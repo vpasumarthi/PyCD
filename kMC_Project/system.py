@@ -6,20 +6,95 @@ code to compute msd of random walk of single electron in 3D hematite lattice str
 
 import random as rnd
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.cm as cm
+import matplotlib.cm as cm # might be unnecessary
 
-class system(object):
+class material(object):
     '''
-    classdocs
+    defines the material working on
+    
+    Attributes:
+        name: A string representing the material name
+        size: An array (3 x 1) defining the system size in multiple of unit cells
+        
     '''
 
-
-    def __init__(self, params):
+    def __init__(self, name, species, sites, occupancy, charge):
         '''
-        Constructor
+        Return an material object whose name is *name* 
+        '''
+        self.name = name
+        self.species = species
+        self.sites = sites
+        self.occupancy = occupancy
+        self.charge = charge
+
+class system(material):
+    '''
+    defines the system we are working on
+    '''
+    
+    def __init__(self, size=np.array([10, 10, 10])):
+        '''
+        Return a system object whose size is *size*
+        '''
+        self.size = size
+        
+class run(system):
+    '''
+    
+    '''
+    
+    def __init__(self, pbc=1):
         '''
         
+        '''
+        self.pbc = pbc
+        
+    def delG0(self, sites, charge):
+        '''
+        
+        '''
+    
+    def elec(self, sites, charge):
+        '''
+        
+        '''
+        
+
+class analysis(object):
+    '''
+    
+    '''
+    
+    def __init__(self):
+        '''
+        
+        '''
+        
+    def msd(self):
+        '''
+        
+        '''
+    
+class plot(object):
+    '''
+    
+    '''
+    
+    def __init__(self):
+        '''
+        
+        '''
+    
+    def plot(self, msd):
+        '''
+        
+        '''
+        import matplotlib.pyplot as plt
+        plt.plot(msd[:,0], msd[:,1])
+        plt.xlabel('Time (ns)')
+        plt.ylabel('MSD (Angstrom**2)')
+        plt.show()
 
 # Input Variables
 x = 9
@@ -158,8 +233,5 @@ for traj in range(n_traj):
 msd = np.zeros((len(sum_msd)+1,2))
 msd[1:,:] = sum_msd / n_traj
 
-plt.plot(msd[:,0], msd[:,1])
-plt.xlabel('Time (ns)')
-plt.ylabel('MSD (Angstrom**2)')
-plt.show()
+
 #plt.savefig(figname)
