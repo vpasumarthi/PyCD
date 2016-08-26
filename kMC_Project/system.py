@@ -11,7 +11,7 @@ class modelParameters(object):
     Definitions of all model parameters that need to be passed on to other classes
     '''
     def __init__(self, vn, kB, T, lambda_basal, lambda_c_direction, VAB_basal, VAB_c_direction, N_basal, 
-                 N_c_direction, num_neighbors, neighbor_cutoff, hopd_basal, hopd_c_direction,
+                 N_c_direction, numLocalNeighbors, neighbor_cutoff, hopdist_basal, hopdist_c_direction,
                  nsteps_msd, ndisp_msd, binsize):
         '''
         Definitions of all model parameters
@@ -28,10 +28,10 @@ class modelParameters(object):
         # may be the same can be termed as k1, k2, k3, k4 with first three being same rate constants
         self.N_basal = N_basal
         self.N_c_direction = N_c_direction
-        self.num_neighbors = num_neighbors
+        self.numLocalNeighbors = numLocalNeighbors
         self.neighbor_cutoff = neighbor_cutoff
-        self.hopd_basal = hopd_basal
-        self.hopd_c_direction = hopd_c_direction
+        self.hopdist_basal = hopdist_basal
+        self.hopdist_c_direction = hopdist_c_direction
         self.nsteps_msd = nsteps_msd
         self.ndisp_msd = ndisp_msd
         self.binsize = binsize
@@ -51,61 +51,60 @@ class material(object):
         # TODO: lattice constants and unit cell matrix may be defined in here
     '''
 
-    def __init__(self, name, elements, species_to_sites, pos, index, charge, latticeParameters):
+    def __init__(self, name, elementTypes, species_to_sites, unitcellCoords, elementTypeIndex, charge, latticeParameters):
         '''
         Return an material object whose name is *name* 
         '''
         self.name = name
-        self.elements = elements
+        self.elementTypes = elementTypes
         self.species_to_sites = species_to_sites
         for key in species_to_sites:
-            assert set(species_to_sites[key]) <= set(elements), 'Specified sites should be a subset of elements'
-        self.pos = pos
-        self.index = index
+            assert set(species_to_sites[key]) <= set(elementTypes), 'Specified sites should be a subset of elements'
+        self.unitcellCoords = unitcellCoords
+        self.elementTypeIndex = elementTypeIndex
         # diff in charge of anions in the first shell different from lattice anions
         # TODO: diff in charge of cations in the first shell from lattice cations
         # TODO: introduce a method to view the material using ase atoms or other gui module
         self.charge = charge
         self.latticeParameters = latticeParameters
         
-    def lattice_matrix(self, latticeParameters):
-        [a, b, c, alpha, beta, gamma] = latticeParameters
+    def lattice_matrix(self):
+        [a, b, c, alpha, beta, gamma] = self.latticeParameters
         cell = np.array([[ a                , 0                , 0],
                          [ b * np.cos(gamma), b * np.sin(gamma), 0],
                          [ c * np.cos(alpha), c * np.cos(beta) , c * np.sqrt(np.sin(alpha)**2 - np.cos(beta)**2)]]) # cell matrix
         return cell
     
-    # TODO: nsites differs from electron to hole, so even these parameters should be arrays with size equal to 
-    # len(species - 1)
-    # TODO: Hardcoded value of 1 for index, should be changed accordingly so that it equals the species name
-    index = material.index
-    num_neighbors = modelParameters.num_neighbors
-    nsites = len(index == 1)
-    tot_neighbors = num_neighbors * nsites
-    
-    def generate_coords(self, size):
-        '''
-        Subroutine to generate coordinates of specified number of unit cells around the original cell
-        '''
-        coords = []
-        return coords
-    
+    def materialParameters(self):
+        numLocalNeighbors = modelParameters.numLocalNeighbors
+        # TODO: nsites differs from electron to hole, so even these parameters should be arrays with size equal to 
+        # len(species - 1)
+        # TODO: Hardcoded value of 1 for index, should be changed accordingly so that it equals the species name
+        for i, key in enumerate(self.species_to_sites):
+            if key == 'empty':
+                empty_index = i
+        nsites = []
+        for i in range(len(self.species_to_sites)):
+            nsites.append()
+        tot_neighbors = numLocalNeighbors * nsites
+        return tot_neighbors
+        
     def displacement_matrix(self, bulksize):
         # Coordinates
-        sitecoords = self.generate_coords(size=[1, 1, 1])
+        sitecoords = self.generate_coords()
         bulkcoords = self.generate_coords(bulksize)
-        num_neighbors = modelParameters.num_neighbors
+        numLocalNeighbors = modelParameters.numLocalNeighbors
         tot_neighbors = material.tot_neighbors
         neighbor_cutoff = modelParameters.neighbor_cutoff
-        hopd_basal = modelParameters.hopd_basal
-        hopd_c_direction = modelParameters.hopd_c_direction
-        hopd_critical  = (hopd_basal + hopd_c_direction) / 2 
+        hopdist_basal = modelParameters.hopdist_basal
+        hopdist_c_direction = modelParameters.hopdist_c_direction
+        hopdist_critical  = (hopdist_basal + hopdist_c_direction) / 2 
 
         # Initialization
         nn_coords = [0] * tot_neighbors
-        local_nn_coords = [0] * num_neighbors
+        local_nn_coords = [0] * numLocalNeighbors
         displacement_matrix = np.zeros((tot_neighbors, 3)) 
-        local_disp = np.zeros((num_neighbors, 3)) 
+        local_disp = np.zeros((numLocalNeighbors, 3)) 
         # fetch all nearest neighbor coordinates
         for site, center in enumerate(sitecoords):
                 index = 0 
@@ -113,15 +112,15 @@ class material(object):
                         displacement = nn_coord.pos - center.pos
                         hop_dist = np.linalg.norm(displacement)
                         if 0 < hop_dist <= neighbor_cutoff:
-                                if hop_dist < hopd_critical: # hop in c-direction
-                                        local_nn_coords[num_neighbors-1] = nn_coord
-                                        local_disp[num_neighbors-1] = displacement
+                                if hop_dist < hopdist_critical: # hop in c-direction
+                                        local_nn_coords[numLocalNeighbors-1] = nn_coord
+                                        local_disp[numLocalNeighbors-1] = displacement
                                 else:
                                         local_nn_coords[index] = nn_coord
                                         local_disp[index] = displacement
                                         index += 1
-                start_index = num_neighbors * site
-                end_index = start_index + num_neighbors
+                start_index = numLocalNeighbors * site
+                end_index = start_index + numLocalNeighbors
                 displacement_matrix[start_index:end_index] = local_disp
                 nn_coords[start_index:end_index] = local_nn_coords        
         return displacement_matrix
@@ -141,6 +140,25 @@ class system(material):
         super(system, self).__init__(name, elements, species_to_sites, pos, index, charge, latticeParameters)
         self.occupancy = occupancy
         self.size = size
+    
+    def generate_coords(self, siteIndex, neighborSize=[1, 1, 1]):
+        '''
+        Subroutine to generate coordinates of specified number of unit cells around the original cell
+        '''
+        assert all(element > 0 for element in neighborSize), 'Input size should always be greater than 0'
+        unitcellSiteCoords = self.unitcellCoords[self.elementTypeIndex == siteIndex]
+        numCells = (2 * neighborSize[0] - 1) * (2 * neighborSize[1] - 1) * (2 * neighborSize[2] - 1)
+        nsites = len(unitcellSiteCoords)
+        coords = np.zeros((numCells * nsites, 3))
+        for xIndex, xSize in enumerate(range(-neighborSize[0]+1, neighborSize[0])):
+            for yIndex, ySize in enumerate(range(-neighborSize[1]+1, neighborSize[1])):
+                for zIndex, zSize in enumerate(range(-neighborSize[2]+1, neighborSize[2])):
+                    startIndex = (xIndex + yIndex + zIndex) * nsites
+                    endIndex = startIndex + nsites
+                    neighborCellSiteCoords = np.multiply(unitcellSiteCoords, [xSize, ySize, zSize])
+                    coords[startIndex:endIndex, :] = neighborCellSiteCoords 
+        return coords
+
                 
 class run(system):
     '''
