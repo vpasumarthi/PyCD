@@ -52,11 +52,12 @@ class material(object):
         # TODO: lattice constants and unit cell matrix may be defined in here
     '''
     
-    def __init__(self, name, elementTypes, species_to_sites, unitcellCoords, elementTypeIndexList, charge, 
+    def __init__(self, modelParameters, name, elementTypes, species_to_sites, unitcellCoords, elementTypeIndexList, charge, 
                  latticeParameters):
         '''
         Return an material object whose name is *name* 
         '''
+        self.modelParameters = modelParameters
         self.name = name
         self.elementTypes = elementTypes
         self.species_to_sites = species_to_sites
@@ -78,7 +79,7 @@ class material(object):
         return cell
     
     def materialParameters(self):
-        numLocalNeighborSites = modelParameters.numLocalNeighborSites
+        numLocalNeighborSites = self.modelParameters.numLocalNeighborSites
         # TODO: nsites differs from electron to hole, so even these parameters should be arrays with size equal to 
         # len(species - 1)
         # TODO: Hardcoded value of 1 for index, should be changed accordingly so that it equals the species name
@@ -90,9 +91,8 @@ class material(object):
         nSites = np.zeros(len(self.elementTypes))
         for elementTypeIndex, elementType in enumerate(self.elementTypes):
             if elementType in SiteList:
-                nSites[elementTypeIndex] = len(self.elementTypeIndexList==elementTypeIndex)
-        print nSites
-        tot_neighbors = numLocalNeighborSites * nSites
+                nSites[elementTypeIndex] = len(np.where(self.elementTypeIndexList == elementTypeIndex)[0]) 
+        tot_neighbors = np.multiply(numLocalNeighborSites, nSites)
         return tot_neighbors
         
     def displacement_matrix(self, bulksize=[2, 2, 2]):
@@ -114,6 +114,7 @@ class material(object):
         # fetch all nearest neighbor coordinates
         for site, center in enumerate(sitecoords):
                 index = 0 
+                # TODO: Is it necessary to use enumerate here?
                 for j, nn_coord in enumerate(bulkcoords):
                         displacement = nn_coord.pos - center.pos
                         hop_dist = np.linalg.norm(displacement)
@@ -131,7 +132,7 @@ class material(object):
                 nn_coords[start_index:end_index] = local_nn_coords        
         return displacement_matrix
 
-class system(material):
+class system(object):
     '''
     defines the system we are working on
     
@@ -139,11 +140,11 @@ class system(material):
     size: An array (3 x 1) defining the system size in multiple of unit cells
     '''
     
-    def __init__(self, name, elements, species_to_sites, pos, index, charge, latticeParameters, occupancy, size=np.array([10, 10, 10])):
+    def __init__(self, material, occupancy, size=np.array([10, 10, 10])):
         '''
         Return a system object whose size is *size*
         '''
-        super(system, self).__init__(name, elements, species_to_sites, pos, index, charge, latticeParameters)
+        self.material = material
         self.occupancy = occupancy
         self.size = size
     
@@ -152,7 +153,7 @@ class system(material):
         Subroutine to generate coordinates of specified number of unit cells around the original cell
         '''
         assert all(element > 0 for element in neighborSize), 'Input size should always be greater than 0'
-        unitcellSiteCoords = self.unitcellCoords[self.elementTypeIndex == siteIndex]
+        unitcellSiteCoords = self.material.unitcellCoords[self.material.elementTypeIndexList == siteIndex]
         numCells = (2 * neighborSize[0] - 1) * (2 * neighborSize[1] - 1) * (2 * neighborSize[2] - 1)
         nsites = len(unitcellSiteCoords)
         coords = np.zeros((numCells * nsites, 3))
@@ -161,18 +162,20 @@ class system(material):
                 for zIndex, zSize in enumerate(range(-neighborSize[2]+1, neighborSize[2])):
                     startIndex = (xIndex + yIndex + zIndex) * nsites
                     endIndex = startIndex + nsites
-                    neighborCellSiteCoords = unitcellSiteCoords + np.multiply(self.latticeParameters[:3], [xSize, ySize, zSize])
+                    neighborCellSiteCoords = unitcellSiteCoords + np.multiply(self.material.latticeParameters[:3], 
+                                                                              [xSize, ySize, zSize])
                     coords[startIndex:endIndex, :] = neighborCellSiteCoords 
         return coords
                 
-class run(system):
+class run(object):
     '''
     defines the subroutines for running Kinetic Monte Carlo and computing electrostatic interaction energies 
     '''
-    def __init__(self, pbc=1):
+    def __init__(self, system, pbc=1):
         '''
         Returns the PBC condition of the system
         '''
+        self.system = system
         self.pbc = pbc
 
     def elec(self, occupancy, charge):
@@ -245,7 +248,7 @@ class analysis(object):
         '''
         
         '''
-
+        
     def compute_sd(self, timeNpath):
         '''
         Subroutine to compute the squared displacement of the trajectories

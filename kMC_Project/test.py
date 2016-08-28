@@ -1,4 +1,4 @@
-from system import system, material
+from system import material, modelParameters, system
 import numpy as np
 
 name = 'Fe2O3'
@@ -21,11 +21,7 @@ gamma = 120. / 180 * np.pi # lattice angle between a-b
 latticeParameters = [a, b, c, alpha, beta, gamma]
 size = np.array([15, 15, 15])
 occupancy = np.array([0, 1, 2])
-hematite = material(name, elementTypes, species_to_sites, unitcellCoords, elementTypeIndexList, charge, latticeParameters)
-hematiteSystem = system(hematite, occupancy, size)
-#hematite = system(name, elementTypes, species_to_sites, unitcellCoords, elementTypeIndexList, charge, latticeParameters, occupancy, size)
-#neighborSize = np.array([2, 1, 1])
-#hematite.materialParameters()
+
 
 vn = 1.85E+13 # typical frequency for nuclear motion in (1/sec)
 kB = 8.617E-05 # boltzmann constant in eV/K
@@ -44,3 +40,12 @@ hopdist_c_direction = 2.5
 nsteps_msd = 1E+02
 ndisp_msd = 1E+02
 binsize = 1E+01
+
+hematiteParameters = modelParameters(vn, kB, T, lambda_basal, lambda_c_direction, VAB_basal, VAB_c_direction, 
+                                     N_basal, N_c_direction, numLocalNeighborSites, neighbor_cutoff, 
+                                     hopdist_basal, hopdist_c_direction, nsteps_msd, ndisp_msd, binsize)
+hematite = material(hematiteParameters, name, elementTypes, species_to_sites, unitcellCoords, elementTypeIndexList, charge, 
+                 latticeParameters)
+hematiteSystem = system(hematite, occupancy, size)
+neighborSize = np.array([2, 1, 1])
+print hematiteSystem.generate_coords(0, neighborSize)
