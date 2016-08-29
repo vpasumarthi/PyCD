@@ -1,10 +1,19 @@
-from system import material, modelParameters, system
+from system import modelParameters, material, system
 import numpy as np
+
+kB = 8.617E-05 # boltzmann constant in eV/K
+T = 300 # Temperature in K
+ntraj = 1E+02
+kmcsteps = 1E+03
+nsteps_msd = 1E+02
+ndisp_msd = 1E+02
+binsize = 1E+01
+pbc = 1
+
+hematiteParameters = modelParameters(kB, T, ntraj, kmcsteps, nsteps_msd, ndisp_msd, binsize, pbc)
 
 name = 'Fe2O3'
 elementTypes = ['Fe', 'O']
-#sites = ['Fe']
-#species = ['electron', 'empty']
 species_to_sites = {'electron': ['Fe'], 'empty': ['Fe', 'O'], 'hole': ['O']}
 inputFileLocation = "/Users/Viswanath/Box Sync/Visualization/Fe2O3_index_coord.txt"
 index_pos = np.loadtxt(inputFileLocation)
@@ -19,13 +28,7 @@ alpha = 90. / 180 * np.pi # interaxial angle between b-c
 beta = 90. / 180 * np.pi # lattice angle between a-c
 gamma = 120. / 180 * np.pi # lattice angle between a-b
 latticeParameters = [a, b, c, alpha, beta, gamma]
-size = np.array([15, 15, 15])
-occupancy = np.array([0, 1, 2])
-
-
 vn = 1.85E+13 # typical frequency for nuclear motion in (1/sec)
-kB = 8.617E-05 # boltzmann constant in eV/K
-T = 300 # Temperature in K
 lambda_basal = 1.74533 # reorganization energy in eV for basal plane
 lambda_c_direction = 1.88683 # reorganization energy in eV for c-direction
 VAB_basal = 0.184 # electronic coupling matrix element in eV for basal plane
@@ -33,19 +36,17 @@ VAB_c_direction = 0.028 # electronic coupling matrix element in eV for c-directi
 N_basal = 3
 N_c_direction = 1 
 numLocalNeighborSites = 4
-hello = 3
-neighbor_cutoff = 3.0
-hopdist_basal = 2.0
-hopdist_c_direction = 2.5 
-nsteps_msd = 1E+02
-ndisp_msd = 1E+02
-binsize = 1E+01
+neighborCutoffDist = 3.0
+hopdist_basal = 2.971
+hopdist_c_direction = 2.901 
 
-hematiteParameters = modelParameters(vn, kB, T, lambda_basal, lambda_c_direction, VAB_basal, VAB_c_direction, 
-                                     N_basal, N_c_direction, numLocalNeighborSites, neighbor_cutoff, 
-                                     hopdist_basal, hopdist_c_direction, nsteps_msd, ndisp_msd, binsize)
-hematite = material(hematiteParameters, name, elementTypes, species_to_sites, unitcellCoords, elementTypeIndexList, charge, 
-                 latticeParameters)
+hematite = material(name, elementTypes, species_to_sites, unitcellCoords, elementTypeIndexList,
+                 charge, latticeParameters, vn, lambda_basal, lambda_c_direction, VAB_basal, VAB_c_direction, 
+                 N_basal, N_c_direction, numLocalNeighborSites, neighborCutoffDist, hopdist_basal, 
+                 hopdist_c_direction)
+
+size = np.array([15, 15, 15])
+occupancy = np.array([0, 1, 2])
+
 hematiteSystem = system(hematite, occupancy, size)
-neighborSize = np.array([2, 1, 1])
-print hematiteSystem.generate_coords(0, neighborSize)
+
