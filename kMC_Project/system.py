@@ -10,17 +10,19 @@ class modelParameters(object):
     '''
     Definitions of all model parameters that need to be passed on to other classes
     '''
-    def __init__(self, kB, T, ntraj, kmcsteps, nsteps_msd, ndisp_msd, binsize, pbc):
+    def __init__(self, kB, T, ntraj, kmcsteps, stepInterval, nsteps_msd, ndisp_msd, binsize, pbc):
         '''
         Definitions of all model parameters
         '''
-        # TODO: Is it possible to define these parameters in a dictionary?
+        # TODO: Is it necessary/better to define these parameters in a dictionary?
         self.kB = kB
         self.T = T
         self.ntraj = ntraj
         self.kmcsteps = kmcsteps
+        self.stepInterval = stepInterval
         self.nsteps_msd = nsteps_msd
         self.ndisp_msd = ndisp_msd
+        
         self.binsize = binsize
         self.pbc = pbc
     
@@ -41,11 +43,12 @@ class material(object):
     
     def __init__(self, name, elementTypes, species_to_sites, unitcellCoords, elementTypeIndexList,
                  charge, latticeParameters, vn, lambda_basal, lambda_c_direction, VAB_basal, VAB_c_direction, 
-                 N_basal, N_c_direction, numLocalNeighborSites, neighborCutoffDist, hopdist_basal, 
+                 N_basal, N_c_direction, neighborCutoffDist, hopdist_basal, 
                  hopdist_c_direction):
         '''
         Return an material object whose name is *name* 
         '''
+        # TODO: introduce a method to view the material using ase atoms or other gui module
         self.name = name
         self.elementTypes = elementTypes
         self.species_to_sites = species_to_sites
@@ -55,7 +58,6 @@ class material(object):
         self.elementTypeIndexList = elementTypeIndexList
         # diff in charge of anions in the first shell different from lattice anions
         # TODO: diff in charge of cations in the first shell from lattice cations
-        # TODO: introduce a method to view the material using ase atoms or other gui module
         self.charge = charge
         self.latticeParameters = latticeParameters
         self.vn = vn
@@ -66,9 +68,8 @@ class material(object):
         # TODO: differentiating between basal and c-direction is specific to the system, change basal and c-direction
         # may be the same can be termed as k1, k2, k3, k4 with first three being same rate constants
         self.N_basal = N_basal
-        self.N_c_direction = N_c_direction
-        # TODO: numLocalNeighborSites should be an array the length of SiteList and computed based on neighborCutoffDist 
-        self.numLocalNeighborSites = numLocalNeighborSites
+        self.N_c_direction = N_c_direction 
+        #self.numLocalNeighborSites = numLocalNeighborSites
         self.neighborCutoffDist = neighborCutoffDist
         self.hopdist_basal = hopdist_basal
         self.hopdist_c_direction = hopdist_c_direction
@@ -80,9 +81,12 @@ class material(object):
                          [ c * np.cos(alpha), c * np.cos(beta) , c * np.sqrt(np.sin(alpha)**2 - np.cos(beta)**2)]]) # cell matrix
         return cell
 
-    def nSites(self):
+    def nSites(self, siteIndex):
         '''
         Returns number of sites available in a unit cell
+        '''
+        # TODO: Returns nSites for a siteIndex
+        nSites = len(np.where(self.elementTypeIndexList == siteIndex)[0])
         '''
         SiteList = []
         for key in self.species_to_sites:
@@ -92,7 +96,8 @@ class material(object):
         nSites = np.zeros(len(self.elementTypes))
         for elementTypeIndex, elementType in enumerate(self.elementTypes):
             if elementType in SiteList:
-                nSites[elementTypeIndex] = len(np.where(self.elementTypeIndexList == elementTypeIndex)[0]) 
+                nSites[elementTypeIndex] = len(np.where(self.elementTypeIndexList == elementTypeIndex)[0])
+        '''
         return nSites
 
     def generate_coords(self, siteIndex, neighborSize=[1, 1, 1]):
@@ -116,7 +121,7 @@ class material(object):
                     endIndex += nSites
         return coords
 
-    def neighborSites(self, siteIndex, neighborCutoffDist, bulksize=[2, 2, 2]):
+    def numLocalNeighborSites(self, siteIndex, neighborCutoffDist, bulksize=[2, 2, 2]):
         '''
         Returns number of neighbor sites available per site
         '''
@@ -125,50 +130,62 @@ class material(object):
         center = sitecoords[0]
         numLocalNeighborSites = 0
         for neighbor in bulkcoords:
-            #print neighbor
             displacement = neighbor - center
             hop_dist = np.linalg.norm(displacement)
             if 0 < hop_dist <= neighborCutoffDist:
-                print hop_dist
                 numLocalNeighborSites += 1
         return numLocalNeighborSites
 
-    def displacement_matrix(self, bulksize=[2, 2, 2]):
-        sitecoords = self.generate_coords()
-        bulkcoords = self.generate_coords(bulksize)
-        # TODO: numLocalNeighborSites, totalNeighborSites are derived using neighborCutoffDist 
-        numLocalNeighborSites = modelParameters.numLocalNeighborSites
-        totalNeighborSites = material.totalNeighborSites
-        neighborCutoffDist = modelParameters.neighborCutoffDist
-        hopdist_basal = modelParameters.hopdist_basal
-        hopdist_c_direction = modelParameters.hopdist_c_direction
-        hopdist_critical  = (hopdist_basal + hopdist_c_direction) / 2 
+    def displacementList(self, siteIndex, bulksize=[2, 2, 2]):
+        sitecoords = self.generate_coords(siteIndex)
+        bulkcoords = self.generate_coords(siteIndex, bulksize)
+        neighborCutoffDist = self.neighborCutoffDist[self.elementTypes[siteIndex]]
+        numLocalNeighborSites = self.numLocalNeighborSites(siteIndex, neighborCutoffDist, bulksize)
+        totalNeighborSites = numLocalNeighborSites * self.nSites(siteIndex)
+        # TODO: shouldn't use any hopdist_critical parameter at all. It should be handled with an offset array for
+        # all sites in a unit cell
+        hopdist_critical  = (self.hopdist_basal + self.hopdist_c_direction) / 2 
 
         # Initialization
-        nn_coords = [0] * totalNeighborSites
-        local_nn_coords = [0] * numLocalNeighborSites
-        displacement_matrix = np.zeros((totalNeighborSites, 3)) 
-        local_disp = np.zeros((numLocalNeighborSites, 3)) 
+        local_nn_coords = np.zeros((numLocalNeighborSites, 3))
+        local_disp = np.zeros((numLocalNeighborSites, 3))
+        nn_coords  = np.zeros((totalNeighborSites, 3)) # nearest neighbor coordinates
+        displacementList = np.zeros((totalNeighborSites, 3))
+                 
         # fetch all nearest neighbor coordinates
         for site, center in enumerate(sitecoords):
-                index = 0 
-                # TODO: Is it necessary to use enumerate here?
-                for j, nn_coord in enumerate(bulkcoords):
-                        displacement = nn_coord.pos - center.pos
-                        hop_dist = np.linalg.norm(displacement)
-                        if 0 < hop_dist <= neighborCutoffDist:
-                                if hop_dist < hopdist_critical: # hop in c-direction
-                                        local_nn_coords[numLocalNeighborSites-1] = nn_coord
-                                        local_disp[numLocalNeighborSites-1] = displacement
-                                else:
-                                        local_nn_coords[index] = nn_coord
-                                        local_disp[index] = displacement
-                                        index += 1
-                start_index = numLocalNeighborSites * site
-                end_index = start_index + numLocalNeighborSites
-                displacement_matrix[start_index:end_index] = local_disp
-                nn_coords[start_index:end_index] = local_nn_coords        
-        return displacement_matrix
+            index = 0
+            for nn_coord in bulkcoords:
+                displacement = nn_coord - center
+                hop_dist = np.linalg.norm(displacement)
+                if 0 < hop_dist <= neighborCutoffDist:
+                    # TODO: This is very specific to the hematite system expecting only one c-direction hop
+                    if hop_dist < hopdist_critical: # hop in c-direction
+                        local_nn_coords[-1] = nn_coord
+                        local_disp[-1] = displacement
+                    else:
+                        local_nn_coords[index] = nn_coord
+                        local_disp[index] = displacement
+                        index += 1
+            startIndex = numLocalNeighborSites * site
+            endIndex = startIndex + numLocalNeighborSites
+            displacementList[startIndex:endIndex] = local_disp
+            nn_coords[startIndex:endIndex] = local_nn_coords
+        return returnValues(displacementList, nn_coords)
+
+class returnCoords(object):
+    def __init__(self, coords, offset, siteIndexList):
+        self.coords = coords
+        self.offset = offset
+        self.siteIndexList = siteIndexList
+
+class returnValues(object):
+    '''
+    Returns the values of displacement list and respective coordinates in an object
+    '''
+    def __init__(self, displacementList, nn_coords):
+        self.displacementList = displacementList
+        self.nn_coords = nn_coords
 
 class system(object):
     '''
@@ -185,22 +202,31 @@ class system(object):
         self.material = material
         self.occupancy = occupancy
         self.size = size
-                    
+
+    def config(self):
+        '''
+        Generates the configuration array for the system 
+        '''
+        
+
 class run(object):
     '''
     defines the subroutines for running Kinetic Monte Carlo and computing electrostatic interaction energies 
     '''
-    def __init__(self, modelParameters, system):
+    def __init__(self, modelParameters, material, system):
         '''
         Returns the PBC condition of the system
         '''
         self.modelParameters = modelParameters
+        self.material = material
         self.system = system
 
     def elec(self, occupancy, charge):
         '''
         Subroutine to compute the electrostatic interaction energies
         '''
+        elec = 0
+        return elec
         
     def delG0(self, occupancy, charge):
         '''
@@ -213,18 +239,27 @@ class run(object):
         '''
         Subroutine to run the kmc simulation by specified number of steps
         '''
-        vn = modelParameters.vn
-        kB = modelParameters.kB
-        T = modelParameters.T
-        lambda_basal = modelParameters.lambda_basal
-        lambda_c_direction = modelParameters.lambda_c_direction
-        VAB_basal = modelParameters.VAB_basal
-        VAB_c_direction = modelParameters.VAB_c_direction
-        N_basal = modelParameters.N_basal
-        N_c_direction = modelParameters.N_c_direction
-        # TODO: Is it self?
-        displacement_matrix = material.displacement_matrix(self) 
-        
+        T = self.modelParameters.T
+        kB = self.modelParameters.kB
+        vn = self.material.vn
+        lambda_basal = self.material.lambda_basal
+        lambda_c_direction = self.material.lambda_c_direction
+        VAB_basal = self.material.VAB_basal
+        VAB_c_direction = self.material.VAB_c_direction
+        N_basal = self.material.N_basal
+        N_c_direction = self.material.N_c_direction
+
+        siteList = []
+        for key in self.material.species_to_sites:
+            if key != 'empty':
+                siteList.extend(self.material.species_to_sites[key])
+        siteList = list(set(siteList))
+        siteIndexList = []
+        for site in siteList:
+            if site in self.material.elementTypes:
+                siteIndexList.append(self.material.elementTypes.index(site))
+
+        displacementMatrix = [material.displacementList(self.material, siteIndex) for siteIndex in siteIndexList] 
         delG0 = self.delG0(occupancy, charge)
         delGs_basal = ((lambda_basal + delG0)**2 / (4 * lambda_basal)) - VAB_basal
         delGs_c_direction = ((lambda_c_direction + delG0)**2 / (4 * lambda_c_direction)) - VAB_c_direction        
@@ -245,10 +280,10 @@ class run(object):
                 rand = rnd.random()
                 for i in range(N_procs):
                         if rand <= k_cumsum[i]:
-                            # TODO: displacement matrix should be imported from the
-                                displacement += displacement_matrix[layer + i]
-                                time -= np.log(rnd.random()) / k_total
-                                break
+                            # TODO: siteIndex
+                            displacement += displacementMatrix[siteIndex].displacementList[layer + i]
+                            time -= np.log(rnd.random()) / k_total
+                            break
                 if step % stepInterval == 0:
                         path_step = step / stepInterval
                         timeNpath[path_step, 0] = timeNpath[path_step-1, 0] + time
@@ -256,7 +291,6 @@ class run(object):
                         displacement = 0
                         time = 0
                 layer = 0 if layer==4 else 4
-        
 
 class analysis(object):
     '''

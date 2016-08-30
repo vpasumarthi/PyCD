@@ -1,16 +1,17 @@
-from system import modelParameters, material, system
+from system import modelParameters, material, system, run
 import numpy as np
 
 kB = 8.617E-05 # boltzmann constant in eV/K
 T = 300 # Temperature in K
 ntraj = 1E+02
-kmcsteps = 1E+03
+kmcsteps = int(1E+03)
+stepInterval = 1E+00
 nsteps_msd = 1E+02
 ndisp_msd = 1E+02
 binsize = 1E+01
 pbc = 1
 
-hematiteParameters = modelParameters(kB, T, ntraj, kmcsteps, nsteps_msd, ndisp_msd, binsize, pbc)
+hematiteParameters = modelParameters(kB, T, ntraj, kmcsteps, stepInterval, nsteps_msd, ndisp_msd, binsize, pbc)
 
 name = 'Fe2O3'
 elementTypes = ['Fe', 'O']
@@ -35,14 +36,13 @@ VAB_basal = 0.184 # electronic coupling matrix element in eV for basal plane
 VAB_c_direction = 0.028 # electronic coupling matrix element in eV for c-direction
 N_basal = 3
 N_c_direction = 1 
-numLocalNeighborSites = 4
-neighborCutoffDist = 3.0
+neighborCutoffDist = {'Fe':3.0, 'O': 4.0}
 hopdist_basal = 2.971
 hopdist_c_direction = 2.901 
 
 hematite = material(name, elementTypes, species_to_sites, unitcellCoords, elementTypeIndexList,
                  charge, latticeParameters, vn, lambda_basal, lambda_c_direction, VAB_basal, VAB_c_direction, 
-                 N_basal, N_c_direction, numLocalNeighborSites, neighborCutoffDist, hopdist_basal, 
+                 N_basal, N_c_direction, neighborCutoffDist, hopdist_basal, 
                  hopdist_c_direction)
 
 size = np.array([15, 15, 15])
@@ -50,3 +50,5 @@ occupancy = np.array([0, 1, 2])
 
 hematiteSystem = system(hematite, occupancy, size)
 
+hematiteRun = run(hematiteParameters, hematite, hematiteSystem)
+hematiteRun.do_kmc_steps(occupancy, charge, stepInterval, kmcsteps)
