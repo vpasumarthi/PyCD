@@ -10,22 +10,24 @@ class modelParameters(object):
     '''
     Definitions of all model parameters that need to be passed on to other classes
     '''
-    def __init__(self, kB, T, ntraj, kmcsteps, stepInterval, nsteps_msd, ndisp_msd, binsize, pbc):
+    def __init__(self, T, ntraj, kmcsteps, stepInterval, nsteps_msd, ndisp_msd, binsize, 
+                 systemSize=np.array([10, 10, 10]), pbc=1, gui=0, kB=8.617E-05):
         '''
         Definitions of all model parameters
         '''
         # TODO: Is it necessary/better to define these parameters in a dictionary?
-        self.kB = kB
         self.T = T
         self.ntraj = ntraj
         self.kmcsteps = kmcsteps
         self.stepInterval = stepInterval
         self.nsteps_msd = nsteps_msd
         self.ndisp_msd = ndisp_msd
-        
         self.binsize = binsize
+        self.systemSize = systemSize
         self.pbc = pbc
-    
+        self.gui = gui
+        self.kB = kB
+        
 class material(object):
     '''
     defines the structure of working material
@@ -41,53 +43,54 @@ class material(object):
         # TODO: lattice constants and unit cell matrix may be defined in here
     '''
     
-    def __init__(self, name, elementTypes, species_to_sites, unitcellCoords, elementTypeIndexList,
-                 charge, latticeParameters, vn, lambda_basal, lambda_c_direction, VAB_basal, VAB_c_direction, 
-                 N_basal, N_c_direction, neighborCutoffDist, hopdist_basal, 
-                 hopdist_c_direction):
+    def __init__(self, name, elementTypes, speciesTypes, unitcellCoords, elementTypeIndexList, chargeTypes, 
+                 latticeParameters, vn, lambdaValues, VAB, neighborCutoffDist):
         '''
         Return an material object whose name is *name* 
         '''
         # TODO: introduce a method to view the material using ase atoms or other gui module
         self.name = name
         self.elementTypes = elementTypes
-        self.species_to_sites = species_to_sites
-        for key in species_to_sites:
-            assert set(species_to_sites[key]) <= set(elementTypes), 'Specified sites should be a subset of elements'
+        self.species_to_sites = speciesTypes
+        for key in speciesTypes:
+            assert set(speciesTypes[key]) <= set(elementTypes), 'Specified sites should be a subset of elements'
         self.unitcellCoords = unitcellCoords
+        startIndex = 0
+        for elementIndex in range(len(elementTypes)):
+            elementUnitCellCoords = unitcellCoords[elementTypeIndexList==elementIndex]
+            endIndex = startIndex + len(elementUnitCellCoords)
+            self.unitcellCoords[startIndex:endIndex] = elementUnitCellCoords[elementUnitCellCoords[:,2].argsort()]
+            startIndex = endIndex
         self.elementTypeIndexList = elementTypeIndexList
-        # diff in charge of anions in the first shell different from lattice anions
-        # TODO: diff in charge of cations in the first shell from lattice cations
-        self.charge = charge
+        self.chargeTypes = chargeTypes
         self.latticeParameters = latticeParameters
         self.vn = vn
-        self.lambda_basal = lambda_basal
-        self.lambda_c_direction = lambda_c_direction
-        self.VAB_basal = VAB_basal
-        self.VAB_c_direction = VAB_c_direction
-        # TODO: differentiating between basal and c-direction is specific to the system, change basal and c-direction
-        # may be the same can be termed as k1, k2, k3, k4 with first three being same rate constants
-        self.N_basal = N_basal
-        self.N_c_direction = N_c_direction 
-        #self.numLocalNeighborSites = numLocalNeighborSites
+        self.lambdaValues = lambdaValues
+        self.VAB = VAB
         self.neighborCutoffDist = neighborCutoffDist
-        self.hopdist_basal = hopdist_basal
-        self.hopdist_c_direction = hopdist_c_direction
    
-    def lattice_matrix(self):
+    def latticeMatrix(self):
         [a, b, c, alpha, beta, gamma] = self.latticeParameters
         cell = np.array([[ a                , 0                , 0],
                          [ b * np.cos(gamma), b * np.sin(gamma), 0],
                          [ c * np.cos(alpha), c * np.cos(beta) , c * np.sqrt(np.sin(alpha)**2 - np.cos(beta)**2)]]) # cell matrix
         return cell
-
+    
+    def nElements(self):
+        '''
+        Returns number of elements of each element type in a unit cell
+        '''
+        length = len(self.elementTypes)
+        nElements = np.zeros(length)
+        for elementIndex in range(length):
+            nElements[elementIndex] = np.count_nonzero(self.elementTypeIndexList == elementIndex)
+        return nElements
+    '''
     def nSites(self, siteIndex):
-        '''
         Returns number of sites available in a unit cell
-        '''
         # TODO: Returns nSites for a siteIndex
         nSites = len(np.where(self.elementTypeIndexList == siteIndex)[0])
-        '''
+        
         SiteList = []
         for key in self.species_to_sites:
             if key != 'empty':
@@ -97,9 +100,8 @@ class material(object):
         for elementTypeIndex, elementType in enumerate(self.elementTypes):
             if elementType in SiteList:
                 nSites[elementTypeIndex] = len(np.where(self.elementTypeIndexList == elementTypeIndex)[0])
-        '''
         return nSites
-
+    '''
     def generate_coords(self, siteIndex, neighborSize=[1, 1, 1]):
         '''
         Subroutine to generate coordinates of specified number of unit cells around the original cell
@@ -195,19 +197,30 @@ class system(object):
     size: An array (3 x 1) defining the system size in multiple of unit cells
     '''
     
-    def __init__(self, material, occupancy, size=np.array([10, 10, 10])):
+    def __init__(self, modelParameters, material, occupancy):
         '''
         Return a system object whose size is *size*
         '''
+        self.modelParameters = modelParameters
         self.material = material
         self.occupancy = occupancy
-        self.size = size
 
     def config(self):
         '''
         Generates the configuration array for the system 
         '''
-        
+        unitcellCoords = material.unitcellCoords
+        unitcellElementTypeIndexList = material.elementTypeIndexList
+        # Initialization
+        positions = np.zeros((np.append(self.size, len(unitcellElementTypeIndexList))))
+        charge = positions
+        return returnConfig(positions, charge)
+
+# TODO: Define one class of returnValues which can input attributes dynamically
+class returnConfig(object):
+    def __init__(self, posConfig, chargeConfig):
+        self.posConfig = posConfig
+        self.chargeConfig = chargeConfig
 
 class run(object):
     '''
@@ -270,7 +283,8 @@ class run(object):
         k_total = N_basal * k_basal + N_c_direction * k_c_direction
         k = np.array([k_basal, k_basal, k_basal, k_c_direction])
         k_cumsum = np.cumsum(k / k_total)
-
+        
+        # TODO: timeNdisplacement, not timeNpath
         timeNpath = np.zeros((nsteps_path+1, 4))
         # TODO: change the logic for layer selection which is specific to the hematite system
         layer = 0 if rnd.random() < 0.5 else 4
@@ -302,15 +316,16 @@ class analysis(object):
         
         '''
         
-    def compute_sd(self, timeNpath):
+    def compute_sd(self, timeNdisplacement):
         '''
         Subroutine to compute the squared displacement of the trajectories
         '''
+        # timeNdisplacement, not timeNpath
         nsteps_msd = modelParameters.nsteps_msd
         ndisp_msd = modelParameters.ndisp_msd
         sec_to_ns = 1E+09
-        time = timeNpath[:, 0] * sec_to_ns
-        path = timeNpath[:, 1:]
+        time = timeNdisplacement[:, 0] * sec_to_ns
+        path = timeNdisplacement[:, 1:]
         sd_array = np.zeros((nsteps_msd * ndisp_msd, 2))
         for timestep in range(1, nsteps_msd+1):
                 sum_sd_timestep = 0
