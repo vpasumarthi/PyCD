@@ -70,6 +70,9 @@ class material(object):
         self.neighborCutoffDist = neighborCutoffDist
    
     def latticeMatrix(self):
+        '''
+        Returns the lattice cell matrix using lattice parameters
+        '''
         [a, b, c, alpha, beta, gamma] = self.latticeParameters
         cell = np.array([[ a                , 0                , 0],
                          [ b * np.cos(gamma), b * np.sin(gamma), 0],
@@ -102,27 +105,45 @@ class material(object):
                 nSites[elementTypeIndex] = len(np.where(self.elementTypeIndexList == elementTypeIndex)[0])
         return nSites
     '''
-    def generate_coords(self, siteIndex, neighborSize=[1, 1, 1]):
+    # TODO: Is it necessary to provide a default value for cellSize?
+    def generateCoords(self, elementTypeIndices, cellSize=np.array([1, 1, 1])):
         '''
-        Subroutine to generate coordinates of specified number of unit cells around the original cell
+        Returns systemElementIndices and coordinates of specified elements in a cell of size *cellSize*
         '''
-        assert all(element > 0 for element in neighborSize), 'Input size should always be greater than 0'
-        unitcellSiteCoords = self.unitcellCoords[self.elementTypeIndexList == siteIndex]
-        numCells = (2 * neighborSize[0] - 1) * (2 * neighborSize[1] - 1) * (2 * neighborSize[2] - 1)
-        nSites = len(unitcellSiteCoords)
-        coords = np.zeros((numCells * nSites, 3))
-        startIndex = 0
-        endIndex = nSites
-        for xSize in range(-neighborSize[0]+1, neighborSize[0]):
-            for ySize in range(-neighborSize[1]+1, neighborSize[1]):
-                for zSize in range(-neighborSize[2]+1, neighborSize[2]):
-                    neighborCellSiteCoords = unitcellSiteCoords + np.dot([xSize, ySize, zSize], 
-                                                                         self.lattice_matrix())
-                    coords[startIndex:endIndex, :] = neighborCellSiteCoords 
-                    startIndex += nSites
-                    endIndex += nSites
-        return coords
-
+        assert all(size > 0 for size in cellSize), 'Input size should always be greater than 0'
+        extractIndices = np.in1d(self.elementTypeIndexList, elementTypeIndices).nonzero()[0]
+        unitcellElementCoords = self.unitcellCoords[extractIndices]
+        numCells = np.prod(cellSize)
+        nSites = len(unitcellElementCoords)
+        unitcellElementIndexList = np.arange(nSites)
+        cellCoordinates = np.zeros((numCells * nSites, 3))
+        systemElementIndexList = np.zeros(numCells * nSites)
+        iUnitCell = 0
+        for xSize in range(cellSize[0]):
+            for ySize in range(cellSize[1]):
+                for zSize in range(cellSize[2]):          
+                    startIndex = iUnitCell * nSites
+                    endIndex = startIndex + nSites
+                    newCellSiteCoords = unitcellElementCoords + np.dot([xSize, ySize, zSize], self.latticeMatrix())
+                    cellCoordinates[startIndex:endIndex, :] = newCellSiteCoords 
+                    systemElementIndexList[startIndex:endIndex] = iUnitCell * nSites + unitcellElementIndexList 
+                    iUnitCell += 1
+        returnCoords = returnValues()
+        returnCoords.cellCoordinates = cellCoordinates
+        returnCoords.systemElementIndexList = systemElementIndexList
+        return returnCoords
+    
+    def neighborSites(self, bulkSiteCoords, bulkSystemElementIndices, centerSiteCoords, centerSystemElementIndices, 
+                      cutoffDist):
+        '''
+        Returns systemElementIndexMap and distances between center sites and its neighbor sites within cutoff distance
+        '''
+        for index, neighbor
+        returnNeighbors = returnValues()
+        returnNeighbors.systemElementIndexMap = systemElementIndexMap
+        returnNeighbors.distances = distances
+        return returnNeighbors
+    
     def numLocalNeighborSites(self, siteIndex, neighborCutoffDist, bulksize=[2, 2, 2]):
         '''
         Returns number of neighbor sites available per site
@@ -174,20 +195,23 @@ class material(object):
             displacementList[startIndex:endIndex] = local_disp
             nn_coords[startIndex:endIndex] = local_nn_coords
         return returnValues(displacementList, nn_coords)
-
+'''
 class returnCoords(object):
     def __init__(self, coords, offset, siteIndexList):
         self.coords = coords
         self.offset = offset
         self.siteIndexList = siteIndexList
-
+'''
 class returnValues(object):
     '''
     Returns the values of displacement list and respective coordinates in an object
     '''
+    pass
+    '''
     def __init__(self, displacementList, nn_coords):
         self.displacementList = displacementList
         self.nn_coords = nn_coords
+    '''
 
 class system(object):
     '''
