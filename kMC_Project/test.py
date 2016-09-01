@@ -40,10 +40,23 @@ neighborCutoffDist = {'Fe-Fe': [2.971, 2.901], 'O-O': [4.0], 'E': [20.0], 'tol':
 hematite = material(name, elementTypes, speciesTypes, unitcellCoords, elementTypeIndexList, chargeTypes, 
                     latticeParameters, vn, lambdaValues, VAB, neighborCutoffDist)
 
-'''
 occupancy = np.array([0, 1, 2])
-hematiteSystem = system(hematite, occupancy)
+hematiteSystem = system(hematiteParameters, hematite, occupancy)
 
+elementTypeIndices = range(len(elementTypes))
+bulkSites = hematiteSystem.generateCoords(elementTypeIndices, systemSize)
+bulkSiteCoords = bulkSites.cellCoordinates
+bulkSystemElementIndices = bulkSites.systemElementIndexList
+nElementSites = len(np.in1d(elementTypeIndexList, elementTypeIndices).nonzero()[0])
+startIndex = np.prod(systemSize[1:]) * nElementSites
+endIndex = startIndex + nElementSites
+centerSiteCoords = bulkSites.cellCoordinates[startIndex:endIndex]
+centerSystemElementIndices = bulkSites.systemElementIndexList[startIndex:endIndex]
+cutoffDist = 3.0
+neighbors = hematiteSystem.neighborSites(bulkSiteCoords, bulkSystemElementIndices, centerSiteCoords, centerSystemElementIndices, cutoffDist)
+print neighbors.displacementList
+
+'''
 hematiteRun = run(hematiteParameters, hematite, hematiteSystem)
 hematiteRun.do_kmc_steps(occupancy, chargeTypes, stepInterval, kmcsteps)
 '''
