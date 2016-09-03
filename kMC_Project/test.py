@@ -11,7 +11,7 @@ binsize = 1E+01
 systemSize = np.array([10, 10, 10])
 pbc = 1
 gui = 0
-kB = 8.617E-05 # boltzmann constant in eV/K
+kB = 8.617E-05 # Boltzmann constant in eV/K
 
 hematiteParameters = modelParameters(T, ntraj, kmcsteps, stepInterval, nsteps_msd, ndisp_msd, binsize, systemSize, 
                                      pbc, gui, kB)
@@ -24,7 +24,8 @@ index_pos = np.loadtxt(inputFileLocation)
 unitcellCoords = index_pos[:, 1:]
 elementTypeIndexList = index_pos[:,0]
 pos_Fe = unitcellCoords[elementTypeIndexList==0, :]
-chargeTypes = {'Fe': +1.11, 'O': -0.74}
+chargeTypes = {'Fe': +1.11, 'O': -0.74, 'Fe:O1': -0.5}
+elementTypeDelimiter = ':'
 a = 5.038 # lattice constant along x-axis
 b = 5.038 # lattice constant along y-axis
 c = 13.772 # lattice constant along z-axis
@@ -33,20 +34,27 @@ beta = 90. / 180 * np.pi # lattice angle between a-c
 gamma = 120. / 180 * np.pi # lattice angle between a-b
 latticeParameters = [a, b, c, alpha, beta, gamma]
 vn = 1.85E+13 # typical frequency for nuclear motion in (1/sec)
-lambdaValues = {'Fe-Fe': [1.74533, 1.88683]} # reorganization energy in eV for basal plane, c-direction
-VAB = {'Fe-Fe': [0.184, 0.028]} # electronic coupling matrix element in eV for basal plane, c-direction
-neighborCutoffDist = {'Fe-Fe': [2.971, 2.901], 'O-O': [4.0], 'E': [20.0], 'tol': [0.01]} # Basal: 2.971, C: 2.901
+lambdaValues = {'Fe:Fe': [1.74533, 1.88683]} # reorganization energy in eV for basal plane, c-direction
+VAB = {'Fe:Fe': [0.184, 0.028]} # electronic coupling matrix element in eV for basal plane, c-direction
+neighborCutoffDist = {'Fe:Fe': [2.971, 2.901], 'O:O': [4.0], 'Fe:O': [1.946, 2.116], 'E': [20.0], 
+                      'tol': [0.01]} # Basal: 2.971, C: 2.901
 
 hematite = material(name, elementTypes, speciesTypes, unitcellCoords, elementTypeIndexList, chargeTypes, 
                     latticeParameters, vn, lambdaValues, VAB, neighborCutoffDist)
 
-occupancy = np.array([0, 1, 2])
-hematiteSystem = system(hematiteParameters, hematite, occupancy)
+electronQuantumIndices = np.array([[0, 0, 0, 0, elementSite] for elementSite in np.arange(12)]) 
+electronSiteIndices = [hematite.generateSystemElementIndex(systemSize, quantumIndex) 
+                       for quantumIndex in electronQuantumIndices]
+occupancy = {'Fe': np.array([electronSiteIndices])}
+hematiteSystem = system(hematiteParameters, hematite, occupancy, elementTypeDelimiter)
 
 elementTypeIndices = range(len(elementTypes))
-bulkSites = hematiteSystem.generateCoords(elementTypeIndices, systemSize)
+bulkSites = hematite.generateCoords(elementTypeIndices, systemSize)
 bulkSiteCoords = bulkSites.cellCoordinates
 bulkSystemElementIndices = bulkSites.systemElementIndexList
+bulkSitesQuantumIndexList = bulkSites.quantumIndexList
+print bulkSitesQuantumIndexList
+'''
 nElementSites = len(np.in1d(elementTypeIndexList, elementTypeIndices).nonzero()[0])
 startIndex = np.prod(systemSize[1:]) * nElementSites
 endIndex = startIndex + nElementSites
@@ -54,8 +62,8 @@ centerSiteCoords = bulkSites.cellCoordinates[startIndex:endIndex]
 centerSystemElementIndices = bulkSites.systemElementIndexList[startIndex:endIndex]
 cutoffDist = 3.0
 neighbors = hematiteSystem.neighborSites(bulkSiteCoords, bulkSystemElementIndices, centerSiteCoords, centerSystemElementIndices, cutoffDist)
-print neighbors.displacementList
-
+print neighbors.systemElementIndexMap
+'''
 '''
 hematiteRun = run(hematiteParameters, hematite, hematiteSystem)
 hematiteRun.do_kmc_steps(occupancy, chargeTypes, stepInterval, kmcsteps)

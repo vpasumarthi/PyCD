@@ -51,7 +51,7 @@ class material(object):
         # TODO: introduce a method to view the material using ase atoms or other gui module
         self.name = name
         self.elementTypes = elementTypes
-        self.species_to_sites = speciesTypes
+        self.speciesTypes = speciesTypes
         for key in speciesTypes:
             assert set(speciesTypes[key]) <= set(elementTypes), 'Specified sites should be a subset of elements'
         self.unitcellCoords = unitcellCoords
@@ -68,43 +68,157 @@ class material(object):
         self.lambdaValues = lambdaValues
         self.VAB = VAB
         self.neighborCutoffDist = neighborCutoffDist
-   
-    def latticeMatrix(self):
-        '''
-        Returns the lattice cell matrix using lattice parameters
-        '''
-        [a, b, c, alpha, beta, gamma] = self.latticeParameters
-        cell = np.array([[ a                , 0                , 0],
-                         [ b * np.cos(gamma), b * np.sin(gamma), 0],
-                         [ c * np.cos(alpha), c * np.cos(beta) , c * np.sqrt(np.sin(alpha)**2 - np.cos(beta)**2)]]) # cell matrix
-        return cell
-    
-    def nElements(self):
-        '''
-        Returns number of elements of each element type in a unit cell
-        '''
+        
+        # number of elements
         length = len(self.elementTypes)
         nElements = np.zeros(length)
         for elementIndex in range(length):
             nElements[elementIndex] = np.count_nonzero(self.elementTypeIndexList == elementIndex)
-        return nElements
-    '''
-    def nSites(self, siteIndex):
-        Returns number of sites available in a unit cell
-        # TODO: Returns nSites for a siteIndex
-        nSites = len(np.where(self.elementTypeIndexList == siteIndex)[0])
+        self.nElements = nElements
         
-        SiteList = []
-        for key in self.species_to_sites:
+        # siteList
+        siteList = []
+        for key in self.speciesTypes:
             if key != 'empty':
-                SiteList.extend(self.species_to_sites[key])
-        SiteList = list(set(SiteList))
+                siteList.extend(self.speciesTypes[key])
+        siteList = list(set(siteList))
+        self.siteList = siteList
+        
+        # number of sites
         nSites = np.zeros(len(self.elementTypes))
         for elementTypeIndex, elementType in enumerate(self.elementTypes):
-            if elementType in SiteList:
+            if elementType in siteList:
                 nSites[elementTypeIndex] = len(np.where(self.elementTypeIndexList == elementTypeIndex)[0])
-        return nSites
+        self.nSites = nSites
+
+        # lattice cell matrix
+        [a, b, c, alpha, beta, gamma] = self.latticeParameters
+        cell = np.array([[ a                , 0                , 0],
+                         [ b * np.cos(gamma), b * np.sin(gamma), 0],
+                         [ c * np.cos(alpha), c * np.cos(beta) , c * np.sqrt(np.sin(alpha)**2 - np.cos(beta)**2)]]) # cell matrix
+        self.latticeMatrix = cell
+
+    # TODO: Is it necessary to provide a default value for cellSize?
+    def generateSites(self, elementTypeIndices, cellSize=np.array([1, 1, 1])):
+        '''
+        Returns systemElementIndices and coordinates of specified elements in a cell of size *cellSize*
+        '''
+        assert all(size > 0 for size in cellSize), 'Input size should always be greater than 0'
+        extractIndices = np.in1d(self.elementTypeIndexList, elementTypeIndices).nonzero()[0]
+        unitcellElementCoords = self.unitcellCoords[extractIndices]
+        numCells = np.prod(cellSize)
+        nSites = len(unitcellElementCoords)
+        unitcellElementIndexList = np.arange(nSites)
+        unitcellElementTypeIndex = np.reshape(np.concatenate((np.asarray([[elementTypeIndex] * self.nElements[elementTypeIndex] 
+                                                                          for elementTypeIndex in elementTypeIndices]))), (nSites, 1))
+        unitCellElementTypeElementIndexList = np.reshape(np.concatenate(([np.arange(self.nElements[elementTypeIndex]) 
+                                                                          for elementTypeIndex in elementTypeIndices])), (nSites, 1))
+        cellCoordinates = np.zeros((numCells * nSites, 3))
+        # quantumIndex = [unitCellIndex, elementTypeIndex, elementIndex]
+        quantumIndexList = np.zeros((numCells * nSites, 5), dtype=int)
+        systemElementIndexList = np.zeros(numCells * nSites, dtype=int)
+        iUnitCell = 0
+        for xSize in range(cellSize[0]):
+            for ySize in range(cellSize[1]):
+                for zSize in range(cellSize[2]): 
+                    startIndex = iUnitCell * nSites
+                    endIndex = startIndex + nSites
+                    newCellSiteCoords = unitcellElementCoords + np.dot([xSize, ySize, zSize], self.latticeMatrix)
+                    cellCoordinates[startIndex:endIndex, :] = newCellSiteCoords 
+                    systemElementIndexList[startIndex:endIndex] = iUnitCell * nSites + unitcellElementIndexList
+                    quantumIndexList[startIndex:endIndex] = np.hstack((np.tile(np.array([xSize, ySize, zSize]), (nSites, 1)), unitcellElementTypeIndex, unitCellElementTypeElementIndexList))
+                    iUnitCell += 1
+        returnSites = returnValues()
+        returnSites.cellCoordinates = cellCoordinates
+        returnSites.quantumIndexList = quantumIndexList
+        returnSites.systemElementIndexList = systemElementIndexList
+        return returnSites
+    
+    def generateSystemElementIndex(self, systemSize, quantumIndex):
+        '''
+        Returns the systemElementIndex of the element
+        '''
+        unitCellIndex = quantumIndex[:3]
+        [elementTypeIndex, elementIndex] = quantumIndex[-2:]
+        nSites = self.nElements
+        nElementsPerUnitCell = np.sum(nSites)
+        systemElementIndex = (elementIndex + np.sum(nSites[:elementTypeIndex]) + unitCellIndex[2] * 
+                              nElementsPerUnitCell + unitCellIndex[1] * systemSize[2] + unitCellIndex[0] * 
+                              np.prod(systemSize[1:]) * nElementsPerUnitCell)   
+        return systemElementIndex
+
+class system(object):
     '''
+    defines the system we are working on
+    
+    Attributes:
+    size: An array (3 x 1) defining the system size in multiple of unit cells
+    '''
+    
+    def __init__(self, modelParameters, material, occupancy, elementTypeDelimiter):
+        '''
+        Return a system object whose size is *size*
+        '''
+        self.modelParameters = modelParameters
+        self.material = material
+        self.occupancy = occupancy
+        self.elementTypeDelimiter = elementTypeDelimiter
+
+    def neighborSites(self, bulkSites, centerSiteIndices, neighborSiteIndices, cutoffDist):
+        '''
+        Returns systemElementIndexMap and distances between center sites and its neighbor sites within cutoff 
+        distance
+        '''
+        neighborSiteCoords = bulkSites.cellCoordinates[neighborSiteIndices]
+        neighborSiteSystemElementIndexList = bulkSites.systemElementIndexList[neighborSiteIndices]
+        neighborSiteQuantumIndexList = bulkSites.quantumIndexList[neighborSiteIndices]
+        centerSiteCoords = bulkSites.cellCoordinates[centerSiteIndices]
+        centerSiteSystemElementIndexList = bulkSites.systemElementIndexList[centerSiteIndices]
+        centerSiteQuantumIndexList = bulkSites.quantumIndexList[centerSiteIndices]
+        
+        neighborSystemElementIndices = []
+        offsetList = [] 
+        neighborElementIndexList = []
+        numNeighbors = []
+        displacementVectorList = []
+        displacementList = []
+        for centerSiteIndex, centerCoord in enumerate(centerSiteCoords):
+            iDisplacementVectors = []
+            iDisplacements = []
+            iNeighborSiteIndexList = []
+            for neighborSiteIndex, neighborCoord in enumerate(neighborSiteCoords):
+                displacementVector = neighborCoord - centerCoord
+                if not self.modelParameters.pbc:
+                    displacement = np.linalg.norm(displacementVector)
+                else:
+                    # TODO: Use minimum image convention to compute the distance
+                    displacement = np.linalg.norm(displacementVector)
+                if 0 < displacement <= cutoffDist:
+                    iNeighborSiteIndexList.append(neighborSiteIndex)
+                    iDisplacementVectors.append(displacementVector)
+                    iDisplacements.append(displacement)
+            neighborSystemElementIndices.append(np.array([neighborSiteSystemElementIndexList[iNeighborSiteIndexList]]))
+            offsetList.append(centerSiteQuantumIndexList[centerSiteIndex, :3] - neighborSiteQuantumIndexList[iNeighborSiteIndexList, :3])
+            neighborElementIndexList.append(neighborSiteQuantumIndexList[iNeighborSiteIndexList, 4])
+            numNeighbors.append(len(iNeighborSiteIndexList))
+            displacementVectorList.append(np.asarray(iDisplacementVectors))
+            displacementList.append(iDisplacements)
+        # TODO: Avoid conversion and initialize the object beforehand
+        neighborSystemElementIndices = np.asarray(neighborSystemElementIndices)
+        systemElementIndexMap = np.array([centerSiteSystemElementIndexList, neighborElementIndexList])
+        offsetList = np.asarray(offsetList)
+        elementIndexMap = np.array([centerSiteQuantumIndexList[:,4], neighborElementIndexList])
+        numNeighbors = np.asarray(numNeighbors, int)
+        
+        returnNeighbors = returnValues()
+        returnNeighbors.systemElementIndexMap = systemElementIndexMap
+        returnNeighbors.offsetList = offsetList
+        returnNeighbors.elementIndexMap = elementIndexMap
+        returnNeighbors.numNeighbors = numNeighbors
+        # TODO: Avoid conversion and initialize the object beforehand
+        returnNeighbors.displacementVectorList = np.asarray(displacementVectorList)
+        returnNeighbors.displacementList = np.asarray(displacementList)
+        return returnNeighbors
     
     def numLocalNeighborSites(self, siteIndex, neighborCutoffDist, bulksize=np.array([2, 2, 2])):
         '''
@@ -120,140 +234,37 @@ class material(object):
             if 0 < hop_dist <= neighborCutoffDist:
                 numLocalNeighborSites += 1
         return numLocalNeighborSites
-    '''
-    def displacementList(self, siteIndex, bulksize=[2, 2, 2]):
-        sitecoords = self.generate_coords(siteIndex)
-        bulkcoords = self.generate_coords(siteIndex, bulksize)
-        neighborCutoffDist = self.neighborCutoffDist[self.elementTypes[siteIndex]]
-        numLocalNeighborSites = self.numLocalNeighborSites(siteIndex, neighborCutoffDist, bulksize)
-        totalNeighborSites = numLocalNeighborSites * self.nSites(siteIndex)
-        # TODO: shouldn't use any hopdist_critical parameter at all. It should be handled with an offset array for
-        # all sites in a unit cell
-        hopdist_critical  = (self.hopdist_basal + self.hopdist_c_direction) / 2 
 
-        # Initialization
-        local_nn_coords = np.zeros((numLocalNeighborSites, 3))
-        local_disp = np.zeros((numLocalNeighborSites, 3))
-        nn_coords  = np.zeros((totalNeighborSites, 3)) # nearest neighbor coordinates
-        displacementList = np.zeros((totalNeighborSites, 3))
-                 
-        # fetch all nearest neighbor coordinates
-        for site, center in enumerate(sitecoords):
-            index = 0
-            for nn_coord in bulkcoords:
-                displacement = nn_coord - center
-                hop_dist = np.linalg.norm(displacement)
-                if 0 < hop_dist <= neighborCutoffDist:
-                    # TODO: This is very specific to the hematite system expecting only one c-direction hop
-                    if hop_dist < hopdist_critical: # hop in c-direction
-                        local_nn_coords[-1] = nn_coord
-                        local_disp[-1] = displacement
-                    else:
-                        local_nn_coords[index] = nn_coord
-                        local_disp[index] = displacement
-                        index += 1
-            startIndex = numLocalNeighborSites * site
-            endIndex = startIndex + numLocalNeighborSites
-            displacementList[startIndex:endIndex] = local_disp
-            nn_coords[startIndex:endIndex] = local_nn_coords
-        return returnValues(displacementList, nn_coords)
-    '''
-    
-class returnValues(object):
-    '''
-    Returns the values of displacement list and respective coordinates in an object
-    '''
-    pass
-
-class system(object):
-    '''
-    defines the system we are working on
-    
-    Attributes:
-    size: An array (3 x 1) defining the system size in multiple of unit cells
-    '''
-    
-    def __init__(self, modelParameters, material, occupancy):
-        '''
-        Return a system object whose size is *size*
-        '''
-        self.modelParameters = modelParameters
-        self.material = material
-        self.occupancy = occupancy
-    
-    # TODO: Is it necessary to provide a default value for cellSize?
-    def generateCoords(self, elementTypeIndices, cellSize=np.array([1, 1, 1])):
-        '''
-        Returns systemElementIndices and coordinates of specified elements in a cell of size *cellSize*
-        '''
-        assert all(size > 0 for size in cellSize), 'Input size should always be greater than 0'
-        extractIndices = np.in1d(self.material.elementTypeIndexList, elementTypeIndices).nonzero()[0]
-        unitcellElementCoords = self.material.unitcellCoords[extractIndices]
-        numCells = np.prod(cellSize)
-        nSites = len(unitcellElementCoords)
-        unitcellElementIndexList = np.arange(nSites)
-        cellCoordinates = np.zeros((numCells * nSites, 3))
-        systemElementIndexList = np.zeros(numCells * nSites, dtype=int)
-        iUnitCell = 0
-        for xSize in range(cellSize[0]):
-            for ySize in range(cellSize[1]):
-                for zSize in range(cellSize[2]):          
-                    startIndex = iUnitCell * nSites
-                    endIndex = startIndex + nSites
-                    newCellSiteCoords = unitcellElementCoords + np.dot([xSize, ySize, zSize], 
-                                                                       self.material.latticeMatrix())
-                    cellCoordinates[startIndex:endIndex, :] = newCellSiteCoords 
-                    systemElementIndexList[startIndex:endIndex] = iUnitCell * nSites + unitcellElementIndexList 
-                    iUnitCell += 1
-        returnCoords = returnValues()
-        returnCoords.cellCoordinates = cellCoordinates
-        returnCoords.systemElementIndexList = systemElementIndexList
-        return returnCoords
-    
-    def neighborSites(self, bulkSiteCoords, bulkSystemElementIndices, centerSiteCoords, centerSystemElementIndices, 
-                      cutoffDist):
-        '''
-        Returns systemElementIndexMap and distances between center sites and its neighbor sites within cutoff 
-        distance
-        '''
-        neighborSystemElementIndices = []
-        displacementList = []
-        for centerCoord in centerSiteCoords:
-            iNeighborSystemElementIndices = []
-            iDisplacements = []
-            for neighborIndex, neighborCoord in enumerate(bulkSiteCoords):
-                displacementVector = neighborCoord - centerCoord
-                if not self.modelParameters.pbc:
-                    displacement = np.linalg.norm(displacementVector)
-                else:
-                    # TODO: Use minimum image convention to compute the distance
-                    displacement = np.linalg.norm(displacementVector)
-                if 0 < displacement <= cutoffDist:
-                    iNeighborSystemElementIndices.append(bulkSystemElementIndices[neighborIndex])
-                    iDisplacements.append(displacementVector)
-            neighborSystemElementIndices.append(iNeighborSystemElementIndices)
-            displacementList.append(np.asarray(iDisplacements))
-        # TODO: Avoid conversion and initialize the object beforehand
-        neighborSystemElementIndices = np.asarray(neighborSystemElementIndices)
-        systemElementIndexMap = np.array([centerSystemElementIndices, neighborSystemElementIndices])
-        returnNeighbors = returnValues()
-        returnNeighbors.systemElementIndexMap = systemElementIndexMap
-        # TODO: Avoid conversion and initialize the object beforehand
-        returnNeighbors.displacementList = np.asarray(displacementList)
-        return returnNeighbors
-
-    def config(self):
+    def config(self, systemSize, chargeTypes, occupancy, elementTypeDelimiter):
         '''
         Generates the configuration array for the system 
         '''
-        unitcellCoords = self.material.unitcellCoords
-        unitcellElementTypeIndexList = material.elementTypeIndexList
-        # Initialization
-        positions = np.zeros((np.append(self.size, len(unitcellElementTypeIndexList))))
-        charge = positions
+        elementTypeIndices = range(len(self.material.elementTypes))
+        systemCoords = self.material.generateCoords(elementTypeIndices, systemSize)
+        positions = systemCoords.cellCoordinates
+        systemElementIndexList = systemCoords.systemElementIndexList
+        unitCellChargeList = np.array([chargeTypes[elementTypeIndex] for elementTypeIndex in 
+                                       self.material.elementTypeIndexList])
+        numCells = np.prod(systemSize)
+        chargeList = np.tile(unitCellChargeList, numCells)
+        chargeTypeKeys = chargeTypes.keys()
+        SiteList = []
+        for key in self.material.speciesTypes:
+            if key != 'empty':
+                SiteList.extend(self.material.speciesTypes[key])
+        SiteList = list(set(SiteList))
+        shellChargeTypeKeys = [key for key in chargeTypeKeys if key not in SiteList]
+        for chargeTypeKey in shellChargeTypeKeys:
+            [centerType, neighborType] = chargeTypeKey.split(elementTypeDelimiter)
+            nShell = neighborType[-1:]
+            neighborType = neighborType[:-1]
+            bulkCoords = self.material.generateCoords(elementTypeIndices, cellSize)
+            neighborSystemElementIndices = self.neighborSites(bulkSiteCoords, bulkSystemElementIndices, centerSiteCoords, centerSystemElementIndices, cutoffDist) 
         returnConfig = returnValues()
         returnConfig.positions = positions
-        returnConfig.charge = charge
+        returnConfig.chargeList = chargeList
+        returnConfig.systemElementIndexList = systemElementIndexList
+        returnConfig.occupancy = occupancy
         return returnConfig
 
 class run(object):
@@ -411,3 +422,9 @@ class plot(object):
         plt.ylabel('MSD (Angstrom**2)')
         #plt.show()
         #plt.savefig(figname)
+
+class returnValues(object):
+    '''
+    Returns the values of displacement list and respective coordinates in an object
+    '''
+    pass
