@@ -24,7 +24,7 @@ index_pos = np.loadtxt(inputFileLocation)
 unitcellCoords = index_pos[:, 1:]
 elementTypeIndexList = index_pos[:,0]
 pos_Fe = unitcellCoords[elementTypeIndexList==0, :]
-chargeTypes = {'Fe': +1.11, 'O': -0.74, 'Fe:O1': -0.5}
+chargeTypes = {'Fe': +1.11, 'O': -0.74, 'Fe:O': [-0.8, -0.5]}
 elementTypeDelimiter = ':'
 a = 5.038 # lattice constant along x-axis
 b = 5.038 # lattice constant along y-axis
@@ -48,9 +48,11 @@ electronQuantumIndices = np.array([[1, 1, 1, electronSiteElementTypeIndex, eleme
 electronSiteIndices = [hematite.generateSystemElementIndex(systemSize, quantumIndex) 
                        for quantumIndex in electronQuantumIndices]
 occupancy = {'Fe': np.asarray(electronSiteIndices, int)}
+
 hematiteSystem = system(hematiteParameters, hematite, occupancy, elementTypeDelimiter)
 hematiteSystem.generateNeighborList()
-print hematiteSystem.neighborList['E'][0].systemElementIndexMap
+# print hematiteSystem.neighborList['E'][0].systemElementIndexMap
+print hematiteSystem.config(occupancy)
 '''
 elementTypeIndices = range(len(elementTypes))
 bulkSites = hematite.generateCoords(elementTypeIndices, systemSize)

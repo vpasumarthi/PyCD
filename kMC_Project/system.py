@@ -61,7 +61,7 @@ class material(object):
             endIndex = startIndex + len(elementUnitCellCoords)
             self.unitcellCoords[startIndex:endIndex] = elementUnitCellCoords[elementUnitCellCoords[:,2].argsort()]
             startIndex = endIndex
-        self.elementTypeIndexList = elementTypeIndexList
+        self.elementTypeIndexList = elementTypeIndexList.astype(int)
         self.chargeTypes = chargeTypes
         self.latticeParameters = latticeParameters
         self.vn = vn
@@ -166,11 +166,19 @@ class system(object):
         
         # total number of unit cells
         self.numCells = np.prod(self.modelParameters.systemSize)
+        
         # generate all sites in the system
         elementTypeIndices = range(len(self.material.elementTypes))
         bulkSites = self.material.generateSites(elementTypeIndices, self.modelParameters.systemSize)
         self.bulkSites = bulkSites
         
+        # generate lattice charge list
+        unitCellChargeList = np.array([self.material.chargeTypes[self.material.elementTypes[elementTypeIndex]] 
+                                       for elementTypeIndex in self.material.elementTypeIndexList])
+        self.latticeChargeList = np.tile(unitCellChargeList, self.numCells)
+    
+    # TODO: Is it better to shift neighborSites method to material class and add generateNeighborList method to 
+    # __init__ function of system class?   
     def neighborSites(self, bulkSites, centerSiteIndices, neighborSiteIndices, cutoffDistLimits):
         '''
         Returns systemElementIndexMap and distances between center sites and its neighbor sites within cutoff 
@@ -239,7 +247,6 @@ class system(object):
         elementTypes = self.material.elementTypes
         systemSize = self.modelParameters.systemSize
         for cutoffDistKey in self.material.neighborCutoffDist.keys():
-            print cutoffDistKey
             cutoffDistList = self.material.neighborCutoffDist[cutoffDistKey]
             neighborListCutoffDistKey = []
             if cutoffDistKey is not 'E':
@@ -266,32 +273,33 @@ class system(object):
         self.neighborList = neighborList
         return neighborList
 
-    def chargeConfig(self, systemSize, chargeTypes, occupancy):
+    def chargeConfig(self, occupancy):
         '''
         Returns charge distribution of the current configuration
         '''
-        unitCellChargeList = np.array([chargeTypes[elementTypeIndex] for elementTypeIndex in 
-                                       self.material.elementTypeIndexList])
-        chargeList = np.tile(unitCellChargeList, self.numCells)
+        chargeList = self.latticeChargeList
+        chargeTypes = self.material.chargeTypes
         chargeTypeKeys = chargeTypes.keys()
-        shellChargeTypeKeys = [key for key in chargeTypeKeys if key not in self.SiteList]
+        shellChargeTypeKeys = [key for key in chargeTypeKeys if key not in self.material.siteList]
         for chargeTypeKey in shellChargeTypeKeys:
-            [centerElementType, neighborElementType] = chargeTypeKey.split(self.elementTypeDelimiter)
-            nShell = neighborElementType[-1:]
-            neighborElementType = neighborElementType[:-1]
-            neighborElementTypeSites = self.neighborList(centerElementType, neighborElementType, nShell)
-            chargeList[chargeTypeKeySystemElementIndices] = chargeTypes[chargeTypeKey]
+            centerElementType = chargeTypeKey.split(self.elementTypeDelimiter)[0]
+            neighborElementTypeSites = self.neighborList[chargeTypeKey]
+            for shellIndex, chargeValue in enumerate(chargeTypes[chargeTypeKey]):
+                chargeTypeKeySystemElementIndexMap = neighborElementTypeSites[shellIndex].systemElementIndexMap
+                extractIndices = np.in1d(chargeTypeKeySystemElementIndexMap[0], occupancy[centerElementType]).nonzero()[0]
+                chargeTypeKeySystemElementIndices = np.unique(np.concatenate((chargeTypeKeySystemElementIndexMap[1][extractIndices])))
+                chargeList[chargeTypeKeySystemElementIndices] = chargeValue
         return chargeList
 
-    def config(self, systemSize, chargeTypes, occupancy, elementTypeDelimiter):
+    def config(self, occupancy):
         '''
         Generates the configuration array for the system 
         '''
         elementTypeIndices = range(len(self.material.elementTypes))
-        systemSites = self.material.generateSites(elementTypeIndices, systemSize)
+        systemSites = self.material.generateSites(elementTypeIndices, self.modelParameters.systemSize)
         positions = systemSites.cellCoordinates
         systemElementIndexList = systemSites.systemElementIndexList
-        chargeList = self.chargeConfig(systemSize, chargeTypes, occupancy, elementTypeDelimiter)
+        chargeList = self.chargeConfig(occupancy)
         
         returnConfig = returnValues()
         returnConfig.positions = positions
