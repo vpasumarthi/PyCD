@@ -8,7 +8,7 @@ stepInterval = 1E+00
 nsteps_msd = 1E+02
 ndisp_msd = 1E+02
 binsize = 1E+01
-systemSize = np.array([10, 10, 10])
+systemSize = np.array([3, 3, 3])
 pbc = 1
 gui = 0
 kB = 8.617E-05 # Boltzmann constant in eV/K
@@ -36,24 +36,29 @@ latticeParameters = [a, b, c, alpha, beta, gamma]
 vn = 1.85E+13 # typical frequency for nuclear motion in (1/sec)
 lambdaValues = {'Fe:Fe': [1.74533, 1.88683]} # reorganization energy in eV for basal plane, c-direction
 VAB = {'Fe:Fe': [0.184, 0.028]} # electronic coupling matrix element in eV for basal plane, c-direction
-neighborCutoffDist = {'Fe:Fe': [2.971, 2.901], 'O:O': [4.0], 'Fe:O': [1.946, 2.116], 'E': [20.0], 
-                      'tol': [0.01]} # Basal: 2.971, C: 2.901
+neighborCutoffDist = {'Fe:Fe': [2.971, 2.901], 'O:O': [4.0], 'Fe:O': [1.946, 2.116], 'E': [20.0]} # Basal: 2.971, C: 2.901
+neighborCutoffDistTol = 0.01
 
 hematite = material(name, elementTypes, speciesTypes, unitcellCoords, elementTypeIndexList, chargeTypes, 
-                    latticeParameters, vn, lambdaValues, VAB, neighborCutoffDist)
+                    latticeParameters, vn, lambdaValues, VAB, neighborCutoffDist, neighborCutoffDistTol)
 
-electronQuantumIndices = np.array([[0, 0, 0, 0, elementSite] for elementSite in np.arange(12)]) 
+electronSiteElementTypeIndex = elementTypes.index(speciesTypes['electron'][0])
+# TODO: Automate the choice of sites given number of electron and hole species
+electronQuantumIndices = np.array([[1, 1, 1, electronSiteElementTypeIndex, elementSite] for elementSite in np.arange(2)])
 electronSiteIndices = [hematite.generateSystemElementIndex(systemSize, quantumIndex) 
                        for quantumIndex in electronQuantumIndices]
-occupancy = {'Fe': np.array([electronSiteIndices])}
+occupancy = {'Fe': np.asarray(electronSiteIndices, int)}
 hematiteSystem = system(hematiteParameters, hematite, occupancy, elementTypeDelimiter)
-
+hematiteSystem.generateNeighborList()
+print hematiteSystem.neighborList['E'][0].systemElementIndexMap
+'''
 elementTypeIndices = range(len(elementTypes))
 bulkSites = hematite.generateCoords(elementTypeIndices, systemSize)
 bulkSiteCoords = bulkSites.cellCoordinates
 bulkSystemElementIndices = bulkSites.systemElementIndexList
 bulkSitesQuantumIndexList = bulkSites.quantumIndexList
 print bulkSitesQuantumIndexList
+'''
 '''
 nElementSites = len(np.in1d(elementTypeIndexList, elementTypeIndices).nonzero()[0])
 startIndex = np.prod(systemSize[1:]) * nElementSites
