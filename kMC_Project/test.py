@@ -24,7 +24,7 @@ index_pos = np.loadtxt(inputFileLocation)
 unitcellCoords = index_pos[:, 1:]
 elementTypeIndexList = index_pos[:,0]
 pos_Fe = unitcellCoords[elementTypeIndexList==0, :]
-chargeTypes = {'Fe': +1.11, 'O': -0.74, 'Fe:O': [-0.8, -0.5]}
+chargeTypes = {'Fe': +1.11, 'O': -0.74, 'Fe0': +1.5, 'Fe:O': [-0.8, -0.5]}
 #chargeTypes = [['Fe', +1.11], ['O', -0.74], ['Fe:O', [-0.8, -0.5]]]
 elementTypeDelimiter = ':'
 a = 5.038 # lattice constant along x-axis

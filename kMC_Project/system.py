@@ -321,7 +321,16 @@ class system(object):
         chargeList = self.latticeChargeList
         chargeTypes = self.material.chargeTypes
         chargeTypeKeys = chargeTypes.keys()
-        shellChargeTypeKeys = [key for key in chargeTypeKeys if key not in self.material.siteList]
+        siteChargeTypeKeys = [key for key in chargeTypeKeys if key not in self.material.siteList if '0' in key]
+        for chargeKeyType in siteChargeTypeKeys:
+            centerSiteElementType = chargeKeyType.replace('0','')
+            for speciesType in self.material.elementTypeSpeciesMap[centerSiteElementType]:
+                assert speciesType in self.occupancy.keys(), ('Invalid definition of charge type \'' + str(chargeKeyType) + '\', \'' + 
+                                                              str(speciesType) + '\' species does not exist in this configuration') 
+                centerSiteSystemElementIndices = self.occupancy[speciesType]
+                chargeList[centerSiteSystemElementIndices] = chargeTypes[chargeKeyType]
+        
+        shellChargeTypeKeys = [key for key in chargeTypeKeys if key not in self.material.siteList if '0' not in key]
         for chargeTypeKey in shellChargeTypeKeys:
             centerSiteElementType = chargeTypeKey.split(self.material.elementTypeDelimiter)[0]
             neighborElementTypeSites = self.neighborList[chargeTypeKey]
