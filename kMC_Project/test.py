@@ -26,7 +26,6 @@ elementTypeIndexList = index_pos[:,0]
 pos_Fe = unitcellCoords[elementTypeIndexList==0, :]
 chargeTypes = {'Fe': +1.11, 'O': -0.74, 'Fe0': +1.5, 'Fe:O': [-0.8, -0.5]}
 #chargeTypes = [['Fe', +1.11], ['O', -0.74], ['Fe:O', [-0.8, -0.5]]]
-elementTypeDelimiter = ':'
 a = 5.038 # lattice constant along x-axis
 b = 5.038 # lattice constant along y-axis
 c = 13.772 # lattice constant along z-axis
@@ -41,10 +40,13 @@ VAB = {'Fe:Fe': [0.184, 0.028]} # electronic coupling matrix element in eV for b
 #VAB = ['Fe:Fe', [0.184, 0.028]] # electronic coupling matrix element in eV for basal plane, c-direction
 neighborCutoffDist = {'Fe:Fe': [2.971, 2.901], 'O:O': [4.0], 'Fe:O': [1.946, 2.116], 'E': [20.0]} # Basal: 2.971, C: 2.901
 neighborCutoffDistTol = 0.01
+elementTypeDelimiter = ':'
+# TODO: Value for hematite might differ
+epsilon0 = 8.854E-12 # vacuum permittivity in F.m-1
 
 hematite = material(name, elementTypes, speciesTypes, unitcellCoords, elementTypeIndexList, chargeTypes, 
                     latticeParameters, vn, lambdaValues, VAB, neighborCutoffDist, neighborCutoffDistTol, 
-                    elementTypeDelimiter)
+                    elementTypeDelimiter, epsilon0)
 
 electronSiteElementTypeIndex = elementTypes.index(speciesTypes['electron'][0])
 # TODO: Automate the choice of sites given number of electron and hole species

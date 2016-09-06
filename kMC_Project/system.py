@@ -5,6 +5,7 @@ code to compute msd of random walk of single electron in 3D hematite lattice str
 '''
 import numpy as np
 from collections import OrderedDict
+from copy import deepcopy
 
 class modelParameters(object):
     '''
@@ -45,7 +46,7 @@ class material(object):
     
     def __init__(self, name, elementTypes, speciesTypes, unitcellCoords, elementTypeIndexList, chargeTypes, 
                  latticeParameters, vn, lambdaValues, VAB, neighborCutoffDist, neighborCutoffDistTol, 
-                 elementTypeDelimiter):
+                 elementTypeDelimiter, epsilon0):
         '''
         Return an material object whose name is *name* 
         '''
@@ -71,6 +72,7 @@ class material(object):
         self.neighborCutoffDist = neighborCutoffDist
         self.neighborCutoffDistTol = neighborCutoffDistTol
         self.elementTypeDelimiter = elementTypeDelimiter
+        self.epsilon0 = epsilon0
         
         # number of elements
         length = len(self.elementTypes)
@@ -405,15 +407,35 @@ class run(object):
         
         # total number of species
         self.totalSpecies = np.sum(self.nSpecies.values()) - self.nSpecies['empty']
+    
+    def generateDistanceList(self, config):
+        # Electrostatic interaction neighborlist:
+        elecNeighborListSystemElementIndexMap = self.system.neighborList['E'][0].systemElementIndexMap
+        self.elecNeighborListSystemElementIndexMap = elecNeighborListSystemElementIndexMap
+        
+        # Distance List
+        positions = config.positions
+        distanceList = deepcopy(elecNeighborListSystemElementIndexMap[1])
+        positionList0 = positions[elecNeighborListSystemElementIndexMap[0]]
+        for index, position in enumerate(positionList0):
+            positionList1 = positions[elecNeighborListSystemElementIndexMap[1][index]]
+            distanceList[index] = np.linalg.norm(positionList1 - position, axis=1)
+        self.distanceList = distanceList
+        self.coeffDistanceList = (1/(4 * np.pi * self.material.epsilon0)) * self.distanceList
 
     def elec(self, occupancy):
         '''
         Subroutine to compute the electrostatic interaction energies
         '''
-        elec = 0
+        configChargeList = self.system.chargeConfig(occupancy)
+        elecNeighborCharge2List = deepcopy(self.elecNeighborListSystemElementIndexMap[1])
+        for index, centerElementCharge in enumerate(configChargeList):
+            elecNeighborCharge2List[index] = centerElementCharge * configChargeList[self.elecNeighborListSystemElementIndexMap[1][index]] 
+        individualInteractionList = np.multiply(elecNeighborCharge2List, self.coeffDistanceList)
+        elec = np.sum(np.concatenate(individualInteractionList))
         return elec
         
-    def delG0(self, currentStateOccupancy, newStateOccupancy):
+    def delG0(self, positions, currentStateOccupancy, newStateOccupancy):
         '''
         Subroutine to compute the difference in free energies between initial and final states of the system
         '''
@@ -472,6 +494,7 @@ class run(object):
         pathIndex = 0
         speciesSystemElementIndices = np.concatenate((currentStateOccupancy.values()))
         config = self.system.config(currentStateOccupancy)
+        self.generateDistanceList(config)
         # TODO: may have to use speciesSystemElementIndices.tolist()
         speciesPositionListOld = config.positions[speciesSystemElementIndices]
         for traj in range(nTraj):
@@ -484,7 +507,7 @@ class run(object):
                 for newStateIndex, newStateOccupancy in enumerate(newStates.newStateOccupancyList):
                     hopElementType = newStates.hopElementType[newStateIndex]
                     hopDistType = newStates.hopDistType[newStateIndex]
-                    delG0 = self.delG0(currentStateOccupancy, newStateOccupancy)
+                    delG0 = self.delG0(config, currentStateOccupancy, newStateOccupancy)
                     lambdaValue = self.lambdaValues[hopElementType][hopDistType]
                     VAB = self.VAB[hopElementType][hopDistType]
                     delGs = ((lambdaValue + delG0) ** 2 / (4 * lambdaValue)) - VAB
