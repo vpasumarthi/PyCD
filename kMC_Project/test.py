@@ -1,20 +1,23 @@
-from system import modelParameters, material, system, run
+from system import modelParameters, material, system, run, analysis
 import numpy as np
 
 T = 300 # Temperature in K
-nTraj = 1E+00
-kmcsteps = 1E+01
+nTraj = 2E+00
+kmcSteps = 1E+02
 stepInterval = 1E+00
-nsteps_msd = 1E+02
-ndisp_msd = 1E+02
-binsize = 1E+01
+nStepsMSD = 5E+00
+nDispMSD = 5E+00
+binsize = 1E+00
+maxBinSize = 1 # ns
 systemSize = np.array([3, 3, 3])
 pbc = 1
 gui = 0
 kB = 8.617E-05 # Boltzmann constant in eV/K
+reprTime = 'ns'
+reprDist = 'Angstrom'
 
-hematiteParameters = modelParameters(T, nTraj, kmcsteps, stepInterval, nsteps_msd, ndisp_msd, binsize, systemSize, 
-                                     pbc, gui, kB)
+hematiteParameters = modelParameters(T, nTraj, kmcSteps, stepInterval, nStepsMSD, nDispMSD, binsize, maxBinSize, 
+                                     systemSize, pbc, gui, kB, reprTime, reprDist)
 
 name = 'Fe2O3'
 elementTypes = ['Fe', 'O']
@@ -62,4 +65,7 @@ hematiteSystem.generateNeighborList()
 #print hematiteSystem.config(occupancy)
 
 hematiteRun = run(hematiteParameters, hematite, hematiteSystem)
-print hematiteRun.doKMCSteps(randomSeed=2)
+timeNpath = hematiteRun.doKMCSteps(randomSeed=2)
+
+hematiteAnalysis = analysis(hematiteParameters, timeNpath)
+msdData = hematiteAnalysis.computeMSD(timeNpath)

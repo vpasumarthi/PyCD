@@ -11,23 +11,26 @@ class modelParameters(object):
     '''
     Definitions of all model parameters that need to be passed on to other classes
     '''
-    def __init__(self, T, nTraj, kmcsteps, stepInterval, nsteps_msd, ndisp_msd, binsize, 
-                 systemSize=np.array([10, 10, 10]), pbc=1, gui=0, kB=8.617E-05):
+    def __init__(self, T, nTraj, kmcSteps, stepInterval, nStepsMSD, nDispMSD, binsize, maxBinSize, 
+                 systemSize=np.array([10, 10, 10]), pbc=1, gui=0, kB=8.617E-05, reprTime='ns', reprDist='Angstrom'):
         '''
         Definitions of all model parameters
         '''
         # TODO: Is it necessary/better to define these parameters in a dictionary?
         self.T = T
         self.nTraj = int(nTraj)
-        self.kmcsteps = int(kmcsteps)
+        self.kmcSteps = int(kmcSteps)
         self.stepInterval = int(stepInterval)
-        self.nsteps_msd = int(nsteps_msd)
-        self.ndisp_msd = int(ndisp_msd)
+        self.nStepsMSD = int(nStepsMSD)
+        self.nDispMSD = int(nDispMSD)
         self.binsize = binsize
+        self.maxBinSize = maxBinSize
         self.systemSize = systemSize
         self.pbc = pbc
         self.gui = gui
         self.kB = kB
+        self.reprTime = reprTime
+        self.reprDist = reprDist
         
 class material(object):
     '''
@@ -486,22 +489,24 @@ class run(object):
         import random as rnd
         rnd.seed(randomSeed)
         nTraj = self.modelParameters.nTraj
-        kmcsteps = self.modelParameters.kmcsteps
+        kmcSteps = self.modelParameters.kmcSteps
         stepInterval = self.modelParameters.stepInterval
         currentStateOccupancy = self.system.occupancy
         
-        timeNdisplacement = np.zeros(( nTraj * (np.floor(kmcsteps / stepInterval) + 1), self.totalSpecies + 1))
+        #timeNdisplacement = np.zeros(( nTraj * (np.floor(kmcSteps / stepInterval) + 1), self.totalSpecies + 1))
+        timeArray = np.zeros(nTraj * (np.floor(kmcSteps / stepInterval) + 1))
+        positionArray = np.zeros(( nTraj * (np.floor(kmcSteps / stepInterval) + 1), self.totalSpecies, 3))
         pathIndex = 0
         speciesSystemElementIndices = np.concatenate((currentStateOccupancy.values()))
         config = self.system.config(currentStateOccupancy)
         self.generateDistanceList(config)
         # TODO: may have to use speciesSystemElementIndices.tolist()
-        speciesPositionListOld = config.positions[speciesSystemElementIndices]
+        #speciesPositionListOld = config.positions[speciesSystemElementIndices]
         for traj in range(nTraj):
             pathIndex += 1
-            speciesDisplacementList = np.zeros(self.totalSpecies)
+            #speciesDisplacementList = np.zeros(self.totalSpecies)
             kmcTime = 0
-            for step in range(kmcsteps):
+            for step in range(kmcSteps):
                 kList = []
                 newStates = self.generateNewStates(currentStateOccupancy)
                 for newStateIndex, newStateOccupancy in enumerate(newStates.newStateOccupancyList):
@@ -517,69 +522,79 @@ class run(object):
                 rand1 = rnd.random()
                 procIndex = np.min(np.where(kCumSum > rand1))
                 rand2 = rnd.random()
-                kmcTime += np.log(rand2) / kTotal
+                kmcTime -= np.log(rand2) / kTotal
                 currentStateOccupancy = newStates.newStateOccupancyList[procIndex]
                 config.chargeList = self.system.chargeConfig(currentStateOccupancy)
                 config.occupancy = currentStateOccupancy
                 if step % stepInterval == 0:
                     speciesSystemElementIndices = np.concatenate((currentStateOccupancy.values()))
                     # TODO: may have to use speciesSystemElementIndices.tolist()
-                    speciesPositionListNew = config.positions[speciesSystemElementIndices]
-                    speciesDisplacementList = np.linalg.norm(speciesPositionListNew - speciesPositionListOld, axis=1)
-                    speciesPositionListOld = speciesPositionListNew
-                    timeNdisplacement[pathIndex, :] = np.concatenate((np.array([kmcTime]), speciesDisplacementList))
+                    speciesPositionList = config.positions[speciesSystemElementIndices]
+                    #speciesPositionListNew = config.positions[speciesSystemElementIndices]
+                    #speciesDisplacementList = np.linalg.norm(speciesPositionListNew - speciesPositionListOld, axis=1)
+                    #speciesPositionListOld = speciesPositionListNew
+                    timeArray[pathIndex] = kmcTime
+                    positionArray[pathIndex] = speciesPositionList
+                    #timeNdisplacement[pathIndex, :] = np.concatenate((np.array([kmcTime]), speciesDisplacementList))
                     pathIndex += 1
-        return timeNdisplacement
+        #print timeArray
+        #print timeArray.shape
+        #print positionArray
+        #print positionArray.shape
+        timeNpath = np.empty(2, dtype=object)
+        timeNpath[:] = [timeArray, positionArray]
+        return timeNpath
+        #return timeNdisplacement
 
 class analysis(object):
     '''
     Post-simulation analysis methods
     '''
     
-    def __init__(self):
+    def __init__(self, modelParameters, timeNpath):
         '''
         
         '''
+        self.modelParameters = modelParameters
+        self.timeNpath = timeNpath
+        self.timeConversion = 1E+09 if self.modelParameters.reprTime is 'ns' else 1E+00 
+        self.distConversion = 1E-10 if self.modelParameters.reprDist is 'm' else 1E+00
         
-    def compute_sd(self, timeNdisplacement):
-        '''
-        Subroutine to compute the squared displacement of the trajectories
-        '''
-        # timeNdisplacement, not timeNpath
-        nsteps_msd = modelParameters.nsteps_msd
-        ndisp_msd = modelParameters.ndisp_msd
-        sec_to_ns = 1E+09
-        time = timeNdisplacement[:, 0] * sec_to_ns
-        path = timeNdisplacement[:, 1:]
-        sd_array = np.zeros((nsteps_msd * ndisp_msd, 2))
-        for timestep in range(1, nsteps_msd+1):
-                sum_sd_timestep = 0
-                for step in range(ndisp_msd):
-                        sd_timestep = sum((path[step + timestep] - path[step])**2)
-                        sd_array[(timestep-1) * ndisp_msd + step, 0] = time[step + timestep] - time[step]
-                        sd_array[(timestep-1) * ndisp_msd + step, 1] = sd_timestep
-                        sum_sd_timestep += sd_timestep
-        return sd_array
-    
-    def compute_msd(self, sd_array):
-        '''
-        subroutine to compute the mean squared displacement
-        '''
-        nsteps_msd = modelParameters.nsteps_msd
-        ndisp_msd = modelParameters.ndisp_msd
-        binsize = modelParameters.binsize
-        sd_array =  sd_array[sd_array[:, 0].argsort()] # sort sd_traj array by time column
-        sd_array[:,0] = np.floor(sd_array[:,0])
-        time_final = np.ceil(sd_array[nsteps_msd * ndisp_msd - 1, 0])
-        nbins = int(np.ceil(time_final / binsize)) + 1
-        time_array = np.arange(0, time_final+1, binsize) + 0.5 * binsize
+        self.nStepsMSD = self.modelParameters.nStepsMSD
+        self.nDispMSD = self.modelParameters.nDispMSD
+        self.nTraj = self.modelParameters.nTraj
+        self.kmcSteps = self.modelParameters.kmcSteps
 
-        msd_array = np.zeros((nbins, 2))
-        msd_array[:,0] = time_array
-        for ibin in range(nbins):
-                msd_array[ibin, 1] = np.mean(sd_array[sd_array[:,0] == ibin, 1])
-        return msd_array
-
+    def computeMSD(self, timeNpath):
+        '''
+        Returns the squared displacement of the trajectories
+        '''
+        time = timeNpath[0] * self.timeConversion
+        path = timeNpath[1] * self.distConversion
+        nSpecies = len(path[0])
+        timeNdisp2 = np.zeros((self.nTraj * (self.nStepsMSD * self.nDispMSD), nSpecies + 1))
+        for traj in range(self.nTraj):
+            for timestep in range(1, self.nStepsMSD + 1):
+                for step in range(self.nDispMSD):
+                    headStart = traj * (self.kmcSteps + 1)
+                    workingRow = traj * (self.nStepsMSD * self.nDispMSD) + (timestep-1) * self.nDispMSD + step 
+                    timeNdisp2[workingRow, 0] = time[headStart + step + timestep] - time[headStart + step]
+                    timeNdisp2[workingRow, 1:] = np.linalg.norm(path[headStart + step + timestep] - 
+                                                                path[headStart + step], axis=1)**2
+        minEndTime = np.min(time[range(self.kmcSteps, self.nTraj * (self.kmcSteps + 1), (self.kmcSteps + 1))])
+        print minEndTime
+        bins = range(0, minEndTime, self.modelParameters.binsize)
+        nBins = len(bins)
+        speciesMSDData = np.zeros((nBins, nSpecies + 1))
+        speciesMSDData[:, 0] = bins
+        timeArray = timeNdisp2[:, 0]
+        msdHistogram = np.histogram(timeArray, bins)
+        for iSpecies in range(nSpecies):
+            speciesMSDData[:, iSpecies + 1] = np.histogram(timeArray, bins, weights=timeNdisp2[:, iSpecies + 1]) / msdHistogram
+        msdData = np.zeros((nBins, 2))
+        msdData[:, 0] = bins[:-1] + 0.5 * self.modelParameters.binsize
+        msdData[:, 1] = np.mean(speciesMSDData[:, 1:], axis=1)
+        return msdData
     
 class plot(object):
     '''
