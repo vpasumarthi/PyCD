@@ -189,9 +189,12 @@ class material(object):
         quantumIndices[3] = np.min(np.where(nElementsPerUnitCellCumSum >= (unitcellElementIndex + 1)))
         quantumIndices[4] = unitcellElementIndex - np.sum(self.nElements[:quantumIndices[3]])
         nFilledUnitCells = (systemElementIndex - unitcellElementIndex) / nElementsPerUnitCell
-        quantumIndices[2] = nFilledUnitCells % systemSize[2] - 1
-        quantumIndices[1] = (nFilledUnitCells / systemSize[2]) % systemSize[1]
-        quantumIndices[0] = (nFilledUnitCells / np.prod(systemSize[1:])) % systemSize[0]
+        for index in range(3):
+            quantumIndices[index] = nFilledUnitCells % systemSize[index]
+            nFilledUnitCells /= systemSize[index] 
+        #quantumIndices[2] = nFilledUnitCells % systemSize[2] - 1
+        #quantumIndices[1] = (nFilledUnitCells / systemSize[2]) % systemSize[1]
+        #quantumIndices[0] = (nFilledUnitCells / np.prod(systemSize[1:])) % systemSize[0]
         return quantumIndices
     
 class system(object):
@@ -353,7 +356,9 @@ class system(object):
                             neighborElementTypeIndex = [self.material.elementTypes.index(chargeTypeKey.split(self.material.elementTypeDelimiter)[1])]
                             neighborElementIndex = [neighborElementIndexMap[1][siteElementIndex][neighborIndex]]
                             neighborQuantumIndices = neighborUnitCellIndex + neighborElementTypeIndex + neighborElementIndex
+                            #print neighborQuantumIndices
                             neighborSystemElementIndex = self.material.generateSystemElementIndex(self.modelParameters.systemSize, neighborQuantumIndices)
+                            #print neighborSystemElementIndex
                             neighborSystemElementIndices.append(neighborSystemElementIndex)
                         chargeList[neighborSystemElementIndices] = chargeValue
         return chargeList
@@ -493,7 +498,6 @@ class run(object):
         stepInterval = self.modelParameters.stepInterval
         currentStateOccupancy = self.system.occupancy
         
-        #timeNdisplacement = np.zeros(( nTraj * (np.floor(kmcSteps / stepInterval) + 1), self.totalSpecies + 1))
         timeArray = np.zeros(nTraj * (np.floor(kmcSteps / stepInterval) + 1))
         positionArray = np.zeros(( nTraj * (np.floor(kmcSteps / stepInterval) + 1), self.totalSpecies, 3))
         pathIndex = 0
@@ -501,10 +505,8 @@ class run(object):
         config = self.system.config(currentStateOccupancy)
         self.generateDistanceList(config)
         # TODO: may have to use speciesSystemElementIndices.tolist()
-        #speciesPositionListOld = config.positions[speciesSystemElementIndices]
         for traj in range(nTraj):
             pathIndex += 1
-            #speciesDisplacementList = np.zeros(self.totalSpecies)
             kmcTime = 0
             for step in range(kmcSteps):
                 kList = []
@@ -530,21 +532,12 @@ class run(object):
                     speciesSystemElementIndices = np.concatenate((currentStateOccupancy.values()))
                     # TODO: may have to use speciesSystemElementIndices.tolist()
                     speciesPositionList = config.positions[speciesSystemElementIndices]
-                    #speciesPositionListNew = config.positions[speciesSystemElementIndices]
-                    #speciesDisplacementList = np.linalg.norm(speciesPositionListNew - speciesPositionListOld, axis=1)
-                    #speciesPositionListOld = speciesPositionListNew
                     timeArray[pathIndex] = kmcTime
                     positionArray[pathIndex] = speciesPositionList
-                    #timeNdisplacement[pathIndex, :] = np.concatenate((np.array([kmcTime]), speciesDisplacementList))
                     pathIndex += 1
-        #print timeArray
-        #print timeArray.shape
-        #print positionArray
-        #print positionArray.shape
         timeNpath = np.empty(2, dtype=object)
         timeNpath[:] = [timeArray, positionArray]
         return timeNpath
-        #return timeNdisplacement
 
 class analysis(object):
     '''
@@ -581,19 +574,18 @@ class analysis(object):
                     timeNdisp2[workingRow, 0] = time[headStart + step + timestep] - time[headStart + step]
                     timeNdisp2[workingRow, 1:] = np.linalg.norm(path[headStart + step + timestep] - 
                                                                 path[headStart + step], axis=1)**2
-        minEndTime = np.min(time[range(self.kmcSteps, self.nTraj * (self.kmcSteps + 1), (self.kmcSteps + 1))])
-        print minEndTime
-        bins = range(0, minEndTime, self.modelParameters.binsize)
-        nBins = len(bins)
-        speciesMSDData = np.zeros((nBins, nSpecies + 1))
-        speciesMSDData[:, 0] = bins
         timeArray = timeNdisp2[:, 0]
-        msdHistogram = np.histogram(timeArray, bins)
+        minEndTime = np.min(timeArray[np.arange(self.nStepsMSD * self.nDispMSD - 1, self.nTraj * (self.nStepsMSD * self.nDispMSD), self.nStepsMSD * self.nDispMSD)])  
+        bins = np.arange(0, minEndTime, self.modelParameters.binsize)
+        nBins = len(bins) - 1
+        speciesMSDData = np.zeros((nBins, nSpecies))
+        msdHistogram, binEdges = np.histogram(timeArray, bins)
         for iSpecies in range(nSpecies):
-            speciesMSDData[:, iSpecies + 1] = np.histogram(timeArray, bins, weights=timeNdisp2[:, iSpecies + 1]) / msdHistogram
+            iSpeciesHist, binEdges = np.histogram(timeArray, bins, weights=timeNdisp2[:, iSpecies + 1])
+            speciesMSDData[:, iSpecies] = iSpeciesHist / msdHistogram
         msdData = np.zeros((nBins, 2))
         msdData[:, 0] = bins[:-1] + 0.5 * self.modelParameters.binsize
-        msdData[:, 1] = np.mean(speciesMSDData[:, 1:], axis=1)
+        msdData[:, 1] = np.mean(speciesMSDData, axis=1)
         return msdData
     
 class plot(object):
@@ -601,21 +593,22 @@ class plot(object):
     
     '''
     
-    def __init__(self):
+    def __init__(self, msdData):
         '''
         
         '''
-    
-    def plot(self, msd):
+        self.msdData = msdData
+
+    def plot(self):
         '''
         
         '''
         import matplotlib.pyplot as plt
         plt.figure(1)
-        plt.plot(msd[:,0], msd[:,1])
+        plt.plot(self.msdData[:,0], self.msdData[:,1])
         plt.xlabel('Time (ns)')
         plt.ylabel('MSD (Angstrom**2)')
-        #plt.show()
+        plt.show()
         #plt.savefig(figname)
 
 class returnValues(object):
