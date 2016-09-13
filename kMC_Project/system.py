@@ -58,13 +58,18 @@ class material(object):
         self.speciesTypes = speciesTypes
         for key in speciesTypes:
             assert set(speciesTypes[key]) <= set(elementTypes), 'Specified sites should be a subset of elements'
-        self.unitcellCoords = unitcellCoords
+        self.unitcellCoords = np.zeros((len(unitcellCoords), 3))
         startIndex = 0
-        for elementIndex in range(len(elementTypes)):
+        length = len(self.elementTypes)
+        nElements = np.zeros(length, int)
+        for elementIndex in range(length):
             elementUnitCellCoords = unitcellCoords[elementTypeIndexList==elementIndex]
-            endIndex = startIndex + len(elementUnitCellCoords)
+            nElements[elementIndex] = len(elementUnitCellCoords)
+            endIndex = startIndex + nElements[elementIndex]
             self.unitcellCoords[startIndex:endIndex] = elementUnitCellCoords[elementUnitCellCoords[:,2].argsort()]
             startIndex = endIndex
+        # number of elements
+        self.nElements = nElements
         self.elementTypeIndexList = elementTypeIndexList.astype(int)
         self.chargeTypes = chargeTypes
         self.latticeParameters = latticeParameters
@@ -77,11 +82,13 @@ class material(object):
         self.epsilon0 = epsilon0
         
         # number of elements
+        '''
         length = len(self.elementTypes)
         nElements = np.zeros(length, int)
         for elementIndex in range(length):
             nElements[elementIndex] = np.count_nonzero(self.elementTypeIndexList == elementIndex)
         self.nElements = nElements
+        '''
         
         # siteList
         siteList = []
@@ -104,11 +111,15 @@ class material(object):
         self.hopElementTypes = hopElementTypes
         
         # number of sites present in siteList
-        nSites = np.zeros(len(self.siteList), int)
+        #nSites = np.zeros(len(self.siteList), int)
+        siteElementIndices = [i for i,n in enumerate(elementTypes) if n in siteList]
+        nSites = [nElements[i] for i in siteElementIndices]
+        '''
         for elementTypeIndex, elementType in enumerate(self.elementTypes):
             if elementType in siteList:
                 nSites[elementTypeIndex] = len(np.where(self.elementTypeIndexList == elementTypeIndex)[0])
-        self.nSites = nSites
+        '''
+        self.nSites = np.asarray(nSites, int)
         
         # element - species map
         elementTypeSpeciesMap = {}
@@ -138,30 +149,31 @@ class material(object):
         extractIndices = np.in1d(self.elementTypeIndexList, elementTypeIndices).nonzero()[0]
         unitcellElementCoords = self.unitcellCoords[extractIndices]
         numCells = np.prod(cellSize)
-        nSites = len(unitcellElementCoords)
-        unitcellElementIndexList = np.arange(nSites)
+        nSitesPerUnitCell = np.sum(self.nElements[elementTypeIndices])
+        unitcellElementIndexList = np.arange(nSitesPerUnitCell)
         unitcellElementTypeIndex = np.reshape(np.concatenate((np.asarray([[elementTypeIndex] * self.nElements[elementTypeIndex] 
-                                                                          for elementTypeIndex in elementTypeIndices]))), (nSites, 1))
+                                                                          for elementTypeIndex in elementTypeIndices]))), (nSitesPerUnitCell, 1))
         unitCellElementTypeElementIndexList = np.reshape(np.concatenate(([np.arange(self.nElements[elementTypeIndex]) 
-                                                                          for elementTypeIndex in elementTypeIndices])), (nSites, 1))
-        cellCoordinates = np.zeros((numCells * nSites, 3))
+                                                                          for elementTypeIndex in elementTypeIndices])), (nSitesPerUnitCell, 1))
+        cellCoordinates = np.zeros((numCells * nSitesPerUnitCell, 3))
         # quantumIndex = [unitCellIndex, elementTypeIndex, elementIndex]
-        quantumIndexList = np.zeros((numCells * nSites, 5), dtype=int)
-        systemElementIndexList = np.zeros(numCells * nSites, dtype=int)
+        quantumIndexList = np.zeros((numCells * nSitesPerUnitCell, 5), dtype=int)
+        systemElementIndexList = np.zeros(numCells * nSitesPerUnitCell, dtype=int)
         iUnitCell = 0
-        for xSize in range(cellSize[0]):
-            for ySize in range(cellSize[1]):  
-                for zSize in range(cellSize[2]): 
-                    startIndex = iUnitCell * nSites
-                    endIndex = startIndex + nSites
+        for xIndex in range(cellSize[0]):
+            for yIndex in range(cellSize[1]):  
+                for zIndex in range(cellSize[2]): 
+                    startIndex = iUnitCell * nSitesPerUnitCell
+                    endIndex = startIndex + nSitesPerUnitCell
                     # TODO: Any reason to use fractional coordinates?
                     # TODO: Shouldn't the product be latticeMatrix * unitCellSize?
-                    newCellSiteCoords = unitcellElementCoords + np.dot([xSize, ySize, zSize], self.latticeMatrix)
-                    cellCoordinates[startIndex:endIndex, :] = newCellSiteCoords 
-                    systemElementIndexList[startIndex:endIndex] = iUnitCell * nSites + unitcellElementIndexList
-                    quantumIndexList[startIndex:endIndex] = np.hstack((np.tile(np.array([xSize, ySize, zSize]), (nSites, 1)), unitcellElementTypeIndex, unitCellElementTypeElementIndexList))
+                    unitcellTranslationalCoords = np.dot([xIndex, yIndex, zIndex], self.latticeMatrix)
+                    newCellSiteCoords = unitcellElementCoords + unitcellTranslationalCoords
+                    cellCoordinates[startIndex:endIndex] = newCellSiteCoords
+                    systemElementIndexList[startIndex:endIndex] = iUnitCell * nSitesPerUnitCell + unitcellElementIndexList
+                    quantumIndexList[startIndex:endIndex] = np.hstack((np.tile(np.array([xIndex, yIndex, zIndex]), (nSitesPerUnitCell, 1)), unitcellElementTypeIndex, unitCellElementTypeElementIndexList))
                     iUnitCell += 1
-
+        
         returnSites = returnValues()
         returnSites.cellCoordinates = cellCoordinates
         returnSites.quantumIndexList = quantumIndexList
@@ -184,11 +196,6 @@ class material(object):
                 systemElementIndex += nElementsPerUnitCell * unitCellIndex[nDim-1-index]
             else:
                 systemElementIndex += nElementsPerUnitCell * unitCellIndex[nDim-1-index] * np.prod(systemSize[-index:])
-        '''
-        systemElementIndex = (elementIndex + np.sum(self.nElements[:elementTypeIndex]) + nElementsPerUnitCell * 
-                              (unitCellIndex[2] + unitCellIndex[1] * systemSize[2] + unitCellIndex[0] * 
-                               np.prod(systemSize[1:])))
-        '''
         return systemElementIndex
     
     def generateQuantumIndices(self, systemSize, systemElementIndex):
@@ -251,13 +258,6 @@ class system(object):
         centerSiteCoords = bulkSites.cellCoordinates[centerSiteIndices]
         centerSiteSystemElementIndexList = bulkSites.systemElementIndexList[centerSiteIndices]
         centerSiteQuantumIndexList = bulkSites.quantumIndexList[centerSiteIndices]
-        '''
-        if cutoffDistKey == 'Fe:O':
-            print np.asarray(centerSiteIndices).reshape(1,12)
-            print np.asarray(neighborSiteIndices).reshape(27,18)
-            print len(neighborSiteIndices)
-        '''
-        print len(neighborSiteIndices)
         
         neighborSystemElementIndices = []
         offsetList = [] 
@@ -290,18 +290,10 @@ class system(object):
                     displacement = np.linalg.norm(neighborImageDisplacementVectors)
                     imageIndex = 0
                 if cutoffDistLimits[0] < displacement <= cutoffDistLimits[1]:
-                    '''
-                    if cutoffDistKey == 'Fe:O':
-                        print displacement
-                    '''
-                    if displacement == 0:
-                        print centerSiteIndex, centerCoord
-                        print neighborSiteIndex, neighborCoord
                     iNeighborSiteIndexList.append(neighborSiteIndex)
                     iDisplacementVectors.append(neighborImageDisplacementVectors[imageIndex])
                     iDisplacements.append(displacement)
-            #print centerSiteIndex, cutoffDistKey, len(iDisplacements)
-            print centerSiteIndex, cutoffDistKey, len(iDisplacements), sorted(iDisplacements)
+            print centerSiteIndex, cutoffDistKey, len(iDisplacements)#, sorted(iDisplacements)
             neighborSystemElementIndices.append(np.array(neighborSiteSystemElementIndexList[iNeighborSiteIndexList]))
             offsetList.append(centerSiteQuantumIndexList[centerSiteIndex, :3] - neighborSiteQuantumIndexList[iNeighborSiteIndexList, :3])
             neighborElementIndexList.append(neighborSiteQuantumIndexList[iNeighborSiteIndexList, 4])
@@ -351,26 +343,12 @@ class system(object):
                                        for xSize in range(localSystemSize[0]) for ySize in range(localSystemSize[1]) 
                                        for zSize in range(localSystemSize[2]) 
                                        for elementIndex in range(self.material.nElements[neighborSiteElementTypeIndex])]
-                '''
-                if cutoffDistKey == 'Fe:O':
-                    print np.sort(centerSiteIndices)
-                    print np.sort(neighborSiteIndices)
-                centerSiteIndices = [self.material.generateSystemElementIndex(systemSize, np.array([1, 1, 1, centerSiteElementTypeIndex, elementIndex])) 
-                                     for elementIndex in range(self.material.nElements[centerSiteElementTypeIndex])]
-                neighborSiteIndices = [self.material.generateSystemElementIndex(systemSize, np.array([xSize, ySize, zSize, neighborSiteElementTypeIndex, elementIndex])) 
-                                       for xSize in range(systemSize[0]) for ySize in range(systemSize[1]) 
-                                       for zSize in range(systemSize[2]) 
-                                       for elementIndex in range(self.material.nElements[neighborSiteElementTypeIndex])]
-                '''
+
                 for cutoffDist in cutoffDistList:
                     cutoffDistLimits = [cutoffDist-tolDist, cutoffDist+tolDist]
                     # TODO: include assertions, conditions for systemSizes less than [3, 3, 3]
                     neighborListCutoffDistKey.append(self.neighborSites(localBulkSites, centerSiteIndices, 
                                                                         neighborSiteIndices, cutoffDistLimits, cutoffDistKey))
-                    '''                    
-                    neighborListCutoffDistKey.append(self.neighborSites(self.bulkSites, centerSiteIndices, 
-                                                                        neighborSiteIndices, cutoffDistLimits, cutoffDistKey))
-                    '''                    
             else:
                 centerSiteIndices = neighborSiteIndices = np.arange(self.numCells * np.sum(self.material.nElements))
                 cutoffDistLimits = [0, cutoffDistList[0]]
