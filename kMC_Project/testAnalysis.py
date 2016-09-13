@@ -25,4 +25,4 @@ msdData = hematiteAnalysis.computeMSD(timeNpath)
 #print msdData
 
 hematitePlot = plot(msdData)
-hematitePlot.plot()
+hematitePlot.displayMSDPlot()

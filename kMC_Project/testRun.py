@@ -1,4 +1,4 @@
-from system import modelParameters, material, system, run, analysis
+from system import modelParameters, material, system, run
 import numpy as np
 
 T = 300 # Temperature in K
@@ -9,8 +9,8 @@ nStepsMSD = 5E+01
 nDispMSD = 5E+01
 binsize = 1E+00
 maxBinSize = 1 # ns
-systemSize = np.array([3, 3, 3])
-pbc = 1
+systemSize = np.array([9, 9, 4])
+pbc = [1, 1, 1]
 gui = 0
 kB = 8.617E-05 # Boltzmann constant in eV/K
 reprTime = 'ns'
@@ -41,7 +41,8 @@ lambdaValues = {'Fe:Fe': [1.74533, 1.88683]} # reorganization energy in eV for b
 #lambdaValues = ['Fe:Fe', [1.74533, 1.88683]] # reorganization energy in eV for basal plane, c-direction
 VAB = {'Fe:Fe': [0.184, 0.028]} # electronic coupling matrix element in eV for basal plane, c-direction
 #VAB = ['Fe:Fe', [0.184, 0.028]] # electronic coupling matrix element in eV for basal plane, c-direction
-neighborCutoffDist = {'Fe:Fe': [2.971, 2.901], 'O:O': [4.0], 'Fe:O': [1.946, 2.116], 'E': [20.0]} # Basal: 2.971, C: 2.901
+#neighborCutoffDist = {'Fe:Fe': [2.971, 2.901], 'O:O': [4.0], 'Fe:O': [1.946, 2.116], 'E': [10.0]} # Basal: 2.971, C: 2.901
+neighborCutoffDist = {'Fe:Fe': [2.971, 2.901], 'Fe:O': [1.946, 2.116]}#, 'E': [10.0]} # Basal: 2.971, C: 2.901
 neighborCutoffDistTol = 0.01
 elementTypeDelimiter = ':'
 # TODO: Value for hematite might differ
@@ -59,6 +60,25 @@ electronSiteIndices = [hematite.generateSystemElementIndex(systemSize, quantumIn
 occupancy = [['electron', np.asarray(electronSiteIndices, int)]]
 
 hematiteSystem = system(hematiteParameters, hematite, occupancy)
+
+localSystemSize = np.array([3, 3, 3])
+centerSiteElementTypeIndex = 0
+elementIndex = 1
+neighborSiteElementTypeIndex = 1
+localBulkSites = hematite.generateSites(range(len(elementTypes)), localSystemSize)
+centerSiteIndices = [hematite.generateSystemElementIndex(localSystemSize, np.array([1, 1, 1, centerSiteElementTypeIndex, elementIndex]))] 
+# for elementIndex in range(hematite.nElements[centerSiteElementTypeIndex])]
+print sorted(centerSiteIndices)
+neighborSiteIndices = [hematite.generateSystemElementIndex(localSystemSize, np.array([xSize, ySize, zSize, neighborSiteElementTypeIndex, elementIndex])) 
+                       for xSize in range(localSystemSize[0]) for ySize in range(localSystemSize[1]) 
+                       for zSize in range(localSystemSize[2]) 
+                       for elementIndex in range(hematite.nElements[neighborSiteElementTypeIndex])]
+print sorted(neighborSiteIndices)
+cutoffDistLimits = [-1.1, 120.0]
+cutoffDistKey = 'Fe:O'
+print hematiteSystem.neighborSites(localBulkSites, centerSiteIndices, neighborSiteIndices, cutoffDistLimits, cutoffDistKey)
+
+'''
 # TODO: Neighbor List has to be generated automatically within the code.
 hematiteSystem.generateNeighborList()
 #print hematiteSystem.neighborList['E'][0].systemElementIndexMap
@@ -67,3 +87,4 @@ hematiteSystem.generateNeighborList()
 hematiteRun = run(hematiteParameters, hematite, hematiteSystem)
 timeNpath = hematiteRun.doKMCSteps(randomSeed=2)
 np.save('timeNpath.npy', timeNpath)
+'''

@@ -12,7 +12,7 @@ class modelParameters(object):
     Definitions of all model parameters that need to be passed on to other classes
     '''
     def __init__(self, T, nTraj, kmcSteps, stepInterval, nStepsMSD, nDispMSD, binsize, maxBinSize, 
-                 systemSize=np.array([10, 10, 10]), pbc=1, gui=0, kB=8.617E-05, reprTime='ns', reprDist='Angstrom'):
+                 systemSize=np.array([10, 10, 10]), pbc=[1, 1, 1], gui=0, kB=8.617E-05, reprTime='ns', reprDist='Angstrom'):
         '''
         Definitions of all model parameters
         '''
@@ -44,7 +44,6 @@ class material(object):
         index: element index of the positions starting from 0
         charge: atomic charges of the elements # first shell atomic charges to be included
         latticeParameters: list of three lattice constants in angstrom and three angles between them in degrees
-        # TODO: lattice constants and unit cell matrix may be defined in here
     '''
     
     def __init__(self, name, elementTypes, speciesTypes, unitcellCoords, elementTypeIndexList, chargeTypes, 
@@ -125,10 +124,11 @@ class material(object):
 
         # lattice cell matrix
         [a, b, c, alpha, beta, gamma] = self.latticeParameters
-        cell = np.array([[ a                , 0                , 0],
-                         [ b * np.cos(gamma), b * np.sin(gamma), 0],
-                         [ c * np.cos(alpha), c * np.cos(beta) , c * np.sqrt(np.sin(alpha)**2 - np.cos(beta)**2)]]) # cell matrix
-        self.latticeMatrix = cell
+        latticeMatrix = np.array([[ a                , 0                , 0],
+                                  [ b * np.cos(gamma), b * np.sin(gamma), 0],
+                                  [ c * np.cos(alpha), c * np.cos(beta) , c * 
+                                   np.sqrt(np.sin(alpha)**2 - np.cos(beta)**2)]])
+        self.latticeMatrix = latticeMatrix
 
     def generateSites(self, elementTypeIndices, cellSize=np.array([1, 1, 1])):
         '''
@@ -150,10 +150,12 @@ class material(object):
         systemElementIndexList = np.zeros(numCells * nSites, dtype=int)
         iUnitCell = 0
         for xSize in range(cellSize[0]):
-            for ySize in range(cellSize[1]):
+            for ySize in range(cellSize[1]):  
                 for zSize in range(cellSize[2]): 
                     startIndex = iUnitCell * nSites
                     endIndex = startIndex + nSites
+                    # TODO: Any reason to use fractional coordinates?
+                    # TODO: Shouldn't the product be latticeMatrix * unitCellSize?
                     newCellSiteCoords = unitcellElementCoords + np.dot([xSize, ySize, zSize], self.latticeMatrix)
                     cellCoordinates[startIndex:endIndex, :] = newCellSiteCoords 
                     systemElementIndexList[startIndex:endIndex] = iUnitCell * nSites + unitcellElementIndexList
@@ -170,12 +172,23 @@ class material(object):
         '''
         Returns the systemElementIndex of the element
         '''
+        assert 0 not in systemSize, 'System size should be greater than 0 in any dimension'
+        assert quantumIndices[-1] < self.nElements[quantumIndices[-2]], 'Element Index exceed number of elements of the specified element type'
         unitCellIndex = quantumIndices[:3]
         [elementTypeIndex, elementIndex] = quantumIndices[-2:]
         nElementsPerUnitCell = np.sum(self.nElements)
+        systemElementIndex = elementIndex + np.sum(self.nElements[:elementTypeIndex])
+        nDim = len(systemSize)
+        for index in range(nDim):
+            if index == 0:
+                systemElementIndex += nElementsPerUnitCell * unitCellIndex[nDim-1-index]
+            else:
+                systemElementIndex += nElementsPerUnitCell * unitCellIndex[nDim-1-index] * np.prod(systemSize[-index:])
+        '''
         systemElementIndex = (elementIndex + np.sum(self.nElements[:elementTypeIndex]) + nElementsPerUnitCell * 
                               (unitCellIndex[2] + unitCellIndex[1] * systemSize[2] + unitCellIndex[0] * 
                                np.prod(systemSize[1:])))
+        '''
         return systemElementIndex
     
     def generateQuantumIndices(self, systemSize, systemElementIndex):
@@ -185,16 +198,13 @@ class material(object):
         quantumIndices = [0] * 5
         nElementsPerUnitCell = np.sum(self.nElements)
         nElementsPerUnitCellCumSum = np.cumsum(self.nElements)
-        unitcellElementIndex = (systemElementIndex + 1) % nElementsPerUnitCell - 1
+        unitcellElementIndex = systemElementIndex % nElementsPerUnitCell
         quantumIndices[3] = np.min(np.where(nElementsPerUnitCellCumSum >= (unitcellElementIndex + 1)))
         quantumIndices[4] = unitcellElementIndex - np.sum(self.nElements[:quantumIndices[3]])
         nFilledUnitCells = (systemElementIndex - unitcellElementIndex) / nElementsPerUnitCell
         for index in range(3):
-            quantumIndices[index] = nFilledUnitCells % systemSize[index]
-            nFilledUnitCells /= systemSize[index] 
-        #quantumIndices[2] = nFilledUnitCells % systemSize[2] - 1
-        #quantumIndices[1] = (nFilledUnitCells / systemSize[2]) % systemSize[1]
-        #quantumIndices[0] = (nFilledUnitCells / np.prod(systemSize[1:])) % systemSize[0]
+            quantumIndices[index] = nFilledUnitCells / np.prod(systemSize[index+1:])
+            nFilledUnitCells -= quantumIndices[index] * np.prod(systemSize[index+1:])
         return quantumIndices
     
 class system(object):
@@ -225,10 +235,12 @@ class system(object):
         unitCellChargeList = np.array([self.material.chargeTypes[self.material.elementTypes[elementTypeIndex]] 
                                        for elementTypeIndex in self.material.elementTypeIndexList])
         self.latticeChargeList = np.tile(unitCellChargeList, self.numCells)
+        
+        self.latticeParameters = self.material.latticeParameters
     
     # TODO: Is it better to shift neighborSites method to material class and add generateNeighborList method to 
     # __init__ function of system class?   
-    def neighborSites(self, bulkSites, centerSiteIndices, neighborSiteIndices, cutoffDistLimits):
+    def neighborSites(self, bulkSites, centerSiteIndices, neighborSiteIndices, cutoffDistLimits, cutoffDistKey):
         '''
         Returns systemElementIndexMap and distances between center sites and its neighbor sites within cutoff 
         distance
@@ -239,6 +251,13 @@ class system(object):
         centerSiteCoords = bulkSites.cellCoordinates[centerSiteIndices]
         centerSiteSystemElementIndexList = bulkSites.systemElementIndexList[centerSiteIndices]
         centerSiteQuantumIndexList = bulkSites.quantumIndexList[centerSiteIndices]
+        '''
+        if cutoffDistKey == 'Fe:O':
+            print np.asarray(centerSiteIndices).reshape(1,12)
+            print np.asarray(neighborSiteIndices).reshape(27,18)
+            print len(neighborSiteIndices)
+        '''
+        print len(neighborSiteIndices)
         
         neighborSystemElementIndices = []
         offsetList = [] 
@@ -246,25 +265,46 @@ class system(object):
         numNeighbors = []
         displacementVectorList = []
         displacementList = []
+        
+        xRange = range(-1, 2) if self.modelParameters.pbc[0] == 1 else [0]
+        yRange = range(-1, 2) if self.modelParameters.pbc[1] == 1 else [0]
+        zRange = range(-1, 2) if self.modelParameters.pbc[2] == 1 else [0]
+        latticeMatrix = self.material.latticeMatrix
         for centerSiteIndex, centerCoord in enumerate(centerSiteCoords):
             iDisplacementVectors = []
             iDisplacements = []
             iNeighborSiteIndexList = []
             for neighborSiteIndex, neighborCoord in enumerate(neighborSiteCoords):
-                displacementVector = neighborCoord - centerCoord
-                if not self.modelParameters.pbc:
-                    displacement = np.linalg.norm(displacementVector)
+                if cutoffDistKey is 'E':
+                    neighborImageCoords = np.zeros((3**sum(self.modelParameters.pbc), 3))
+                    index = 0
+                    for xOffset in xRange:
+                        for yOffset in yRange:
+                            for zOffset in zRange:
+                                neighborImageCoords[index] = (neighborCoord + np.sum(np.multiply(latticeMatrix, np.repeat(np.array([xOffset, yOffset, zOffset]), 3).reshape(3,3)), axis=0))
+                                index += 1
+                    neighborImageDisplacementVectors = np.linalg.norm(neighborImageCoords - centerCoord, axis=1)
+                    [displacement, imageIndex] = [np.min(neighborImageDisplacementVectors), np.argmin(neighborImageDisplacementVectors)]
                 else:
-                    # TODO: Use minimum image convention to compute the distance
-                    displacement = np.linalg.norm(displacementVector)
+                    neighborImageDisplacementVectors = np.array([neighborCoord - centerCoord])
+                    displacement = np.linalg.norm(neighborImageDisplacementVectors)
+                    imageIndex = 0
                 if cutoffDistLimits[0] < displacement <= cutoffDistLimits[1]:
+                    '''
+                    if cutoffDistKey == 'Fe:O':
+                        print displacement
+                    '''
+                    if displacement == 0:
+                        print centerSiteIndex, centerCoord
+                        print neighborSiteIndex, neighborCoord
                     iNeighborSiteIndexList.append(neighborSiteIndex)
-                    iDisplacementVectors.append(displacementVector)
+                    iDisplacementVectors.append(neighborImageDisplacementVectors[imageIndex])
                     iDisplacements.append(displacement)
+            #print centerSiteIndex, cutoffDistKey, len(iDisplacements)
+            print centerSiteIndex, cutoffDistKey, len(iDisplacements), sorted(iDisplacements)
             neighborSystemElementIndices.append(np.array(neighborSiteSystemElementIndexList[iNeighborSiteIndexList]))
             offsetList.append(centerSiteQuantumIndexList[centerSiteIndex, :3] - neighborSiteQuantumIndexList[iNeighborSiteIndexList, :3])
             neighborElementIndexList.append(neighborSiteQuantumIndexList[iNeighborSiteIndexList, 4])
-            numNeighbors.append(len(iNeighborSiteIndexList))
             displacementVectorList.append(np.asarray(iDisplacementVectors))
             displacementList.append(iDisplacements)
         # TODO: Avoid conversion and initialize the object beforehand
@@ -294,7 +334,7 @@ class system(object):
         neighborList = {}
         tolDist = self.material.neighborCutoffDistTol
         elementTypes = self.material.elementTypes
-        systemSize = self.modelParameters.systemSize
+        # systemSize = self.modelParameters.systemSize
         for cutoffDistKey in self.material.neighborCutoffDist.keys():
             cutoffDistList = self.material.neighborCutoffDist[cutoffDistKey]
             neighborListCutoffDistKey = []
@@ -302,22 +342,40 @@ class system(object):
                 [centerElementType, neighborElementType] = cutoffDistKey.split(self.material.elementTypeDelimiter)
                 centerSiteElementTypeIndex = elementTypes.index(centerElementType) 
                 neighborSiteElementTypeIndex = elementTypes.index(neighborElementType)
+                localSystemSize = np.array([3, 3, 3])
+                localBulkSites = self.material.generateSites(range(len(self.material.elementTypes)), 
+                                                             localSystemSize)
+                centerSiteIndices = [self.material.generateSystemElementIndex(localSystemSize, np.array([1, 1, 1, centerSiteElementTypeIndex, elementIndex])) 
+                                     for elementIndex in range(self.material.nElements[centerSiteElementTypeIndex])]
+                neighborSiteIndices = [self.material.generateSystemElementIndex(localSystemSize, np.array([xSize, ySize, zSize, neighborSiteElementTypeIndex, elementIndex])) 
+                                       for xSize in range(localSystemSize[0]) for ySize in range(localSystemSize[1]) 
+                                       for zSize in range(localSystemSize[2]) 
+                                       for elementIndex in range(self.material.nElements[neighborSiteElementTypeIndex])]
+                '''
+                if cutoffDistKey == 'Fe:O':
+                    print np.sort(centerSiteIndices)
+                    print np.sort(neighborSiteIndices)
                 centerSiteIndices = [self.material.generateSystemElementIndex(systemSize, np.array([1, 1, 1, centerSiteElementTypeIndex, elementIndex])) 
                                      for elementIndex in range(self.material.nElements[centerSiteElementTypeIndex])]
                 neighborSiteIndices = [self.material.generateSystemElementIndex(systemSize, np.array([xSize, ySize, zSize, neighborSiteElementTypeIndex, elementIndex])) 
                                        for xSize in range(systemSize[0]) for ySize in range(systemSize[1]) 
                                        for zSize in range(systemSize[2]) 
                                        for elementIndex in range(self.material.nElements[neighborSiteElementTypeIndex])]
+                '''
                 for cutoffDist in cutoffDistList:
                     cutoffDistLimits = [cutoffDist-tolDist, cutoffDist+tolDist]
                     # TODO: include assertions, conditions for systemSizes less than [3, 3, 3]
+                    neighborListCutoffDistKey.append(self.neighborSites(localBulkSites, centerSiteIndices, 
+                                                                        neighborSiteIndices, cutoffDistLimits, cutoffDistKey))
+                    '''                    
                     neighborListCutoffDistKey.append(self.neighborSites(self.bulkSites, centerSiteIndices, 
-                                                                        neighborSiteIndices, cutoffDistLimits))                    
+                                                                        neighborSiteIndices, cutoffDistLimits, cutoffDistKey))
+                    '''                    
             else:
                 centerSiteIndices = neighborSiteIndices = np.arange(self.numCells * np.sum(self.material.nElements))
                 cutoffDistLimits = [0, cutoffDistList[0]]
                 neighborListCutoffDistKey.append(self.neighborSites(self.bulkSites, centerSiteIndices, 
-                                                                    neighborSiteIndices, cutoffDistLimits))
+                                                                    neighborSiteIndices, cutoffDistLimits, cutoffDistKey))
             neighborList[cutoffDistKey] = neighborListCutoffDistKey
         self.neighborList = neighborList
         return neighborList
@@ -348,9 +406,7 @@ class system(object):
                             neighborElementTypeIndex = [self.material.elementTypes.index(chargeTypeKey.split(self.material.elementTypeDelimiter)[1])]
                             neighborElementIndex = [neighborElementIndexMap[1][siteElementIndex][neighborIndex]]
                             neighborQuantumIndices = neighborUnitCellIndex + neighborElementTypeIndex + neighborElementIndex
-                            #print neighborQuantumIndices
                             neighborSystemElementIndex = self.material.generateSystemElementIndex(self.modelParameters.systemSize, neighborQuantumIndices)
-                            #print neighborSystemElementIndex
                             neighborSystemElementIndices.append(neighborSystemElementIndex)
                         chargeList[neighborSystemElementIndices] = chargeValue
 
@@ -456,6 +512,7 @@ class run(object):
         '''
         generates a list of new occupancy states possible from the current state
         '''
+        # TODO: Import the neighborlist
         neighborList = self.system.neighborList
         newStateOccupancyList = []
         hopElementType = []
@@ -493,6 +550,7 @@ class run(object):
         '''
         Subroutine to run the kmc simulation by specified number of steps
         '''
+        # TODO: import neighbor list
         import random as rnd
         rnd.seed(randomSeed)
         nTraj = self.modelParameters.nTraj
@@ -505,9 +563,9 @@ class run(object):
         pathIndex = 0
         speciesSystemElementIndices = np.concatenate((currentStateOccupancy.values()))
         config = self.system.config(currentStateOccupancy)
+        assert 'E' in self.material.neighborCutoffDist.keys(), 'Please specify the cutoff distance for electrostatic interactions'
         self.generateDistanceList(config)
-        # TODO: may have to use speciesSystemElementIndices.tolist()
-        for traj in range(nTraj):
+        for dummy in range(nTraj):
             pathIndex += 1
             kmcTime = 0
             for step in range(kmcSteps):
@@ -531,8 +589,8 @@ class run(object):
                 config.chargeList = self.system.chargeConfig(currentStateOccupancy)
                 config.occupancy = currentStateOccupancy
                 if step % stepInterval == 0:
+                    # TODO: update position from the displacementvectorlist
                     speciesSystemElementIndices = np.concatenate((currentStateOccupancy.values()))
-                    # TODO: may have to use speciesSystemElementIndices.tolist()
                     speciesPositionList = config.positions[speciesSystemElementIndices]
                     timeArray[pathIndex] = kmcTime
                     positionArray[pathIndex] = speciesPositionList
@@ -581,9 +639,9 @@ class analysis(object):
         bins = np.arange(0, minEndTime, self.modelParameters.binsize)
         nBins = len(bins) - 1
         speciesMSDData = np.zeros((nBins, nSpecies))
-        msdHistogram, binEdges = np.histogram(timeArray, bins)
+        msdHistogram, dummy = np.histogram(timeArray, bins)
         for iSpecies in range(nSpecies):
-            iSpeciesHist, binEdges = np.histogram(timeArray, bins, weights=timeNdisp2[:, iSpecies + 1])
+            iSpeciesHist, dummy = np.histogram(timeArray, bins, weights=timeNdisp2[:, iSpecies + 1])
             speciesMSDData[:, iSpecies] = iSpeciesHist / msdHistogram
         msdData = np.zeros((nBins, 2))
         msdData[:, 0] = bins[:-1] + 0.5 * self.modelParameters.binsize
@@ -592,7 +650,7 @@ class analysis(object):
     
 class plot(object):
     '''
-    
+    class with definitions of plotting funcitons
     '''
     
     def __init__(self, msdData):
@@ -601,9 +659,9 @@ class plot(object):
         '''
         self.msdData = msdData
 
-    def plot(self):
+    def displayMSDPlot(self):
         '''
-        
+        Returns a line plot of the MSD data
         '''
         import matplotlib.pyplot as plt
         plt.figure(1)
