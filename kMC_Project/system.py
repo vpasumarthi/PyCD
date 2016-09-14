@@ -384,9 +384,7 @@ class neighbors(object):
                 neighborListCutoffDistKey.append(self.hopNeighborSites(self.bulkSites, centerSiteIndices, 
                                                                     neighborSiteIndices, cutoffDistLimits, cutoffDistKey))
             neighborList[cutoffDistKey] = neighborListCutoffDistKey
-        self.neighborList = neighborList
         return neighborList
-    
     
 class system(object):
     '''
@@ -396,7 +394,7 @@ class system(object):
     size: An array (3 x 1) defining the system size in multiple of unit cells
     '''
     
-    def __init__(self, modelParameters, material, occupancy):
+    def __init__(self, modelParameters, material, occupancy, neighborList):
         '''
         Return a system object whose size is *size*
         '''

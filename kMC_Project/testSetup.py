@@ -1,4 +1,4 @@
-from system import modelParameters, material
+from system import modelParameters, material, neighbors
 import numpy as np
 
 T = 300 # Temperature in K
@@ -52,15 +52,15 @@ hematite = material(name, elementTypes, speciesTypes, unitcellCoords, elementTyp
                     latticeParameters, vn, lambdaValues, VAB, neighborCutoffDist, neighborCutoffDistTol, 
                     elementTypeDelimiter, epsilon0)
 
-hematiteSystem = system(hematiteParameters, hematite, occupancy, neighborList)
+#print hematite.unitcellCoords
+electronSiteElementTypeIndex = elementTypes.index(speciesTypes['electron'][0])
+# TODO: Automate the choice of sites given number of electron and hole species
+electronQuantumIndices = np.array([[1, 1, 1, electronSiteElementTypeIndex, elementSite] for elementSite in np.array([3, 8])])
+electronSiteIndices = [hematite.generateSystemElementIndex(systemSize, quantumIndex) 
+                       for quantumIndex in electronQuantumIndices]
+occupancy = [['electron', np.asarray(electronSiteIndices, int)]]
 
-#hematiteSystem.neighborSites(bulkSites, centerSiteIndices, neighborSiteIndices, [0.0, 2.0], 'E')
+hematiteNeighborList = neighbors(hematiteParameters, hematite)
 
-# TODO: Neighbor List has to be generated automatically within the code.
-#hematiteSystem.generateNeighborList()
-#print hematiteSystem.neighborList['E'][0].systemElementIndexMap
-#print hematiteSystem.config(occupancy)
-
-hematiteRun = run(hematiteParameters, hematite, hematiteSystem)
-timeNpath = hematiteRun.doKMCSteps(randomSeed=2)
-np.save('timeNpath.npy', timeNpath)
+neighborList = hematiteNeighborList.generateNeighborList()
+np.save('neighborList.npy', neighborList)
