@@ -233,7 +233,65 @@ class system(object):
     
     # TODO: Is it better to shift neighborSites method to material class and add generateNeighborList method to 
     # __init__ function of system class?   
-    def neighborSites(self, systemSize, bulkSites, centerSiteIndices, neighborSiteIndices, cutoffDistLimits, cutoffDistKey):
+
+    def hopNeighborSites(self, bulkSites, centerSiteIndices, neighborSiteIndices, cutoffDistLimits, cutoffDistKey):
+        '''
+        Returns systemElementIndexMap and distances between center sites and its neighbor sites within cutoff 
+        distance
+        '''
+        neighborSiteCoords = bulkSites.cellCoordinates[neighborSiteIndices]
+        neighborSiteSystemElementIndexList = bulkSites.systemElementIndexList[neighborSiteIndices]
+        neighborSiteQuantumIndexList = bulkSites.quantumIndexList[neighborSiteIndices]
+        centerSiteCoords = bulkSites.cellCoordinates[centerSiteIndices]
+        centerSiteSystemElementIndexList = bulkSites.systemElementIndexList[centerSiteIndices]
+        centerSiteQuantumIndexList = bulkSites.quantumIndexList[centerSiteIndices]
+        
+        neighborSystemElementIndices = []
+        offsetList = [] 
+        neighborElementIndexList = []
+        numNeighbors = []
+        displacementVectorList = []
+        displacementList = []
+        
+        for centerSiteIndex, centerCoord in enumerate(centerSiteCoords):
+            iDisplacementVectors = []
+            iDisplacements = []
+            iNeighborSiteIndexList = []
+            for neighborSiteIndex, neighborCoord in enumerate(neighborSiteCoords):
+                neighborImageDisplacementVectors = np.array([neighborCoord - centerCoord])
+                displacement = np.linalg.norm(neighborImageDisplacementVectors)
+                if cutoffDistLimits[0] < displacement <= cutoffDistLimits[1]:
+                    iNeighborSiteIndexList.append(neighborSiteIndex)
+                    iDisplacementVectors.append(neighborImageDisplacementVectors[0])
+                    iDisplacements.append(displacement)
+            print centerSiteIndex, cutoffDistKey, len(iDisplacements)#, sorted(iDisplacements)
+            neighborSystemElementIndices.append(np.array(neighborSiteSystemElementIndexList[iNeighborSiteIndexList]))
+            offsetList.append(centerSiteQuantumIndexList[centerSiteIndex, :3] - neighborSiteQuantumIndexList[iNeighborSiteIndexList, :3])
+            neighborElementIndexList.append(neighborSiteQuantumIndexList[iNeighborSiteIndexList, 4])
+            displacementVectorList.append(np.asarray(iDisplacementVectors))
+            displacementList.append(iDisplacements)
+            
+        # TODO: Avoid conversion and initialize the object beforehand
+        neighborSystemElementIndices = np.asarray(neighborSystemElementIndices)
+        systemElementIndexMap = np.empty(2, dtype=object)
+        systemElementIndexMap[:] = [centerSiteSystemElementIndexList, neighborSystemElementIndices]
+        offsetList = np.asarray(offsetList)
+        neighborElementIndexList = np.asarray(neighborElementIndexList)
+        elementIndexMap = np.empty(2, dtype=object)
+        elementIndexMap[:] = [centerSiteQuantumIndexList[:,4], neighborElementIndexList]
+        numNeighbors = np.asarray(numNeighbors, int)
+
+        returnNeighbors = returnValues()
+        returnNeighbors.systemElementIndexMap = systemElementIndexMap
+        returnNeighbors.offsetList = offsetList
+        returnNeighbors.elementIndexMap = elementIndexMap
+        returnNeighbors.numNeighbors = numNeighbors
+        # TODO: Avoid conversion and initialize the object beforehand
+        returnNeighbors.displacementVectorList = np.asarray(displacementVectorList)
+        returnNeighbors.displacementList = np.asarray(displacementList)
+        return returnNeighbors
+
+    def electrostaticNeighborSites(self, systemSize, bulkSites, centerSiteIndices, neighborSiteIndices, cutoffDistLimits, cutoffDistKey):
         '''
         Returns systemElementIndexMap and distances between center sites and its neighbor sites within cutoff 
         distance
@@ -261,21 +319,16 @@ class system(object):
             iDisplacements = []
             iNeighborSiteIndexList = []
             for neighborSiteIndex, neighborCoord in enumerate(neighborSiteCoords):
-                if cutoffDistKey is 'E':
-                    neighborImageCoords = np.zeros((3**sum(self.modelParameters.pbc), 3))
-                    index = 0
-                    for xOffset in xRange:
-                        for yOffset in yRange:
-                            for zOffset in zRange:
-                                unitcellTranslationalCoords = np.dot(np.multiply(np.array([xOffset, yOffset, zOffset]), self.modelParameters.systemSize), latticeMatrix)
-                                neighborImageCoords[index] = neighborCoord + unitcellTranslationalCoords
-                                index += 1
-                    neighborImageDisplacementVectors = np.linalg.norm(neighborImageCoords - centerCoord, axis=1)
-                    [displacement, imageIndex] = [np.min(neighborImageDisplacementVectors), np.argmin(neighborImageDisplacementVectors)]
-                else:
-                    neighborImageDisplacementVectors = np.array([neighborCoord - centerCoord])
-                    displacement = np.linalg.norm(neighborImageDisplacementVectors)
-                    imageIndex = 0
+                neighborImageCoords = np.zeros((3**sum(self.modelParameters.pbc), 3))
+                index = 0
+                for xOffset in xRange:
+                    for yOffset in yRange:
+                        for zOffset in zRange:
+                            unitcellTranslationalCoords = np.dot(np.multiply(np.array([xOffset, yOffset, zOffset]), self.modelParameters.systemSize), latticeMatrix)
+                            neighborImageCoords[index] = neighborCoord + unitcellTranslationalCoords
+                            index += 1
+                neighborImageDisplacementVectors = np.linalg.norm(neighborImageCoords - centerCoord, axis=1)
+                [displacement, imageIndex] = [np.min(neighborImageDisplacementVectors), np.argmin(neighborImageDisplacementVectors)]
                 if cutoffDistLimits[0] < displacement <= cutoffDistLimits[1]:
                     iNeighborSiteIndexList.append(neighborSiteIndex)
                     iDisplacementVectors.append(neighborImageDisplacementVectors[imageIndex])
@@ -296,14 +349,7 @@ class system(object):
         elementIndexMap = np.empty(2, dtype=object)
         elementIndexMap[:] = [centerSiteQuantumIndexList[:,4], neighborElementIndexList]
         numNeighbors = np.asarray(numNeighbors, int)
-        '''
-        if cutoffDistKey is 'E':
-            print 'center Element'
-            print self.material.generateQuantumIndices(self.modelParameters.systemSize, centerSiteSystemElementIndexList[0])
-            print 'Neighbor Elements'
-            for neighborElementIndex in neighborSystemElementIndices[0]:
-                print neighborElementIndex, self.material.generateQuantumIndices(self.modelParameters.systemSize, neighborElementIndex)
-        ''' 
+
         returnNeighbors = returnValues()
         returnNeighbors.systemElementIndexMap = systemElementIndexMap
         returnNeighbors.offsetList = offsetList
@@ -341,14 +387,14 @@ class system(object):
                 for cutoffDist in cutoffDistList:
                     cutoffDistLimits = [cutoffDist-tolDist, cutoffDist+tolDist]
                     # TODO: include assertions, conditions for systemSizes less than [3, 3, 3]
-                    neighborListCutoffDistKey.append(self.neighborSites(localSystemSize, localBulkSites, centerSiteIndices, 
+                    neighborListCutoffDistKey.append(self.electrostaticNeighborSites(localSystemSize, localBulkSites, centerSiteIndices, 
                                                                         neighborSiteIndices, cutoffDistLimits, cutoffDistKey))
             else:
                 #centerSiteIndices = neighborSiteIndices = np.arange(self.numCells * np.sum(self.material.nElements))
                 centerSiteIndices = [0] 
                 neighborSiteIndices = np.arange(self.numCells * np.sum(self.material.nElements))
                 cutoffDistLimits = [0, cutoffDistList[0]]
-                neighborListCutoffDistKey.append(self.neighborSites(self.modelParameters.systemSize, self.bulkSites, centerSiteIndices, 
+                neighborListCutoffDistKey.append(self.hopNeighborSites(self.bulkSites, centerSiteIndices, 
                                                                     neighborSiteIndices, cutoffDistLimits, cutoffDistKey))
             neighborList[cutoffDistKey] = neighborListCutoffDistKey
         self.neighborList = neighborList
