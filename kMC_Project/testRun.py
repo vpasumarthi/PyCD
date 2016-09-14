@@ -41,8 +41,8 @@ lambdaValues = {'Fe:Fe': [1.74533, 1.88683]} # reorganization energy in eV for b
 #lambdaValues = ['Fe:Fe', [1.74533, 1.88683]] # reorganization energy in eV for basal plane, c-direction
 VAB = {'Fe:Fe': [0.184, 0.028]} # electronic coupling matrix element in eV for basal plane, c-direction
 #VAB = ['Fe:Fe', [0.184, 0.028]] # electronic coupling matrix element in eV for basal plane, c-direction
-neighborCutoffDist = {'Fe:Fe': [2.971, 2.901], 'O:O': [2.670, 2.775, 2.887, 3.035], 'Fe:O': [1.946, 2.116], 'E': [10.0]} # Basal: 2.971, C: 2.901
-#neighborCutoffDist = {'Fe:Fe': [2.971, 2.901], 'Fe:O': [1.946, 2.116], 'E': [10.0]} # Basal: 2.971, C: 2.901
+neighborCutoffDist = {'Fe:Fe': [2.971, 2.901], 'O:O': [2.670, 2.775, 2.887, 3.035], 'Fe:O': [1.946, 2.116], 'E': [5.0]} # Basal: 2.971, C: 2.901
+#neighborCutoffDist = {'Fe:Fe': [2.971, 2.901], 'E': [2.0]} # Basal: 2.971, C: 2.901
 neighborCutoffDistTol = 0.01
 elementTypeDelimiter = ':'
 # TODO: Value for hematite might differ
@@ -52,6 +52,7 @@ hematite = material(name, elementTypes, speciesTypes, unitcellCoords, elementTyp
                     latticeParameters, vn, lambdaValues, VAB, neighborCutoffDist, neighborCutoffDistTol, 
                     elementTypeDelimiter, epsilon0)
 
+#print hematite.unitcellCoords
 electronSiteElementTypeIndex = elementTypes.index(speciesTypes['electron'][0])
 # TODO: Automate the choice of sites given number of electron and hole species
 electronQuantumIndices = np.array([[1, 1, 1, electronSiteElementTypeIndex, elementSite] for elementSite in np.array([3, 8])])
@@ -61,12 +62,13 @@ occupancy = [['electron', np.asarray(electronSiteIndices, int)]]
 
 hematiteSystem = system(hematiteParameters, hematite, occupancy)
 
+#hematiteSystem.neighborSites(bulkSites, centerSiteIndices, neighborSiteIndices, [0.0, 2.0], 'E')
+
 # TODO: Neighbor List has to be generated automatically within the code.
 hematiteSystem.generateNeighborList()
 #print hematiteSystem.neighborList['E'][0].systemElementIndexMap
 #print hematiteSystem.config(occupancy)
 '''
-
 hematiteRun = run(hematiteParameters, hematite, hematiteSystem)
 timeNpath = hematiteRun.doKMCSteps(randomSeed=2)
 np.save('timeNpath.npy', timeNpath)
