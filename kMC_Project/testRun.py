@@ -1,4 +1,4 @@
-from system import modelParameters, material, system, run
+from system import modelParameters, material, neighbors, system, run
 import numpy as np
 
 T = 300 # Temperature in K
@@ -60,12 +60,16 @@ electronSiteIndices = [hematite.generateSystemElementIndex(systemSize, quantumIn
                        for quantumIndex in electronQuantumIndices]
 occupancy = [['electron', np.asarray(electronSiteIndices, int)]]
 
+hematiteNeighborList = neighbors(hematiteParameters, hematite)
+
+hematiteNeighborList.generateNeighborList()
+
 hematiteSystem = system(hematiteParameters, hematite, occupancy)
 
 #hematiteSystem.neighborSites(bulkSites, centerSiteIndices, neighborSiteIndices, [0.0, 2.0], 'E')
 
 # TODO: Neighbor List has to be generated automatically within the code.
-hematiteSystem.generateNeighborList()
+#hematiteSystem.generateNeighborList()
 #print hematiteSystem.neighborList['E'][0].systemElementIndexMap
 #print hematiteSystem.config(occupancy)
 '''

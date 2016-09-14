@@ -200,21 +200,18 @@ class material(object):
             nFilledUnitCells -= quantumIndices[index] * np.prod(systemSize[index+1:])
         return quantumIndices
     
-class system(object):
+
+class neighbors(object):
     '''
-    defines the system we are working on
-    
-    Attributes:
-    size: An array (3 x 1) defining the system size in multiple of unit cells
+    Returns the neighbor list file
     '''
     
-    def __init__(self, modelParameters, material, occupancy):
+    def __init__(self, modelParameters, material):
         '''
-        Return a system object whose size is *size*
+        
         '''
-        self.modelParameters = modelParameters
         self.material = material
-        self.occupancy = OrderedDict(occupancy)
+        self.modelParameters = modelParameters
         
         # total number of unit cells
         self.numCells = np.prod(self.modelParameters.systemSize)
@@ -224,16 +221,6 @@ class system(object):
         bulkSites = self.material.generateSites(elementTypeIndices, self.modelParameters.systemSize)
         self.bulkSites = bulkSites
         
-        # generate lattice charge list
-        unitCellChargeList = np.array([self.material.chargeTypes[self.material.elementTypes[elementTypeIndex]] 
-                                       for elementTypeIndex in self.material.elementTypeIndexList])
-        self.latticeChargeList = np.tile(unitCellChargeList, self.numCells)
-        
-        self.latticeParameters = self.material.latticeParameters
-    
-    # TODO: Is it better to shift neighborSites method to material class and add generateNeighborList method to 
-    # __init__ function of system class?   
-
     def hopNeighborSites(self, bulkSites, centerSiteIndices, neighborSiteIndices, cutoffDistLimits, cutoffDistKey):
         '''
         Returns systemElementIndexMap and distances between center sites and its neighbor sites within cutoff 
@@ -399,6 +386,37 @@ class system(object):
             neighborList[cutoffDistKey] = neighborListCutoffDistKey
         self.neighborList = neighborList
         return neighborList
+    
+    
+class system(object):
+    '''
+    defines the system we are working on
+    
+    Attributes:
+    size: An array (3 x 1) defining the system size in multiple of unit cells
+    '''
+    
+    def __init__(self, modelParameters, material, occupancy):
+        '''
+        Return a system object whose size is *size*
+        '''
+        self.modelParameters = modelParameters
+        self.material = material
+        self.occupancy = OrderedDict(occupancy)
+        
+        # total number of unit cells
+        self.numCells = np.prod(self.modelParameters.systemSize)
+        
+        # generate lattice charge list
+        unitCellChargeList = np.array([self.material.chargeTypes[self.material.elementTypes[elementTypeIndex]] 
+                                       for elementTypeIndex in self.material.elementTypeIndexList])
+        self.latticeChargeList = np.tile(unitCellChargeList, self.numCells)
+        
+        self.latticeParameters = self.material.latticeParameters
+    
+    # TODO: Is it better to shift neighborSites method to material class and add generateNeighborList method to 
+    # __init__ function of system class?   
+
 
     def chargeConfig(self, occupancy):
         '''
