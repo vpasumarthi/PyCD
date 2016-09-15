@@ -1,4 +1,4 @@
-from system import modelParameters, analysis, plot
+from kineticModel import modelParameters, analysis, plot
 import numpy as np
 
 T = 300 # Temperature in K

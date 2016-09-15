@@ -1,4 +1,4 @@
-from system import modelParameters, material, neighbors
+from kineticModel import modelParameters, material, neighbors
 import numpy as np
 
 T = 300 # Temperature in K

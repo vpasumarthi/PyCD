@@ -1,4 +1,4 @@
-from system import modelParameters, material, system, run
+from kineticModel import modelParameters, material, system, run
 import numpy as np
 
 T = 300 # Temperature in K
