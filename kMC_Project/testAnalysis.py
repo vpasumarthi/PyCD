@@ -8,6 +8,7 @@ stepInterval = 1E+00
 nStepsMSD = 5E+01
 nDispMSD = 5E+01
 binsize = 1E+00
+# TODO: Make sure it works for any type of bin size even less than 1 ns.
 maxBinSize = 1 # ns
 systemSize = np.array([3, 3, 3])
 pbc = 1

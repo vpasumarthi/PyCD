@@ -172,6 +172,7 @@ class material(object):
         '''
         assert 0 not in systemSize, 'System size should be greater than 0 in any dimension'
         assert quantumIndices[-1] < self.nElements[quantumIndices[-2]], 'Element Index exceed number of elements of the specified element type'
+        assert all(quantumIndex >= 0 for quantumIndex in quantumIndices), 'Quantum Indices cannot be negative'
         unitCellIndex = quantumIndices[:3]
         [elementTypeIndex, elementIndex] = quantumIndices[-2:]
         nElementsPerUnitCell = np.sum(self.nElements)
@@ -188,6 +189,7 @@ class material(object):
         '''
         Returns the quantum indices of the element
         '''
+        assert systemElementIndex >= 0, 'System Element Index cannot be negative'
         quantumIndices = [0] * 5
         nElementsPerUnitCell = np.sum(self.nElements)
         nElementsPerUnitCellCumSum = np.cumsum(self.nElements)
@@ -552,8 +554,8 @@ class run(object):
         '''
         neighborList = self.system.neighborList
         newStateOccupancyList = []
-        hopElementType = []
-        hopDistType = []
+        hopElementTypes = []
+        hopDistTypes = []
         for speciesType in currentStateOccupancy.keys():
             for speciesIndex, speciesSystemElementIndex in enumerate(currentStateOccupancy[speciesType]):
                 for iHopElementType in self.material.hopElementTypes[speciesType]:
@@ -564,23 +566,29 @@ class run(object):
                         speciesElementIndex = speciesQuantumIndices[4]
                         neighborSystemElementIndices = []
                         for neighborIndex in range(len(neighborElementIndexMap[1][speciesElementIndex])):
-                            neighborUnitCellIndex = [sum(x) for x in zip(speciesQuantumIndices[:3], neighborOffsetList[speciesElementIndex][neighborIndex])]
+                            neighborUnitCellIndices = [sum(x) for x in zip(speciesQuantumIndices[:3], neighborOffsetList[speciesElementIndex][neighborIndex])]
+                            # TODO: Try to avoid the loop and conditions
+                            for index, neighborUnitCellIndex in enumerate(neighborUnitCellIndices):
+                                if neighborUnitCellIndex > self.modelParameters.systemSize[index] - 1:
+                                    neighborUnitCellIndices[index] -= self.modelParameters.systemSize[index]
+                                elif neighborUnitCellIndex < 0:
+                                    neighborUnitCellIndices[index] += self.modelParameters.systemSize[index]
                             neighborElementTypeIndex = [self.material.elementTypes.index(iHopElementType.split(self.material.elementTypeDelimiter)[1])]
                             neighborElementIndex = [neighborElementIndexMap[1][speciesElementIndex][neighborIndex]]
-                            neighborQuantumIndices = neighborUnitCellIndex + neighborElementTypeIndex + neighborElementIndex
+                            neighborQuantumIndices = neighborUnitCellIndices + neighborElementTypeIndex + neighborElementIndex
                             neighborSystemElementIndex = self.material.generateSystemElementIndex(self.modelParameters.systemSize, neighborQuantumIndices)
                             neighborSystemElementIndices.append(neighborSystemElementIndex)
                         for neighborSystemElementIndex in neighborSystemElementIndices:
-                            newStateOccupancy = currentStateOccupancy
+                            newStateOccupancy = deepcopy(currentStateOccupancy)
                             newStateOccupancy[speciesType][speciesIndex] = neighborSystemElementIndex
                             newStateOccupancyList.append(newStateOccupancy)
-                            hopElementType.append(iHopElementType)
-                            hopDistType.append(hopDistTypeIndex)
+                            hopElementTypes.append(iHopElementType)
+                            hopDistTypes.append(hopDistTypeIndex)
 
         returnNewStates = returnValues()
         returnNewStates.newStateOccupancyList = newStateOccupancyList
-        returnNewStates.hopElementType = hopElementType
-        returnNewStates.hopDistType = hopDistType
+        returnNewStates.hopElementTypes = hopElementTypes
+        returnNewStates.hopDistTypes = hopDistTypes
         return returnNewStates
 
     def doKMCSteps(self, randomSeed = 1):
@@ -594,7 +602,7 @@ class run(object):
         kmcSteps = self.modelParameters.kmcSteps
         stepInterval = self.modelParameters.stepInterval
         currentStateOccupancy = self.system.occupancy
-        
+                
         timeArray = np.zeros(nTraj * (np.floor(kmcSteps / stepInterval) + 1))
         positionArray = np.zeros(( nTraj * (np.floor(kmcSteps / stepInterval) + 1), self.totalSpecies, 3))
         pathIndex = 0
@@ -608,10 +616,12 @@ class run(object):
             for step in range(kmcSteps):
                 kList = []
                 newStates = self.generateNewStates(currentStateOccupancy)
+                hopElementTypes = newStates.hopElementTypes
+                hopDistTypes = newStates.hopDistTypes
                 for newStateIndex, newStateOccupancy in enumerate(newStates.newStateOccupancyList):
-                    hopElementType = newStates.hopElementType[newStateIndex]
-                    hopDistType = newStates.hopDistType[newStateIndex]
                     delG0 = self.delG0(config, currentStateOccupancy, newStateOccupancy)
+                    hopElementType = hopElementTypes[newStateIndex]
+                    hopDistType = hopDistTypes[newStateIndex]
                     lambdaValue = self.lambdaValues[hopElementType][hopDistType]
                     VAB = self.VAB[hopElementType][hopDistType]
                     delGs = ((lambdaValue + delG0) ** 2 / (4 * lambdaValue)) - VAB
