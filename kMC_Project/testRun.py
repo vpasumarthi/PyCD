@@ -1,4 +1,4 @@
-from system import modelParameters, material
+from system import modelParameters, material, system, run
 import numpy as np
 
 T = 300 # Temperature in K
@@ -9,7 +9,7 @@ nStepsMSD = 5E+01
 nDispMSD = 5E+01
 binsize = 1E+00
 maxBinSize = 1 # ns
-systemSize = np.array([9, 9, 4])
+systemSize = np.array([3, 3, 3])
 pbc = [1, 1, 1]
 gui = 0
 kB = 8.617E-05 # Boltzmann constant in eV/K
@@ -52,10 +52,21 @@ hematite = material(name, elementTypes, speciesTypes, unitcellCoords, elementTyp
                     latticeParameters, vn, lambdaValues, VAB, neighborCutoffDist, neighborCutoffDistTol, 
                     elementTypeDelimiter, epsilon0)
 
-hematiteSystem = system(hematiteParameters, hematite, occupancy, neighborList)
+#print hematite.unitcellCoords
+electronSiteElementTypeIndex = elementTypes.index(speciesTypes['electron'][0])
+# TODO: Automate the choice of sites given number of electron and hole species
+electronQuantumIndices = np.array([[1, 1, 1, electronSiteElementTypeIndex, elementSite] for elementSite in np.array([3, 8])])
+electronSiteIndices = [hematite.generateSystemElementIndex(systemSize, quantumIndex) 
+                       for quantumIndex in electronQuantumIndices]
+occupancy = [['electron', np.asarray(electronSiteIndices, int)]]
+
+# dictionary neighborList is saved as an numpy array. It can be recovered by calling
+# neighborList[()]
+neighborList = np.load('neighborList333.npy')
+
+hematiteSystem = system(hematiteParameters, hematite, occupancy, neighborList[()])
 
 #hematiteSystem.neighborSites(bulkSites, centerSiteIndices, neighborSiteIndices, [0.0, 2.0], 'E')
-
 # TODO: Neighbor List has to be generated automatically within the code.
 #hematiteSystem.generateNeighborList()
 #print hematiteSystem.neighborList['E'][0].systemElementIndexMap

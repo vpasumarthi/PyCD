@@ -251,7 +251,7 @@ class neighbors(object):
                     iNeighborSiteIndexList.append(neighborSiteIndex)
                     iDisplacementVectors.append(neighborImageDisplacementVectors[0])
                     iDisplacements.append(displacement)
-            print centerSiteIndex, cutoffDistKey, len(iDisplacements)#, sorted(iDisplacements)
+            #print centerSiteIndex, cutoffDistKey, len(iDisplacements)#, sorted(iDisplacements)
             neighborSystemElementIndices.append(np.array(neighborSiteSystemElementIndexList[iNeighborSiteIndexList]))
             offsetList.append(centerSiteQuantumIndexList[centerSiteIndex, :3] - neighborSiteQuantumIndexList[iNeighborSiteIndexList, :3])
             neighborElementIndexList.append(neighborSiteQuantumIndexList[iNeighborSiteIndexList, 4])
@@ -291,7 +291,8 @@ class neighbors(object):
         centerSiteQuantumIndexList = bulkSites.quantumIndexList[centerSiteIndices]
         
         neighborSystemElementIndices = []
-        offsetList = [] 
+        offsetList = []
+        neighborElementTypeIndexList = []
         neighborElementIndexList = []
         numNeighbors = []
         displacementVectorList = []
@@ -320,9 +321,10 @@ class neighbors(object):
                     iNeighborSiteIndexList.append(neighborSiteIndex)
                     iDisplacementVectors.append(neighborImageDisplacementVectors[imageIndex])
                     iDisplacements.append(displacement)
-            print centerSiteIndex, cutoffDistKey, len(iDisplacements)#, sorted(iDisplacements)
+            #print centerSiteIndex, cutoffDistKey, len(iDisplacements)#, sorted(iDisplacements)
             neighborSystemElementIndices.append(np.array(neighborSiteSystemElementIndexList[iNeighborSiteIndexList]))
             offsetList.append(centerSiteQuantumIndexList[centerSiteIndex, :3] - neighborSiteQuantumIndexList[iNeighborSiteIndexList, :3])
+            neighborElementTypeIndexList.append(neighborSiteQuantumIndexList[iNeighborSiteIndexList, 3])
             neighborElementIndexList.append(neighborSiteQuantumIndexList[iNeighborSiteIndexList, 4])
             displacementVectorList.append(np.asarray(iDisplacementVectors))
             displacementList.append(iDisplacements)
@@ -333,6 +335,9 @@ class neighbors(object):
         systemElementIndexMap[:] = [centerSiteSystemElementIndexList, neighborSystemElementIndices]
         offsetList = np.asarray(offsetList)
         neighborElementIndexList = np.asarray(neighborElementIndexList)
+        neighborElementTypeIndexList = np.asarray(neighborElementTypeIndexList)
+        elementTypeIndexMap = np.empty(2, dtype=object)
+        elementTypeIndexMap[:] = [centerSiteQuantumIndexList[:,3], neighborElementTypeIndexList]
         elementIndexMap = np.empty(2, dtype=object)
         elementIndexMap[:] = [centerSiteQuantumIndexList[:,4], neighborElementIndexList]
         numNeighbors = np.asarray(numNeighbors, int)
@@ -374,15 +379,13 @@ class neighbors(object):
                 for cutoffDist in cutoffDistList:
                     cutoffDistLimits = [cutoffDist-tolDist, cutoffDist+tolDist]
                     # TODO: include assertions, conditions for systemSizes less than [3, 3, 3]
-                    neighborListCutoffDistKey.append(self.electrostaticNeighborSites(localSystemSize, localBulkSites, centerSiteIndices, 
-                                                                        neighborSiteIndices, cutoffDistLimits, cutoffDistKey))
+                    neighborListCutoffDistKey.append(self.hopNeighborSites(localBulkSites, centerSiteIndices, 
+                                                                           neighborSiteIndices, cutoffDistLimits, cutoffDistKey))
             else:
-                #centerSiteIndices = neighborSiteIndices = np.arange(self.numCells * np.sum(self.material.nElements))
-                centerSiteIndices = [0] 
-                neighborSiteIndices = np.arange(self.numCells * np.sum(self.material.nElements))
+                centerSiteIndices = neighborSiteIndices = np.arange(self.numCells * np.sum(self.material.nElements))
                 cutoffDistLimits = [0, cutoffDistList[0]]
-                neighborListCutoffDistKey.append(self.hopNeighborSites(self.bulkSites, centerSiteIndices, 
-                                                                    neighborSiteIndices, cutoffDistLimits, cutoffDistKey))
+                neighborListCutoffDistKey.append(self.electrostaticNeighborSites(self.modelParameters.systemSize, self.bulkSites, centerSiteIndices, 
+                                                                                 neighborSiteIndices, cutoffDistLimits, cutoffDistKey))
             neighborList[cutoffDistKey] = neighborListCutoffDistKey
         return neighborList
     
@@ -401,6 +404,7 @@ class system(object):
         self.modelParameters = modelParameters
         self.material = material
         self.occupancy = OrderedDict(occupancy)
+        self.neighborList = neighborList
         
         # total number of unit cells
         self.numCells = np.prod(self.modelParameters.systemSize)
@@ -411,11 +415,10 @@ class system(object):
         self.latticeChargeList = np.tile(unitCellChargeList, self.numCells)
         
         self.latticeParameters = self.material.latticeParameters
+        
     
     # TODO: Is it better to shift neighborSites method to material class and add generateNeighborList method to 
     # __init__ function of system class?   
-
-
     def chargeConfig(self, occupancy):
         '''
         Returns charge distribution of the current configuration
@@ -511,6 +514,9 @@ class run(object):
         self.totalSpecies = np.sum(self.nSpecies.values()) - self.nSpecies['empty']
     
     def generateDistanceList(self, config):
+        '''
+        
+        '''
         # Electrostatic interaction neighborlist:
         elecNeighborListSystemElementIndexMap = self.system.neighborList['E'][0].systemElementIndexMap
         self.elecNeighborListSystemElementIndexMap = elecNeighborListSystemElementIndexMap
@@ -548,7 +554,6 @@ class run(object):
         '''
         generates a list of new occupancy states possible from the current state
         '''
-        # TODO: Import the neighborlist
         neighborList = self.system.neighborList
         newStateOccupancyList = []
         hopElementType = []
