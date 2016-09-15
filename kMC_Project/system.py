@@ -315,8 +315,9 @@ class neighbors(object):
                             unitcellTranslationalCoords = np.dot(np.multiply(np.array([xOffset, yOffset, zOffset]), self.modelParameters.systemSize), latticeMatrix)
                             neighborImageCoords[index] = neighborCoord + unitcellTranslationalCoords
                             index += 1
-                neighborImageDisplacementVectors = np.linalg.norm(neighborImageCoords - centerCoord, axis=1)
-                [displacement, imageIndex] = [np.min(neighborImageDisplacementVectors), np.argmin(neighborImageDisplacementVectors)]
+                neighborImageDisplacementVectors = neighborImageCoords - centerCoord
+                neighborImageDisplacements = np.linalg.norm(neighborImageDisplacementVectors, axis=1)
+                [displacement, imageIndex] = [np.min(neighborImageDisplacements), np.argmin(neighborImageDisplacements)]
                 if cutoffDistLimits[0] < displacement <= cutoffDistLimits[1]:
                     iNeighborSiteIndexList.append(neighborSiteIndex)
                     iDisplacementVectors.append(neighborImageDisplacementVectors[imageIndex])
@@ -513,7 +514,7 @@ class run(object):
         # total number of species
         self.totalSpecies = np.sum(self.nSpecies.values()) - self.nSpecies['empty']
     
-    def generateDistanceList(self, config):
+    def generateDistanceList(self):
         '''
         
         '''
@@ -522,12 +523,7 @@ class run(object):
         self.elecNeighborListSystemElementIndexMap = elecNeighborListSystemElementIndexMap
         
         # Distance List
-        positions = config.positions
-        distanceList = deepcopy(elecNeighborListSystemElementIndexMap[1])
-        positionList0 = positions[elecNeighborListSystemElementIndexMap[0]]
-        for index, position in enumerate(positionList0):
-            positionList1 = positions[elecNeighborListSystemElementIndexMap[1][index]]
-            distanceList[index] = np.linalg.norm(positionList1 - position, axis=1)
+        distanceList = self.system.neighborList['E'][0].displacementList
         self.distanceList = distanceList
         self.coeffDistanceList = (1/(4 * np.pi * self.material.epsilon0)) * self.distanceList
 
@@ -605,7 +601,7 @@ class run(object):
         speciesSystemElementIndices = np.concatenate((currentStateOccupancy.values()))
         config = self.system.config(currentStateOccupancy)
         assert 'E' in self.material.neighborCutoffDist.keys(), 'Please specify the cutoff distance for electrostatic interactions'
-        self.generateDistanceList(config)
+        self.generateDistanceList()
         for dummy in range(nTraj):
             pathIndex += 1
             kmcTime = 0
