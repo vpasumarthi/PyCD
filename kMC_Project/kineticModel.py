@@ -127,7 +127,6 @@ class material(object):
                     startIndex = iUnitCell * nSitesPerUnitCell
                     endIndex = startIndex + nSitesPerUnitCell
                     # TODO: Any reason to use fractional coordinates?
-                    # TODO: Shouldn't the product be latticeMatrix * unitCellSize?
                     unitcellTranslationalCoords = np.dot([xIndex, yIndex, zIndex], self.latticeMatrix)
                     newCellSiteCoords = unitcellElementCoords + unitcellTranslationalCoords
                     cellCoordinates[startIndex:endIndex] = newCellSiteCoords
@@ -331,10 +330,12 @@ class neighbors(object):
         returnNeighbors.displacementList = np.asarray(displacementList)
         return returnNeighbors
 
-    def generateNeighborList(self):
+    def generateNeighborList(self, localSystemSize = np.array([3, 3, 3]), 
+                             centerUnitCellIndex = np.array([1, 1, 1])):
         '''
         Adds the neighbor list to the system object and returns the neighbor list
         '''
+        assert all(size >= 3 for size in localSystemSize), 'Local system size in all dimensions should always be greater than or equal to 3'
         neighborList = {}
         tolDist = self.material.neighborCutoffDistTol
         elementTypes = self.material.elementTypes
@@ -345,10 +346,9 @@ class neighbors(object):
                 [centerElementType, neighborElementType] = cutoffDistKey.split(self.material.elementTypeDelimiter)
                 centerSiteElementTypeIndex = elementTypes.index(centerElementType) 
                 neighborSiteElementTypeIndex = elementTypes.index(neighborElementType)
-                localSystemSize = np.array([3, 3, 3])
                 localBulkSites = self.material.generateSites(range(len(self.material.elementTypes)), 
                                                              localSystemSize)
-                centerSiteIndices = [self.material.generateSystemElementIndex(localSystemSize, np.array([1, 1, 1, centerSiteElementTypeIndex, elementIndex])) 
+                centerSiteIndices = [self.material.generateSystemElementIndex(localSystemSize, np.append(centerUnitCellIndex, centerSiteElementTypeIndex, elementIndex)) 
                                      for elementIndex in range(self.material.nElements[centerSiteElementTypeIndex])]
                 neighborSiteIndices = [self.material.generateSystemElementIndex(localSystemSize, np.array([xSize, ySize, zSize, neighborSiteElementTypeIndex, elementIndex])) 
                                        for xSize in range(localSystemSize[0]) for ySize in range(localSystemSize[1]) 
@@ -357,7 +357,6 @@ class neighbors(object):
 
                 for cutoffDist in cutoffDistList:
                     cutoffDistLimits = [cutoffDist-tolDist, cutoffDist+tolDist]
-                    # TODO: include assertions, conditions for systemSizes less than [3, 3, 3]
                     neighborListCutoffDistKey.append(self.hopNeighborSites(localBulkSites, centerSiteIndices, 
                                                                            neighborSiteIndices, cutoffDistLimits, cutoffDistKey))
             else:
@@ -396,8 +395,6 @@ class system(object):
         self.latticeParameters = self.material.latticeParameters
         
     
-    # TODO: Is it better to shift neighborSites method to material class and add generateNeighborList method to 
-    # __init__ function of system class?   
     def chargeConfig(self, occupancy):
         '''
         Returns charge distribution of the current configuration
@@ -538,13 +535,15 @@ class run(object):
         hopDistTypes = []
         hoppingSpeciesIndices = []
         speciesDisplacementVectorList = []
+        print self.material.hopElementTypes
         for speciesType in currentStateOccupancy.keys():
-            for speciesIndex, speciesSystemElementIndex in enumerate(currentStateOccupancy[speciesType]):
+            for speciesTypeSpeciesIndex, speciesSiteSystemElementIndex in enumerate(currentStateOccupancy[speciesType]):
                 for iHopElementType in self.material.hopElementTypes[speciesType]:
                     for hopDistTypeIndex in range(len(self.material.neighborCutoffDist[iHopElementType])):
                         neighborOffsetList = neighborList[iHopElementType][hopDistTypeIndex].offsetList
                         neighborElementIndexMap = neighborList[iHopElementType][hopDistTypeIndex].elementIndexMap
-                        speciesQuantumIndices = self.material.generateQuantumIndices(self.systemSize, speciesSystemElementIndex)
+                        speciesQuantumIndices = self.material.generateQuantumIndices(self.systemSize, speciesSiteSystemElementIndex)
+                        # TODO: speciesTypeElementIndex instead of speciesElementIndex
                         speciesElementIndex = speciesQuantumIndices[4]
                         species2NeighborDisplacementVectorList = neighborList[iHopElementType][hopDistTypeIndex].displacementVectorList
                         
@@ -564,14 +563,15 @@ class run(object):
                             neighborSystemElementIndices.append(neighborSystemElementIndex)
                             speciesDisplacementVector = species2NeighborDisplacementVectorList[speciesElementIndex][neighborIndex]
                             speciesDisplacementVectorList.append(speciesDisplacementVector)
+                        
                         # TODO: Combine this for loop with the one before
                         for neighborSystemElementIndex in neighborSystemElementIndices:
                             newStateOccupancy = deepcopy(currentStateOccupancy)
-                            newStateOccupancy[speciesType][speciesIndex] = neighborSystemElementIndex
+                            newStateOccupancy[speciesType][speciesTypeSpeciesIndex] = neighborSystemElementIndex
                             newStateOccupancyList.append(newStateOccupancy)
                             hopElementTypes.append(iHopElementType)
                             hopDistTypes.append(hopDistTypeIndex)
-                            hoppingSpeciesIndices.append(speciesIndex)
+                            hoppingSpeciesIndices.append(speciesTypeSpeciesIndex)
 
         returnNewStates = returnValues()
         returnNewStates.newStateOccupancyList = newStateOccupancyList
@@ -655,7 +655,6 @@ class analysis(object):
     '''
     Post-simulation analysis methods
     '''
-    
     def __init__(self, trajectoryData, nStepsMSD, nDispMSD, binsize, maxBinSize = 1.0, reprTime = 'ns', reprDist = 'Angstrom'):
         '''
         

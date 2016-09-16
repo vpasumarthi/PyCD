@@ -1,5 +1,6 @@
 from kineticModel import material, neighbors
 import numpy as np
+import pickle
 
 name = 'Fe2O3'
 elementTypes = ['Fe', 'O']
@@ -33,9 +34,17 @@ hematite = material(name, elementTypes, speciesTypes, unitcellCoords, elementTyp
                     latticeParameters, vn, lambdaValues, VAB, neighborCutoffDist, neighborCutoffDistTol, 
                     elementTypeDelimiter, epsilon0)
 
+file_hematite = open('file_hematite.obj', 'w')
+pickle.dump(hematite, file_hematite)
+file_hematite.close()
+
 systemSize = np.array([3, 3, 3])
 pbc = np.array([1, 1, 1])
 hematiteNeighbors = neighbors(hematite, systemSize, pbc)
+
+file_hematiteNeighbors = open('file_hematiteNeighbors.obj', 'w')
+pickle.dump(hematiteNeighbors, file_hematiteNeighbors)
+file_hematiteNeighbors.close()
 
 neighborList = hematiteNeighbors.generateNeighborList()
 np.save('neighborList333.npy', neighborList)
