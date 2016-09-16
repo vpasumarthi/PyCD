@@ -6,31 +6,6 @@ code to compute msd of random walk of single electron in 3D hematite lattice str
 import numpy as np
 from collections import OrderedDict
 from copy import deepcopy
-
-class modelParameters(object):
-    '''
-    Definitions of all model parameters that need to be passed on to other classes
-    '''
-    def __init__(self, T, nTraj, kmcSteps, stepInterval, nStepsMSD, nDispMSD, binsize, maxBinSize, 
-                 systemSize=np.array([10, 10, 10]), pbc=[1, 1, 1], gui=0, kB=8.617E-05, reprTime='ns', reprDist='Angstrom'):
-        '''
-        Definitions of all model parameters
-        '''
-        # TODO: Is it necessary/better to define these parameters in a dictionary?
-        self.T = T
-        self.nTraj = int(nTraj)
-        self.kmcSteps = int(kmcSteps)
-        self.stepInterval = int(stepInterval)
-        self.nStepsMSD = int(nStepsMSD)
-        self.nDispMSD = int(nDispMSD)
-        self.binsize = binsize
-        self.maxBinSize = maxBinSize
-        self.systemSize = systemSize
-        self.pbc = pbc
-        self.gui = gui
-        self.kB = kB
-        self.reprTime = reprTime
-        self.reprDist = reprDist
         
 class material(object):
     '''
@@ -208,19 +183,20 @@ class neighbors(object):
     Returns the neighbor list file
     '''
     
-    def __init__(self, modelParameters, material):
+    def __init__(self, material, systemSize=np.array([10, 10, 10]), pbc=[1, 1, 1]):
         '''
         
         '''
         self.material = material
-        self.modelParameters = modelParameters
+        self.systemSize = systemSize
+        self.pbc = pbc
         
         # total number of unit cells
-        self.numCells = np.prod(self.modelParameters.systemSize)
+        self.numCells = np.prod(self.systemSize)
         
         # generate all sites in the system
         elementTypeIndices = range(len(self.material.elementTypes))
-        bulkSites = self.material.generateSites(elementTypeIndices, self.modelParameters.systemSize)
+        bulkSites = self.material.generateSites(elementTypeIndices, self.systemSize)
         self.bulkSites = bulkSites
         
     def hopNeighborSites(self, bulkSites, centerSiteIndices, neighborSiteIndices, cutoffDistLimits, cutoffDistKey):
@@ -300,21 +276,21 @@ class neighbors(object):
         displacementVectorList = []
         displacementList = []
         
-        xRange = range(-1, 2) if self.modelParameters.pbc[0] == 1 else [0]
-        yRange = range(-1, 2) if self.modelParameters.pbc[1] == 1 else [0]
-        zRange = range(-1, 2) if self.modelParameters.pbc[2] == 1 else [0]
+        xRange = range(-1, 2) if self.pbc[0] == 1 else [0]
+        yRange = range(-1, 2) if self.pbc[1] == 1 else [0]
+        zRange = range(-1, 2) if self.pbc[2] == 1 else [0]
         latticeMatrix = self.material.latticeMatrix
         for centerSiteIndex, centerCoord in enumerate(centerSiteCoords):
             iDisplacementVectors = []
             iDisplacements = []
             iNeighborSiteIndexList = []
             for neighborSiteIndex, neighborCoord in enumerate(neighborSiteCoords):
-                neighborImageCoords = np.zeros((3**sum(self.modelParameters.pbc), 3))
+                neighborImageCoords = np.zeros((3**sum(self.pbc), 3))
                 index = 0
                 for xOffset in xRange:
                     for yOffset in yRange:
                         for zOffset in zRange:
-                            unitcellTranslationalCoords = np.dot(np.multiply(np.array([xOffset, yOffset, zOffset]), self.modelParameters.systemSize), latticeMatrix)
+                            unitcellTranslationalCoords = np.dot(np.multiply(np.array([xOffset, yOffset, zOffset]), self.systemSize), latticeMatrix)
                             neighborImageCoords[index] = neighborCoord + unitcellTranslationalCoords
                             index += 1
                 neighborImageDisplacementVectors = neighborImageCoords - centerCoord
@@ -387,7 +363,7 @@ class neighbors(object):
             else:
                 centerSiteIndices = neighborSiteIndices = np.arange(self.numCells * np.sum(self.material.nElements))
                 cutoffDistLimits = [0, cutoffDistList[0]]
-                neighborListCutoffDistKey.append(self.electrostaticNeighborSites(self.modelParameters.systemSize, self.bulkSites, centerSiteIndices, 
+                neighborListCutoffDistKey.append(self.electrostaticNeighborSites(self.systemSize, self.bulkSites, centerSiteIndices, 
                                                                                  neighborSiteIndices, cutoffDistLimits, cutoffDistKey))
             neighborList[cutoffDistKey] = neighborListCutoffDistKey
         return neighborList
@@ -400,23 +376,23 @@ class system(object):
     size: An array (3 x 1) defining the system size in multiple of unit cells
     '''
     
-    def __init__(self, modelParameters, material, occupancy, neighborList):
+    def __init__(self, material, neighbors, neighborList, occupancy):
         '''
         Return a system object whose size is *size*
         '''
-        self.modelParameters = modelParameters
         self.material = material
-        self.occupancy = OrderedDict(occupancy)
+        self.neighbors = neighbors
         self.neighborList = neighborList
+        self.occupancy = OrderedDict(occupancy)
         
         # total number of unit cells
-        self.numCells = np.prod(self.modelParameters.systemSize)
+        self.systemSize = self.neighbors.systemSize
+        self.numCells = np.prod(self.systemSize)
         
         # generate lattice charge list
         unitCellChargeList = np.array([self.material.chargeTypes[self.material.elementTypes[elementTypeIndex]] 
                                        for elementTypeIndex in self.material.elementTypeIndexList])
         self.latticeChargeList = np.tile(unitCellChargeList, self.numCells)
-        
         self.latticeParameters = self.material.latticeParameters
         
     
@@ -440,7 +416,7 @@ class system(object):
                     for shellIndex, chargeValue in enumerate(chargeTypes[chargeTypeKey]):
                         neighborOffsetList = neighborElementTypeSites[shellIndex].offsetList
                         neighborElementIndexMap = neighborElementTypeSites[shellIndex].elementIndexMap
-                        siteQuantumIndices = self.material.generateQuantumIndices(self.modelParameters.systemSize, centerSiteSystemElementIndex)
+                        siteQuantumIndices = self.material.generateQuantumIndices(self.systemSize, centerSiteSystemElementIndex)
                         siteElementIndex = siteQuantumIndices[4]
                         neighborSystemElementIndices = []
                         for neighborIndex in range(len(neighborElementIndexMap[1][siteElementIndex])):
@@ -448,7 +424,7 @@ class system(object):
                             neighborElementTypeIndex = [self.material.elementTypes.index(chargeTypeKey.split(self.material.elementTypeDelimiter)[1])]
                             neighborElementIndex = [neighborElementIndexMap[1][siteElementIndex][neighborIndex]]
                             neighborQuantumIndices = neighborUnitCellIndex + neighborElementTypeIndex + neighborElementIndex
-                            neighborSystemElementIndex = self.material.generateSystemElementIndex(self.modelParameters.systemSize, neighborQuantumIndices)
+                            neighborSystemElementIndex = self.material.generateSystemElementIndex(self.systemSize, neighborQuantumIndices)
                             neighborSystemElementIndices.append(neighborSystemElementIndex)
                         chargeList[neighborSystemElementIndices] = chargeValue
 
@@ -468,7 +444,7 @@ class system(object):
         Generates the configuration array for the system 
         '''
         elementTypeIndices = range(len(self.material.elementTypes))
-        systemSites = self.material.generateSites(elementTypeIndices, self.modelParameters.systemSize)
+        systemSites = self.material.generateSites(elementTypeIndices, self.systemSize)
         positions = systemSites.cellCoordinates
         systemElementIndexList = systemSites.systemElementIndexList
         chargeList = self.chargeConfig(occupancy)
@@ -484,17 +460,21 @@ class run(object):
     '''
     defines the subroutines for running Kinetic Monte Carlo and computing electrostatic interaction energies 
     '''
-    def __init__(self, modelParameters, material, system):
+    def __init__(self, material, system, T, nTraj, kmcSteps, stepInterval, gui, kB):
         '''
         Returns the PBC condition of the system
         '''
-        self.modelParameters = modelParameters
         self.material = material
         self.system = system
         
-        # import parameters from modelParameters class
-        self.kB = self.modelParameters.kB
-        self.T = self.modelParameters.T
+        self.T = T
+        self.nTraj = int(nTraj)
+        self.kmcSteps = int(kmcSteps)
+        self.stepInterval = int(stepInterval)
+        self.gui = gui
+        self.kB = kB
+        
+        self.systemSize = self.system.systemSize
         
         # import parameters from material class
         self.vn = self.material.vn
@@ -546,7 +526,6 @@ class run(object):
         Subroutine to compute the difference in free energies between initial and final states of the system
         '''
         delG0 = self.elec(newStateOccupancy) - self.elec(currentStateOccupancy)
-        print delG0
         return delG0
     
     def generateNewStates(self, currentStateOccupancy):
@@ -565,7 +544,7 @@ class run(object):
                     for hopDistTypeIndex in range(len(self.material.neighborCutoffDist[iHopElementType])):
                         neighborOffsetList = neighborList[iHopElementType][hopDistTypeIndex].offsetList
                         neighborElementIndexMap = neighborList[iHopElementType][hopDistTypeIndex].elementIndexMap
-                        speciesQuantumIndices = self.material.generateQuantumIndices(self.modelParameters.systemSize, speciesSystemElementIndex)
+                        speciesQuantumIndices = self.material.generateQuantumIndices(self.systemSize, speciesSystemElementIndex)
                         speciesElementIndex = speciesQuantumIndices[4]
                         species2NeighborDisplacementVectorList = neighborList[iHopElementType][hopDistTypeIndex].displacementVectorList
                         
@@ -574,14 +553,14 @@ class run(object):
                             neighborUnitCellIndices = [sum(x) for x in zip(speciesQuantumIndices[:3], neighborOffsetList[speciesElementIndex][neighborIndex])]
                             # TODO: Try to avoid the loop and conditions
                             for index, neighborUnitCellIndex in enumerate(neighborUnitCellIndices):
-                                if neighborUnitCellIndex > self.modelParameters.systemSize[index] - 1:
-                                    neighborUnitCellIndices[index] -= self.modelParameters.systemSize[index]
+                                if neighborUnitCellIndex > self.systemSize[index] - 1:
+                                    neighborUnitCellIndices[index] -= self.systemSize[index]
                                 elif neighborUnitCellIndex < 0:
-                                    neighborUnitCellIndices[index] += self.modelParameters.systemSize[index]
+                                    neighborUnitCellIndices[index] += self.systemSize[index]
                             neighborElementTypeIndex = [self.material.elementTypes.index(iHopElementType.split(self.material.elementTypeDelimiter)[1])]
                             neighborElementIndex = [neighborElementIndexMap[1][speciesElementIndex][neighborIndex]]
                             neighborQuantumIndices = neighborUnitCellIndices + neighborElementTypeIndex + neighborElementIndex
-                            neighborSystemElementIndex = self.material.generateSystemElementIndex(self.modelParameters.systemSize, neighborQuantumIndices)
+                            neighborSystemElementIndex = self.material.generateSystemElementIndex(self.systemSize, neighborQuantumIndices)
                             neighborSystemElementIndices.append(neighborSystemElementIndex)
                             speciesDisplacementVector = species2NeighborDisplacementVectorList[speciesElementIndex][neighborIndex]
                             speciesDisplacementVectorList.append(speciesDisplacementVector)
@@ -609,9 +588,9 @@ class run(object):
         # TODO: import neighbor list
         import random as rnd
         rnd.seed(randomSeed)
-        nTraj = self.modelParameters.nTraj
-        kmcSteps = self.modelParameters.kmcSteps
-        stepInterval = self.modelParameters.stepInterval
+        nTraj = self.nTraj
+        kmcSteps = self.kmcSteps
+        stepInterval = self.stepInterval
         currentStateOccupancy = self.system.occupancy
                 
         numPathStepsPerTraj = np.floor(kmcSteps / stepInterval) + 1
@@ -663,6 +642,9 @@ class run(object):
                     speciesDisplacementVectorList = np.zeros((self.totalSpecies, 3))
                     pathIndex += 1
         trajectoryData = returnValues()
+        trajectoryData.nTraj = nTraj
+        trajectoryData.kmcSteps = kmcSteps
+        trajectoryData.stepInterval = stepInterval
         trajectoryData.timeArray = timeArray
         trajectoryData.unwrappedPositionArray = unwrappedPositionArray
         trajectoryData.wrappedPositionArray = wrappedPositionArray
@@ -674,20 +656,22 @@ class analysis(object):
     Post-simulation analysis methods
     '''
     
-    def __init__(self, modelParameters, trajectoryData):
+    def __init__(self, trajectoryData, nStepsMSD, nDispMSD, binsize, maxBinSize = 1.0, reprTime = 'ns', reprDist = 'Angstrom'):
         '''
         
         '''
-        self.modelParameters = modelParameters
         self.trajectoryData = trajectoryData
-        self.timeConversion = 1E+09 if self.modelParameters.reprTime is 'ns' else 1E+00 
-        self.distConversion = 1E-10 if self.modelParameters.reprDist is 'm' else 1E+00
+
+        self.nStepsMSD = int(nStepsMSD)
+        self.nDispMSD = int(nDispMSD)
+        self.binsize = binsize
+        self.maxBinSize = maxBinSize
+        self.timeConversion = 1E+09 if reprTime is 'ns' else 1E+00 
+        self.distConversion = 1E-10 if reprDist is 'm' else 1E+00
         
-        self.nStepsMSD = self.modelParameters.nStepsMSD
-        self.nDispMSD = self.modelParameters.nDispMSD
-        self.nTraj = self.modelParameters.nTraj
-        self.kmcSteps = self.modelParameters.kmcSteps
-        self.stepInterval = self.modelParameters.stepInterval
+        self.nTraj = self.trajectoryData.nTraj
+        self.kmcSteps = self.trajectoryData.kmcSteps
+        self.stepInterval = self.trajectoryData.stepInterval
 
     def computeMSD(self, timeArray, unwrappedPositionArray):
         '''
@@ -708,7 +692,7 @@ class analysis(object):
                                                                 positionArray[headStart + step], axis=1)**2
         timeArrayMSD = timeNdisp2[:, 0]
         minEndTime = np.min(timeArrayMSD[np.arange(self.nStepsMSD * self.nDispMSD - 1, self.nTraj * (self.nStepsMSD * self.nDispMSD), self.nStepsMSD * self.nDispMSD)])  
-        bins = np.arange(0, minEndTime, self.modelParameters.binsize)
+        bins = np.arange(0, minEndTime, self.binsize)
         nBins = len(bins) - 1
         speciesMSDData = np.zeros((nBins, nSpecies))
         msdHistogram, dummy = np.histogram(timeArrayMSD, bins)
@@ -716,7 +700,7 @@ class analysis(object):
             iSpeciesHist, dummy = np.histogram(timeArrayMSD, bins, weights=timeNdisp2[:, iSpecies + 1])
             speciesMSDData[:, iSpecies] = iSpeciesHist / msdHistogram
         msdData = np.zeros((nBins, 2))
-        msdData[:, 0] = bins[:-1] + 0.5 * self.modelParameters.binsize
+        msdData[:, 0] = bins[:-1] + 0.5 * self.binsize
         msdData[:, 1] = np.mean(speciesMSDData, axis=1)
         return msdData
 

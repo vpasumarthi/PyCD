@@ -1,23 +1,5 @@
-from kineticModel import modelParameters, material, neighbors
+from kineticModel import material, neighbors
 import numpy as np
-
-T = 300 # Temperature in K
-nTraj = 2E+00
-kmcSteps = 1E+02
-stepInterval = 1E+00
-nStepsMSD = 5E+01
-nDispMSD = 5E+01
-binsize = 1E+00
-maxBinSize = 1 # ns
-systemSize = np.array([3, 3, 3])
-pbc = [1, 1, 1]
-gui = 0
-kB = 8.617E-05 # Boltzmann constant in eV/K
-reprTime = 'ns'
-reprDist = 'Angstrom'
-
-hematiteParameters = modelParameters(T, nTraj, kmcSteps, stepInterval, nStepsMSD, nDispMSD, binsize, maxBinSize, 
-                                     systemSize, pbc, gui, kB, reprTime, reprDist)
 
 name = 'Fe2O3'
 elementTypes = ['Fe', 'O']
@@ -51,7 +33,9 @@ hematite = material(name, elementTypes, speciesTypes, unitcellCoords, elementTyp
                     latticeParameters, vn, lambdaValues, VAB, neighborCutoffDist, neighborCutoffDistTol, 
                     elementTypeDelimiter, epsilon0)
 
-hematiteNeighborList = neighbors(hematiteParameters, hematite)
+systemSize = np.array([3, 3, 3])
+pbc = np.array([1, 1, 1])
+hematiteNeighbors = neighbors(hematite, systemSize, pbc)
 
-neighborList = hematiteNeighborList.generateNeighborList()
+neighborList = hematiteNeighbors.generateNeighborList()
 np.save('neighborList333.npy', neighborList)

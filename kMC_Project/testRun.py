@@ -1,23 +1,8 @@
-from kineticModel import modelParameters, material, system, run
+from kineticModel import material, neighbors, system, run
 import numpy as np
+import time as timer
 
-T = 300 # Temperature in K
-nTraj = 2E+00
-kmcSteps = 1E+03
-stepInterval = 1E+00
-nStepsMSD = 5E+02
-nDispMSD = 5E+02
-binsize = 1E+00
-maxBinSize = 1 # ns
-systemSize = np.array([3, 3, 3])
-pbc = [1, 1, 1]
-gui = 0
-kB = 8.617E-05 # Boltzmann constant in eV/K
-reprTime = 'ns'
-reprDist = 'Angstrom'
-
-hematiteParameters = modelParameters(T, nTraj, kmcSteps, stepInterval, nStepsMSD, nDispMSD, binsize, maxBinSize, 
-                                     systemSize, pbc, gui, kB, reprTime, reprDist)
+start_time = timer.time()
 
 name = 'Fe2O3'
 elementTypes = ['Fe', 'O']
@@ -56,15 +41,20 @@ hematite = material(name, elementTypes, speciesTypes, unitcellCoords, elementTyp
 electronSiteElementTypeIndex = elementTypes.index(speciesTypes['electron'][0])
 # TODO: Automate the choice of sites given number of electron and hole species
 electronQuantumIndices = np.array([[1, 1, 1, electronSiteElementTypeIndex, elementSite] for elementSite in np.array([3])])
+systemSize = np.array([3, 3, 3])
 electronSiteIndices = [hematite.generateSystemElementIndex(systemSize, quantumIndex) 
                        for quantumIndex in electronQuantumIndices]
 occupancy = [['electron', np.asarray(electronSiteIndices, int)]]
+
+systemSize = np.array([3, 3, 3])
+pbc = np.array([1, 1, 1])
+hematiteNeighbors = neighbors(hematite, systemSize, pbc)
 
 # dictionary neighborList is saved as an numpy array. It can be recovered by calling
 # neighborList[()]
 neighborList = np.load('neighborList333.npy')
 
-hematiteSystem = system(hematiteParameters, hematite, occupancy, neighborList[()])
+hematiteSystem = system(hematite, hematiteNeighbors, neighborList[()], occupancy)
 
 #hematiteSystem.neighborSites(bulkSites, centerSiteIndices, neighborSiteIndices, [0.0, 2.0], 'E')
 # TODO: Neighbor List has to be generated automatically within the code.
@@ -72,6 +62,14 @@ hematiteSystem = system(hematiteParameters, hematite, occupancy, neighborList[()
 #print hematiteSystem.neighborList['E'][0].systemElementIndexMap
 #print hematiteSystem.config(occupancy)
 
-hematiteRun = run(hematiteParameters, hematite, hematiteSystem)
+T = 300 # Temperature in K
+nTraj = 1E+00
+kmcSteps = 1E+03
+stepInterval = 1E+01
+gui = 0
+kB = 8.617E-05 # Boltzmann constant in eV/K
+
+hematiteRun = run(hematite, hematiteSystem, T, nTraj, kmcSteps, stepInterval, gui, kB)
 trajectoryData = hematiteRun.doKMCSteps(randomSeed=2)
-np.save('trajectoryData_1electron.npy', trajectoryData)
+np.save('trajectoryData_1electron_PBC_1e03KMCSteps_1e02PathSteps_1Traj.npy', trajectoryData)
+print("--- %s seconds ---" % (timer.time() - start_time))
