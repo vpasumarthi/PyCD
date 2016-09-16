@@ -3,10 +3,10 @@ import numpy as np
 
 T = 300 # Temperature in K
 nTraj = 2E+00
-kmcSteps = 1E+02
+kmcSteps = 1E+03
 stepInterval = 1E+00
-nStepsMSD = 5E+01
-nDispMSD = 5E+01
+nStepsMSD = 5E+02
+nDispMSD = 5E+02
 binsize = 1E+00
 maxBinSize = 1 # ns
 systemSize = np.array([3, 3, 3])
@@ -55,7 +55,7 @@ hematite = material(name, elementTypes, speciesTypes, unitcellCoords, elementTyp
 #print hematite.unitcellCoords
 electronSiteElementTypeIndex = elementTypes.index(speciesTypes['electron'][0])
 # TODO: Automate the choice of sites given number of electron and hole species
-electronQuantumIndices = np.array([[1, 1, 1, electronSiteElementTypeIndex, elementSite] for elementSite in np.array([3, 8])])
+electronQuantumIndices = np.array([[1, 1, 1, electronSiteElementTypeIndex, elementSite] for elementSite in np.array([3])])
 electronSiteIndices = [hematite.generateSystemElementIndex(systemSize, quantumIndex) 
                        for quantumIndex in electronQuantumIndices]
 occupancy = [['electron', np.asarray(electronSiteIndices, int)]]
@@ -74,4 +74,4 @@ hematiteSystem = system(hematiteParameters, hematite, occupancy, neighborList[()
 
 hematiteRun = run(hematiteParameters, hematite, hematiteSystem)
 trajectoryData = hematiteRun.doKMCSteps(randomSeed=2)
-np.save('trajectoryData.npy', trajectoryData)
+np.save('trajectoryData_1electron.npy', trajectoryData)

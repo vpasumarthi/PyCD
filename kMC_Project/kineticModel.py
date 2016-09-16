@@ -546,6 +546,7 @@ class run(object):
         Subroutine to compute the difference in free energies between initial and final states of the system
         '''
         delG0 = self.elec(newStateOccupancy) - self.elec(currentStateOccupancy)
+        print delG0
         return delG0
     
     def generateNewStates(self, currentStateOccupancy):
@@ -556,7 +557,7 @@ class run(object):
         newStateOccupancyList = []
         hopElementTypes = []
         hopDistTypes = []
-        speciesIndices = []
+        hoppingSpeciesIndices = []
         speciesDisplacementVectorList = []
         for speciesType in currentStateOccupancy.keys():
             for speciesIndex, speciesSystemElementIndex in enumerate(currentStateOccupancy[speciesType]):
@@ -591,13 +592,13 @@ class run(object):
                             newStateOccupancyList.append(newStateOccupancy)
                             hopElementTypes.append(iHopElementType)
                             hopDistTypes.append(hopDistTypeIndex)
-                            speciesIndices.append(speciesIndex)
+                            hoppingSpeciesIndices.append(speciesIndex)
 
         returnNewStates = returnValues()
         returnNewStates.newStateOccupancyList = newStateOccupancyList
         returnNewStates.hopElementTypes = hopElementTypes
         returnNewStates.hopDistTypes = hopDistTypes
-        returnNewStates.speciesIndices = speciesIndices
+        returnNewStates.hoppingSpeciesIndices = hoppingSpeciesIndices
         returnNewStates.speciesDisplacementVectorList = speciesDisplacementVectorList
         return returnNewStates
 
@@ -647,7 +648,7 @@ class run(object):
                 rand2 = rnd.random()
                 kmcTime -= np.log(rand2) / kTotal
                 currentStateOccupancy = newStates.newStateOccupancyList[procIndex]
-                speciesIndex = newStates.speciesIndices[procIndex]
+                speciesIndex = newStates.hoppingSpeciesIndices[procIndex]
                 speciesDisplacementVector = newStates.speciesDisplacementVectorList[procIndex]
                 speciesDisplacementVectorList[speciesIndex] += speciesDisplacementVector
                 config.chargeList = self.system.chargeConfig(currentStateOccupancy)
@@ -656,9 +657,9 @@ class run(object):
                     # TODO: update position from the displacementvectorlist
                     speciesSystemElementIndices = np.concatenate((currentStateOccupancy.values()))
                     timeArray[pathIndex] = kmcTime
-                    unwrappedPositionArray[pathIndex] = config.positions[speciesSystemElementIndices]
+                    wrappedPositionArray[pathIndex] = config.positions[speciesSystemElementIndices]
                     speciesDisplacementArray[pathIndex] = speciesDisplacementVectorList
-                    wrappedPositionArray[pathIndex] = wrappedPositionArray[pathIndex - 1] + speciesDisplacementVectorList
+                    unwrappedPositionArray[pathIndex] = unwrappedPositionArray[pathIndex - 1] + speciesDisplacementVectorList
                     speciesDisplacementVectorList = np.zeros((self.totalSpecies, 3))
                     pathIndex += 1
         trajectoryData = returnValues()
