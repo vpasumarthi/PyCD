@@ -556,6 +556,8 @@ class run(object):
         newStateOccupancyList = []
         hopElementTypes = []
         hopDistTypes = []
+        speciesIndices = []
+        speciesDisplacementVectorList = []
         for speciesType in currentStateOccupancy.keys():
             for speciesIndex, speciesSystemElementIndex in enumerate(currentStateOccupancy[speciesType]):
                 for iHopElementType in self.material.hopElementTypes[speciesType]:
@@ -564,6 +566,8 @@ class run(object):
                         neighborElementIndexMap = neighborList[iHopElementType][hopDistTypeIndex].elementIndexMap
                         speciesQuantumIndices = self.material.generateQuantumIndices(self.modelParameters.systemSize, speciesSystemElementIndex)
                         speciesElementIndex = speciesQuantumIndices[4]
+                        species2NeighborDisplacementVectorList = neighborList[iHopElementType][hopDistTypeIndex].displacementVectorList
+                        
                         neighborSystemElementIndices = []
                         for neighborIndex in range(len(neighborElementIndexMap[1][speciesElementIndex])):
                             neighborUnitCellIndices = [sum(x) for x in zip(speciesQuantumIndices[:3], neighborOffsetList[speciesElementIndex][neighborIndex])]
@@ -578,17 +582,23 @@ class run(object):
                             neighborQuantumIndices = neighborUnitCellIndices + neighborElementTypeIndex + neighborElementIndex
                             neighborSystemElementIndex = self.material.generateSystemElementIndex(self.modelParameters.systemSize, neighborQuantumIndices)
                             neighborSystemElementIndices.append(neighborSystemElementIndex)
+                            speciesDisplacementVector = species2NeighborDisplacementVectorList[speciesElementIndex][neighborIndex]
+                            speciesDisplacementVectorList.append(speciesDisplacementVector)
+                        # TODO: Combine this for loop with the one before
                         for neighborSystemElementIndex in neighborSystemElementIndices:
                             newStateOccupancy = deepcopy(currentStateOccupancy)
                             newStateOccupancy[speciesType][speciesIndex] = neighborSystemElementIndex
                             newStateOccupancyList.append(newStateOccupancy)
                             hopElementTypes.append(iHopElementType)
                             hopDistTypes.append(hopDistTypeIndex)
+                            speciesIndices.append(speciesIndex)
 
         returnNewStates = returnValues()
         returnNewStates.newStateOccupancyList = newStateOccupancyList
         returnNewStates.hopElementTypes = hopElementTypes
         returnNewStates.hopDistTypes = hopDistTypes
+        returnNewStates.speciesIndices = speciesIndices
+        returnNewStates.speciesDisplacementVectorList = speciesDisplacementVectorList
         return returnNewStates
 
     def doKMCSteps(self, randomSeed = 1):
@@ -603,8 +613,11 @@ class run(object):
         stepInterval = self.modelParameters.stepInterval
         currentStateOccupancy = self.system.occupancy
                 
-        timeArray = np.zeros(nTraj * (np.floor(kmcSteps / stepInterval) + 1))
-        positionArray = np.zeros(( nTraj * (np.floor(kmcSteps / stepInterval) + 1), self.totalSpecies, 3))
+        numPathStepsPerTraj = np.floor(kmcSteps / stepInterval) + 1
+        timeArray = np.zeros(nTraj * numPathStepsPerTraj)
+        unwrappedPositionArray = np.zeros(( nTraj * numPathStepsPerTraj, self.totalSpecies, 3))
+        wrappedPositionArray = np.zeros(( nTraj * numPathStepsPerTraj, self.totalSpecies, 3))
+        speciesDisplacementArray = np.zeros(( nTraj * numPathStepsPerTraj, self.totalSpecies, 3))
         pathIndex = 0
         speciesSystemElementIndices = np.concatenate((currentStateOccupancy.values()))
         config = self.system.config(currentStateOccupancy)
@@ -613,6 +626,7 @@ class run(object):
         for dummy in range(nTraj):
             pathIndex += 1
             kmcTime = 0
+            speciesDisplacementVectorList = np.zeros((self.totalSpecies, 3))
             for step in range(kmcSteps):
                 kList = []
                 newStates = self.generateNewStates(currentStateOccupancy)
@@ -633,30 +647,38 @@ class run(object):
                 rand2 = rnd.random()
                 kmcTime -= np.log(rand2) / kTotal
                 currentStateOccupancy = newStates.newStateOccupancyList[procIndex]
+                speciesIndex = newStates.speciesIndices[procIndex]
+                speciesDisplacementVector = newStates.speciesDisplacementVectorList[procIndex]
+                speciesDisplacementVectorList[speciesIndex] += speciesDisplacementVector
                 config.chargeList = self.system.chargeConfig(currentStateOccupancy)
                 config.occupancy = currentStateOccupancy
                 if step % stepInterval == 0:
                     # TODO: update position from the displacementvectorlist
                     speciesSystemElementIndices = np.concatenate((currentStateOccupancy.values()))
-                    speciesPositionList = config.positions[speciesSystemElementIndices]
                     timeArray[pathIndex] = kmcTime
-                    positionArray[pathIndex] = speciesPositionList
+                    unwrappedPositionArray[pathIndex] = config.positions[speciesSystemElementIndices]
+                    speciesDisplacementArray[pathIndex] = speciesDisplacementVectorList
+                    wrappedPositionArray[pathIndex] = wrappedPositionArray[pathIndex - 1] + speciesDisplacementVectorList
+                    speciesDisplacementVectorList = np.zeros((self.totalSpecies, 3))
                     pathIndex += 1
-        timeNpath = np.empty(2, dtype=object)
-        timeNpath[:] = [timeArray, positionArray]
-        return timeNpath
-
+        trajectoryData = returnValues()
+        trajectoryData.timeArray = timeArray
+        trajectoryData.unwrappedPositionArray = unwrappedPositionArray
+        trajectoryData.wrappedPositionArray = wrappedPositionArray
+        trajectoryData.speciesDisplacementArray = speciesDisplacementArray
+        return trajectoryData
+        
 class analysis(object):
     '''
     Post-simulation analysis methods
     '''
     
-    def __init__(self, modelParameters, timeNpath):
+    def __init__(self, modelParameters, trajectoryData):
         '''
         
         '''
         self.modelParameters = modelParameters
-        self.timeNpath = timeNpath
+        self.trajectoryData = trajectoryData
         self.timeConversion = 1E+09 if self.modelParameters.reprTime is 'ns' else 1E+00 
         self.distConversion = 1E-10 if self.modelParameters.reprDist is 'm' else 1E+00
         
@@ -664,37 +686,40 @@ class analysis(object):
         self.nDispMSD = self.modelParameters.nDispMSD
         self.nTraj = self.modelParameters.nTraj
         self.kmcSteps = self.modelParameters.kmcSteps
+        self.stepInterval = self.modelParameters.stepInterval
 
-    def computeMSD(self, timeNpath):
+    def computeMSD(self, timeArray, unwrappedPositionArray):
         '''
         Returns the squared displacement of the trajectories
         '''
-        time = timeNpath[0] * self.timeConversion
-        path = timeNpath[1] * self.distConversion
-        nSpecies = len(path[0])
+        time = timeArray * self.timeConversion
+        positionArray = unwrappedPositionArray * self.distConversion
+        nSpecies = len(positionArray[0])
         timeNdisp2 = np.zeros((self.nTraj * (self.nStepsMSD * self.nDispMSD), nSpecies + 1))
-        for traj in range(self.nTraj):
+        numPathStepsPerTraj = np.floor(self.kmcSteps / self.stepInterval) + 1
+        for trajIndex in range(self.nTraj):
             for timestep in range(1, self.nStepsMSD + 1):
                 for step in range(self.nDispMSD):
-                    headStart = traj * (self.kmcSteps + 1)
-                    workingRow = traj * (self.nStepsMSD * self.nDispMSD) + (timestep-1) * self.nDispMSD + step 
+                    headStart = trajIndex * (numPathStepsPerTraj + 1)
+                    workingRow = trajIndex * (self.nStepsMSD * self.nDispMSD) + (timestep-1) * self.nDispMSD + step 
                     timeNdisp2[workingRow, 0] = time[headStart + step + timestep] - time[headStart + step]
-                    timeNdisp2[workingRow, 1:] = np.linalg.norm(path[headStart + step + timestep] - 
-                                                                path[headStart + step], axis=1)**2
-        timeArray = timeNdisp2[:, 0]
-        minEndTime = np.min(timeArray[np.arange(self.nStepsMSD * self.nDispMSD - 1, self.nTraj * (self.nStepsMSD * self.nDispMSD), self.nStepsMSD * self.nDispMSD)])  
+                    timeNdisp2[workingRow, 1:] = np.linalg.norm(positionArray[headStart + step + timestep] - 
+                                                                positionArray[headStart + step], axis=1)**2
+        timeArrayMSD = timeNdisp2[:, 0]
+        minEndTime = np.min(timeArrayMSD[np.arange(self.nStepsMSD * self.nDispMSD - 1, self.nTraj * (self.nStepsMSD * self.nDispMSD), self.nStepsMSD * self.nDispMSD)])  
         bins = np.arange(0, minEndTime, self.modelParameters.binsize)
         nBins = len(bins) - 1
         speciesMSDData = np.zeros((nBins, nSpecies))
-        msdHistogram, dummy = np.histogram(timeArray, bins)
+        msdHistogram, dummy = np.histogram(timeArrayMSD, bins)
         for iSpecies in range(nSpecies):
-            iSpeciesHist, dummy = np.histogram(timeArray, bins, weights=timeNdisp2[:, iSpecies + 1])
+            iSpeciesHist, dummy = np.histogram(timeArrayMSD, bins, weights=timeNdisp2[:, iSpecies + 1])
             speciesMSDData[:, iSpecies] = iSpeciesHist / msdHistogram
         msdData = np.zeros((nBins, 2))
         msdData[:, 0] = bins[:-1] + 0.5 * self.modelParameters.binsize
         msdData[:, 1] = np.mean(speciesMSDData, axis=1)
         return msdData
-    
+
+
 class plot(object):
     '''
     class with definitions of plotting funcitons

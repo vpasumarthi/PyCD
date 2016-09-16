@@ -7,7 +7,7 @@ kmcSteps = 1E+02
 stepInterval = 1E+00
 nStepsMSD = 5E+01
 nDispMSD = 5E+01
-binsize = 1E+00
+binsize = 2.5E-01#1E+00
 # TODO: Make sure it works for any type of bin size even less than 1 ns.
 maxBinSize = 1 # ns
 systemSize = np.array([3, 3, 3])
@@ -20,9 +20,11 @@ reprDist = 'Angstrom'
 hematiteParameters = modelParameters(T, nTraj, kmcSteps, stepInterval, nStepsMSD, nDispMSD, binsize, maxBinSize, 
                                      systemSize, pbc, gui, kB, reprTime, reprDist)
 
-timeNpath = np.load('timeNpath.npy')
-hematiteAnalysis = analysis(hematiteParameters, timeNpath)
-msdData = hematiteAnalysis.computeMSD(timeNpath)
+trajectoryData = np.load('trajectoryData.npy')
+hematiteAnalysis = analysis(hematiteParameters, trajectoryData[()])
+timeArray = trajectoryData[()].timeArray
+unwrappedPositionArray = trajectoryData[()].unwrappedPositionArray
+msdData = hematiteAnalysis.computeMSD(timeArray, unwrappedPositionArray)
 #print msdData
 
 hematitePlot = plot(msdData)

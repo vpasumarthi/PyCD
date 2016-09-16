@@ -42,7 +42,6 @@ lambdaValues = {'Fe:Fe': [1.74533, 1.88683]} # reorganization energy in eV for b
 VAB = {'Fe:Fe': [0.184, 0.028]} # electronic coupling matrix element in eV for basal plane, c-direction
 #VAB = ['Fe:Fe', [0.184, 0.028]] # electronic coupling matrix element in eV for basal plane, c-direction
 neighborCutoffDist = {'Fe:Fe': [2.971, 2.901], 'O:O': [2.670, 2.775, 2.887, 3.035], 'Fe:O': [1.946, 2.116], 'E': [5.0]} # Basal: 2.971, C: 2.901
-#neighborCutoffDist = {'Fe:Fe': [2.971, 2.901], 'E': [2.0]} # Basal: 2.971, C: 2.901
 neighborCutoffDistTol = 0.01
 elementTypeDelimiter = ':'
 # TODO: Value for hematite might differ

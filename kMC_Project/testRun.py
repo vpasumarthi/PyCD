@@ -73,5 +73,5 @@ hematiteSystem = system(hematiteParameters, hematite, occupancy, neighborList[()
 #print hematiteSystem.config(occupancy)
 
 hematiteRun = run(hematiteParameters, hematite, hematiteSystem)
-timeNpath = hematiteRun.doKMCSteps(randomSeed=2)
-np.save('timeNpath.npy', timeNpath)
+trajectoryData = hematiteRun.doKMCSteps(randomSeed=2)
+np.save('trajectoryData.npy', trajectoryData)
