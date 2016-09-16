@@ -4,7 +4,7 @@ import pickle
 
 name = 'Fe2O3'
 elementTypes = ['Fe', 'O']
-speciesTypes = {'electron': ['Fe'], 'empty': ['Fe', 'O'], 'hole': ['O']}
+speciesTypes = {'electron': 'Fe', 'empty': ['Fe', 'O'], 'hole': 'O'}
 inputFileLocation = "/Users/Viswanath/Box Sync/Visualization/Fe2O3_index_coord.txt"
 index_pos = np.loadtxt(inputFileLocation)
 unitcellCoords = index_pos[:, 1:]
