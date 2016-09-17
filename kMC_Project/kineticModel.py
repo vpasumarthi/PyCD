@@ -23,7 +23,7 @@ class material(object):
     
     def __init__(self, name, elementTypes, speciesTypes, unitcellCoords, elementTypeIndexList, chargeTypes, 
                  latticeParameters, vn, lambdaValues, VAB, neighborCutoffDist, neighborCutoffDistTol, 
-                 elementTypeDelimiter, epsilon0):
+                 elementTypeDelimiter, emptySpeciesTypeName, epsilon0):
         '''
         Return an material object whose name is *name* 
         '''
@@ -53,16 +53,17 @@ class material(object):
         self.neighborCutoffDist = neighborCutoffDist
         self.neighborCutoffDistTol = neighborCutoffDistTol
         self.elementTypeDelimiter = elementTypeDelimiter
+        self.emptySpeciesTypeName = emptySpeciesTypeName
         self.epsilon0 = epsilon0
                 
         # siteList
-        siteList = [self.speciesTypes[key] for key in self.speciesTypes if key is not 'empty']
+        siteList = [self.speciesTypes[key] for key in self.speciesTypes if key is not self.emptySpeciesTypeName]
         self.siteList = siteList
         
         # list of hop element types
         hopElementTypes = {key: self.speciesTypes[key] + self.elementTypeDelimiter + 
                            self.speciesTypes[key] for key in self.speciesTypes 
-                           if key is not 'empty'}
+                           if key is not self.emptySpeciesTypeName}
         self.hopElementTypes = hopElementTypes
         
         # number of sites present in siteList
@@ -73,7 +74,7 @@ class material(object):
         # element - species map
         elementTypeSpeciesMap = {}
         nonEmptySpeciesTypes = speciesTypes.copy()
-        del nonEmptySpeciesTypes['empty']
+        del nonEmptySpeciesTypes[self.emptySpeciesTypeName]
         self.nonEmptySpeciesTypes = nonEmptySpeciesTypes
         for elementType in self.elementTypes:
             speciesList = []
@@ -375,7 +376,7 @@ class system(object):
         
         speciesCount = {key: len(self.occupancy[key]) if key in self.occupancy.keys() else 0 
                         for key in self.material.nonEmptySpeciesTypes.keys() 
-                        if key is not 'empty'}
+                        if key is not self.material.emptySpeciesTypeName}
         self.speciesCount = speciesCount
         
         # total number of unit cells
@@ -478,14 +479,14 @@ class run(object):
         for speciesTypeKey in  speciesTypes.keys():
             if speciesTypeKey in self.system.occupancy.keys(): 
                 nSpecies[speciesTypeKey] = len(self.system.occupancy[speciesTypeKey])
-            elif speciesTypeKey is not 'empty':
+            elif speciesTypeKey is not self.material.emptySpeciesTypeName:
                 nSpecies[speciesTypeKey] = 0
             
-        nSpecies['empty'] = (np.sum(self.material.nElements) * self.system.numCells - np.sum(nSpecies.values()))
+        nSpecies[self.material.emptySpeciesTypeName] = (np.sum(self.material.nElements) * self.system.numCells - np.sum(nSpecies.values()))
         self.nSpecies = nSpecies
         
         # total number of species
-        self.totalSpecies = np.sum(self.nSpecies.values()) - self.nSpecies['empty']
+        self.totalSpecies = np.sum(self.nSpecies.values()) - self.nSpecies[self.material.emptySpeciesTypeName]
     
     def generateDistanceList(self):
         '''
