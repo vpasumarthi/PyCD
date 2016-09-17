@@ -14,8 +14,7 @@ hematiteAnalysis = analysis(trajectoryData[()], nStepsMSD, nDispMSD, binsize, ma
 
 timeArray = trajectoryData[()].timeArray
 unwrappedPositionArray = trajectoryData[()].unwrappedPositionArray
-msdData = hematiteAnalysis.computeMSD(timeArray, unwrappedPositionArray)
-#print msdData
+msdAnalysisData = hematiteAnalysis.computeMSD(timeArray, unwrappedPositionArray)
 
-hematitePlot = plot(msdData)
+hematitePlot = plot(msdAnalysisData)
 hematitePlot.displayMSDPlot()

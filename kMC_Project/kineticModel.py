@@ -31,8 +31,6 @@ class material(object):
         self.name = name
         self.elementTypes = elementTypes
         self.speciesTypes = speciesTypes
-        for key in speciesTypes:
-            assert set(speciesTypes[key]) <= set(elementTypes), 'Specified sites should be a subset of elements'
         self.unitcellCoords = np.zeros((len(unitcellCoords), 3))
         startIndex = 0
         length = len(self.elementTypes)
@@ -58,23 +56,13 @@ class material(object):
         self.epsilon0 = epsilon0
                 
         # siteList
-        siteList = []
-        for key in self.speciesTypes:
-            if key is not 'empty':
-                siteList.extend(self.speciesTypes[key])
-        siteList = list(set(siteList))
+        siteList = [self.speciesTypes[key] for key in self.speciesTypes if key is not 'empty']
         self.siteList = siteList
         
         # list of hop element types
-        hopElementTypes = {}
-        for key in self.speciesTypes:
-            if key is not 'empty':
-                speciesTypeHopElementTypes = []
-                for centerElementIndex, centerElementType in enumerate(self.speciesTypes[key]):
-                    for neighborElementType in self.speciesTypes[key][centerElementIndex:]:
-                        speciesTypeHopElementTypes.append(centerElementType + self.elementTypeDelimiter + 
-                                                          neighborElementType)   
-                hopElementTypes[key] = speciesTypeHopElementTypes
+        hopElementTypes = {key: self.speciesTypes[key] + self.elementTypeDelimiter + 
+                           self.speciesTypes[key] for key in self.speciesTypes 
+                           if key is not 'empty'}
         self.hopElementTypes = hopElementTypes
         
         # number of sites present in siteList
@@ -84,8 +72,9 @@ class material(object):
         
         # element - species map
         elementTypeSpeciesMap = {}
-        nonEmptySpeciesTypes = speciesTypes
+        nonEmptySpeciesTypes = speciesTypes.copy()
         del nonEmptySpeciesTypes['empty']
+        self.nonEmptySpeciesTypes = nonEmptySpeciesTypes
         for elementType in self.elementTypes:
             speciesList = []
             for speciesTypeKey in nonEmptySpeciesTypes.keys():
@@ -348,7 +337,7 @@ class neighbors(object):
                 neighborSiteElementTypeIndex = elementTypes.index(neighborElementType)
                 localBulkSites = self.material.generateSites(range(len(self.material.elementTypes)), 
                                                              localSystemSize)
-                centerSiteIndices = [self.material.generateSystemElementIndex(localSystemSize, np.append(centerUnitCellIndex, centerSiteElementTypeIndex, elementIndex)) 
+                centerSiteIndices = [self.material.generateSystemElementIndex(localSystemSize, np.concatenate((centerUnitCellIndex, np.array([centerSiteElementTypeIndex]), np.array([elementIndex])))) 
                                      for elementIndex in range(self.material.nElements[centerSiteElementTypeIndex])]
                 neighborSiteIndices = [self.material.generateSystemElementIndex(localSystemSize, np.array([xSize, ySize, zSize, neighborSiteElementTypeIndex, elementIndex])) 
                                        for xSize in range(localSystemSize[0]) for ySize in range(localSystemSize[1]) 
@@ -384,6 +373,11 @@ class system(object):
         self.neighborList = neighborList
         self.occupancy = OrderedDict(occupancy)
         
+        speciesCount = {key: len(self.occupancy[key]) if key in self.occupancy.keys() else 0 
+                        for key in self.material.nonEmptySpeciesTypes.keys() 
+                        if key is not 'empty'}
+        self.speciesCount = speciesCount
+        
         # total number of unit cells
         self.systemSize = self.neighbors.systemSize
         self.numCells = np.prod(self.systemSize)
@@ -403,7 +397,7 @@ class system(object):
         chargeTypes = self.material.chargeTypes
         chargeTypeKeys = chargeTypes.keys()
         
-        shellChargeTypeKeys = [key for key in chargeTypeKeys if key not in self.material.siteList if '0' not in key]
+        shellChargeTypeKeys = [key for key in chargeTypeKeys if self.material.elementTypeDelimiter in key]
         for chargeTypeKey in shellChargeTypeKeys:
             centerSiteElementType = chargeTypeKey.split(self.material.elementTypeDelimiter)[0]
             neighborElementTypeSites = self.neighborList[chargeTypeKey]
@@ -535,44 +529,43 @@ class run(object):
         hopDistTypes = []
         hoppingSpeciesIndices = []
         speciesDisplacementVectorList = []
-        print self.material.hopElementTypes
+        
+        cumulativeSpeciesSiteSystemElementIndices = [systemElementIndex for speciesSiteSystemElementIndices in currentStateOccupancy.values() 
+                                                 for systemElementIndex in speciesSiteSystemElementIndices]
         for speciesType in currentStateOccupancy.keys():
             for speciesTypeSpeciesIndex, speciesSiteSystemElementIndex in enumerate(currentStateOccupancy[speciesType]):
-                for iHopElementType in self.material.hopElementTypes[speciesType]:
-                    for hopDistTypeIndex in range(len(self.material.neighborCutoffDist[iHopElementType])):
-                        neighborOffsetList = neighborList[iHopElementType][hopDistTypeIndex].offsetList
-                        neighborElementIndexMap = neighborList[iHopElementType][hopDistTypeIndex].elementIndexMap
-                        speciesQuantumIndices = self.material.generateQuantumIndices(self.systemSize, speciesSiteSystemElementIndex)
-                        # TODO: speciesTypeElementIndex instead of speciesElementIndex
-                        speciesElementIndex = speciesQuantumIndices[4]
-                        species2NeighborDisplacementVectorList = neighborList[iHopElementType][hopDistTypeIndex].displacementVectorList
-                        
-                        neighborSystemElementIndices = []
-                        for neighborIndex in range(len(neighborElementIndexMap[1][speciesElementIndex])):
-                            neighborUnitCellIndices = [sum(x) for x in zip(speciesQuantumIndices[:3], neighborOffsetList[speciesElementIndex][neighborIndex])]
-                            # TODO: Try to avoid the loop and conditions
-                            for index, neighborUnitCellIndex in enumerate(neighborUnitCellIndices):
-                                if neighborUnitCellIndex > self.systemSize[index] - 1:
-                                    neighborUnitCellIndices[index] -= self.systemSize[index]
-                                elif neighborUnitCellIndex < 0:
-                                    neighborUnitCellIndices[index] += self.systemSize[index]
-                            neighborElementTypeIndex = [self.material.elementTypes.index(iHopElementType.split(self.material.elementTypeDelimiter)[1])]
-                            neighborElementIndex = [neighborElementIndexMap[1][speciesElementIndex][neighborIndex]]
-                            neighborQuantumIndices = neighborUnitCellIndices + neighborElementTypeIndex + neighborElementIndex
-                            neighborSystemElementIndex = self.material.generateSystemElementIndex(self.systemSize, neighborQuantumIndices)
-                            neighborSystemElementIndices.append(neighborSystemElementIndex)
-                            speciesDisplacementVector = species2NeighborDisplacementVectorList[speciesElementIndex][neighborIndex]
-                            speciesDisplacementVectorList.append(speciesDisplacementVector)
-                        
-                        # TODO: Combine this for loop with the one before
-                        for neighborSystemElementIndex in neighborSystemElementIndices:
+                speciesIndex = cumulativeSpeciesSiteSystemElementIndices.index(speciesSiteSystemElementIndex)
+                hopElementType = self.material.hopElementTypes[speciesType]
+                for hopDistTypeIndex in range(len(self.material.neighborCutoffDist[hopElementType])):
+                    neighborOffsetList = neighborList[hopElementType][hopDistTypeIndex].offsetList
+                    neighborElementIndexMap = neighborList[hopElementType][hopDistTypeIndex].elementIndexMap
+                    speciesSiteToNeighborDisplacementVectorList = neighborList[hopElementType][hopDistTypeIndex].displacementVectorList
+                    
+                    speciesQuantumIndices = self.material.generateQuantumIndices(self.systemSize, speciesSiteSystemElementIndex)
+                    speciesSiteElementIndex = speciesQuantumIndices[4]
+                    numNeighbors = len(neighborElementIndexMap[1][speciesSiteElementIndex])
+                    for neighborIndex in range(numNeighbors):
+                        neighborUnitCellIndices = [sum(x) for x in zip(speciesQuantumIndices[:3], neighborOffsetList[speciesSiteElementIndex][neighborIndex])]
+                        # TODO: Try to avoid the loop and conditions
+                        for index, neighborUnitCellIndex in enumerate(neighborUnitCellIndices):
+                            if neighborUnitCellIndex > self.systemSize[index] - 1:
+                                neighborUnitCellIndices[index] -= self.systemSize[index]
+                            elif neighborUnitCellIndex < 0:
+                                neighborUnitCellIndices[index] += self.systemSize[index]
+                        neighborElementTypeIndex = [self.material.elementTypes.index(hopElementType.split(self.material.elementTypeDelimiter)[1])]
+                        neighborElementIndex = [neighborElementIndexMap[1][speciesSiteElementIndex][neighborIndex]]
+                        neighborQuantumIndices = neighborUnitCellIndices + neighborElementTypeIndex + neighborElementIndex
+                        neighborSystemElementIndex = self.material.generateSystemElementIndex(self.systemSize, neighborQuantumIndices)
+                        if neighborSystemElementIndex not in cumulativeSpeciesSiteSystemElementIndices:
                             newStateOccupancy = deepcopy(currentStateOccupancy)
                             newStateOccupancy[speciesType][speciesTypeSpeciesIndex] = neighborSystemElementIndex
                             newStateOccupancyList.append(newStateOccupancy)
-                            hopElementTypes.append(iHopElementType)
+                            hopElementTypes.append(hopElementType)
                             hopDistTypes.append(hopDistTypeIndex)
-                            hoppingSpeciesIndices.append(speciesTypeSpeciesIndex)
-
+                            hoppingSpeciesIndices.append(speciesIndex)
+                            speciesDisplacementVector = speciesSiteToNeighborDisplacementVectorList[speciesSiteElementIndex][neighborIndex]
+                            speciesDisplacementVectorList.append(speciesDisplacementVector)
+                    
         returnNewStates = returnValues()
         returnNewStates.newStateOccupancyList = newStateOccupancyList
         returnNewStates.hopElementTypes = hopElementTypes
@@ -585,7 +578,6 @@ class run(object):
         '''
         Subroutine to run the kmc simulation by specified number of steps
         '''
-        # TODO: import neighbor list
         import random as rnd
         rnd.seed(randomSeed)
         nTraj = self.nTraj
@@ -627,13 +619,13 @@ class run(object):
                 rand2 = rnd.random()
                 kmcTime -= np.log(rand2) / kTotal
                 currentStateOccupancy = newStates.newStateOccupancyList[procIndex]
+                # species Index is different from speciesTypeSpeciesIndex
                 speciesIndex = newStates.hoppingSpeciesIndices[procIndex]
                 speciesDisplacementVector = newStates.speciesDisplacementVectorList[procIndex]
                 speciesDisplacementVectorList[speciesIndex] += speciesDisplacementVector
                 config.chargeList = self.system.chargeConfig(currentStateOccupancy)
                 config.occupancy = currentStateOccupancy
                 if step % stepInterval == 0:
-                    # TODO: update position from the displacementvectorlist
                     speciesSystemElementIndices = np.concatenate((currentStateOccupancy.values()))
                     timeArray[pathIndex] = kmcTime
                     wrappedPositionArray[pathIndex] = config.positions[speciesSystemElementIndices]
@@ -641,7 +633,9 @@ class run(object):
                     unwrappedPositionArray[pathIndex] = unwrappedPositionArray[pathIndex - 1] + speciesDisplacementVectorList
                     speciesDisplacementVectorList = np.zeros((self.totalSpecies, 3))
                     pathIndex += 1
+        
         trajectoryData = returnValues()
+        trajectoryData.speciesCount = self.system.speciesCount
         trajectoryData.nTraj = nTraj
         trajectoryData.kmcSteps = kmcSteps
         trajectoryData.stepInterval = stepInterval
@@ -678,7 +672,13 @@ class analysis(object):
         '''
         time = timeArray * self.timeConversion
         positionArray = unwrappedPositionArray * self.distConversion
-        nSpecies = len(positionArray[0])
+        speciesCount = self.trajectoryData.speciesCount
+        nSpecies = sum(speciesCount.values())
+        speciesTypes = []
+        for speciesType in speciesCount.keys():
+            if speciesCount[speciesType] is not 0:
+                speciesTypes.append(speciesType)
+        nSpeciesTypes = len(speciesTypes)
         timeNdisp2 = np.zeros((self.nTraj * (self.nStepsMSD * self.nDispMSD), nSpecies + 1))
         numPathStepsPerTraj = np.floor(self.kmcSteps / self.stepInterval) + 1
         for trajIndex in range(self.nTraj):
@@ -698,10 +698,19 @@ class analysis(object):
         for iSpecies in range(nSpecies):
             iSpeciesHist, dummy = np.histogram(timeArrayMSD, bins, weights=timeNdisp2[:, iSpecies + 1])
             speciesMSDData[:, iSpecies] = iSpeciesHist / msdHistogram
-        msdData = np.zeros((nBins, 2))
+        msdData = np.zeros((nBins, nSpeciesTypes + 1))
         msdData[:, 0] = bins[:-1] + 0.5 * self.binsize
-        msdData[:, 1] = np.mean(speciesMSDData, axis=1)
-        return msdData
+        startIndex = 0
+        for speciesTypeIndex in range(nSpeciesTypes):
+            endIndex = startIndex + speciesCount[speciesTypes[speciesTypeIndex]]
+            msdData[:, speciesTypeIndex + 1] = np.mean(speciesMSDData[:, startIndex:endIndex], axis=1)
+            #msdData[:, 1] = np.mean(speciesMSDData, axis=1)
+            startIndex = endIndex
+        
+        returnMSDData = returnValues()
+        returnMSDData.msdData = msdData
+        returnMSDData.speciesTypes = speciesTypes
+        return returnMSDData
 
 
 class plot(object):
@@ -709,11 +718,12 @@ class plot(object):
     class with definitions of plotting funcitons
     '''
     
-    def __init__(self, msdData):
+    def __init__(self, msdAnalysisData):
         '''
         
         '''
-        self.msdData = msdData
+        self.msdData = msdAnalysisData.msdData
+        self.speciesTypes = msdAnalysisData.speciesTypes
 
     def displayMSDPlot(self):
         '''
@@ -721,9 +731,11 @@ class plot(object):
         '''
         import matplotlib.pyplot as plt
         plt.figure(1)
-        plt.plot(self.msdData[:,0], self.msdData[:,1])
+        for speciesIndex, speciesType in enumerate(self.speciesTypes):
+            plt.plot(self.msdData[:,0], self.msdData[:,speciesIndex + 1], label=speciesType)
         plt.xlabel('Time (ns)')
         plt.ylabel('MSD (Angstrom**2)')
+        plt.legend()
         plt.show()
         #plt.savefig(figname)
 

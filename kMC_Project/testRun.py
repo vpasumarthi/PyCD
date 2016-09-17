@@ -15,15 +15,16 @@ file_hematiteNeighbors.close()
 
 # TODO: Automate the choice of sites given number of electron and hole species
 elementTypes = ['Fe', 'O']
-speciesTypes = {'electron': ['Fe'], 'empty': ['Fe', 'O'], 'hole': ['O']}
+speciesTypes = {'electron': 'Fe', 'empty': ['Fe', 'O'], 'hole': 'O'}
 
-electronSiteElementTypeIndex = elementTypes.index(speciesTypes['electron'][0])
+electronSiteElementTypeIndex = elementTypes.index(speciesTypes['electron'])
 electronQuantumIndices = np.array([[1, 1, 1, electronSiteElementTypeIndex, elementSite] for elementSite in np.array([3])])
 systemSize = np.array([3, 3, 3])
 electronSiteIndices = [hematite.generateSystemElementIndex(systemSize, quantumIndex) 
                        for quantumIndex in electronQuantumIndices]
-occupancy = [['electron', np.asarray(electronSiteIndices, int)]]
-
+#occupancy = [['electron', np.asarray(electronSiteIndices, int)]]
+occupancy = [['electron', electronSiteIndices]]
+#occupancy = [['electron', electronSiteIndices], ['hole', [23, 45]]]
 # dictionary neighborList is saved as an numpy array. It can be recovered by calling
 # neighborList[()]
 neighborList = np.load('neighborList333.npy')

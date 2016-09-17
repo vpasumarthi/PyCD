@@ -45,6 +45,7 @@ hematiteNeighbors = neighbors(hematite, systemSize, pbc)
 file_hematiteNeighbors = open('file_hematiteNeighbors.obj', 'w')
 pickle.dump(hematiteNeighbors, file_hematiteNeighbors)
 file_hematiteNeighbors.close()
-
+'''
 neighborList = hematiteNeighbors.generateNeighborList()
 np.save('neighborList333.npy', neighborList)
+'''
