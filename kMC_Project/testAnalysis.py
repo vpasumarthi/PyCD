@@ -1,4 +1,4 @@
-from kineticModel import analysis, plot
+from kineticModel import analysis
 import numpy as np
 
 trajectoryData = np.load('trajectoryData_1electron_PBC_1e03KMCSteps_1e02PathSteps_1Traj.npy')
@@ -15,6 +15,6 @@ hematiteAnalysis = analysis(trajectoryData[()], nStepsMSD, nDispMSD, binsize, ma
 timeArray = trajectoryData[()].timeArray
 unwrappedPositionArray = trajectoryData[()].unwrappedPositionArray
 msdAnalysisData = hematiteAnalysis.computeMSD(timeArray, unwrappedPositionArray)
-
-hematitePlot = plot(msdAnalysisData)
-hematitePlot.displayMSDPlot()
+msdData = msdAnalysisData.msdData
+speciesTypes = msdAnalysisData.speciesTypes
+hematiteAnalysis.displayMSDPlot(msdData, speciesTypes, save=1)

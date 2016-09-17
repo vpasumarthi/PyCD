@@ -374,6 +374,7 @@ class system(object):
         self.neighborList = neighborList
         self.occupancy = OrderedDict(occupancy)
         
+        self.pbc = self.neighbors.pbc
         speciesCount = {key: len(self.occupancy[key]) if key in self.occupancy.keys() else 0 
                         for key in self.material.nonEmptySpeciesTypes.keys() 
                         if key is not self.material.emptySpeciesTypeName}
@@ -640,6 +641,8 @@ class run(object):
         trajectoryData.nTraj = nTraj
         trajectoryData.kmcSteps = kmcSteps
         trajectoryData.stepInterval = stepInterval
+        trajectoryData.pbc = self.system.pbc
+        trajectoryData.systemSize = self.systemSize
         trajectoryData.timeArray = timeArray
         trajectoryData.unwrappedPositionArray = unwrappedPositionArray
         trajectoryData.wrappedPositionArray = wrappedPositionArray
@@ -650,7 +653,8 @@ class analysis(object):
     '''
     Post-simulation analysis methods
     '''
-    def __init__(self, trajectoryData, nStepsMSD, nDispMSD, binsize, maxBinSize = 1.0, reprTime = 'ns', reprDist = 'Angstrom'):
+    def __init__(self, trajectoryData, nStepsMSD, nDispMSD, binsize, maxBinSize = 1.0, 
+                 reprTime = 'ns', reprDist = 'Angstrom'):
         '''
         
         '''
@@ -660,6 +664,11 @@ class analysis(object):
         self.nDispMSD = int(nDispMSD)
         self.binsize = binsize
         self.maxBinSize = maxBinSize
+        self.reprTime = reprTime
+        self.reprDist = reprDist
+        self.systemSize = self.trajectoryData.systemSize
+        self.pbc = self.trajectoryData.pbc
+        
         self.timeConversion = 1E+09 if reprTime is 'ns' else 1E+00 
         self.distConversion = 1E-10 if reprDist is 'm' else 1E+00
         
@@ -713,35 +722,30 @@ class analysis(object):
         returnMSDData.speciesTypes = speciesTypes
         return returnMSDData
 
-
-class plot(object):
-    '''
-    class with definitions of plotting funcitons
-    '''
-    
-    def __init__(self, msdAnalysisData):
-        '''
-        
-        '''
-        self.msdData = msdAnalysisData.msdData
-        self.speciesTypes = msdAnalysisData.speciesTypes
-
-    def displayMSDPlot(self):
+    def displayMSDPlot(self, msdData, speciesTypes, save=1):
         '''
         Returns a line plot of the MSD data
         '''
         import matplotlib.pyplot as plt
         plt.figure(1)
-        for speciesIndex, speciesType in enumerate(self.speciesTypes):
-            plt.plot(self.msdData[:,0], self.msdData[:,speciesIndex + 1], label=speciesType)
-        plt.xlabel('Time (ns)')
-        plt.ylabel('MSD (Angstrom**2)')
+        for speciesIndex, speciesType in enumerate(speciesTypes):
+            plt.plot(msdData[:,0], msdData[:,speciesIndex + 1], label=speciesType)
+        plt.xlabel('Time (' + self.reprTime + ')')
+        plt.ylabel('MSD (' + self.reprDist + '**2)')
+        strSystemSize = [str(size) for size in self.systemSize] 
+        filename = ('System Size:[' + " ".join(strSystemSize) + ']' + '; ' + 'PBC:' + 
+                    str(self.pbc) + '; ' + 'nTraj:' + str(self.nTraj) + '; ' + 'KMC_Steps:' + 
+                    ('%1.0E' % self.kmcSteps))
+        figureTitle = 'MSD_' + filename + '; ' + 'MSD_Steps:' + ('%1.0E' % self.nStepsMSD)
+        figureName = filename + '; ' + 'MSD_Steps:' + ('%1.0E' % self.nStepsMSD) + '.jpg'
+        plt.title(figureTitle)
         plt.legend()
+        if save:
+            plt.savefig(figureName)
         plt.show()
-        #plt.savefig(figname)
-
+        
 class returnValues(object):
     '''
-    Returns the values of displacement list and respective coordinates in an object
+    dummy class to return objects from methods defined inside other classes
     '''
     pass
