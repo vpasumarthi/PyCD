@@ -15,9 +15,9 @@ file_hematiteNeighbors.close()
 
 # TODO: Automate the choice of sites given number of electron and hole species
 elementTypes = ['Fe', 'O']
-speciesTypes = {'electron': 'Fe', 'empty': ['Fe', 'O'], 'hole': 'O'}
+speciesTypes = {'electron': ['Fe'], 'empty': ['Fe', 'O'], 'hole': ['O']}
 
-electronSiteElementTypeIndex = elementTypes.index(speciesTypes['electron'])
+electronSiteElementTypeIndex = elementTypes.index(speciesTypes['electron'][0])
 electronQuantumIndices = np.array([[1, 1, 1, electronSiteElementTypeIndex, elementSite] for elementSite in np.array([3])])
 systemSize = np.array([3, 3, 3])
 electronSiteIndices = [hematite.generateSystemElementIndex(systemSize, quantumIndex) 

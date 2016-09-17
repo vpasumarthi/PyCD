@@ -6,7 +6,8 @@ code to compute msd of random walk of single electron in 3D hematite lattice str
 import numpy as np
 from collections import OrderedDict
 from copy import deepcopy
-        
+import itertools
+     
 class material(object):
     '''
     defines the structure of working material
@@ -61,8 +62,9 @@ class material(object):
         self.siteList = siteList
         
         # list of hop element types
-        hopElementTypes = {key: self.speciesTypes[key] + self.elementTypeDelimiter + 
-                           self.speciesTypes[key] for key in self.speciesTypes 
+        hopElementTypes = {key: [self.elementTypeDelimiter.join(comb) 
+                                 for comb in list(itertools.product(self.speciesTypes[key], repeat=2))] 
+                           for key in self.speciesTypes 
                            if key is not self.emptySpeciesTypeName}
         self.hopElementTypes = hopElementTypes
         
@@ -537,36 +539,37 @@ class run(object):
         for speciesType in currentStateOccupancy.keys():
             for speciesTypeSpeciesIndex, speciesSiteSystemElementIndex in enumerate(currentStateOccupancy[speciesType]):
                 speciesIndex = cumulativeSpeciesSiteSystemElementIndices.index(speciesSiteSystemElementIndex)
-                hopElementType = self.material.hopElementTypes[speciesType]
-                for hopDistTypeIndex in range(len(self.material.neighborCutoffDist[hopElementType])):
-                    neighborOffsetList = neighborList[hopElementType][hopDistTypeIndex].offsetList
-                    neighborElementIndexMap = neighborList[hopElementType][hopDistTypeIndex].elementIndexMap
-                    speciesSiteToNeighborDisplacementVectorList = neighborList[hopElementType][hopDistTypeIndex].displacementVectorList
-                    
-                    speciesQuantumIndices = self.material.generateQuantumIndices(self.systemSize, speciesSiteSystemElementIndex)
-                    speciesSiteElementIndex = speciesQuantumIndices[4]
-                    numNeighbors = len(neighborElementIndexMap[1][speciesSiteElementIndex])
-                    for neighborIndex in range(numNeighbors):
-                        neighborUnitCellIndices = [sum(x) for x in zip(speciesQuantumIndices[:3], neighborOffsetList[speciesSiteElementIndex][neighborIndex])]
-                        # TODO: Try to avoid the loop and conditions
-                        for index, neighborUnitCellIndex in enumerate(neighborUnitCellIndices):
-                            if neighborUnitCellIndex > self.systemSize[index] - 1:
-                                neighborUnitCellIndices[index] -= self.systemSize[index]
-                            elif neighborUnitCellIndex < 0:
-                                neighborUnitCellIndices[index] += self.systemSize[index]
-                        neighborElementTypeIndex = [self.material.elementTypes.index(hopElementType.split(self.material.elementTypeDelimiter)[1])]
-                        neighborElementIndex = [neighborElementIndexMap[1][speciesSiteElementIndex][neighborIndex]]
-                        neighborQuantumIndices = neighborUnitCellIndices + neighborElementTypeIndex + neighborElementIndex
-                        neighborSystemElementIndex = self.material.generateSystemElementIndex(self.systemSize, neighborQuantumIndices)
-                        if neighborSystemElementIndex not in cumulativeSpeciesSiteSystemElementIndices:
-                            newStateOccupancy = deepcopy(currentStateOccupancy)
-                            newStateOccupancy[speciesType][speciesTypeSpeciesIndex] = neighborSystemElementIndex
-                            newStateOccupancyList.append(newStateOccupancy)
-                            hopElementTypes.append(hopElementType)
-                            hopDistTypes.append(hopDistTypeIndex)
-                            hoppingSpeciesIndices.append(speciesIndex)
-                            speciesDisplacementVector = speciesSiteToNeighborDisplacementVectorList[speciesSiteElementIndex][neighborIndex]
-                            speciesDisplacementVectorList.append(speciesDisplacementVector)
+                for hopElementType in self.material.hopElementTypes[speciesType]:
+                    #hopElementType = self.material.hopElementTypes[speciesType]
+                    for hopDistTypeIndex in range(len(self.material.neighborCutoffDist[hopElementType])):
+                        neighborOffsetList = neighborList[hopElementType][hopDistTypeIndex].offsetList
+                        neighborElementIndexMap = neighborList[hopElementType][hopDistTypeIndex].elementIndexMap
+                        speciesSiteToNeighborDisplacementVectorList = neighborList[hopElementType][hopDistTypeIndex].displacementVectorList
+                        
+                        speciesQuantumIndices = self.material.generateQuantumIndices(self.systemSize, speciesSiteSystemElementIndex)
+                        speciesSiteElementIndex = speciesQuantumIndices[4]
+                        numNeighbors = len(neighborElementIndexMap[1][speciesSiteElementIndex])
+                        for neighborIndex in range(numNeighbors):
+                            neighborUnitCellIndices = [sum(x) for x in zip(speciesQuantumIndices[:3], neighborOffsetList[speciesSiteElementIndex][neighborIndex])]
+                            # TODO: Try to avoid the loop and conditions
+                            for index, neighborUnitCellIndex in enumerate(neighborUnitCellIndices):
+                                if neighborUnitCellIndex > self.systemSize[index] - 1:
+                                    neighborUnitCellIndices[index] -= self.systemSize[index]
+                                elif neighborUnitCellIndex < 0:
+                                    neighborUnitCellIndices[index] += self.systemSize[index]
+                            neighborElementTypeIndex = [self.material.elementTypes.index(hopElementType.split(self.material.elementTypeDelimiter)[1])]
+                            neighborElementIndex = [neighborElementIndexMap[1][speciesSiteElementIndex][neighborIndex]]
+                            neighborQuantumIndices = neighborUnitCellIndices + neighborElementTypeIndex + neighborElementIndex
+                            neighborSystemElementIndex = self.material.generateSystemElementIndex(self.systemSize, neighborQuantumIndices)
+                            if neighborSystemElementIndex not in cumulativeSpeciesSiteSystemElementIndices:
+                                newStateOccupancy = deepcopy(currentStateOccupancy)
+                                newStateOccupancy[speciesType][speciesTypeSpeciesIndex] = neighborSystemElementIndex
+                                newStateOccupancyList.append(newStateOccupancy)
+                                hopElementTypes.append(hopElementType)
+                                hopDistTypes.append(hopDistTypeIndex)
+                                hoppingSpeciesIndices.append(speciesIndex)
+                                speciesDisplacementVector = speciesSiteToNeighborDisplacementVectorList[speciesSiteElementIndex][neighborIndex]
+                                speciesDisplacementVectorList.append(speciesDisplacementVector)
                     
         returnNewStates = returnValues()
         returnNewStates.newStateOccupancyList = newStateOccupancyList

@@ -4,7 +4,7 @@ import pickle
 
 name = 'Fe2O3'
 elementTypes = ['Fe', 'O']
-speciesTypes = {'electron': 'Fe', 'empty': ['Fe', 'O'], 'hole': 'O'}
+speciesTypes = {'electron': ['Fe'], 'empty': ['Fe', 'O'], 'hole': ['O']}
 inputFileLocation = "/Users/Viswanath/Box Sync/Visualization/Fe2O3_index_coord.txt"
 index_pos = np.loadtxt(inputFileLocation)
 unitcellCoords = index_pos[:, 1:]
@@ -46,7 +46,6 @@ hematiteNeighbors = neighbors(hematite, systemSize, pbc)
 file_hematiteNeighbors = open('file_hematiteNeighbors.obj', 'w')
 pickle.dump(hematiteNeighbors, file_hematiteNeighbors)
 file_hematiteNeighbors.close()
-'''
+
 neighborList = hematiteNeighbors.generateNeighborList()
 np.save('neighborList333.npy', neighborList)
-'''
