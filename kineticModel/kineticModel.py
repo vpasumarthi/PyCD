@@ -862,7 +862,6 @@ class analysis(object):
             figureName = 'MSD_Plot_' + fileName + '.jpg'
             figurePath = outdir + '/' + figureName
             plt.savefig(figurePath)
-        plt.show()
         
     def displayWrappedTrajectories(self):
         '''
