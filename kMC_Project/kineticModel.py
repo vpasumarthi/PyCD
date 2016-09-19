@@ -7,6 +7,7 @@ import numpy as np
 from collections import OrderedDict
 from copy import deepcopy
 import itertools
+import random as rnd
      
 class material(object):
     '''
@@ -24,7 +25,7 @@ class material(object):
     
     def __init__(self, name, elementTypes, speciesTypes, unitcellCoords, elementTypeIndexList, chargeTypes, 
                  latticeParameters, vn, lambdaValues, VAB, neighborCutoffDist, neighborCutoffDistTol, 
-                 elementTypeDelimiter, emptySpeciesTypeName, epsilon0):
+                 elementTypeDelimiter, emptySpeciesType, epsilon0):
         '''
         Return an material object whose name is *name* 
         '''
@@ -54,18 +55,19 @@ class material(object):
         self.neighborCutoffDist = neighborCutoffDist
         self.neighborCutoffDistTol = neighborCutoffDistTol
         self.elementTypeDelimiter = elementTypeDelimiter
-        self.emptySpeciesTypeName = emptySpeciesTypeName
+        self.emptySpeciesType = emptySpeciesType
         self.epsilon0 = epsilon0
                 
         # siteList
-        siteList = [self.speciesTypes[key] for key in self.speciesTypes if key is not self.emptySpeciesTypeName]
-        self.siteList = siteList
+        siteList = [self.speciesTypes[key] for key in self.speciesTypes 
+                    if key is not self.emptySpeciesType]
+        self.siteList = list(set([item for sublist in siteList for item in sublist]))
         
         # list of hop element types
         hopElementTypes = {key: [self.elementTypeDelimiter.join(comb) 
                                  for comb in list(itertools.product(self.speciesTypes[key], repeat=2))] 
                            for key in self.speciesTypes 
-                           if key is not self.emptySpeciesTypeName}
+                           if key is not self.emptySpeciesType}
         self.hopElementTypes = hopElementTypes
         
         # number of sites present in siteList
@@ -76,7 +78,7 @@ class material(object):
         # element - species map
         elementTypeSpeciesMap = {}
         nonEmptySpeciesTypes = speciesTypes.copy()
-        del nonEmptySpeciesTypes[self.emptySpeciesTypeName]
+        del nonEmptySpeciesTypes[self.emptySpeciesType]
         self.nonEmptySpeciesTypes = nonEmptySpeciesTypes
         for elementType in self.elementTypes:
             speciesList = []
@@ -359,6 +361,42 @@ class neighbors(object):
             neighborList[cutoffDistKey] = neighborListCutoffDistKey
         return neighborList
     
+class initiateSystem(object):
+    '''
+    
+    '''
+    def __init__(self, material, neighbors):
+        '''
+        
+        '''
+        self.material = material
+        self.neighbors = neighbors
+        self.systemSize = self.neighbors.systemSize
+        
+    def generateRandomOccupancy(self, speciesCount):
+        '''
+        generates initial occupancy list based on species count
+        '''
+        occupancy = OrderedDict()
+        for speciesType in speciesCount.keys():
+            siteElementTypesIndices = np.in1d(self.material.elementTypes, self.material.speciesTypes[speciesType]).nonzero()[0]
+            numSpecies = speciesCount[speciesType]
+            iSpeciesSystemElementIndices = []
+            for iSpecies in range(numSpecies):
+                siteElementTypeIndex = rnd.choice(siteElementTypesIndices)
+                iSpeciesSiteIndices = np.array([rnd.randint(0, self.systemSize[0]-1), 
+                                                rnd.randint(0, self.systemSize[0]-1), 
+                                                rnd.randint(0, self.systemSize[0]-1), 
+                                                siteElementTypeIndex, 
+                                                rnd.randint(0, self.material.nElements[siteElementTypeIndex]-1)])
+                iSpeciesSystemElementIndex = self.material.generateSystemElementIndex(self.systemSize, iSpeciesSiteIndices)
+                if iSpeciesSystemElementIndex in iSpeciesSystemElementIndices:
+                    iSpecies -= 1
+                else:
+                    iSpeciesSystemElementIndices.append(iSpeciesSystemElementIndex)
+            occupancy[speciesType] = iSpeciesSystemElementIndices
+        return occupancy
+    
 class system(object):
     '''
     defines the system we are working on
@@ -379,7 +417,7 @@ class system(object):
         self.pbc = self.neighbors.pbc
         speciesCount = {key: len(self.occupancy[key]) if key in self.occupancy.keys() else 0 
                         for key in self.material.nonEmptySpeciesTypes.keys() 
-                        if key is not self.material.emptySpeciesTypeName}
+                        if key is not self.material.emptySpeciesType}
         self.speciesCount = speciesCount
         
         # total number of unit cells
@@ -482,14 +520,14 @@ class run(object):
         for speciesTypeKey in  speciesTypes.keys():
             if speciesTypeKey in self.system.occupancy.keys(): 
                 nSpecies[speciesTypeKey] = len(self.system.occupancy[speciesTypeKey])
-            elif speciesTypeKey is not self.material.emptySpeciesTypeName:
+            elif speciesTypeKey is not self.material.emptySpeciesType:
                 nSpecies[speciesTypeKey] = 0
             
-        nSpecies[self.material.emptySpeciesTypeName] = (np.sum(self.material.nElements) * self.system.numCells - np.sum(nSpecies.values()))
+        nSpecies[self.material.emptySpeciesType] = (np.sum(self.material.nElements) * self.system.numCells - np.sum(nSpecies.values()))
         self.nSpecies = nSpecies
         
         # total number of species
-        self.totalSpecies = np.sum(self.nSpecies.values()) - self.nSpecies[self.material.emptySpeciesTypeName]
+        self.totalSpecies = np.sum(self.nSpecies.values()) - self.nSpecies[self.material.emptySpeciesType]
     
     def generateDistanceList(self):
         '''
@@ -540,7 +578,6 @@ class run(object):
             for speciesTypeSpeciesIndex, speciesSiteSystemElementIndex in enumerate(currentStateOccupancy[speciesType]):
                 speciesIndex = cumulativeSpeciesSiteSystemElementIndices.index(speciesSiteSystemElementIndex)
                 for hopElementType in self.material.hopElementTypes[speciesType]:
-                    #hopElementType = self.material.hopElementTypes[speciesType]
                     for hopDistTypeIndex in range(len(self.material.neighborCutoffDist[hopElementType])):
                         neighborOffsetList = neighborList[hopElementType][hopDistTypeIndex].offsetList
                         neighborElementIndexMap = neighborList[hopElementType][hopDistTypeIndex].elementIndexMap
@@ -583,7 +620,6 @@ class run(object):
         '''
         Subroutine to run the kmc simulation by specified number of steps
         '''
-        import random as rnd
         rnd.seed(randomSeed)
         nTraj = self.nTraj
         kmcSteps = self.kmcSteps
@@ -717,7 +753,6 @@ class analysis(object):
         for speciesTypeIndex in range(nSpeciesTypes):
             endIndex = startIndex + speciesCount[speciesTypes[speciesTypeIndex]]
             msdData[:, speciesTypeIndex + 1] = np.mean(speciesMSDData[:, startIndex:endIndex], axis=1)
-            #msdData[:, 1] = np.mean(speciesMSDData, axis=1)
             startIndex = endIndex
         
         returnMSDData = returnValues()
@@ -741,11 +776,30 @@ class analysis(object):
                     ('%1.0E' % self.kmcSteps))
         figureTitle = 'MSD_' + filename + '; ' + 'MSD_Steps:' + ('%1.0E' % self.nStepsMSD)
         figureName = filename + '; ' + 'MSD_Steps:' + ('%1.0E' % self.nStepsMSD) + '.jpg'
+        # TODO: species count should also be included
         plt.title(figureTitle)
         plt.legend()
         if save:
             plt.savefig(figureName)
         plt.show()
+        
+    def displayWrappedTrajectories(self):
+        '''
+        
+        '''
+        pass
+    
+    def displayUnwrappedTrajectories(self):
+        '''
+        
+        '''
+        pass
+    
+    def trajectoryToDCD(self):
+        '''
+        Convert trajectory data and outputs dcd file
+        '''
+        pass
         
 class returnValues(object):
     '''
