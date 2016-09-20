@@ -802,12 +802,12 @@ class analysis(object):
         for iSpecies in range(nSpecies):
             iSpeciesHist, dummy = np.histogram(timeArrayMSD, bins, weights=timeNdisp2[:, iSpecies + 1])
             speciesMSDData[:, iSpecies] = iSpeciesHist / msdHistogram
-        msdData = np.zeros((nBins, nSpeciesTypes + 1))
-        msdData[:, 0] = bins[:-1] + 0.5 * self.binsize
+        msdData = np.zeros((nBins+1, nSpeciesTypes + 1))
+        msdData[1:, 0] = bins[:-1] + 0.5 * self.binsize
         startIndex = 0
         for speciesTypeIndex in range(nSpeciesTypes):
             endIndex = startIndex + speciesCount[speciesTypes[speciesTypeIndex]]
-            msdData[:, speciesTypeIndex + 1] = np.mean(speciesMSDData[:, startIndex:endIndex], axis=1)
+            msdData[1:, speciesTypeIndex + 1] = np.mean(speciesMSDData[:, startIndex:endIndex], axis=1)
             startIndex = endIndex
         
         if outdir:
