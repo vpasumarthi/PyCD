@@ -786,9 +786,9 @@ class analysis(object):
         timeNdisp2 = np.zeros((self.nTraj * (self.nStepsMSD * self.nDispMSD), nSpecies + 1))
         numPathStepsPerTraj = np.floor(self.kmcSteps / self.stepInterval) + 1
         for trajIndex in range(self.nTraj):
+            headStart = trajIndex * numPathStepsPerTraj
             for timestep in range(1, self.nStepsMSD + 1):
                 for step in range(self.nDispMSD):
-                    headStart = trajIndex * (numPathStepsPerTraj + 1)
                     workingRow = trajIndex * (self.nStepsMSD * self.nDispMSD) + (timestep-1) * self.nDispMSD + step 
                     timeNdisp2[workingRow, 0] = time[headStart + step + timestep] - time[headStart + step]
                     timeNdisp2[workingRow, 1:] = np.linalg.norm(positionArray[headStart + step + timestep] - 
@@ -849,7 +849,7 @@ class analysis(object):
         '''
         import matplotlib.pyplot as plt
         from textwrap import wrap
-        fig = plt.figure()
+        plt.figure()
         for speciesIndex, speciesType in enumerate(speciesTypes):
             plt.plot(msdData[:,0], msdData[:,speciesIndex + 1], label=speciesType)
             

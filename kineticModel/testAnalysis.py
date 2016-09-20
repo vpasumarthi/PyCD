@@ -1,11 +1,11 @@
 from kineticModel import analysis
 import numpy as np
 
-trajectoryData = np.load('trajectoryData_1electron_PBC_1e03KMCSteps_1e02PathSteps_1Traj.npy')
+trajectoryData = np.load('trajectoryData_1electron_PBC_1e03KMCSteps_1e02PathSteps_100Traj.npy')
 
 nStepsMSD = 5E+01
 nDispMSD = 5E+01
-binsize = 10E+00
+binsize = 1E+00
 maxBinSize = 1 # ns
 reprTime = 'ns'
 reprDist = 'Angstrom'
