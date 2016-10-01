@@ -11,25 +11,30 @@ import random as rnd
 from datetime import datetime
 
 class material(object):
-    '''
-    defines the structure of working material
+    """Defines the properties and structure of working material
     
     Attributes:
         name: A string representing the material name
-        elements: list of element symbols
-        species_to_sites: dictionary that maps species to sites
-        positions: positions of elements in the unit cell
-        index: element index of the positions starting from 0
-        charge: atomic charges of the elements # first shell atomic charges to be included
+        elementTypes: list of elements
+        speciesTypes: list of species
+        unitcellCoords: positions of all elements in the unit cell
+        elementTypeIndexList: list of element types for all unit cell coordinates
+        chargeTypes: types of atomic charges considered for the working material
         latticeParameters: list of three lattice constants in angstrom and three angles between them in degrees
-    '''
+        vn: typical frequency for nuclear motion
+        lambdaValues: Reorganization energies
+        VAB: Electronic coupling matrix element
+        neighborCutoffDist: List of neighbors and their respective cutoff distances in angstrom
+        neighborCutoffDistTol: Tolerance value in angstrom for neighbor cutoff distance
+        elementTypeDelimiter: Delimiter between element types
+        emptySpeciesType: name of the empty species type
+        epsilon0: Dielectric constant of the vacuum
+    """
     
     def __init__(self, name, elementTypes, speciesTypes, unitcellCoords, elementTypeIndexList, chargeTypes, 
                  latticeParameters, vn, lambdaValues, VAB, neighborCutoffDist, neighborCutoffDistTol, 
                  elementTypeDelimiter, emptySpeciesType, epsilon0):
-        '''
-        Return an material object whose name is *name* 
-        '''
+        """Return an material object whose name is *name*""" 
         # TODO: introduce a method to view the material using ase atoms or other gui module
         self.name = name
         self.elementTypes = elementTypes
@@ -98,9 +103,19 @@ class material(object):
         self.latticeMatrix = latticeMatrix
 
     def generateSites(self, elementTypeIndices, cellSize=np.array([1, 1, 1])):
-        '''
-        Returns systemElementIndices and coordinates of specified elements in a cell of size *cellSize*
-        '''
+        """Returns systemElementIndices and coordinates of specified elements in a cell 
+        of size *cellSize*
+        
+        Args:
+            elementTypeIndices(dataType):
+            cellSize(1x3 np.array):
+            
+        Returns:
+            returnSites object with following attributes:
+            cellCoordinates:
+            quantumIndexList:
+            systemElementIndexList:
+        """
         assert all(size > 0 for size in cellSize), 'Input size should always be greater than 0'
         extractIndices = np.in1d(self.elementTypeIndexList, elementTypeIndices).nonzero()[0]
         unitcellElementCoords = self.unitcellCoords[extractIndices]
@@ -136,9 +151,7 @@ class material(object):
         return returnSites
     
     def generateSystemElementIndex(self, systemSize, quantumIndices):
-        '''
-        Returns the systemElementIndex of the element
-        '''
+        """Returns the systemElementIndex of the element"""
         assert 0 not in systemSize, 'System size should be greater than 0 in any dimension'
         assert quantumIndices[-1] < self.nElements[quantumIndices[-2]], 'Element Index exceed number of elements of the specified element type'
         assert all(quantumIndex >= 0 for quantumIndex in quantumIndices), 'Quantum Indices cannot be negative'
@@ -155,9 +168,7 @@ class material(object):
         return systemElementIndex
     
     def generateQuantumIndices(self, systemSize, systemElementIndex):
-        '''
-        Returns the quantum indices of the element
-        '''
+        """Returns the quantum indices of the element"""
         assert systemElementIndex >= 0, 'System Element Index cannot be negative'
         quantumIndices = [0] * 5
         nElementsPerUnitCell = np.sum(self.nElements)
@@ -173,14 +184,9 @@ class material(object):
     
 
 class neighbors(object):
-    '''
-    Returns the neighbor list file
-    '''
+    """Returns the neighbor list file"""
     
     def __init__(self, material, systemSize=np.array([10, 10, 10]), pbc=[1, 1, 1]):
-        '''
-        
-        '''
         self.startTime = datetime.now()
         self.material = material
         self.systemSize = systemSize
@@ -195,10 +201,8 @@ class neighbors(object):
         self.bulkSites = bulkSites
         
     def hopNeighborSites(self, bulkSites, centerSiteIndices, neighborSiteIndices, cutoffDistLimits, cutoffDistKey):
-        '''
-        Returns systemElementIndexMap and distances between center sites and its neighbor sites within cutoff 
-        distance
-        '''
+        """Returns systemElementIndexMap and distances between center sites and its neighbor sites within cutoff 
+        distance"""
         neighborSiteCoords = bulkSites.cellCoordinates[neighborSiteIndices]
         neighborSiteSystemElementIndexList = bulkSites.systemElementIndexList[neighborSiteIndices]
         neighborSiteQuantumIndexList = bulkSites.quantumIndexList[neighborSiteIndices]
@@ -252,10 +256,8 @@ class neighbors(object):
         return returnNeighbors
 
     def electrostaticNeighborSites(self, systemSize, bulkSites, centerSiteIndices, neighborSiteIndices, cutoffDistLimits, cutoffDistKey):
-        '''
-        Returns systemElementIndexMap and distances between center sites and its neighbor sites within cutoff 
-        distance
-        '''
+        """Returns systemElementIndexMap and distances between center sites and its 
+        neighbor sites within cutoff distance"""
         neighborSiteCoords = bulkSites.cellCoordinates[neighborSiteIndices]
         neighborSiteSystemElementIndexList = bulkSites.systemElementIndexList[neighborSiteIndices]
         neighborSiteQuantumIndexList = bulkSites.quantumIndexList[neighborSiteIndices]
@@ -328,9 +330,7 @@ class neighbors(object):
 
     def generateNeighborList(self, outdir=None, report=1, localSystemSize=np.array([3, 3, 3]), 
                              centerUnitCellIndex=np.array([1, 1, 1])):
-        '''
-        Adds the neighbor list to the system object and returns the neighbor list
-        '''
+        """Adds the neighbor list to the system object and returns the neighbor list"""
         assert all(size >= 3 for size in localSystemSize), 'Local system size in all dimensions should always be greater than or equal to 3'
         neighborList = {}
         tolDist = self.material.neighborCutoffDistTol
@@ -371,9 +371,7 @@ class neighbors(object):
         return neighborList
     
     def generateNeighborListReport(self, outdir, fileName):
-        '''
-        Generates a neighbor list and prints out a report to the output directory
-        '''
+        """Generates a neighbor list and prints out a report to the output directory"""
         neighborListLogName = 'NeighborList_' + fileName + '.log'
         neighborListLogPath = outdir + '/' + neighborListLogName
         report = open(neighborListLogPath, 'w')
@@ -386,21 +384,14 @@ class neighbors(object):
         report.close()
     
 class initiateSystem(object):
-    '''
-    
-    '''
+    """ """
     def __init__(self, material, neighbors):
-        '''
-        
-        '''
         self.material = material
         self.neighbors = neighbors
         self.systemSize = self.neighbors.systemSize
         
     def generateRandomOccupancy(self, speciesCount):
-        '''
-        generates initial occupancy list based on species count
-        '''
+        """generates initial occupancy list based on species count"""
         occupancy = OrderedDict()
         for speciesType in speciesCount.keys():
             siteElementTypesIndices = np.in1d(self.material.elementTypes, self.material.speciesTypes[speciesType]).nonzero()[0]
@@ -422,17 +413,13 @@ class initiateSystem(object):
         return occupancy
     
 class system(object):
-    '''
-    defines the system we are working on
+    """defines the system we are working on
     
     Attributes:
     size: An array (3 x 1) defining the system size in multiple of unit cells
-    '''
-    
+    """
     def __init__(self, material, neighbors, neighborList, occupancy):
-        '''
-        Return a system object whose size is *size*
-        '''
+        """Return a system object whose size is *size*"""
         self.material = material
         self.neighbors = neighbors
         self.neighborList = neighborList
@@ -456,9 +443,7 @@ class system(object):
         
     
     def chargeConfig(self, occupancy):
-        '''
-        Returns charge distribution of the current configuration
-        '''
+        """Returns charge distribution of the current configuration"""
         chargeList = self.latticeChargeList
         chargeTypes = self.material.chargeTypes
         chargeTypeKeys = chargeTypes.keys()
@@ -497,9 +482,7 @@ class system(object):
         return chargeList
 
     def config(self, occupancy):
-        '''
-        Generates the configuration array for the system 
-        '''
+        """Generates the configuration array for the system"""
         elementTypeIndices = range(len(self.material.elementTypes))
         systemSites = self.material.generateSites(elementTypeIndices, self.systemSize)
         positions = systemSites.cellCoordinates
@@ -514,13 +497,10 @@ class system(object):
         return returnConfig
 
 class run(object):
-    '''
-    defines the subroutines for running Kinetic Monte Carlo and computing electrostatic interaction energies 
-    '''
+    """defines the subroutines for running Kinetic Monte Carlo and computing electrostatic 
+    interaction energies"""
     def __init__(self, material, system, T, nTraj, kmcSteps, stepInterval, gui, kB):
-        '''
-        Returns the PBC condition of the system
-        '''
+        """Returns the PBC condition of the system"""
         self.startTime = datetime.now()
         
         self.material = material
@@ -556,9 +536,7 @@ class run(object):
         self.totalSpecies = np.sum(self.nSpecies.values()) - self.nSpecies[self.material.emptySpeciesType]
     
     def generateDistanceList(self):
-        '''
-        
-        '''
+        """ """
         # Electrostatic interaction neighborlist:
         elecNeighborListSystemElementIndexMap = self.system.neighborList['E'][0].systemElementIndexMap
         self.elecNeighborListSystemElementIndexMap = elecNeighborListSystemElementIndexMap
@@ -569,9 +547,7 @@ class run(object):
         self.coeffDistanceList = (1/(4 * np.pi * self.material.epsilon0)) * self.distanceList
 
     def elec(self, occupancy):
-        '''
-        Subroutine to compute the electrostatic interaction energies
-        '''
+        """Subroutine to compute the electrostatic interaction energies"""
         configChargeList = self.system.chargeConfig(occupancy)
         elecNeighborCharge2List = deepcopy(self.elecNeighborListSystemElementIndexMap[1])
         for index, centerElementCharge in enumerate(configChargeList):
@@ -581,16 +557,13 @@ class run(object):
         return elec
         
     def delG0(self, positions, currentStateOccupancy, newStateOccupancy):
-        '''
-        Subroutine to compute the difference in free energies between initial and final states of the system
-        '''
+        """Subroutine to compute the difference in free energies between initial and 
+        final states of the system"""
         delG0 = self.elec(newStateOccupancy) - self.elec(currentStateOccupancy)
         return delG0
     
     def generateNewStates(self, currentStateOccupancy):
-        '''
-        generates a list of new occupancy states possible from the current state
-        '''
+        """generates a list of new occupancy states possible from the current state"""
         neighborList = self.system.neighborList
         newStateOccupancyList = []
         hopElementTypes = []
@@ -643,9 +616,7 @@ class run(object):
         return returnNewStates
 
     def doKMCSteps(self, outdir=None, report=1, randomSeed=1):
-        '''
-        Subroutine to run the kmc simulation by specified number of steps
-        '''
+        """Subroutine to run the kmc simulation by specified number of steps"""
         rnd.seed(randomSeed)
         nTraj = self.nTraj
         kmcSteps = self.kmcSteps
@@ -728,9 +699,7 @@ class run(object):
         return trajectoryData
 
     def generateSimulationLogReport(self, outdir, fileName):
-        ''''
-        Generates an log report of the simulation and outputs to the working directory
-        '''
+        """Generates an log report of the simulation and outputs to the working directory"""
         simulationLogFileName = 'Run_' + fileName + '.log'
         simulationLogFilePath = outdir + '/' + simulationLogFileName
         report = open(simulationLogFilePath, 'w')
@@ -744,9 +713,7 @@ class run(object):
 
 
 class analysis(object):
-    '''
-    Post-simulation analysis methods
-    '''
+    """Post-simulation analysis methods"""
     def __init__(self, trajectoryData, nStepsMSD, nDispMSD, binsize, maxBinSize = 1.0, 
                  reprTime = 'ns', reprDist = 'Angstrom'):
         '''
@@ -774,9 +741,7 @@ class analysis(object):
         self.EcutoffDist = self.trajectoryData.EcutoffDist
 
     def computeMSD(self, timeArray, unwrappedPositionArray, outdir=None, report=1):
-        '''
-        Returns the squared displacement of the trajectories
-        '''
+        """Returns the squared displacement of the trajectories"""
         time = timeArray * self.timeConversion
         positionArray = unwrappedPositionArray * self.distConversion
         speciesCount = self.trajectoryData.speciesCount
@@ -833,9 +798,7 @@ class analysis(object):
         return returnMSDData
     
     def generateMSDAnalysisLogReport(self, outdir, fileName):
-        '''
-        Generates an log report of the MSD Analysis and outputs to the working directory
-        '''
+        """Generates an log report of the MSD Analysis and outputs to the working directory"""
         msdAnalysisLogFileName = 'MSD_Analysis_' + fileName + '.log'
         msdLogFilePath = outdir + '/' + msdAnalysisLogFileName
         report = open(msdLogFilePath, 'w')
@@ -848,9 +811,7 @@ class analysis(object):
         report.close()
 
     def displayMSDPlot(self, msdData, speciesTypes, fileName, outdir=None):
-        '''
-        Returns a line plot of the MSD data
-        '''
+        """Returns a line plot of the MSD data"""
         import matplotlib.pyplot as plt
         from textwrap import wrap
         plt.figure()
@@ -868,25 +829,17 @@ class analysis(object):
             plt.savefig(figurePath)
         
     def displayWrappedTrajectories(self):
-        '''
-        
-        '''
+        """ """
         pass
     
     def displayUnwrappedTrajectories(self):
-        '''
-        
-        '''
+        """ """
         pass
     
     def trajectoryToDCD(self):
-        '''
-        Convert trajectory data and outputs dcd file
-        '''
+        """Convert trajectory data and outputs dcd file"""
         pass
         
 class returnValues(object):
-    '''
-    dummy class to return objects from methods defined inside other classes
-    '''
+    """dummy class to return objects from methods defined inside other classes"""
     pass
