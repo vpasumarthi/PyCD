@@ -378,9 +378,9 @@ class neighbors(object):
         endTime = datetime.now()
         timeElapsed = endTime - self.startTime
         report.write('Time elapsed: ' + ('%2d days, ' % timeElapsed.days if timeElapsed.days else '') +
-                     ('%2d hours' % (timeElapsed.seconds // 3600)) +
-                     (', %2d minutes' % (timeElapsed.seconds // 60)) +
-                     (', %2d seconds' % (timeElapsed.seconds)))
+                     ('%2d hours' % ((timeElapsed.seconds // 3600) % 24)) + 
+                     (', %2d minutes' % ((timeElapsed.seconds // 60) % 60)) + 
+                     (', %2d seconds' % (timeElapsed.seconds % 60)))
         report.close()
     
 class initiateSystem(object):
@@ -706,9 +706,9 @@ class run(object):
         endTime = datetime.now()
         timeElapsed = endTime - self.startTime
         report.write('Time elapsed: ' + ('%2d days, ' % timeElapsed.days if timeElapsed.days else '') +
-                     ('%2d hours' % (timeElapsed.seconds // 3600)) +
-                     (', %2d minutes' % (timeElapsed.seconds // 60)) +
-                     (', %2d seconds' % (timeElapsed.seconds)))
+                     ('%2d hours' % ((timeElapsed.seconds // 3600) % 24)) + 
+                     (', %2d minutes' % ((timeElapsed.seconds // 60) % 60)) + 
+                     (', %2d seconds' % (timeElapsed.seconds % 60)))
         report.close()
 
 
@@ -805,9 +805,9 @@ class analysis(object):
         endTime = datetime.now()
         timeElapsed = endTime - self.startTime
         report.write('Time elapsed: ' + ('%2d days, ' % timeElapsed.days if timeElapsed.days else '') +
-                     ('%2d hours' % (timeElapsed.seconds // 3600)) +
-                     (', %2d minutes' % (timeElapsed.seconds // 60)) +
-                     (', %2d seconds' % (timeElapsed.seconds)))
+                     ('%2d hours' % ((timeElapsed.seconds // 3600) % 24)) + 
+                     (', %2d minutes' % ((timeElapsed.seconds // 60) % 60)) + 
+                     (', %2d seconds' % (timeElapsed.seconds % 60)))
         report.close()
 
     def displayMSDPlot(self, msdData, speciesTypes, fileName, outdir=None):
