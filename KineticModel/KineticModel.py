@@ -812,6 +812,8 @@ class analysis(object):
 
     def displayMSDPlot(self, msdData, speciesTypes, fileName, outdir=None):
         """Returns a line plot of the MSD data"""
+        import matplotlib
+        matplotlib.use('Agg')
         import matplotlib.pyplot as plt
         from textwrap import wrap
         plt.figure()
