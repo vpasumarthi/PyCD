@@ -28,12 +28,12 @@ class material(object):
         neighborCutoffDistTol: Tolerance value in angstrom for neighbor cutoff distance
         elementTypeDelimiter: Delimiter between element types
         emptySpeciesType: name of the empty species type
-        epsilon0: Dielectric constant of the vacuum
+        epsilon: Dielectric constant of the material
     """
     
     def __init__(self, name, elementTypes, speciesTypes, unitcellCoords, elementTypeIndexList, chargeTypes, 
                  latticeParameters, vn, lambdaValues, VAB, neighborCutoffDist, neighborCutoffDistTol, 
-                 elementTypeDelimiter, emptySpeciesType, epsilon0):
+                 elementTypeDelimiter, emptySpeciesType, epsilon):
         """Return an material object whose name is *name*""" 
         # TODO: introduce a method to view the material using ase atoms or other gui module
         self.name = name
@@ -62,7 +62,7 @@ class material(object):
         self.neighborCutoffDistTol = neighborCutoffDistTol
         self.elementTypeDelimiter = elementTypeDelimiter
         self.emptySpeciesType = emptySpeciesType
-        self.epsilon0 = epsilon0
+        self.epsilon = epsilon
                 
         # siteList
         siteList = [self.speciesTypes[key] for key in self.speciesTypes 
@@ -544,7 +544,7 @@ class run(object):
         # Distance List
         distanceList = self.system.neighborList['E'][0].displacementList
         self.distanceList = distanceList
-        self.coeffDistanceList = (1/(4 * np.pi * self.material.epsilon0)) * self.distanceList
+        self.coeffDistanceList = (1/(4 * np.pi * self.material.epsilon)) * self.distanceList
 
     def elec(self, occupancy):
         """Subroutine to compute the electrostatic interaction energies"""
