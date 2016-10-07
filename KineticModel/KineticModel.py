@@ -303,7 +303,7 @@ class neighbors(object):
             neighborElementTypeIndexList.append(neighborSiteQuantumIndexList[iNeighborSiteIndexList, 3])
             neighborElementIndexList.append(neighborSiteQuantumIndexList[iNeighborSiteIndexList, 4])
             displacementVectorList.append(np.asarray(iDisplacementVectors))
-            displacementList.append(iDisplacements)
+            displacementList.append(np.asarray(iDisplacements))
             
         # TODO: Avoid conversion and initialize the object beforehand
         neighborSystemElementIndices = np.asarray(neighborSystemElementIndices)
