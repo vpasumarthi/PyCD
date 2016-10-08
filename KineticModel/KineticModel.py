@@ -714,8 +714,8 @@ class run(object):
 
 class analysis(object):
     """Post-simulation analysis methods"""
-    def __init__(self, trajectoryData, nStepsMSD, nDispMSD, binsize, maxBinSize = 1.0, 
-                 reprTime = 'ns', reprDist = 'Angstrom'):
+    def __init__(self, trajectoryData, nStepsMSD, nDispMSD, binsize, reprTime = 'ns', 
+                 reprDist = 'Angstrom'):
         '''
         
         '''
@@ -726,7 +726,6 @@ class analysis(object):
         self.nStepsMSD = int(nStepsMSD)
         self.nDispMSD = int(nDispMSD)
         self.binsize = binsize
-        self.maxBinSize = maxBinSize
         self.reprTime = reprTime
         self.reprDist = reprDist
         self.systemSize = self.trajectoryData.systemSize

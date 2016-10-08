@@ -1,4 +1,4 @@
-from KineticModel import analysis
+from kineticModel import analysis
 import numpy as np
 
 trajectoryData = np.load('trajectoryData_1electron_PBC_1e03KMCSteps_1e02PathSteps_100Traj.npy')
@@ -6,11 +6,10 @@ trajectoryData = np.load('trajectoryData_1electron_PBC_1e03KMCSteps_1e02PathStep
 nStepsMSD = 5E+01
 nDispMSD = 5E+01
 binsize = 1E+00
-maxBinSize = 1 # ns
 reprTime = 'ns'
 reprDist = 'Angstrom'
 
-hematiteAnalysis = analysis(trajectoryData[()], nStepsMSD, nDispMSD, binsize, maxBinSize, reprTime, reprDist)
+hematiteAnalysis = analysis(trajectoryData[()], nStepsMSD, nDispMSD, binsize, reprTime, reprDist)
 
 timeArray = trajectoryData[()].timeArray
 unwrappedPositionArray = trajectoryData[()].unwrappedPositionArray
