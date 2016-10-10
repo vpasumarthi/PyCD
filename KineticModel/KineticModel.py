@@ -547,7 +547,7 @@ class run(object):
         self.distanceList = distanceList
         self.coeffDistanceList = (1/(4 * np.pi * self.material.epsilon)) * self.distanceList
 
-    def elec(self, occupancy):
+    def electrostaticIntEnergy(self, occupancy):
         """Subroutine to compute the electrostatic interaction energies"""
         configChargeList = self.system.chargeConfig(occupancy)
         elecNeighborCharge2List = deepcopy(self.elecNeighborListSystemElementIndexMap[1])
@@ -557,10 +557,10 @@ class run(object):
         elec = np.sum(np.concatenate(individualInteractionList))
         return elec
         
-    def delG0(self, positions, currentStateOccupancy, newStateOccupancy):
+    def delG0(self, positions, currentStateOccupancyEnergy, newStateOccupancy):
         """Subroutine to compute the difference in free energies between initial and 
         final states of the system"""
-        delG0 = self.elec(newStateOccupancy) - self.elec(currentStateOccupancy)
+        delG0 = self.electrostaticIntEnergy(newStateOccupancy) - currentStateOccupancyEnergy
         return delG0
     
     def generateNewStates(self, currentStateOccupancy):
@@ -643,14 +643,23 @@ class run(object):
                 newStates = self.generateNewStates(currentStateOccupancy)
                 hopElementTypes = newStates.hopElementTypes
                 hopDistTypes = newStates.hopDistTypes
+                Time0 = datetime.now()
+                currentStateOccupancyEnergy = self.electrostaticIntEnergy(currentStateOccupancy)
                 for newStateIndex, newStateOccupancy in enumerate(newStates.newStateOccupancyList):
-                    delG0 = self.delG0(config, currentStateOccupancy, newStateOccupancy)
+                    delG0 = self.delG0(config, currentStateOccupancyEnergy, newStateOccupancy)
                     hopElementType = hopElementTypes[newStateIndex]
                     hopDistType = hopDistTypes[newStateIndex]
                     lambdaValue = self.lambdaValues[hopElementType][hopDistType]
                     VAB = self.VAB[hopElementType][hopDistType]
                     delGs = ((lambdaValue + delG0) ** 2 / (4 * lambdaValue)) - VAB
                     kList.append(self.vn * np.exp(-delGs / (self.kB * self.T)))
+                Time1 = datetime.now()
+                timeElapsed = Time1 - Time0
+                print('delG0: ' + ('%2d days, ' % timeElapsed.days if timeElapsed.days else '') +
+                             ('%2d hours' % ((timeElapsed.seconds // 3600) % 24)) + 
+                             (', %2d minutes' % ((timeElapsed.seconds // 60) % 60)) + 
+                             (', %2d seconds' % (timeElapsed.seconds % 60)))
+                
                 kTotal = np.sum(kList)
                 kCumSum = np.cumsum(kList / kTotal)
                 rand1 = rnd.random()
