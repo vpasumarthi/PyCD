@@ -243,6 +243,7 @@ class neighbors(object):
         neighborElementIndexList = np.asarray(neighborElementIndexList)
         elementIndexMap = np.empty(2, dtype=object)
         elementIndexMap[:] = [centerSiteQuantumIndexList[:,4], neighborElementIndexList]
+        # TODO: numNeighbors is not being computed.
         numNeighbors = np.asarray(numNeighbors, int)
 
         returnNeighbors = returnValues()
