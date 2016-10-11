@@ -552,27 +552,33 @@ class run(object):
 
     def electrostaticIntEnergy(self, occupancy):
         """Subroutine to compute the electrostatic interaction energies"""
+        Time0 = datetime.now()
         configChargeList = self.system.chargeConfig(occupancy)
         elecNeighborCharge2List = deepcopy(self.elecNeighborListSystemElementIndexMap[1])
-        Time0 = datetime.now()
-        for index, centerElementCharge in enumerate(configChargeList):
-            elecNeighborCharge2List[index] = centerElementCharge * configChargeList[self.elecNeighborListSystemElementIndexMap[1][index]] 
         Time1 = datetime.now()
         timeElapsed = Time1 - Time0
+        print('Loading: ' + ('%2d days, ' % timeElapsed.days if timeElapsed.days else '') +
+                     ('%2d hours' % ((timeElapsed.seconds // 3600) % 24)) + 
+                     (', %2d minutes' % ((timeElapsed.seconds // 60) % 60)) + 
+                     (', %2d seconds' % (timeElapsed.seconds % 60)))
+        for index, centerElementCharge in enumerate(configChargeList):
+            elecNeighborCharge2List[index] = centerElementCharge * configChargeList[self.elecNeighborListSystemElementIndexMap[1][index]] 
+        Time2 = datetime.now()
+        timeElapsed = Time2 - Time1
         print('charge2List: ' + ('%2d days, ' % timeElapsed.days if timeElapsed.days else '') +
                      ('%2d hours' % ((timeElapsed.seconds // 3600) % 24)) + 
                      (', %2d minutes' % ((timeElapsed.seconds // 60) % 60)) + 
                      (', %2d seconds' % (timeElapsed.seconds % 60)))
         individualInteractionList = np.multiply(elecNeighborCharge2List, self.coeffDistanceList)
-        Time2 = datetime.now()
-        timeElapsed = Time2 - Time1
+        Time3 = datetime.now()
+        timeElapsed = Time3 - Time2
         print('multiplication: ' + ('%2d days, ' % timeElapsed.days if timeElapsed.days else '') +
                      ('%2d hours' % ((timeElapsed.seconds // 3600) % 24)) + 
                      (', %2d minutes' % ((timeElapsed.seconds // 60) % 60)) + 
                      (', %2d seconds' % (timeElapsed.seconds % 60)))
         elec = np.sum(np.concatenate(individualInteractionList))
-        Time3 = datetime.now()
-        timeElapsed = Time3 - Time2
+        Time4 = datetime.now()
+        timeElapsed = Time4 - Time3
         print('Summation: ' + ('%2d days, ' % timeElapsed.days if timeElapsed.days else '') +
                      ('%2d hours' % ((timeElapsed.seconds // 3600) % 24)) + 
                      (', %2d minutes' % ((timeElapsed.seconds // 60) % 60)) + 
