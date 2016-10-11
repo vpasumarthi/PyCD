@@ -554,10 +554,14 @@ class run(object):
         """Subroutine to compute the electrostatic interaction energies"""
         Time0 = datetime.now()
         configChargeList = self.system.chargeConfig(occupancy)
-        elecNeighborCharge2List = deepcopy(self.elecNeighborListSystemElementIndexMap[1])
         Time1 = datetime.now()
         timeElapsed = Time1 - Time0
         print('Loading: ' + ('%2d seconds' % (timeElapsed.seconds % 60)) +
+                     (', %2d microseconds' % (timeElapsed.microseconds % 1e6)))
+        elecNeighborCharge2List = deepcopy(self.elecNeighborListSystemElementIndexMap[1])
+        Time11 = datetime.now()
+        timeElapsed = Time11 - Time1
+        print('deepcopy: ' + ('%2d seconds' % (timeElapsed.seconds % 60)) +
                      (', %2d microseconds' % (timeElapsed.microseconds % 1e6)))
         for index, centerElementCharge in enumerate(configChargeList):
             elecNeighborCharge2List[index] = centerElementCharge * configChargeList[self.elecNeighborListSystemElementIndexMap[1][index]] 
@@ -575,7 +579,6 @@ class run(object):
         timeElapsed = Time4 - Time3
         print('Summation: ' + ('%2d seconds' % (timeElapsed.seconds % 60)) +
                      (', %2d microseconds' % (timeElapsed.microseconds % 1000)))
-        
         return elec
         
     def delG0(self, positions, currentStateOccupancyEnergy, newStateOccupancy):
