@@ -560,7 +560,8 @@ class run(object):
         print('Loading: ' + ('%2d days, ' % timeElapsed.days if timeElapsed.days else '') +
                      ('%2d hours' % ((timeElapsed.seconds // 3600) % 24)) + 
                      (', %2d minutes' % ((timeElapsed.seconds // 60) % 60)) + 
-                     (', %2d seconds' % (timeElapsed.seconds % 60)))
+                     (', %2d seconds' % (timeElapsed.seconds % 60)) +
+                     (', %2d seconds' % (timeElapsed.microseconds % 1000)))
         for index, centerElementCharge in enumerate(configChargeList):
             elecNeighborCharge2List[index] = centerElementCharge * configChargeList[self.elecNeighborListSystemElementIndexMap[1][index]] 
         Time2 = datetime.now()
@@ -568,21 +569,24 @@ class run(object):
         print('charge2List: ' + ('%2d days, ' % timeElapsed.days if timeElapsed.days else '') +
                      ('%2d hours' % ((timeElapsed.seconds // 3600) % 24)) + 
                      (', %2d minutes' % ((timeElapsed.seconds // 60) % 60)) + 
-                     (', %2d seconds' % (timeElapsed.seconds % 60)))
+                     (', %2d seconds' % (timeElapsed.seconds % 60)) +
+                     (', %2d seconds' % (timeElapsed.microseconds % 1000)))
         individualInteractionList = np.multiply(elecNeighborCharge2List, self.coeffDistanceList)
         Time3 = datetime.now()
         timeElapsed = Time3 - Time2
         print('multiplication: ' + ('%2d days, ' % timeElapsed.days if timeElapsed.days else '') +
                      ('%2d hours' % ((timeElapsed.seconds // 3600) % 24)) + 
                      (', %2d minutes' % ((timeElapsed.seconds // 60) % 60)) + 
-                     (', %2d seconds' % (timeElapsed.seconds % 60)))
+                     (', %2d seconds' % (timeElapsed.seconds % 60)) +
+                     (', %2d seconds' % (timeElapsed.microseconds % 1000)))
         elec = np.sum(np.concatenate(individualInteractionList))
         Time4 = datetime.now()
         timeElapsed = Time4 - Time3
         print('Summation: ' + ('%2d days, ' % timeElapsed.days if timeElapsed.days else '') +
                      ('%2d hours' % ((timeElapsed.seconds // 3600) % 24)) + 
                      (', %2d minutes' % ((timeElapsed.seconds // 60) % 60)) + 
-                     (', %2d seconds' % (timeElapsed.seconds % 60)))
+                     (', %2d seconds' % (timeElapsed.seconds % 60)) +
+                     (', %2d seconds' % (timeElapsed.microseconds % 1000)))
         
         return elec
         
