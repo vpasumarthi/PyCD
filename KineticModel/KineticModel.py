@@ -554,10 +554,30 @@ class run(object):
         """Subroutine to compute the electrostatic interaction energies"""
         configChargeList = self.system.chargeConfig(occupancy)
         elecNeighborCharge2List = deepcopy(self.elecNeighborListSystemElementIndexMap[1])
+        Time0 = datetime.now()
         for index, centerElementCharge in enumerate(configChargeList):
             elecNeighborCharge2List[index] = centerElementCharge * configChargeList[self.elecNeighborListSystemElementIndexMap[1][index]] 
+        Time1 = datetime.now()
+        timeElapsed = Time1 - Time0
+        print('charge2List: ' + ('%2d days, ' % timeElapsed.days if timeElapsed.days else '') +
+                     ('%2d hours' % ((timeElapsed.seconds // 3600) % 24)) + 
+                     (', %2d minutes' % ((timeElapsed.seconds // 60) % 60)) + 
+                     (', %2d seconds' % (timeElapsed.seconds % 60)))
         individualInteractionList = np.multiply(elecNeighborCharge2List, self.coeffDistanceList)
+        Time2 = datetime.now()
+        timeElapsed = Time2 - Time1
+        print('multiplication: ' + ('%2d days, ' % timeElapsed.days if timeElapsed.days else '') +
+                     ('%2d hours' % ((timeElapsed.seconds // 3600) % 24)) + 
+                     (', %2d minutes' % ((timeElapsed.seconds // 60) % 60)) + 
+                     (', %2d seconds' % (timeElapsed.seconds % 60)))
         elec = np.sum(np.concatenate(individualInteractionList))
+        Time3 = datetime.now()
+        timeElapsed = Time3 - Time2
+        print('Summation: ' + ('%2d days, ' % timeElapsed.days if timeElapsed.days else '') +
+                     ('%2d hours' % ((timeElapsed.seconds // 3600) % 24)) + 
+                     (', %2d minutes' % ((timeElapsed.seconds // 60) % 60)) + 
+                     (', %2d seconds' % (timeElapsed.seconds % 60)))
+        
         return elec
         
     def delG0(self, positions, currentStateOccupancyEnergy, newStateOccupancy):
@@ -656,12 +676,6 @@ class run(object):
                     VAB = self.VAB[hopElementType][hopDistType]
                     delGs = ((lambdaValue + delG0) ** 2 / (4 * lambdaValue)) - VAB
                     kList.append(self.vn * np.exp(-delGs / (self.kB * self.T)))
-                Time1 = datetime.now()
-                timeElapsed = Time1 - Time0
-                print('delG0: ' + ('%2d days, ' % timeElapsed.days if timeElapsed.days else '') +
-                             ('%2d hours' % ((timeElapsed.seconds // 3600) % 24)) + 
-                             (', %2d minutes' % ((timeElapsed.seconds // 60) % 60)) + 
-                             (', %2d seconds' % (timeElapsed.seconds % 60)))
                 
                 kTotal = np.sum(kList)
                 kCumSum = np.cumsum(kList / kTotal)
