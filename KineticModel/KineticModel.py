@@ -550,18 +550,13 @@ class run(object):
         self.distanceList = distanceList
         self.coeffDistanceList = (1/(4 * np.pi * self.material.epsilon)) * self.distanceList
 
-    def electrostaticIntEnergy(self, occupancy):
+    def electrostaticInteractionEnergy(self, occupancy, elecNeighborCharge2List):
         """Subroutine to compute the electrostatic interaction energies"""
         Time0 = datetime.now()
         configChargeList = self.system.chargeConfig(occupancy)
         Time1 = datetime.now()
         timeElapsed = Time1 - Time0
         print('Loading: ' + ('%2d seconds' % (timeElapsed.seconds % 60)) +
-                     (', %2d microseconds' % (timeElapsed.microseconds % 1e6)))
-        elecNeighborCharge2List = deepcopy(self.elecNeighborListSystemElementIndexMap[1])
-        Time11 = datetime.now()
-        timeElapsed = Time11 - Time1
-        print('deepcopy: ' + ('%2d seconds' % (timeElapsed.seconds % 60)) +
                      (', %2d microseconds' % (timeElapsed.microseconds % 1e6)))
         for index, centerElementCharge in enumerate(configChargeList):
             elecNeighborCharge2List[index] = centerElementCharge * configChargeList[self.elecNeighborListSystemElementIndexMap[1][index]] 
@@ -581,10 +576,24 @@ class run(object):
                      (', %2d microseconds' % (timeElapsed.microseconds % 1000)))
         return elec
         
-    def delG0(self, positions, currentStateOccupancyEnergy, newStateOccupancy):
+    def relativeElectrostaticInteractionEnergy(self, currentStateOccupancy, newStateOccupancy, 
+                                               elecNeighborCharge2List, currentStateElecEnergy, 
+                                               oldSiteSystemElementIndex, newSiteSystemElementIndex):
+        """Subroutine to compute the relative electrostatic interaction energies between two states"""
+        currentStateConfigChargeList = self.system.chargeConfig(currentStateOccupancy)
+        for index, centerElementCharge in enumerate(currentStateConfigChargeList):
+            elecNeighborCharge2List[index] = centerElementCharge * currentStateConfigChargeList[self.elecNeighborListSystemElementIndexMap[1][index]] 
+        individualInteractionList = np.multiply(elecNeighborCharge2List, self.coeffDistanceList)
+        
+        relativeElecEnergy = (newSiteElecIntEnergy + newNeighborSiteElecIntEnergy
+                              - oldSiteElecIntEnergy - oldNeighborSiteElecIntEnergy)
+        elec = currentStateElecEnergy + relativeElecEnergy
+        return elec
+
+    def delG0(self, positions, currentStateOccupancyEnergy, newStateOccupancy, elecNeighborCharge2List):
         """Subroutine to compute the difference in free energies between initial and 
         final states of the system"""
-        delG0 = self.electrostaticIntEnergy(newStateOccupancy) - currentStateOccupancyEnergy
+        delG0 = self.electrostaticInteractionEnergy(newStateOccupancy, elecNeighborCharge2List) - currentStateOccupancyEnergy
         return delG0
     
     def generateNewStates(self, currentStateOccupancy):
@@ -668,9 +677,10 @@ class run(object):
                 hopElementTypes = newStates.hopElementTypes
                 hopDistTypes = newStates.hopDistTypes
                 Time0 = datetime.now()
-                currentStateOccupancyEnergy = self.electrostaticIntEnergy(currentStateOccupancy)
+                elecNeighborCharge2List = deepcopy(self.elecNeighborListSystemElementIndexMap[1])
+                currentStateOccupancyEnergy = self.electrostaticInteractionEnergy(currentStateOccupancy, elecNeighborCharge2List)
                 for newStateIndex, newStateOccupancy in enumerate(newStates.newStateOccupancyList):
-                    delG0 = self.delG0(config, currentStateOccupancyEnergy, newStateOccupancy)
+                    delG0 = self.delG0(config, currentStateOccupancyEnergy, newStateOccupancy, elecNeighborCharge2List)
                     hopElementType = hopElementTypes[newStateIndex]
                     hopDistType = hopDistTypes[newStateIndex]
                     lambdaValue = self.lambdaValues[hopElementType][hopDistType]
