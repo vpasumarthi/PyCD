@@ -569,28 +569,42 @@ class run(object):
         timeElapsed = Time3 - Time2
         print('multiplication: ' + ('%2d seconds' % (timeElapsed.seconds % 60)) +
                      (', %2d microseconds' % (timeElapsed.microseconds % 1e6)))
-        elec = np.sum(np.concatenate(individualInteractionList))
+        elecIntEnergy = np.sum(np.concatenate(individualInteractionList))
         Time4 = datetime.now()
         timeElapsed = Time4 - Time3
         print('Summation: ' + ('%2d seconds' % (timeElapsed.seconds % 60)) +
                      (', %2d microseconds' % (timeElapsed.microseconds % 1000)))
-        return elec
+        return elecIntEnergy
         
     def relativeElectrostaticInteractionEnergy(self, currentStateOccupancy, newStateOccupancy, 
-                                               elecNeighborCharge2List, currentStateElecEnergy, 
-                                               oldSiteSystemElementIndex, newSiteSystemElementIndex):
+                                               elecNeighborCharge2List, oldSiteSystemElementIndex, 
+                                               newSiteSystemElementIndex):
         """Subroutine to compute the relative electrostatic interaction energies between two states"""
         currentStateConfigChargeList = self.system.chargeConfig(currentStateOccupancy)
-        for index, centerElementCharge in enumerate(currentStateConfigChargeList):
-            elecNeighborCharge2List[index] = centerElementCharge * currentStateConfigChargeList[self.elecNeighborListSystemElementIndexMap[1][index]] 
-        individualInteractionList = np.multiply(elecNeighborCharge2List, self.coeffDistanceList)
+        
+        oldSiteElecNeighborCharge2List = currentStateConfigChargeList[oldSiteSystemElementIndex] * currentStateConfigChargeList[self.elecNeighborListSystemElementIndexMap[1][oldSiteSystemElementIndex]]
+        individualInteractionList = np.multiply(oldSiteElecNeighborCharge2List, self.coeffDistanceList[oldSiteSystemElementIndex])
+        oldSiteElecIntEnergy = np.sum(individualInteractionList)
+        
+        oldNeighborSiteElecNeighborCharge2List = currentStateConfigChargeList[newSiteSystemElementIndex] * currentStateConfigChargeList[self.elecNeighborListSystemElementIndexMap[1][newSiteSystemElementIndex]]
+        individualInteractionList = np.multiply(oldNeighborSiteElecNeighborCharge2List, self.coeffDistanceList[newSiteSystemElementIndex])
+        oldNeighborSiteElecIntEnergy = np.sum(individualInteractionList)
+        
+        newStateConfigChargeList = self.system.chargeConfig(newStateOccupancy)
+        
+        newSiteElecNeighborCharge2List = newStateConfigChargeList[newSiteSystemElementIndex] * newStateConfigChargeList[self.elecNeighborListSystemElementIndexMap[1][newSiteSystemElementIndex]]
+        individualInteractionList = np.multiply(newSiteElecNeighborCharge2List, self.coeffDistanceList[newSiteSystemElementIndex])
+        newSiteElecIntEnergy = np.sum(individualInteractionList)
+        
+        newNeighborSiteElecNeighborCharge2List = newStateConfigChargeList[oldSiteSystemElementIndex] * newStateConfigChargeList[self.elecNeighborListSystemElementIndexMap[1][oldSiteSystemElementIndex]]
+        individualInteractionList = np.multiply(newNeighborSiteElecNeighborCharge2List, self.coeffDistanceList[oldSiteSystemElementIndex])
+        newNeighborSiteElecIntEnergy = np.sum(individualInteractionList)
         
         relativeElecEnergy = (newSiteElecIntEnergy + newNeighborSiteElecIntEnergy
                               - oldSiteElecIntEnergy - oldNeighborSiteElecIntEnergy)
-        elec = currentStateElecEnergy + relativeElecEnergy
-        return elec
+        return relativeElecEnergy
 
-    def delG0(self, positions, currentStateOccupancyEnergy, newStateOccupancy, elecNeighborCharge2List):
+    def delG0(self, currentStateOccupancyEnergy, newStateOccupancy, elecNeighborCharge2List):
         """Subroutine to compute the difference in free energies between initial and 
         final states of the system"""
         delG0 = self.electrostaticInteractionEnergy(newStateOccupancy, elecNeighborCharge2List) - currentStateOccupancyEnergy
@@ -604,6 +618,7 @@ class run(object):
         hopDistTypes = []
         hoppingSpeciesIndices = []
         speciesDisplacementVectorList = []
+        systemElementIndexPairList = []
         
         cumulativeSpeciesSiteSystemElementIndices = [systemElementIndex for speciesSiteSystemElementIndices in currentStateOccupancy.values() 
                                                  for systemElementIndex in speciesSiteSystemElementIndices]
@@ -640,6 +655,7 @@ class run(object):
                                 hoppingSpeciesIndices.append(speciesIndex)
                                 speciesDisplacementVector = speciesSiteToNeighborDisplacementVectorList[speciesSiteElementIndex][neighborIndex]
                                 speciesDisplacementVectorList.append(speciesDisplacementVector)
+                                systemElementIndexPairList.append([speciesSiteSystemElementIndex, neighborSystemElementIndex])
                     
         returnNewStates = returnValues()
         returnNewStates.newStateOccupancyList = newStateOccupancyList
@@ -647,6 +663,7 @@ class run(object):
         returnNewStates.hopDistTypes = hopDistTypes
         returnNewStates.hoppingSpeciesIndices = hoppingSpeciesIndices
         returnNewStates.speciesDisplacementVectorList = speciesDisplacementVectorList
+        returnNewStates.systemElementIndexPairList = systemElementIndexPairList
         return returnNewStates
 
     def doKMCSteps(self, outdir=None, report=1, randomSeed=1):
@@ -678,9 +695,9 @@ class run(object):
                 hopDistTypes = newStates.hopDistTypes
                 Time0 = datetime.now()
                 elecNeighborCharge2List = deepcopy(self.elecNeighborListSystemElementIndexMap[1])
-                currentStateOccupancyEnergy = self.electrostaticInteractionEnergy(currentStateOccupancy, elecNeighborCharge2List)
                 for newStateIndex, newStateOccupancy in enumerate(newStates.newStateOccupancyList):
-                    delG0 = self.delG0(config, currentStateOccupancyEnergy, newStateOccupancy, elecNeighborCharge2List)
+                    [oldSiteSystemElementIndex, newSiteSystemElementIndex] = newStates.systemElementIndexPairList[newStateIndex]
+                    delG0 = self.relativeElectrostaticInteractionEnergy(currentStateOccupancy, newStateOccupancy, elecNeighborCharge2List, oldSiteSystemElementIndex, newSiteSystemElementIndex)
                     hopElementType = hopElementTypes[newStateIndex]
                     hopDistType = hopDistTypes[newStateIndex]
                     lambdaValue = self.lambdaValues[hopElementType][hopDistType]
