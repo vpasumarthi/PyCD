@@ -604,12 +604,6 @@ class run(object):
                               - oldSiteElecIntEnergy - oldNeighborSiteElecIntEnergy)
         return relativeElecEnergy
 
-    def delG0(self, currentStateOccupancyEnergy, newStateOccupancy, elecNeighborCharge2List):
-        """Subroutine to compute the difference in free energies between initial and 
-        final states of the system"""
-        delG0 = self.electrostaticInteractionEnergy(newStateOccupancy, elecNeighborCharge2List) - currentStateOccupancyEnergy
-        return delG0
-    
     def generateNewStates(self, currentStateOccupancy):
         """generates a list of new occupancy states possible from the current state"""
         neighborList = self.system.neighborList
