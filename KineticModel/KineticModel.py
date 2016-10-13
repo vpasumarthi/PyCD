@@ -552,39 +552,39 @@ class run(object):
 
     def electrostaticInteractionEnergy(self, occupancy, elecNeighborCharge2List):
         """Subroutine to compute the electrostatic interaction energies"""
-        Time0 = datetime.now()
         configChargeList = self.system.chargeConfig(occupancy)
-        Time1 = datetime.now()
-        timeElapsed = Time1 - Time0
-        print('Loading: ' + ('%2d seconds' % (timeElapsed.seconds % 60)) +
-                     (', %2d microseconds' % (timeElapsed.microseconds % 1e6)))
         for index, centerElementCharge in enumerate(configChargeList):
             elecNeighborCharge2List[index] = centerElementCharge * configChargeList[self.elecNeighborListSystemElementIndexMap[1][index]] 
-        Time2 = datetime.now()
-        timeElapsed = Time2 - Time1
-        print('charge2List: ' + ('%2d seconds' % (timeElapsed.seconds % 60)) +
-                     (', %2d microseconds' % (timeElapsed.microseconds % 1e6)))
         individualInteractionList = np.multiply(elecNeighborCharge2List, self.coeffDistanceList)
-        Time3 = datetime.now()
-        timeElapsed = Time3 - Time2
-        print('multiplication: ' + ('%2d seconds' % (timeElapsed.seconds % 60)) +
-                     (', %2d microseconds' % (timeElapsed.microseconds % 1e6)))
         elecIntEnergy = np.sum(np.concatenate(individualInteractionList))
-        Time4 = datetime.now()
-        timeElapsed = Time4 - Time3
-        print('Summation: ' + ('%2d seconds' % (timeElapsed.seconds % 60)) +
-                     (', %2d microseconds' % (timeElapsed.microseconds % 1000)))
         return elecIntEnergy
         
     def relativeElectrostaticInteractionEnergy(self, currentStateOccupancy, newStateOccupancy, 
                                                elecNeighborCharge2List, oldSiteSystemElementIndex, 
                                                newSiteSystemElementIndex):
         """Subroutine to compute the relative electrostatic interaction energies between two states"""
+        Time0 = datetime.now()
         currentStateConfigChargeList = self.system.chargeConfig(currentStateOccupancy)
+        Time1 = datetime.now()
+        timeElapsed = Time1 - Time0
+        print('Loading: ' + ('%2d seconds' % (timeElapsed.seconds % 60)) +
+                     (', %2d microseconds' % (timeElapsed.microseconds % 1e6)))
         
         oldSiteElecNeighborCharge2List = currentStateConfigChargeList[oldSiteSystemElementIndex] * currentStateConfigChargeList[self.elecNeighborListSystemElementIndexMap[1][oldSiteSystemElementIndex]]
+        Time2 = datetime.now()
+        timeElapsed = Time2 - Time1
+        print('charge2List: ' + ('%2d seconds' % (timeElapsed.seconds % 60)) +
+                     (', %2d microseconds' % (timeElapsed.microseconds % 1e6)))
         individualInteractionList = np.multiply(oldSiteElecNeighborCharge2List, self.coeffDistanceList[oldSiteSystemElementIndex])
+        Time3 = datetime.now()
+        timeElapsed = Time3 - Time2
+        print('multiplication: ' + ('%2d seconds' % (timeElapsed.seconds % 60)) +
+                     (', %2d microseconds' % (timeElapsed.microseconds % 1e6)))
         oldSiteElecIntEnergy = np.sum(individualInteractionList)
+        Time4 = datetime.now()
+        timeElapsed = Time4 - Time3
+        print('Summation: ' + ('%2d seconds' % (timeElapsed.seconds % 60)) +
+                     (', %2d microseconds' % (timeElapsed.microseconds % 1000)))
         
         oldNeighborSiteElecNeighborCharge2List = currentStateConfigChargeList[newSiteSystemElementIndex] * currentStateConfigChargeList[self.elecNeighborListSystemElementIndexMap[1][newSiteSystemElementIndex]]
         individualInteractionList = np.multiply(oldNeighborSiteElecNeighborCharge2List, self.coeffDistanceList[newSiteSystemElementIndex])
