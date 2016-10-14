@@ -154,6 +154,7 @@ class material(object):
         """Returns the systemElementIndex of the element"""
         assert 0 not in systemSize, 'System size should be greater than 0 in any dimension'
         assert quantumIndices[-1] < self.nElements[quantumIndices[-2]], 'Element Index exceed number of elements of the specified element type'
+        # TODO: Use import pdb; pdb.set_trace() when this following condition is not fulfilled
         assert all(quantumIndex >= 0 for quantumIndex in quantumIndices), 'Quantum Indices cannot be negative'
         unitCellIndex = quantumIndices[:3]
         [elementTypeIndex, elementIndex] = quantumIndices[-2:]
@@ -393,7 +394,7 @@ class initiateSystem(object):
         self.material = material
         self.neighbors = neighbors
         self.systemSize = self.neighbors.systemSize
-        
+
     def generateRandomOccupancy(self, speciesCount):
         """generates initial occupancy list based on species count"""
         occupancy = OrderedDict()
@@ -472,6 +473,7 @@ class system(object):
                             neighborQuantumIndices = neighborUnitCellIndex + neighborElementTypeIndex + neighborElementIndex
                             neighborSystemElementIndex = self.material.generateSystemElementIndex(self.systemSize, neighborQuantumIndices)
                             neighborSystemElementIndices.append(neighborSystemElementIndex)
+                        # TODO: Deal with this error: IndexError: index 10281 is out of bounds for axis 1 with size 9720.
                         chargeList[neighborSystemElementIndices] = chargeValue
 
         siteChargeTypeKeys = [key for key in chargeTypeKeys if key not in self.material.siteList if '0' in key]
@@ -482,9 +484,8 @@ class system(object):
                                                               str(speciesType) + '\' species does not exist in this configuration') 
                 centerSiteSystemElementIndices = self.occupancy[speciesType]
                 chargeList[centerSiteSystemElementIndices] = chargeTypes[chargeKeyType]
-
         return chargeList
-
+    
     def config(self, occupancy):
         """Generates the configuration array for the system"""
         elementTypeIndices = range(len(self.material.elementTypes))
@@ -559,32 +560,55 @@ class run(object):
         elecIntEnergy = np.sum(np.concatenate(individualInteractionList))
         return elecIntEnergy
         
+    def neighborChargeConfig(self, occupancy, siteSystemElementIndex):
+        """Generates the charge config"""
+        localNeighborSEIndices = self.elecNeighborListSystemElementIndexMap[1][siteSystemElementIndex]
+        localNeighborElementIndices = self.system.neighborList['E'][0].elementIndexMap[1][siteSystemElementIndex]
+        localNeighborElementTypeIndices = self.material.elementTypeIndexList[localNeighborElementIndices % np.sum(self.material.nElements)]
+        localNeighborElementTypes = np.asarray([self.material.elementTypes[localNeighborElementTypeIndex] for localNeighborElementTypeIndex in localNeighborElementTypeIndices])
+        neighborChargeList = np.asarray([self.material.chargeTypes[localNeighborElementType] for localNeighborElementType in localNeighborElementTypes])
+        for species in occupancy.keys():
+            for siteSEIndex in occupancy[species]:
+                if siteSEIndex in localNeighborSEIndices:
+                    # TODO: Remove hardcoded '0'
+                    index = np.where(localNeighborSEIndices == siteSEIndex)[0][0]
+                    neighborChargeList[index] = self.material.chargeTypes[localNeighborElementTypes[index] + '0']
+        return neighborChargeList
+
     def relativeElectrostaticInteractionEnergy(self, currentStateOccupancy, newStateOccupancy, 
                                                elecNeighborCharge2List, oldSiteSystemElementIndex, 
                                                newSiteSystemElementIndex):
         """Subroutine to compute the relative electrostatic interaction energies between two states"""
-        Time0 = datetime.now()
-        currentStateConfigChargeList = self.system.chargeConfig(currentStateOccupancy)
-        Time1 = datetime.now()
-        timeElapsed = Time1 - Time0
-        print('Loading: ' + ('%2d seconds' % (timeElapsed.seconds % 60)) +
-                     (', %2d microseconds' % (timeElapsed.microseconds % 1e6)))
         
+        #Time0 = datetime.now()
+        currentStateConfigChargeList = self.system.chargeConfig(currentStateOccupancy)
+        #Time1 = datetime.now()
+        #timeElapsed = Time1 - Time0
+        #print('Loading: ' + ('%2d seconds' % (timeElapsed.seconds % 60)) +
+        #             (', %2d microseconds' % (timeElapsed.microseconds % 1e6)))
+        
+        '''
+        if oldSiteSystemElementIndex in np.concatenate(currentStateOccupancy.values()):
+            oldSiteCharge = self.material.chargeTypes[self.material.elementTypes[self.material.elementTypeIndexList[oldSiteSystemElementIndex % np.sum(self.material.nElements)]] + '0']
+        else:
+            oldSiteCharge = self.material.chargeTypes[self.material.elementTypes[self.material.elementTypeIndexList[oldSiteSystemElementIndex % np.sum(self.material.nElements)]]]
+        oldSiteElecNeighborCharge2List = oldSiteCharge * self.neighborChargeConfig(currentStateOccupancy, oldSiteSystemElementIndex)
+        '''
         oldSiteElecNeighborCharge2List = currentStateConfigChargeList[oldSiteSystemElementIndex] * currentStateConfigChargeList[self.elecNeighborListSystemElementIndexMap[1][oldSiteSystemElementIndex]]
-        Time2 = datetime.now()
-        timeElapsed = Time2 - Time1
-        print('charge2List: ' + ('%2d seconds' % (timeElapsed.seconds % 60)) +
-                     (', %2d microseconds' % (timeElapsed.microseconds % 1e6)))
+        #Time2 = datetime.now()
+        #timeElapsed = Time2 - Time1
+        #print('charge2List: ' + ('%2d seconds' % (timeElapsed.seconds % 60)) +
+        #             (', %2d microseconds' % (timeElapsed.microseconds % 1e6)))
         individualInteractionList = np.multiply(oldSiteElecNeighborCharge2List, self.coeffDistanceList[oldSiteSystemElementIndex])
-        Time3 = datetime.now()
-        timeElapsed = Time3 - Time2
-        print('multiplication: ' + ('%2d seconds' % (timeElapsed.seconds % 60)) +
-                     (', %2d microseconds' % (timeElapsed.microseconds % 1e6)))
+        #Time3 = datetime.now()
+        #timeElapsed = Time3 - Time2
+        #print('multiplication: ' + ('%2d seconds' % (timeElapsed.seconds % 60)) +
+        #             (', %2d microseconds' % (timeElapsed.microseconds % 1e6)))
         oldSiteElecIntEnergy = np.sum(individualInteractionList)
-        Time4 = datetime.now()
-        timeElapsed = Time4 - Time3
-        print('Summation: ' + ('%2d seconds' % (timeElapsed.seconds % 60)) +
-                     (', %2d microseconds' % (timeElapsed.microseconds % 1000)))
+        #Time4 = datetime.now()
+        #timeElapsed = Time4 - Time3
+        #print('Summation: ' + ('%2d seconds' % (timeElapsed.seconds % 60)) +
+        #             (', %2d microseconds' % (timeElapsed.microseconds % 1000)))
         
         oldNeighborSiteElecNeighborCharge2List = currentStateConfigChargeList[newSiteSystemElementIndex] * currentStateConfigChargeList[self.elecNeighborListSystemElementIndexMap[1][newSiteSystemElementIndex]]
         individualInteractionList = np.multiply(oldNeighborSiteElecNeighborCharge2List, self.coeffDistanceList[newSiteSystemElementIndex])
