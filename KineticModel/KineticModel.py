@@ -560,21 +560,6 @@ class run(object):
         elecIntEnergy = np.sum(np.concatenate(individualInteractionList))
         return elecIntEnergy
         
-    def neighborChargeConfig(self, occupancy, siteSystemElementIndex):
-        """Generates the charge config"""
-        localNeighborSEIndices = self.elecNeighborListSystemElementIndexMap[1][siteSystemElementIndex]
-        localNeighborElementIndices = self.system.neighborList['E'][0].elementIndexMap[1][siteSystemElementIndex]
-        localNeighborElementTypeIndices = self.material.elementTypeIndexList[localNeighborElementIndices % np.sum(self.material.nElements)]
-        localNeighborElementTypes = np.asarray([self.material.elementTypes[localNeighborElementTypeIndex] for localNeighborElementTypeIndex in localNeighborElementTypeIndices])
-        neighborChargeList = np.asarray([self.material.chargeTypes[localNeighborElementType] for localNeighborElementType in localNeighborElementTypes])
-        for species in occupancy.keys():
-            for siteSEIndex in occupancy[species]:
-                if siteSEIndex in localNeighborSEIndices:
-                    # TODO: Remove hardcoded '0'
-                    index = np.where(localNeighborSEIndices == siteSEIndex)[0][0]
-                    neighborChargeList[index] = self.material.chargeTypes[localNeighborElementTypes[index] + '0']
-        return neighborChargeList
-
     def relativeElectrostaticInteractionEnergy(self, currentStateOccupancy, newStateOccupancy, 
                                                elecNeighborCharge2List, oldSiteSystemElementIndex, 
                                                newSiteSystemElementIndex):
@@ -587,13 +572,6 @@ class run(object):
         #print('Loading: ' + ('%2d seconds' % (timeElapsed.seconds % 60)) +
         #             (', %2d microseconds' % (timeElapsed.microseconds % 1e6)))
         
-        '''
-        if oldSiteSystemElementIndex in np.concatenate(currentStateOccupancy.values()):
-            oldSiteCharge = self.material.chargeTypes[self.material.elementTypes[self.material.elementTypeIndexList[oldSiteSystemElementIndex % np.sum(self.material.nElements)]] + '0']
-        else:
-            oldSiteCharge = self.material.chargeTypes[self.material.elementTypes[self.material.elementTypeIndexList[oldSiteSystemElementIndex % np.sum(self.material.nElements)]]]
-        oldSiteElecNeighborCharge2List = oldSiteCharge * self.neighborChargeConfig(currentStateOccupancy, oldSiteSystemElementIndex)
-        '''
         oldSiteElecNeighborCharge2List = currentStateConfigChargeList[oldSiteSystemElementIndex] * currentStateConfigChargeList[self.elecNeighborListSystemElementIndexMap[1][oldSiteSystemElementIndex]]
         #Time2 = datetime.now()
         #timeElapsed = Time2 - Time1
