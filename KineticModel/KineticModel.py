@@ -34,11 +34,11 @@ class material(object):
     
     The additional attributes are:
         * **nElements** (np.array (n)): element-type wise total number of elements in a unit cell
-        * **elementTypeSpeciesMap** (dict): dictionary of element to species mapping
         * **siteList** (list): list of elements that act as sites
-        * **nonEmptySpeciesTypes** (dict): dictionary of species to element mapping with elements excluding emptySpeciesType 
-        * **latticeMatrix** (np.array (3x3): lattice cell matrix
+        * **elementTypeToSpeciesMap** (dict): dictionary of element to species mapping
+        * **nonEmptySpeciesToElementTypeMap** (dict): dictionary of species to element mapping with elements excluding emptySpeciesType 
         * **hopElementTypes** (dict): dictionary of species to hopping element types separated by elementTypeDelimiter
+        * **latticeMatrix** (np.array (3x3): lattice cell matrix
     """ 
     def __init__(self, name, elementTypes, speciesTypes, unitcellCoords, elementTypeIndexList, 
                  chargeTypes, latticeParameters, vn, lambdaValues, VAB, neighborCutoffDist, 
@@ -76,24 +76,24 @@ class material(object):
                     if key is not self.emptySpeciesType]
         self.siteList = list(set([item for sublist in siteList for item in sublist]))
         
-        hopElementTypes = {key: [self.elementTypeDelimiter.join(comb) 
-                                 for comb in list(itertools.product(self.speciesTypes[key], repeat=2))] 
-                           for key in self.speciesTypes 
-                           if key is not self.emptySpeciesType}
-        self.hopElementTypes = hopElementTypes
+        nonEmptySpeciesToElementTypeMap = speciesTypes.copy()
+        del nonEmptySpeciesToElementTypeMap[self.emptySpeciesType]
+        self.nonEmptySpeciesToElementTypeMap = nonEmptySpeciesToElementTypeMap
         
-        elementTypeSpeciesMap = {}
-        nonEmptySpeciesTypes = speciesTypes.copy()
-        del nonEmptySpeciesTypes[self.emptySpeciesType]
-        self.nonEmptySpeciesTypes = nonEmptySpeciesTypes
+        elementTypeToSpeciesMap = {}
         for elementType in self.elementTypes:
             speciesList = []
-            for speciesTypeKey in nonEmptySpeciesTypes.keys():
-                if elementType in nonEmptySpeciesTypes[speciesTypeKey]:
+            for speciesTypeKey in nonEmptySpeciesToElementTypeMap.keys():
+                if elementType in nonEmptySpeciesToElementTypeMap[speciesTypeKey]:
                     speciesList.append(speciesTypeKey)
-            elementTypeSpeciesMap[elementType] = speciesList
-        self.elementTypeSpeciesMap = elementTypeSpeciesMap
+            elementTypeToSpeciesMap[elementType] = speciesList
+        self.elementTypeToSpeciesMap = elementTypeToSpeciesMap
 
+        hopElementTypes = {key: [self.elementTypeDelimiter.join(comb) 
+                                 for comb in list(itertools.product(self.speciesTypes[key], repeat=2))] 
+                           for key in self.speciesTypes if key is not self.emptySpeciesType}
+        self.hopElementTypes = hopElementTypes
+        
         [a, b, c, alpha, beta, gamma] = self.latticeParameters
         latticeMatrix = np.array([[ a                , 0                , 0],
                                   [ b * np.cos(gamma), b * np.sin(gamma), 0],
@@ -422,7 +422,7 @@ class system(object):
         
         self.pbc = self.neighbors.pbc
         speciesCount = {key: len(self.occupancy[key]) if key in self.occupancy.keys() else 0 
-                        for key in self.material.nonEmptySpeciesTypes.keys() 
+                        for key in self.material.nonEmptySpeciesToElementTypeMap.keys() 
                         if key is not self.material.emptySpeciesType}
         self.speciesCount = speciesCount
         
@@ -447,7 +447,7 @@ class system(object):
         for chargeTypeKey in shellChargeTypeKeys:
             centerSiteElementType = chargeTypeKey.split(self.material.elementTypeDelimiter)[0]
             neighborElementTypeSites = self.neighborList[chargeTypeKey]
-            for speciesType in self.material.elementTypeSpeciesMap[centerSiteElementType]:
+            for speciesType in self.material.elementTypeToSpeciesMap[centerSiteElementType]:
                 centerSiteSystemElementIndices = self.occupancy[speciesType]
                 for centerSiteSystemElementIndex in centerSiteSystemElementIndices:
                     for shellIndex, chargeValue in enumerate(chargeTypes[chargeTypeKey]):
@@ -469,7 +469,7 @@ class system(object):
         siteChargeTypeKeys = [key for key in chargeTypeKeys if key not in self.material.siteList if self.material.siteIdentifier in key]
         for chargeKeyType in siteChargeTypeKeys:
             centerSiteElementType = chargeKeyType.replace(self.material.siteIdentifier,'')
-            for speciesType in self.material.elementTypeSpeciesMap[centerSiteElementType]:
+            for speciesType in self.material.elementTypeToSpeciesMap[centerSiteElementType]:
                 assert speciesType in self.occupancy.keys(), ('Invalid definition of charge type \'' + str(chargeKeyType) + '\', \'' + 
                                                               str(speciesType) + '\' species does not exist in this configuration') 
                 centerSiteSystemElementIndices = self.occupancy[speciesType]
