@@ -1,8 +1,8 @@
 #!/usr/bin/env python
-'''
-code to compute msd of random walk of single electron in 3D hematite lattice structure
- switch off PBC, and 
-'''
+"""
+kMC model to run kinetic Monte Carlo simulations and compute mean square displacement of 
+random walk of charge carriers on 3D lattice systems
+"""
 import numpy as np
 from collections import OrderedDict
 from copy import deepcopy
@@ -13,28 +13,37 @@ from datetime import datetime
 class material(object):
     """Defines the properties and structure of working material
     
-    Attributes:
-        name: A string representing the material name
-        elementTypes: list of elements
-        speciesTypes: list of species
-        unitcellCoords: positions of all elements in the unit cell
-        elementTypeIndexList: list of element types for all unit cell coordinates
-        chargeTypes: types of atomic charges considered for the working material
-        latticeParameters: list of three lattice constants in angstrom and three angles between them in degrees
-        vn: typical frequency for nuclear motion
-        lambdaValues: Reorganization energies
-        VAB: Electronic coupling matrix element
-        neighborCutoffDist: List of neighbors and their respective cutoff distances in angstrom
-        neighborCutoffDistTol: Tolerance value in angstrom for neighbor cutoff distance
-        elementTypeDelimiter: Delimiter between element types
-        emptySpeciesType: name of the empty species type
-        epsilon: Dielectric constant of the material
-    """
+    :param str name: A string representing the material name
+    :param list elementTypes: list of chemical elements
+    :param dict speciesTypes: list of charge carrier species
+    :param unitcellCoords: positions of all elements in the unit cell
+    :type unitcellCoords: np.array (nx3)
+    :param elementTypeIndexList: list of element types for all unit cell coordinates
+    :type elementTypeIndexList: np.array (n)
+    :param dict chargeTypes: types of atomic charges considered for the working material
+    :param list latticeParameters: list of three lattice constants in angstrom and three angles between them in degrees
+    :param float vn: typical frequency for nuclear motion
+    :param dict lambdaValues: Reorganization energies
+    :param dict VAB: Electronic coupling matrix element
+    :param dict neighborCutoffDist: List of neighbors and their respective cutoff distances in angstrom
+    :param float neighborCutoffDistTol: Tolerance value in angstrom for neighbor cutoff distance
+    :param str elementTypeDelimiter: Delimiter between element types
+    :param str emptySpeciesType: name of the empty species type
+    :param str siteIdentifier: suffix to the chargeType to identify site
+    :param float epsilon: Dielectric constant of the material
     
-    def __init__(self, name, elementTypes, speciesTypes, unitcellCoords, elementTypeIndexList, chargeTypes, 
-                 latticeParameters, vn, lambdaValues, VAB, neighborCutoffDist, neighborCutoffDistTol, 
-                 elementTypeDelimiter, emptySpeciesType, epsilon):
-        """Return an material object whose name is *name*""" 
+    The additional attributes are:
+        * **nElements** (np.array (n)): element-type wise total number of elements in a unit cell
+        * **nSites** (np.array): 
+        * **elementTypeSpeciesMap** (dict): dictionary of element to species mapping
+        * **siteList** (list): list of elements that act as sites
+        * **nonEmptySpeciesTypes** (dict): dictionary of species to element mapping with elements excluding emptySpeciesType 
+        * **latticeMatrix** (np.array (3x3): lattice cell matrix
+        * **hopElementTypes** (dict): dictionary of species to hopping element types separated by elementTypeDelimiter
+    """ 
+    def __init__(self, name, elementTypes, speciesTypes, unitcellCoords, elementTypeIndexList, 
+                 chargeTypes, latticeParameters, vn, lambdaValues, VAB, neighborCutoffDist, 
+                 neighborCutoffDistTol, elementTypeDelimiter, emptySpeciesType, siteIdentifier, epsilon):
         # TODO: introduce a method to view the material using ase atoms or other gui module
         self.name = name
         self.elementTypes = elementTypes
@@ -50,7 +59,6 @@ class material(object):
             self.unitcellCoords[startIndex:endIndex] = elementUnitCellCoords[elementUnitCellCoords[:,2].argsort()]
             startIndex = endIndex
         
-        # number of elements
         self.nElements = nElements
         self.elementTypeIndexList = elementTypeIndexList.astype(int)
         self.chargeTypes = chargeTypes
@@ -62,26 +70,24 @@ class material(object):
         self.neighborCutoffDistTol = neighborCutoffDistTol
         self.elementTypeDelimiter = elementTypeDelimiter
         self.emptySpeciesType = emptySpeciesType
+        self.siteIdentifier = siteIdentifier
         self.epsilon = epsilon
                 
-        # siteList
         siteList = [self.speciesTypes[key] for key in self.speciesTypes 
                     if key is not self.emptySpeciesType]
         self.siteList = list(set([item for sublist in siteList for item in sublist]))
         
-        # list of hop element types
         hopElementTypes = {key: [self.elementTypeDelimiter.join(comb) 
                                  for comb in list(itertools.product(self.speciesTypes[key], repeat=2))] 
                            for key in self.speciesTypes 
                            if key is not self.emptySpeciesType}
         self.hopElementTypes = hopElementTypes
         
-        # number of sites present in siteList
         siteElementIndices = [i for i,n in enumerate(elementTypes) if n in siteList]
+        # TODO: nSites is unused attribute. Get rid of it.
         nSites = [nElements[i] for i in siteElementIndices]
         self.nSites = np.asarray(nSites, int)
         
-        # element - species map
         elementTypeSpeciesMap = {}
         nonEmptySpeciesTypes = speciesTypes.copy()
         del nonEmptySpeciesTypes[self.emptySpeciesType]
@@ -94,7 +100,6 @@ class material(object):
             elementTypeSpeciesMap[elementType] = speciesList
         self.elementTypeSpeciesMap = elementTypeSpeciesMap
 
-        # lattice cell matrix
         [a, b, c, alpha, beta, gamma] = self.latticeParameters
         latticeMatrix = np.array([[ a                , 0                , 0],
                                   [ b * np.cos(gamma), b * np.sin(gamma), 0],
@@ -106,15 +111,7 @@ class material(object):
         """Returns systemElementIndices and coordinates of specified elements in a cell 
         of size *cellSize*
         
-        Args:
-            elementTypeIndices(dataType):
-            cellSize(1x3 np.array):
-            
-        Returns:
-            returnSites object with following attributes:
-            cellCoordinates:
-            quantumIndexList:
-            systemElementIndexList:
+        :param str elementTypeIndices: element type indices
         """
         assert all(size > 0 for size in cellSize), 'Input size should always be greater than 0'
         extractIndices = np.in1d(self.elementTypeIndexList, elementTypeIndices).nonzero()[0]
@@ -475,9 +472,9 @@ class system(object):
                         # TODO: Deal with this error: IndexError: index 10281 is out of bounds for axis 1 with size 9720.
                         chargeList[neighborSystemElementIndices] = chargeValue
 
-        siteChargeTypeKeys = [key for key in chargeTypeKeys if key not in self.material.siteList if '0' in key]
+        siteChargeTypeKeys = [key for key in chargeTypeKeys if key not in self.material.siteList if self.material.siteIdentifier in key]
         for chargeKeyType in siteChargeTypeKeys:
-            centerSiteElementType = chargeKeyType.replace('0','')
+            centerSiteElementType = chargeKeyType.replace(self.material.siteIdentifier,'')
             for speciesType in self.material.elementTypeSpeciesMap[centerSiteElementType]:
                 assert speciesType in self.occupancy.keys(), ('Invalid definition of charge type \'' + str(chargeKeyType) + '\', \'' + 
                                                               str(speciesType) + '\' species does not exist in this configuration') 
@@ -671,7 +668,6 @@ class run(object):
                 newStates = self.generateNewStates(currentStateOccupancy)
                 hopElementTypes = newStates.hopElementTypes
                 hopDistTypes = newStates.hopDistTypes
-                Time0 = datetime.now()
                 elecNeighborCharge2List = deepcopy(self.elecNeighborListSystemElementIndexMap[1])
                 for newStateIndex, newStateOccupancy in enumerate(newStates.newStateOccupancyList):
                     [oldSiteSystemElementIndex, newSiteSystemElementIndex] = newStates.systemElementIndexPairList[newStateIndex]
