@@ -34,7 +34,6 @@ class material(object):
     
     The additional attributes are:
         * **nElements** (np.array (n)): element-type wise total number of elements in a unit cell
-        * **nSites** (np.array): 
         * **elementTypeSpeciesMap** (dict): dictionary of element to species mapping
         * **siteList** (list): list of elements that act as sites
         * **nonEmptySpeciesTypes** (dict): dictionary of species to element mapping with elements excluding emptySpeciesType 
@@ -82,11 +81,6 @@ class material(object):
                            for key in self.speciesTypes 
                            if key is not self.emptySpeciesType}
         self.hopElementTypes = hopElementTypes
-        
-        siteElementIndices = [i for i,n in enumerate(elementTypes) if n in siteList]
-        # TODO: nSites is unused attribute. Get rid of it.
-        nSites = [nElements[i] for i in siteElementIndices]
-        self.nSites = np.asarray(nSites, int)
         
         elementTypeSpeciesMap = {}
         nonEmptySpeciesTypes = speciesTypes.copy()
