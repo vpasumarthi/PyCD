@@ -9,6 +9,8 @@ from copy import deepcopy
 import itertools
 import random as rnd
 from datetime import datetime
+import pickle
+import os.path
 
 class material(object):
     """Defines the properties and structure of working material
@@ -40,43 +42,41 @@ class material(object):
         * **hopElementTypes** (dict): dictionary of species to hopping element types separated by elementTypeDelimiter
         * **latticeMatrix** (np.array (3x3): lattice cell matrix
     """ 
-    def __init__(self, name, elementTypes, speciesTypes, unitcellCoords, elementTypeIndexList, 
-                 chargeTypes, latticeParameters, vn, lambdaValues, VAB, neighborCutoffDist, 
-                 neighborCutoffDistTol, elementTypeDelimiter, emptySpeciesType, siteIdentifier, epsilon):
+    def __init__(self, materialParameters):
         # TODO: introduce a method to view the material using ase atoms or other gui module
-        self.name = name
-        self.elementTypes = elementTypes
-        self.speciesTypes = speciesTypes
-        self.unitcellCoords = np.zeros((len(unitcellCoords), 3))
+        self.name = materialParameters.name
+        self.elementTypes = materialParameters.elementTypes
+        self.speciesTypes = materialParameters.speciesTypes
+        self.unitcellCoords = np.zeros((len(materialParameters.unitcellCoords), 3))
         startIndex = 0
         length = len(self.elementTypes)
         nElements = np.zeros(length, int)
         for elementIndex in range(length):
-            elementUnitCellCoords = unitcellCoords[elementTypeIndexList==elementIndex]
+            elementUnitCellCoords = materialParameters.unitcellCoords[materialParameters.elementTypeIndexList==elementIndex]
             nElements[elementIndex] = len(elementUnitCellCoords)
             endIndex = startIndex + nElements[elementIndex]
             self.unitcellCoords[startIndex:endIndex] = elementUnitCellCoords[elementUnitCellCoords[:,2].argsort()]
             startIndex = endIndex
         
         self.nElements = nElements
-        self.elementTypeIndexList = elementTypeIndexList.astype(int)
-        self.chargeTypes = chargeTypes
-        self.latticeParameters = latticeParameters
-        self.vn = vn
-        self.lambdaValues = lambdaValues
-        self.VAB = VAB
-        self.neighborCutoffDist = neighborCutoffDist
-        self.neighborCutoffDistTol = neighborCutoffDistTol
-        self.elementTypeDelimiter = elementTypeDelimiter
-        self.emptySpeciesType = emptySpeciesType
-        self.siteIdentifier = siteIdentifier
-        self.epsilon = epsilon
+        self.elementTypeIndexList = materialParameters.elementTypeIndexList.astype(int)
+        self.chargeTypes = materialParameters.chargeTypes
+        self.latticeParameters = materialParameters.latticeParameters
+        self.vn = materialParameters.vn
+        self.lambdaValues = materialParameters.lambdaValues
+        self.VAB = materialParameters.VAB
+        self.neighborCutoffDist = materialParameters.neighborCutoffDist
+        self.neighborCutoffDistTol = materialParameters.neighborCutoffDistTol
+        self.elementTypeDelimiter = materialParameters.elementTypeDelimiter
+        self.emptySpeciesType = materialParameters.emptySpeciesType
+        self.siteIdentifier = materialParameters.siteIdentifier
+        self.epsilon = materialParameters.epsilon
                 
         siteList = [self.speciesTypes[key] for key in self.speciesTypes 
                     if key is not self.emptySpeciesType]
         self.siteList = list(set([item for sublist in siteList for item in sublist]))
         
-        nonEmptySpeciesToElementTypeMap = speciesTypes.copy()
+        nonEmptySpeciesToElementTypeMap = materialParameters.speciesTypes.copy()
         del nonEmptySpeciesToElementTypeMap[self.emptySpeciesType]
         self.nonEmptySpeciesToElementTypeMap = nonEmptySpeciesToElementTypeMap
         
@@ -100,12 +100,29 @@ class material(object):
                                   [ c * np.cos(alpha), c * np.cos(beta) , c * 
                                    np.sqrt(np.sin(alpha)**2 - np.cos(beta)**2)]])
         self.latticeMatrix = latticeMatrix
+        
+    def generateMaterialFile(self, material, materialFileName, replaceExistingObjectFiles):
+        """ """
+        if not os.path.isfile(materialFileName) or replaceExistingObjectFiles:
+            file_material = open(materialFileName, 'w')
+            pickle.dump(material, file_material)
+            file_material.close()
+        pass
 
     def generateSites(self, elementTypeIndices, cellSize=np.array([1, 1, 1])):
-        """Returns systemElementIndices and coordinates of specified elements in a cell 
-        of size *cellSize*
-        
+        """Returns systemElementIndices and coordinates of specified elements in a cell of size 
+        *cellSize*
+            
         :param str elementTypeIndices: element type indices
+        :param cellSize: size of the cell
+        :type cellSize: np.array (3x1)
+        :return: an object with following attributes:
+        
+            * **cellCoordinates** (np.array (nx3)):  
+            * **quantumIndexList** (np.array (nx5)): 
+            * **systemElementIndexList** (np.array (n)): 
+        
+        :raises ValueError: if the input cellSize is less than or equal to 0.
         """
         assert all(size > 0 for size in cellSize), 'Input size should always be greater than 0'
         extractIndices = np.in1d(self.elementTypeIndexList, elementTypeIndices).nonzero()[0]
@@ -191,6 +208,15 @@ class neighbors(object):
         elementTypeIndices = range(len(self.material.elementTypes))
         bulkSites = self.material.generateSites(elementTypeIndices, self.systemSize)
         self.bulkSites = bulkSites
+        
+    def generateNeighborsFile(self, materialNeighbors, neighborsFileName, replaceExistingObjectFiles):
+        """ """
+        if not os.path.isfile(neighborsFileName) or replaceExistingObjectFiles:
+            file_Neighbors = open(neighborsFileName, 'w')
+            pickle.dump(materialNeighbors, file_Neighbors)
+            file_Neighbors.close()
+        pass
+
         
     def hopNeighborSites(self, bulkSites, centerSiteIndices, neighborSiteIndices, cutoffDistLimits, cutoffDistKey):
         """Returns systemElementIndexMap and distances between center sites and its neighbor sites within cutoff 
@@ -323,7 +349,7 @@ class neighbors(object):
         returnNeighbors.displacementList = np.asarray(displacementList)
         return returnNeighbors
 
-    def generateNeighborList(self, outdir=None, report=1, localSystemSize=np.array([3, 3, 3]), 
+    def generateNeighborList(self, replaceExistingNeighborList, outdir=None, report=1, localSystemSize=np.array([3, 3, 3]), 
                              centerUnitCellIndex=np.array([1, 1, 1])):
         """Adds the neighbor list to the system object and returns the neighbor list"""
         assert all(size >= 3 for size in localSystemSize), 'Local system size in all dimensions should always be greater than or equal to 3'
@@ -360,7 +386,9 @@ class neighbors(object):
             fileName = 'E' + ('%2.1f' % self.material.neighborCutoffDist['E'][0])
             neighborListFileName = 'NeighborList_' + fileName + '.npy'
             neighborListFilePath = outdir + '/' + neighborListFileName
-            np.save(neighborListFilePath, neighborList)
+            if not os.path.isfile(neighborListFilePath) or replaceExistingNeighborList:
+                np.save(neighborListFilePath, neighborList)
+                report = 1
         if report:
             self.generateNeighborListReport(outdir, fileName)
         return neighborList
