@@ -17,7 +17,7 @@ class material(object):
     
     :param str name: A string representing the material name
     :param list elementTypes: list of chemical elements
-    :param dict speciesTypes: list of charge carrier species
+    :param dict speciesToElementTypeMap: list of charge carrier species
     :param unitcellCoords: positions of all elements in the unit cell
     :type unitcellCoords: np.array (nx3)
     :param elementTypeIndexList: list of element types for all unit cell coordinates
@@ -46,7 +46,7 @@ class material(object):
         # TODO: introduce a method to view the material using ase atoms or other gui module
         self.name = materialParameters.name
         self.elementTypes = materialParameters.elementTypes
-        self.speciesTypes = materialParameters.speciesTypes
+        self.speciesToElementTypeMap = materialParameters.speciesToElementTypeMap
         self.unitcellCoords = np.zeros((len(materialParameters.unitcellCoords), 3))
         startIndex = 0
         length = len(self.elementTypes)
@@ -72,11 +72,11 @@ class material(object):
         self.siteIdentifier = materialParameters.siteIdentifier
         self.epsilon = materialParameters.epsilon
                 
-        siteList = [self.speciesTypes[key] for key in self.speciesTypes 
+        siteList = [self.speciesToElementTypeMap[key] for key in self.speciesToElementTypeMap 
                     if key is not self.emptySpeciesType]
         self.siteList = list(set([item for sublist in siteList for item in sublist]))
         
-        nonEmptySpeciesToElementTypeMap = materialParameters.speciesTypes.copy()
+        nonEmptySpeciesToElementTypeMap = materialParameters.speciesToElementTypeMap.copy()
         del nonEmptySpeciesToElementTypeMap[self.emptySpeciesType]
         self.nonEmptySpeciesToElementTypeMap = nonEmptySpeciesToElementTypeMap
         
@@ -90,8 +90,8 @@ class material(object):
         self.elementTypeToSpeciesMap = elementTypeToSpeciesMap
 
         hopElementTypes = {key: [self.elementTypeDelimiter.join(comb) 
-                                 for comb in list(itertools.product(self.speciesTypes[key], repeat=2))] 
-                           for key in self.speciesTypes if key is not self.emptySpeciesType}
+                                 for comb in list(itertools.product(self.speciesToElementTypeMap[key], repeat=2))] 
+                           for key in self.speciesToElementTypeMap if key is not self.emptySpeciesType}
         self.hopElementTypes = hopElementTypes
         
         [a, b, c, alpha, beta, gamma] = self.latticeParameters
@@ -417,14 +417,14 @@ class initiateSystem(object):
         """generates initial occupancy list based on species count"""
         occupancy = OrderedDict()
         for speciesType in speciesCount.keys():
-            siteElementTypesIndices = np.in1d(self.material.elementTypes, self.material.speciesTypes[speciesType]).nonzero()[0]
+            siteElementTypesIndices = np.in1d(self.material.elementTypes, self.material.speciesToElementTypeMap[speciesType]).nonzero()[0]
             numSpecies = speciesCount[speciesType]
             iSpeciesSystemElementIndices = []
             for iSpecies in range(numSpecies):
                 siteElementTypeIndex = rnd.choice(siteElementTypesIndices)
                 iSpeciesSiteIndices = np.array([rnd.randint(0, self.systemSize[0]-1), 
-                                                rnd.randint(0, self.systemSize[0]-1), 
-                                                rnd.randint(0, self.systemSize[0]-1), 
+                                                rnd.randint(0, self.systemSize[1]-1), 
+                                                rnd.randint(0, self.systemSize[2]-1), 
                                                 siteElementTypeIndex, 
                                                 rnd.randint(0, self.material.nElements[siteElementTypeIndex]-1)])
                 iSpeciesSystemElementIndex = self.material.generateSystemElementIndex(self.systemSize, iSpeciesSiteIndices)
@@ -545,8 +545,8 @@ class run(object):
         
         # compute number of species existing in the system
         nSpecies = {}
-        speciesTypes = self.material.speciesTypes
-        for speciesTypeKey in  speciesTypes.keys():
+        speciesToElementTypeMap = self.material.speciesToElementTypeMap
+        for speciesTypeKey in  speciesToElementTypeMap.keys():
             if speciesTypeKey in self.system.occupancy.keys(): 
                 nSpecies[speciesTypeKey] = len(self.system.occupancy[speciesTypeKey])
             elif speciesTypeKey is not self.material.emptySpeciesType:
