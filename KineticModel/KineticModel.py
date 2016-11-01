@@ -491,7 +491,6 @@ class system(object):
                             neighborQuantumIndices = neighborUnitCellIndex + neighborElementTypeIndex + neighborElementIndex
                             neighborSystemElementIndex = self.material.generateSystemElementIndex(self.systemSize, neighborQuantumIndices)
                             neighborSystemElementIndices.append(neighborSystemElementIndex)
-                        # TODO: Deal with this error: IndexError: index 10281 is out of bounds for axis 1 with size 9720.
                         chargeList[neighborSystemElementIndices] = chargeValue
 
         siteChargeTypeKeys = [key for key in chargeTypeKeys if key not in self.material.siteList if self.material.siteIdentifier in key]
@@ -836,7 +835,7 @@ class analysis(object):
                         ('%1.0E' % self.nStepsMSD) + 'nStepsMSD_' + 
                         ('%1.0E' % self.nDispMSD) + 'nDispMSD')
 
-            msdFileName = 'MSD_Data_' + fileName + '.npy' 
+            msdFileName = 'MSD_Data_' + fileName + '.npy'
             msdFilePath = outdir + '/' + msdFileName
             np.save(msdFilePath, msdData)
         if report:
