@@ -557,8 +557,6 @@ class run(object):
         # total number of species
         self.totalSpecies = np.sum(self.nSpecies.values()) - self.nSpecies[self.material.emptySpeciesType]
     
-    def generateDistanceList(self):
-        """ """
         # Electrostatic interaction neighborlist:
         elecNeighborListSystemElementIndexMap = self.system.neighborList['E'][0].systemElementIndexMap
         self.elecNeighborListSystemElementIndexMap = elecNeighborListSystemElementIndexMap
@@ -679,7 +677,6 @@ class run(object):
         speciesSystemElementIndices = np.concatenate((currentStateOccupancy.values()))
         config = self.system.config(currentStateOccupancy)
         assert 'E' in self.material.neighborCutoffDist.keys(), 'Please specify the cutoff distance for electrostatic interactions'
-        self.generateDistanceList()
         for dummy in range(nTraj):
             pathIndex += 1
             kmcTime = 0
