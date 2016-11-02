@@ -566,12 +566,10 @@ class run(object):
         self.distanceList = distanceList
         self.coeffDistanceList = (1/(4 * np.pi * self.material.epsilon)) * self.distanceList
 
-    def electrostaticInteractionEnergy(self, occupancy, elecNeighborCharge2List):
+    def electrostaticInteractionEnergy(self, occupancy):
         """Subroutine to compute the electrostatic interaction energies"""
         configChargeList = self.system.chargeConfig(occupancy)
-        for index, centerElementCharge in enumerate(configChargeList):
-            elecNeighborCharge2List[index] = centerElementCharge * configChargeList[self.elecNeighborListSystemElementIndexMap[1][index]] 
-        individualInteractionList = np.multiply(elecNeighborCharge2List, self.coeffDistanceList)
+        individualInteractionList = configChargeList * configChargeList[self.elecNeighborListSystemElementIndexMap[1]] * self.coeffDistanceList
         elecIntEnergy = np.sum(np.concatenate(individualInteractionList))
         return elecIntEnergy
         
