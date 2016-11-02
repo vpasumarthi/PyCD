@@ -579,7 +579,7 @@ class run(object):
                                                elecNeighborCharge2List, oldSiteSystemElementIndex, 
                                                newSiteSystemElementIndex):
         """Subroutine to compute the relative electrostatic interaction energies between two states"""
-        
+        # TODO: Use elecNeighborCharge2List
         currentStateConfigChargeList = self.system.chargeConfig(currentStateOccupancy)
         
         oldSiteElecNeighborCharge2List = currentStateConfigChargeList[oldSiteSystemElementIndex] * currentStateConfigChargeList[self.elecNeighborListSystemElementIndexMap[1][oldSiteSystemElementIndex]]
@@ -672,10 +672,12 @@ class run(object):
         timeArray = np.zeros(nTraj * numPathStepsPerTraj)
         unwrappedPositionArray = np.zeros(( nTraj * numPathStepsPerTraj, self.totalSpecies, 3))
         wrappedPositionArray = np.zeros(( nTraj * numPathStepsPerTraj, self.totalSpecies, 3))
+        # TODO: speciesDisplacementArray = [speciesIndex, displacement]
         speciesDisplacementArray = np.zeros(( nTraj * numPathStepsPerTraj, self.totalSpecies, 3))
         pathIndex = 0
         speciesSystemElementIndices = np.concatenate((currentStateOccupancy.values()))
         config = self.system.config(currentStateOccupancy)
+        elecNeighborCharge2List = deepcopy(self.elecNeighborListSystemElementIndexMap[1])
         assert 'E' in self.material.neighborCutoffDist.keys(), 'Please specify the cutoff distance for electrostatic interactions'
         for dummy in range(nTraj):
             pathIndex += 1
@@ -686,7 +688,6 @@ class run(object):
                 newStates = self.generateNewStates(currentStateOccupancy)
                 hopElementTypes = newStates.hopElementTypes
                 hopDistTypes = newStates.hopDistTypes
-                elecNeighborCharge2List = deepcopy(self.elecNeighborListSystemElementIndexMap[1])
                 for newStateIndex, newStateOccupancy in enumerate(newStates.newStateOccupancyList):
                     [oldSiteSystemElementIndex, newSiteSystemElementIndex] = newStates.systemElementIndexPairList[newStateIndex]
                     delG0 = self.relativeElectrostaticInteractionEnergy(currentStateOccupancy, newStateOccupancy, elecNeighborCharge2List, oldSiteSystemElementIndex, newSiteSystemElementIndex)
