@@ -554,7 +554,7 @@ class run(object):
         self.nSpecies = nSpecies
         
         # total number of species
-        self.totalSpecies = np.sum(self.nSpecies.values()) - self.nSpecies[self.material.emptySpeciesType]
+        self.totalSpecies = int(np.sum(self.nSpecies.values()) - self.nSpecies[self.material.emptySpeciesType])
     
         # Electrostatic interaction neighborlist:
         elecNeighborListSystemElementIndexMap = self.system.neighborList['E'][0].systemElementIndexMap
@@ -664,7 +664,7 @@ class run(object):
         stepInterval = self.stepInterval
         currentStateOccupancy = self.system.occupancy
                 
-        numPathStepsPerTraj = np.floor(kmcSteps / stepInterval) + 1
+        numPathStepsPerTraj = int(kmcSteps / stepInterval) + 1
         timeArray = np.zeros(nTraj * numPathStepsPerTraj)
         unwrappedPositionArray = np.zeros(( nTraj * numPathStepsPerTraj, self.totalSpecies, 3))
         wrappedPositionArray = np.zeros(( nTraj * numPathStepsPerTraj, self.totalSpecies, 3))
@@ -810,7 +810,7 @@ class analysis(object):
                 speciesTypes.append(speciesType)
         nSpeciesTypes = len(speciesTypes)
         timeNdisp2 = np.zeros((self.nTraj * (self.nStepsMSD * self.nDispMSD), nSpecies + 1))
-        numPathStepsPerTraj = np.floor(self.kmcSteps / self.stepInterval) + 1
+        numPathStepsPerTraj = int(self.kmcSteps / self.stepInterval) + 1
         for trajIndex in range(self.nTraj):
             headStart = trajIndex * numPathStepsPerTraj
             for timestep in range(1, self.nStepsMSD + 1):
