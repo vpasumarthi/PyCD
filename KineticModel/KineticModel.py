@@ -462,7 +462,8 @@ class system(object):
                                        for elementTypeIndex in self.material.elementTypeIndexList])
         self.latticeChargeList = np.tile(unitCellChargeList, self.numCells)
         self.latticeParameters = self.material.latticeParameters
-
+        
+    
     def chargeConfig(self, occupancy):
         """Returns charge distribution of the current configuration"""
         chargeList = self.latticeChargeList
@@ -500,11 +501,7 @@ class system(object):
                 centerSiteSystemElementIndices = self.occupancy[speciesType]
                 chargeList[centerSiteSystemElementIndices] = chargeTypes[chargeKeyType]
         return chargeList
-
-    def ESPConfig(self, occupancy, currentStateChargeConfig):
-        
-        return ESPConfig
-
+    
     def config(self, occupancy):
         """Generates the configuration array for the system"""
         elementTypeIndices = range(len(self.material.elementTypes))
@@ -576,27 +573,29 @@ class run(object):
         elecIntEnergy = np.sum(np.concatenate(individualInteractionList))
         return elecIntEnergy
         
-    def relativeElectrostaticInteractionEnergy(self, elecNeighborCharge2List, currentStateESPConfig, newStateESPConfig,
-                                               currentStateChargeConfig, newStateChargeConfig,
+    def relativeElectrostaticInteractionEnergy(self, elecNeighborCharge2List, currentStateChargeConfig, newStateChargeConfig,
                                                oldSiteSystemElementIndex, newSiteSystemElementIndex):
         """Subroutine to compute the relative electrostatic interaction energies between two states"""
-        
-        individualInteractionList = (currentStateESPConfig[oldSiteSystemElementIndex] * 
-                                     currentStateChargeConfig[elecNeighborCharge2List[oldSiteSystemElementIndex]])
+        individualInteractionList = (currentStateChargeConfig[oldSiteSystemElementIndex] * 
+                                     currentStateChargeConfig[elecNeighborCharge2List[oldSiteSystemElementIndex]] * 
+                                     self.coeffDistanceList[oldSiteSystemElementIndex])
         oldSiteElecIntEnergy = np.sum(individualInteractionList)
         
-        individualInteractionList = (currentStateESPConfig[newSiteSystemElementIndex] * 
-                                     currentStateChargeConfig[elecNeighborCharge2List[newSiteSystemElementIndex]])
+        individualInteractionList = (currentStateChargeConfig[newSiteSystemElementIndex] * 
+                                     currentStateChargeConfig[elecNeighborCharge2List[newSiteSystemElementIndex]] * 
+                                     self.coeffDistanceList[newSiteSystemElementIndex])
         oldNeighborSiteElecIntEnergy = np.sum(individualInteractionList)
         
-        individualInteractionList = (newStateESPConfig[oldSiteSystemElementIndex] * 
-                                     newStateChargeConfig[elecNeighborCharge2List[oldSiteSystemElementIndex]])
+        individualInteractionList = (newStateChargeConfig[newSiteSystemElementIndex] * 
+                                     newStateChargeConfig[elecNeighborCharge2List[newSiteSystemElementIndex]] * 
+                                     self.coeffDistanceList[newSiteSystemElementIndex]) 
         newSiteElecIntEnergy = np.sum(individualInteractionList)
         
-        individualInteractionList = (newStateESPConfig[newSiteSystemElementIndex] * 
-                                     newStateChargeConfig[elecNeighborCharge2List[newSiteSystemElementIndex]])
+        individualInteractionList = (newStateChargeConfig[oldSiteSystemElementIndex] * 
+                                     newStateChargeConfig[elecNeighborCharge2List[oldSiteSystemElementIndex]] * 
+                                     self.coeffDistanceList[oldSiteSystemElementIndex]) 
         newNeighborSiteElecIntEnergy = np.sum(individualInteractionList)
-
+        
         relativeElecEnergy = (newSiteElecIntEnergy + newNeighborSiteElecIntEnergy
                               - oldSiteElecIntEnergy - oldNeighborSiteElecIntEnergy)
         return relativeElecEnergy
