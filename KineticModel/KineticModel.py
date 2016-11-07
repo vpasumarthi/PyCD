@@ -583,7 +583,7 @@ class run(object):
         individualInteractionList = (currentStateESPConfig[oldSiteSystemElementIndex] * 
                                      currentStateChargeConfig[self.elecNeighborListNeighborSEIndices[oldSiteSystemElementIndex]])
         oldSiteElecIntEnergy = np.sum(individualInteractionList)
-
+        
         individualInteractionList = (currentStateESPConfig[newSiteSystemElementIndex] * 
                                      currentStateChargeConfig[self.elecNeighborListNeighborSEIndices[newSiteSystemElementIndex]])
         oldNeighborSiteElecIntEnergy = np.sum(individualInteractionList)
@@ -695,11 +695,11 @@ class run(object):
                     else:
                         newStateChargeConfig = currentStateChargeConfig
                         newStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = currentStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
-                        newStateESPConfig = currentStateChargeConfig
-                        newStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = (newStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] / 
-                                                                                                     currentStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] * 
-                                                                                                     currentStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]])
-                        
+                        newStateESPConfig = currentStateESPConfig
+                        multFactor = (currentStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]] / 
+                                      currentStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]])
+                        newStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = np.multiply(newStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]], multFactor[:, np.newaxis])
+
                     delG0 = self.relativeElectrostaticInteractionEnergy(currentStateESPConfig, newStateESPConfig, currentStateChargeConfig, 
                                                                         newStateChargeConfig, oldSiteSystemElementIndex, newSiteSystemElementIndex)
                     hopElementType = hopElementTypes[newStateIndex]
@@ -723,9 +723,9 @@ class run(object):
                     [oldSiteSystemElementIndex, newSiteSystemElementIndex] = newStates.systemElementIndexPairList[procIndex]
                     currentStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = currentStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
                     newStateESPConfig = currentStateESPConfig
-                    newStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = (newStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] / 
-                                                                                                 currentStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] * 
-                                                                                                 currentStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]])
+                    multFactor = (currentStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]] / 
+                                  currentStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]])
+                    newStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = np.multiply(newStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]], multFactor[:, np.newaxis])
                     currentStateESPConfig = newStateESPConfig
 
                 # speciesIndex is different from speciesTypeSpeciesIndex
