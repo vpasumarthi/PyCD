@@ -463,7 +463,11 @@ class system(object):
         self.latticeChargeList = np.tile(unitCellChargeList, self.numCells)
         self.latticeParameters = self.material.latticeParameters
         
-    
+        # Distance List
+        distanceList = self.neighborList['E'][0].displacementList
+        self.distanceList = distanceList
+        self.coeffDistanceList = (1/(4 * np.pi * self.material.epsilon)) * self.distanceList
+
     def chargeConfig(self, occupancy):
         """Returns charge distribution of the current configuration"""
         chargeList = self.latticeChargeList
@@ -501,7 +505,11 @@ class system(object):
                 centerSiteSystemElementIndices = self.occupancy[speciesType]
                 chargeList[centerSiteSystemElementIndices] = chargeTypes[chargeKeyType]
         return chargeList
-    
+
+    def ESPConfig(self, currentStateChargeConfig):
+        ESPConfig = np.multiply(currentStateChargeConfig[:, np.newaxis], self.coeffDistanceList)
+        return ESPConfig
+
     def config(self, occupancy):
         """Generates the configuration array for the system"""
         elementTypeIndices = range(len(self.material.elementTypes))
@@ -533,14 +541,14 @@ class run(object):
         self.stepInterval = int(stepInterval)
         self.gui = gui
         self.kB = kB
-        
+
         self.systemSize = self.system.systemSize
-        
+
         # import parameters from material class
         self.vn = self.material.vn
         self.lambdaValues = self.material.lambdaValues
         self.VAB = self.material.VAB
-        
+
         # compute number of species existing in the system
         nSpecies = {}
         speciesToElementTypeMap = self.material.speciesToElementTypeMap
@@ -549,22 +557,16 @@ class run(object):
                 nSpecies[speciesTypeKey] = len(self.system.occupancy[speciesTypeKey])
             elif speciesTypeKey is not self.material.emptySpeciesType:
                 nSpecies[speciesTypeKey] = 0
-            
+
         nSpecies[self.material.emptySpeciesType] = (np.sum(self.material.nElements) * self.system.numCells - np.sum(nSpecies.values()))
         self.nSpecies = nSpecies
-        
+
         # total number of species
         self.totalSpecies = int(np.sum(self.nSpecies.values()) - self.nSpecies[self.material.emptySpeciesType])
-    
+
         # Electrostatic interaction neighborlist:
         elecNeighborListSystemElementIndexMap = self.system.neighborList['E'][0].systemElementIndexMap
-        #self.elecNeighborListSystemElementIndexMap = elecNeighborListSystemElementIndexMap
-        self.elecNeighborCharge2List = elecNeighborListSystemElementIndexMap[1]
-        
-        # Distance List
-        distanceList = self.system.neighborList['E'][0].displacementList
-        self.distanceList = distanceList
-        self.coeffDistanceList = (1/(4 * np.pi * self.material.epsilon)) * self.distanceList
+        self.elecNeighborListNeighborSEIndices = elecNeighborListSystemElementIndexMap[1]
 
     def electrostaticInteractionEnergy(self, occupancy):
         """Subroutine to compute the electrostatic interaction energies"""
@@ -572,30 +574,28 @@ class run(object):
         individualInteractionList = currentStateChargeConfig * currentStateChargeConfig[self.elecNeighborListSystemElementIndexMap[1]] * self.coeffDistanceList
         elecIntEnergy = np.sum(np.concatenate(individualInteractionList))
         return elecIntEnergy
-        
-    def relativeElectrostaticInteractionEnergy(self, elecNeighborCharge2List, currentStateChargeConfig, newStateChargeConfig,
+
+    def relativeElectrostaticInteractionEnergy(self, currentStateESPConfig, newStateESPConfig, 
+                                               currentStateChargeConfig, newStateChargeConfig, 
                                                oldSiteSystemElementIndex, newSiteSystemElementIndex):
         """Subroutine to compute the relative electrostatic interaction energies between two states"""
-        individualInteractionList = (currentStateChargeConfig[oldSiteSystemElementIndex] * 
-                                     currentStateChargeConfig[elecNeighborCharge2List[oldSiteSystemElementIndex]] * 
-                                     self.coeffDistanceList[oldSiteSystemElementIndex])
+        
+        individualInteractionList = (currentStateESPConfig[oldSiteSystemElementIndex] * 
+                                     currentStateChargeConfig[self.elecNeighborListNeighborSEIndices[oldSiteSystemElementIndex]])
         oldSiteElecIntEnergy = np.sum(individualInteractionList)
         
-        individualInteractionList = (currentStateChargeConfig[newSiteSystemElementIndex] * 
-                                     currentStateChargeConfig[elecNeighborCharge2List[newSiteSystemElementIndex]] * 
-                                     self.coeffDistanceList[newSiteSystemElementIndex])
+        individualInteractionList = (currentStateESPConfig[newSiteSystemElementIndex] * 
+                                     currentStateChargeConfig[self.elecNeighborListNeighborSEIndices[newSiteSystemElementIndex]])
         oldNeighborSiteElecIntEnergy = np.sum(individualInteractionList)
         
-        individualInteractionList = (newStateChargeConfig[newSiteSystemElementIndex] * 
-                                     newStateChargeConfig[elecNeighborCharge2List[newSiteSystemElementIndex]] * 
-                                     self.coeffDistanceList[newSiteSystemElementIndex]) 
+        individualInteractionList = (newStateESPConfig[newSiteSystemElementIndex] * 
+                                     newStateChargeConfig[self.elecNeighborListNeighborSEIndices[newSiteSystemElementIndex]])
         newSiteElecIntEnergy = np.sum(individualInteractionList)
         
-        individualInteractionList = (newStateChargeConfig[oldSiteSystemElementIndex] * 
-                                     newStateChargeConfig[elecNeighborCharge2List[oldSiteSystemElementIndex]] * 
-                                     self.coeffDistanceList[oldSiteSystemElementIndex]) 
+        individualInteractionList = (newStateESPConfig[oldSiteSystemElementIndex] * 
+                                     newStateChargeConfig[self.elecNeighborListNeighborSEIndices[oldSiteSystemElementIndex]])
         newNeighborSiteElecIntEnergy = np.sum(individualInteractionList)
-        
+
         relativeElecEnergy = (newSiteElecIntEnergy + newNeighborSiteElecIntEnergy
                               - oldSiteElecIntEnergy - oldNeighborSiteElecIntEnergy)
         return relativeElecEnergy
@@ -671,10 +671,9 @@ class run(object):
         # TODO: speciesDisplacementArray = [speciesIndex, displacement]
         speciesDisplacementArray = np.zeros(( nTraj * numPathStepsPerTraj, self.totalSpecies, 3))
         pathIndex = 0
-        # TODO: Is this definition here necessary?
-        #speciesSystemElementIndices = np.concatenate((currentStateOccupancy.values()))
         currentStateConfig = self.system.config(currentStateOccupancy)
         currentStateChargeConfig = self.system.chargeConfig(currentStateOccupancy)
+        currentStateESPConfig = self.system.ESPConfig(currentStateChargeConfig)
         shellChargeTypeKeys = [key for key in self.material.chargeTypes.keys() if self.material.elementTypeDelimiter in key]
         shellCharges = 0 if shellChargeTypeKeys==[] else 1
         assert 'E' in self.material.neighborCutoffDist.keys(), 'Please specify the cutoff distance for electrostatic interactions'
@@ -692,11 +691,17 @@ class run(object):
                     if shellCharges:
                         newStateOccupancy = newStates.newStateOccupancyList[newStateIndex]
                         newStateChargeConfig = self.system.chargeConfig(newStateOccupancy)
+                        newStateESPConfig = self.system.ESPConfig(newStateChargeConfig)
                     else:
                         newStateChargeConfig = currentStateChargeConfig
                         newStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = currentStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
-                    delG0 = self.relativeElectrostaticInteractionEnergy(self.elecNeighborCharge2List, currentStateChargeConfig, newStateChargeConfig, 
-                                                                        oldSiteSystemElementIndex, newSiteSystemElementIndex)
+                        newStateESPConfig = currentStateESPConfig
+                        multFactor = (currentStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]] / 
+                                      currentStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]])
+                        newStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = np.multiply(newStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]], multFactor[:, np.newaxis])
+
+                    delG0 = self.relativeElectrostaticInteractionEnergy(currentStateESPConfig, newStateESPConfig, currentStateChargeConfig, 
+                                                                        newStateChargeConfig, oldSiteSystemElementIndex, newSiteSystemElementIndex)
                     hopElementType = hopElementTypes[newStateIndex]
                     hopDistType = hopDistTypes[newStateIndex]
                     lambdaValue = self.lambdaValues[hopElementType][hopDistType]
@@ -713,9 +718,16 @@ class run(object):
                 currentStateOccupancy = newStates.newStateOccupancyList[procIndex]
                 if shellCharges:
                     currentStateChargeConfig = self.system.chargeConfig(currentStateOccupancy)
+                    currentStateESPConfig = self.system.ESPConfig(currentStateChargeConfig)
                 else:
                     [oldSiteSystemElementIndex, newSiteSystemElementIndex] = newStates.systemElementIndexPairList[procIndex]
                     currentStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = currentStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
+                    newStateESPConfig = currentStateESPConfig
+                    multFactor = (currentStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]] / 
+                                  currentStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]])
+                    newStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = np.multiply(newStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]], multFactor[:, np.newaxis])
+                    currentStateESPConfig = newStateESPConfig
+
                 # speciesIndex is different from speciesTypeSpeciesIndex
                 speciesIndex = newStates.hoppingSpeciesIndices[procIndex]
                 speciesDisplacementVector = newStates.speciesDisplacementVectorList[procIndex]
