@@ -71,7 +71,7 @@ class material(object):
         self.emptySpeciesType = materialParameters.emptySpeciesType
         self.siteIdentifier = materialParameters.siteIdentifier
         self.epsilon = materialParameters.epsilon
-                
+        
         siteList = [self.speciesToElementTypeMap[key] for key in self.speciesToElementTypeMap 
                     if key is not self.emptySpeciesType]
         self.siteList = list(set([item for sublist in siteList for item in sublist]))
@@ -579,7 +579,6 @@ class run(object):
                                                currentStateChargeConfig, newStateChargeConfig, 
                                                oldSiteSystemElementIndex, newSiteSystemElementIndex):
         """Subroutine to compute the relative electrostatic interaction energies between two states"""
-        
         individualInteractionList = (currentStateESPConfig[oldSiteSystemElementIndex] * 
                                      currentStateChargeConfig[self.elecNeighborListNeighborSEIndices[oldSiteSystemElementIndex]])
         oldSiteElecIntEnergy = np.sum(individualInteractionList)
@@ -698,8 +697,8 @@ class run(object):
                         newStateESPConfig = currentStateESPConfig
                         multFactor = (currentStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]] / 
                                       currentStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]])
-                        newStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = np.multiply(newStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]], multFactor[:, np.newaxis])
-
+                        newStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = np.multiply(newStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]], 
+                                                                                                                multFactor[:, np.newaxis])
                     delG0 = self.relativeElectrostaticInteractionEnergy(currentStateESPConfig, newStateESPConfig, currentStateChargeConfig, 
                                                                         newStateChargeConfig, oldSiteSystemElementIndex, newSiteSystemElementIndex)
                     hopElementType = hopElementTypes[newStateIndex]
@@ -781,7 +780,6 @@ class run(object):
                      (', %2d minutes' % ((timeElapsed.seconds // 60) % 60)) + 
                      (', %2d seconds' % (timeElapsed.seconds % 60)))
         report.close()
-
 
 class analysis(object):
     """Post-simulation analysis methods"""
