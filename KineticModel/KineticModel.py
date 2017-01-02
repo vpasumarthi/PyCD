@@ -44,11 +44,11 @@ class material(object):
     """ 
     def __init__(self, materialParameters):
         # CONSTANTS
-        self.ECHARGE = 1.602E-19 # Coulomb
+        self.ECHARGE = 1.6021766208E-19 # Coulomb, Ref: http://physics.nist.gov/cgi-bin/cuu/Value?e
         self.ANG2M = 1E-10
         self.J2EV = 1/self.ECHARGE
-        self.KB = 8.617E-05 # Boltzmann constant in eV/K
-        self.EPSILON0 = 8.854E-12 # vacuum permittivity in F.m-1
+        self.KB = 8.6173303E-05 # Boltzmann constant in eV/K
+        self.EPSILON0 = 8.854187817E-12 # vacuum permittivity in F.m-1
         
         # TODO: introduce a method to view the material using ase atoms or other gui module
         self.name = materialParameters.name
@@ -586,22 +586,15 @@ class run(object):
         """Subroutine to compute the relative electrostatic interaction energies between two states"""
         oldSiteElecIntEnergy = np.sum(currentStateESPConfig[oldSiteSystemElementIndex] * 
                                       currentStateChargeConfig[self.elecNeighborListNeighborSEIndices[oldSiteSystemElementIndex]])
-        import pdb; pdb.set_trace()
-        print 'energies'
-        print oldSiteElecIntEnergy
         oldNeighborSiteElecIntEnergy = np.sum(currentStateESPConfig[newSiteSystemElementIndex] * 
                                               currentStateChargeConfig[self.elecNeighborListNeighborSEIndices[newSiteSystemElementIndex]])
-        print oldNeighborSiteElecIntEnergy
         newSiteElecIntEnergy = np.sum(newStateESPConfig[newSiteSystemElementIndex] * 
                                       newStateChargeConfig[self.elecNeighborListNeighborSEIndices[newSiteSystemElementIndex]])
-        print newSiteElecIntEnergy
         newNeighborSiteElecIntEnergy = np.sum(newStateESPConfig[oldSiteSystemElementIndex] * 
                                               newStateChargeConfig[self.elecNeighborListNeighborSEIndices[oldSiteSystemElementIndex]])
-        print newNeighborSiteElecIntEnergy
         #TODO: Is absolute necessary?
         relativeElecEnergy = abs(newSiteElecIntEnergy + newNeighborSiteElecIntEnergy - 
                                  oldSiteElecIntEnergy - oldNeighborSiteElecIntEnergy) * self.material.J2EV # electron-volt
-        print relativeElecEnergy
         return relativeElecEnergy
 
     def generateNewStates(self, currentStateOccupancy):
@@ -745,6 +738,7 @@ class run(object):
                 speciesIndex = newStates.hoppingSpeciesIndices[procIndex]
                 speciesDisplacementVector = newStates.speciesDisplacementVectorList[procIndex]
                 speciesDisplacementVectorList[speciesIndex] += speciesDisplacementVector
+                # TODO: May not be necessary
                 currentStateConfig.chargeList = currentStateChargeConfig
                 currentStateConfig.occupancy = currentStateOccupancy
                 if step % stepInterval == 0:
