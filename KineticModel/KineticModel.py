@@ -43,6 +43,13 @@ class material(object):
         * **latticeMatrix** (np.array (3x3): lattice cell matrix
     """ 
     def __init__(self, materialParameters):
+        # CONSTANTS
+        self.ECHARGE = 1.602E-19 # Coulomb
+        self.ANG2M = 1E-10
+        self.J2EV = 1/self.ECHARGE
+        self.KB = 8.617E-05 # Boltzmann constant in eV/K
+        self.EPSILON0 = 8.854E-12 # vacuum permittivity in F.m-1
+        
         # TODO: introduce a method to view the material using ase atoms or other gui module
         self.name = materialParameters.name
         self.elementTypes = materialParameters.elementTypes
@@ -60,17 +67,22 @@ class material(object):
         
         self.nElements = nElements
         self.elementTypeIndexList = materialParameters.elementTypeIndexList.astype(int)
-        self.chargeTypes = materialParameters.chargeTypes
+        
+        chargeTypes = materialParameters.chargeTypes
+        chargeTypes.update(( x, y * self.ECHARGE ) for x, y in chargeTypes.items())
+        self.chargeTypes = chargeTypes # Coulomb
+        
         self.latticeParameters = materialParameters.latticeParameters
         self.vn = materialParameters.vn
         self.lambdaValues = materialParameters.lambdaValues
         self.VAB = materialParameters.VAB
         self.neighborCutoffDist = materialParameters.neighborCutoffDist
         self.neighborCutoffDistTol = materialParameters.neighborCutoffDistTol
+        
         self.elementTypeDelimiter = materialParameters.elementTypeDelimiter
         self.emptySpeciesType = materialParameters.emptySpeciesType
         self.siteIdentifier = materialParameters.siteIdentifier
-        self.epsilon = materialParameters.epsilon
+        self.dielectricConstant = materialParameters.dielectricConstant
                 
         siteList = [self.speciesToElementTypeMap[key] for key in self.speciesToElementTypeMap 
                     if key is not self.emptySpeciesType]
@@ -95,17 +107,10 @@ class material(object):
         self.hopElementTypes = hopElementTypes
         
         [a, b, c, alpha, beta, gamma] = self.latticeParameters
-        latticeMatrix = np.array([[ a                , 0                , 0],
-                                  [ b * np.cos(gamma), b * np.sin(gamma), 0],
-                                  [ c * np.cos(alpha), c * np.cos(beta) , c * 
-                                   np.sqrt(np.sin(alpha)**2 - np.cos(beta)**2)]])
-        self.latticeMatrix = latticeMatrix
-
-        # CONSTANTS
-        self.ECHARGE = 1.602E-19
-        self.ANG2M = 1E-10
-        self.J2EV = 1/self.ECHARGE
-        self.KB = 8.617E-05 # Boltzmann constant in eV/K
+        self.latticeMatrix = np.array([[ a                , 0                , 0],
+                                       [ b * np.cos(gamma), b * np.sin(gamma), 0],
+                                       [ c * np.cos(alpha), c * np.cos(beta) , c * 
+                                        np.sqrt(np.sin(alpha)**2 - np.cos(beta)**2)]])
         
     def generateMaterialFile(self, material, materialFileName, replaceExistingObjectFiles):
         """ """
@@ -221,7 +226,6 @@ class neighbors(object):
             pickle.dump(materialNeighbors, file_Neighbors)
             file_Neighbors.close()
         pass
-
         
     def hopNeighborSites(self, bulkSites, centerSiteIndices, neighborSiteIndices, cutoffDistLimits, cutoffDistKey):
         """Returns systemElementIndexMap and distances between center sites and its neighbor sites within cutoff 
@@ -467,8 +471,10 @@ class system(object):
         unitCellChargeList = np.array([self.material.chargeTypes[self.material.elementTypes[elementTypeIndex]] 
                                        for elementTypeIndex in self.material.elementTypeIndexList])
         self.latticeChargeList = np.tile(unitCellChargeList, self.numCells)
-        self.latticeParameters = self.material.latticeParameters
         
+        # Coefficient Distance List
+        self.KE = (1/(4 * np.pi * self.material.EPSILON0)) # Coulomb's constant
+        self.coeffDistanceList = self.KE / (self.material.dielectricConstant * self.neighborList['E'][0].displacementList * self.material.ANG2M)
     
     def chargeConfig(self, occupancy):
         """Returns charge distribution of the current configuration"""
@@ -507,6 +513,10 @@ class system(object):
                 centerSiteSystemElementIndices = self.occupancy[speciesType]
                 chargeList[centerSiteSystemElementIndices] = chargeTypes[chargeKeyType]
         return chargeList
+
+    def ESPConfig(self, currentStateChargeConfig):
+        ESPConfig = np.multiply(currentStateChargeConfig[:, np.newaxis], self.coeffDistanceList) # SI units
+        return ESPConfig
 
     def config(self, occupancy):
         """Generates the configuration array for the system"""
