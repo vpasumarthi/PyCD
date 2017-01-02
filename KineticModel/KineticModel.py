@@ -100,6 +100,12 @@ class material(object):
                                   [ c * np.cos(alpha), c * np.cos(beta) , c * 
                                    np.sqrt(np.sin(alpha)**2 - np.cos(beta)**2)]])
         self.latticeMatrix = latticeMatrix
+
+        # CONSTANTS
+        self.ECHARGE = 1.602E-19
+        self.ANG2M = 1E-10
+        self.J2EV = 1/self.ECHARGE
+        self.KB = 8.617E-05 # Boltzmann constant in eV/K
         
     def generateMaterialFile(self, material, materialFileName, replaceExistingObjectFiles):
         """ """
@@ -520,7 +526,7 @@ class system(object):
 class run(object):
     """defines the subroutines for running Kinetic Monte Carlo and computing electrostatic 
     interaction energies"""
-    def __init__(self, material, system, T, nTraj, kmcSteps, stepInterval, gui, kB):
+    def __init__(self, material, system, T, nTraj, kmcSteps, stepInterval, gui):
         """Returns the PBC condition of the system"""
         self.startTime = datetime.now()
         
@@ -532,7 +538,6 @@ class run(object):
         self.kmcSteps = int(kmcSteps)
         self.stepInterval = int(stepInterval)
         self.gui = gui
-        self.kB = kB
         
         self.systemSize = self.system.systemSize
         
@@ -702,7 +707,7 @@ class run(object):
                     lambdaValue = self.lambdaValues[hopElementType][hopDistType]
                     VAB = self.VAB[hopElementType][hopDistType]
                     delGs = ((lambdaValue + delG0) ** 2 / (4 * lambdaValue)) - VAB
-                    kList.append(self.vn * np.exp(-delGs / (self.kB * self.T)))
+                    kList.append(self.vn * np.exp(-delGs / (self.material.KB * self.T)))
                 
                 kTotal = np.sum(kList)
                 kCumSum = np.cumsum(kList / kTotal)
@@ -723,7 +728,7 @@ class run(object):
                 currentStateConfig.chargeList = currentStateChargeConfig
                 currentStateConfig.occupancy = currentStateOccupancy
                 if step % stepInterval == 0:
-                    speciesSystemElementIndices = np.concatenate((currentStateOccupancy.values()))
+                    speciesSystemElementIndices = np.concatenate((currentStateOccupancy.values())).astype(int)
                     timeArray[pathIndex] = kmcTime
                     wrappedPositionArray[pathIndex] = currentStateConfig.positions[speciesSystemElementIndices]
                     speciesDisplacementArray[pathIndex] = speciesDisplacementVectorList
@@ -745,21 +750,17 @@ class run(object):
         trajectoryData.EcutoffDist = self.material.neighborCutoffDist['E'][0]
         
         if outdir:
-            fileName = (('%2.1f' % self.material.neighborCutoffDist['E'][0]) + 'E_' + 
-                        ('%1.0E' % self.kmcSteps) + 'KMCsteps_' +  
-                        ('%1.0E' % (numPathStepsPerTraj-1)) + 'PathSteps_' + 
-                        ('%1.0E' % self.nTraj) + 'Traj')
-            trajectoryDataFileName = 'TrajectoryData_' + fileName + '.npy'
+            trajectoryDataFileName = 'TrajectoryData.npy'
             trajectoryDataFilePath = outdir + '/' + trajectoryDataFileName
             np.save(trajectoryDataFilePath, trajectoryData)
         if report:
-            self.generateSimulationLogReport(outdir, fileName)
+            self.generateSimulationLogReport(outdir)
         
         return trajectoryData
 
-    def generateSimulationLogReport(self, outdir, fileName):
+    def generateSimulationLogReport(self, outdir):
         """Generates an log report of the simulation and outputs to the working directory"""
-        simulationLogFileName = 'Run_' + fileName + '.log'
+        simulationLogFileName = 'Run.log'
         simulationLogFilePath = outdir + '/' + simulationLogFileName
         report = open(simulationLogFilePath, 'w')
         endTime = datetime.now()
@@ -769,7 +770,6 @@ class run(object):
                      (', %2d minutes' % ((timeElapsed.seconds // 60) % 60)) + 
                      (', %2d seconds' % (timeElapsed.seconds % 60)))
         report.close()
-
 
 class analysis(object):
     """Post-simulation analysis methods"""
@@ -837,12 +837,8 @@ class analysis(object):
             startIndex = endIndex
         
         if outdir:
-            fileName = (('%2.1f' % self.EcutoffDist) + 'E_' + 
-                        ('%1.0E' % self.kmcSteps) + 'KMCsteps_' +  
-                        ('%1.0E' % (numPathStepsPerTraj-1)) + 'PathSteps_' + 
-                        ('%1.0E' % self.nTraj) + 'Traj_' + 
-                        ('%1.0E' % self.nStepsMSD) + 'nStepsMSD_' + 
-                        ('%1.0E' % self.nDispMSD) + 'nDispMSD')
+            fileName = (('%1.2E' % self.nStepsMSD) + 'nStepsMSD,' + 
+                        ('%1.2E' % self.nDispMSD) + 'nDispMSD')
 
             msdFileName = 'MSD_Data_' + fileName + '.npy'
             msdFilePath = outdir + '/' + msdFileName
