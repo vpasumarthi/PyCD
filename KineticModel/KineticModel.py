@@ -10,6 +10,7 @@ import random as rnd
 from datetime import datetime
 import pickle
 import os.path
+from copy import deepcopy
 
 class material(object):
     """Defines the properties and structure of working material
@@ -585,15 +586,22 @@ class run(object):
         """Subroutine to compute the relative electrostatic interaction energies between two states"""
         oldSiteElecIntEnergy = np.sum(currentStateESPConfig[oldSiteSystemElementIndex] * 
                                       currentStateChargeConfig[self.elecNeighborListNeighborSEIndices[oldSiteSystemElementIndex]])
+        import pdb; pdb.set_trace()
+        print 'energies'
+        print oldSiteElecIntEnergy
         oldNeighborSiteElecIntEnergy = np.sum(currentStateESPConfig[newSiteSystemElementIndex] * 
                                               currentStateChargeConfig[self.elecNeighborListNeighborSEIndices[newSiteSystemElementIndex]])
+        print oldNeighborSiteElecIntEnergy
         newSiteElecIntEnergy = np.sum(newStateESPConfig[newSiteSystemElementIndex] * 
                                       newStateChargeConfig[self.elecNeighborListNeighborSEIndices[newSiteSystemElementIndex]])
+        print newSiteElecIntEnergy
         newNeighborSiteElecIntEnergy = np.sum(newStateESPConfig[oldSiteSystemElementIndex] * 
                                               newStateChargeConfig[self.elecNeighborListNeighborSEIndices[oldSiteSystemElementIndex]])
+        print newNeighborSiteElecIntEnergy
         #TODO: Is absolute necessary?
         relativeElecEnergy = abs(newSiteElecIntEnergy + newNeighborSiteElecIntEnergy - 
                                  oldSiteElecIntEnergy - oldNeighborSiteElecIntEnergy) * self.material.J2EV # electron-volt
+        print relativeElecEnergy
         return relativeElecEnergy
 
     def generateNewStates(self, currentStateOccupancy):
@@ -605,14 +613,13 @@ class run(object):
         hoppingSpeciesIndices = []
         speciesDisplacementVectorList = []
         systemElementIndexPairList = []
-        newStateOccupancy = currentStateOccupancy.copy()
+        newStateOccupancy = deepcopy(currentStateOccupancy)
                                 
         cumulativeSpeciesSiteSystemElementIndices = [systemElementIndex for speciesSiteSystemElementIndices in currentStateOccupancy.values() 
                                                  for systemElementIndex in speciesSiteSystemElementIndices]
         for speciesType in currentStateOccupancy.keys():
             for speciesTypeSpeciesIndex, speciesSiteSystemElementIndex in enumerate(currentStateOccupancy[speciesType]):
                 speciesIndex = cumulativeSpeciesSiteSystemElementIndices.index(speciesSiteSystemElementIndex)
-                siteSystemElementIndex = newStateOccupancy[speciesType][speciesTypeSpeciesIndex]
                 for hopElementType in self.material.hopElementTypes[speciesType]:
                     for hopDistTypeIndex in range(len(self.material.neighborCutoffDist[hopElementType])):
                         neighborOffsetList = neighborList[hopElementType][hopDistTypeIndex].offsetList
@@ -636,8 +643,8 @@ class run(object):
                             neighborSystemElementIndex = self.material.generateSystemElementIndex(self.systemSize, neighborQuantumIndices)
                             if neighborSystemElementIndex not in cumulativeSpeciesSiteSystemElementIndices:
                                 newStateOccupancy[speciesType][speciesTypeSpeciesIndex] = neighborSystemElementIndex
-                                newStateOccupancyList.append(newStateOccupancy)
-                                newStateOccupancy[speciesType][speciesTypeSpeciesIndex] = siteSystemElementIndex
+                                newStateOccupancyList.append(deepcopy(newStateOccupancy))
+                                newStateOccupancy[speciesType][speciesTypeSpeciesIndex] = speciesSiteSystemElementIndex
                                 hopElementTypes.append(hopElementType)
                                 hopDistTypes.append(hopDistTypeIndex)
                                 hoppingSpeciesIndices.append(speciesIndex)
@@ -661,7 +668,7 @@ class run(object):
         kmcSteps = self.kmcSteps
         stepInterval = self.stepInterval
         currentStateOccupancy = self.system.occupancy
-                
+        
         numPathStepsPerTraj = int(kmcSteps / stepInterval) + 1
         timeArray = np.zeros(nTraj * numPathStepsPerTraj)
         unwrappedPositionArray = np.zeros(( nTraj * numPathStepsPerTraj, self.totalSpecies, 3))
@@ -686,7 +693,6 @@ class run(object):
                 newStates = self.generateNewStates(currentStateOccupancy)
                 hopElementTypes = newStates.hopElementTypes
                 hopDistTypes = newStates.hopDistTypes
-                # TODO: not necessary
                 for newStateIndex in range(len(newStates.hoppingSpeciesIndices)):
                     [oldSiteSystemElementIndex, newSiteSystemElementIndex] = newStates.systemElementIndexPairList[newStateIndex]
                     if shellCharges:
@@ -694,8 +700,9 @@ class run(object):
                         newStateChargeConfig = self.system.chargeConfig(newStateOccupancy)
                         newStateESPConfig = self.system.ESPConfig(newStateChargeConfig)
                     else:
-                        multFactor = np.true_divide(newStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]], 
-                                                    newStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]])
+                        # TODO: Is it necessary to compute everytime?
+                        multFactor = np.true_divide(currentStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]], 
+                                                    currentStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]])
                         newStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = newStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
                         newStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] *= multFactor[:, np.newaxis]
                         
@@ -710,7 +717,8 @@ class run(object):
                     kList.append(self.vn * np.exp(-delGs / (self.material.KB * self.T)))
                     if not shellCharges:
                         newStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = newStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
-                        newStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] /= multFactor[:, np.newaxis]
+                        newStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = currentStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]]
+                        
                 kTotal = np.sum(kList)
                 kCumSum = (kList / kTotal).cumsum()
                 rand1 = rnd.random()
@@ -725,12 +733,13 @@ class run(object):
                     newStateESPConfig = self.system.ESPConfig(currentStateChargeConfig)
                 else:
                     [oldSiteSystemElementIndex, newSiteSystemElementIndex] = newStates.systemElementIndexPairList[procIndex]
+                    # TODO: Is it necessary to compute everytime?
                     multFactor = np.true_divide(currentStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]], 
                                                 currentStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]])
                     currentStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = currentStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
                     newStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = newStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
                     currentStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] *= multFactor[:, np.newaxis]
-                    newStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] *= multFactor[:, np.newaxis]
+                    newStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = currentStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]]
                     
                 # speciesIndex is different from speciesTypeSpeciesIndex
                 speciesIndex = newStates.hoppingSpeciesIndices[procIndex]
