@@ -5,7 +5,6 @@ random walk of charge carriers on 3D lattice systems
 """
 import numpy as np
 from collections import OrderedDict
-from copy import deepcopy
 import itertools
 import random as rnd
 from datetime import datetime
@@ -596,7 +595,6 @@ class run(object):
         #TODO: Is absolute necessary?
         relativeElecEnergy = abs(newSiteElecIntEnergy + newNeighborSiteElecIntEnergy - 
                                  oldSiteElecIntEnergy - oldNeighborSiteElecIntEnergy) * self.material.J2EV # electron-volt
-        print relativeElecEnergy
         return relativeElecEnergy
 
     def generateNewStates(self, currentStateOccupancy):
@@ -636,7 +634,7 @@ class run(object):
                             neighborQuantumIndices = neighborUnitCellIndices + neighborElementTypeIndex + neighborElementIndex
                             neighborSystemElementIndex = self.material.generateSystemElementIndex(self.systemSize, neighborQuantumIndices)
                             if neighborSystemElementIndex not in cumulativeSpeciesSiteSystemElementIndices:
-                                newStateOccupancy = deepcopy(currentStateOccupancy)
+                                newStateOccupancy = currentStateOccupancy.copy()
                                 newStateOccupancy[speciesType][speciesTypeSpeciesIndex] = neighborSystemElementIndex
                                 newStateOccupancyList.append(newStateOccupancy)
                                 hopElementTypes.append(hopElementType)
@@ -692,10 +690,10 @@ class run(object):
                         newStateChargeConfig = self.system.chargeConfig(newStateOccupancy)
                         newStateESPConfig = self.system.ESPConfig(newStateChargeConfig)
                     else:
-                        newStateChargeConfig = deepcopy(currentStateChargeConfig)
+                        newStateChargeConfig = np.copy(currentStateChargeConfig)
                         # TODO: Is deepcopy necessary?
                         newStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = currentStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
-                        newStateESPConfig = deepcopy(currentStateESPConfig)
+                        newStateESPConfig = np.copy(currentStateESPConfig)
                         multFactor = np.true_divide(currentStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]], 
                                                     currentStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]])
                         newStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] *= multFactor[:, np.newaxis]
