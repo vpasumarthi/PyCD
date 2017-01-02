@@ -507,7 +507,7 @@ class system(object):
                 centerSiteSystemElementIndices = self.occupancy[speciesType]
                 chargeList[centerSiteSystemElementIndices] = chargeTypes[chargeKeyType]
         return chargeList
-    
+
     def config(self, occupancy):
         """Generates the configuration array for the system"""
         elementTypeIndices = range(len(self.material.elementTypes))
@@ -564,7 +564,7 @@ class run(object):
         # Electrostatic interaction neighborlist:
         elecNeighborListSystemElementIndexMap = self.system.neighborList['E'][0].systemElementIndexMap
         #self.elecNeighborListSystemElementIndexMap = elecNeighborListSystemElementIndexMap
-        self.elecNeighborCharge2List = elecNeighborListSystemElementIndexMap[1]
+        self.elecNeighborListNeighborSEIndices = elecNeighborListSystemElementIndexMap[1]
         
         # Distance List
         distanceList = self.system.neighborList['E'][0].displacementList
@@ -578,26 +578,26 @@ class run(object):
         elecIntEnergy = np.sum(np.concatenate(individualInteractionList))
         return elecIntEnergy
         
-    def relativeElectrostaticInteractionEnergy(self, elecNeighborCharge2List, currentStateChargeConfig, newStateChargeConfig,
+    def relativeElectrostaticInteractionEnergy(self, elecNeighborListNeighborSEIndices, currentStateChargeConfig, newStateChargeConfig,
                                                oldSiteSystemElementIndex, newSiteSystemElementIndex):
         """Subroutine to compute the relative electrostatic interaction energies between two states"""
         individualInteractionList = (currentStateChargeConfig[oldSiteSystemElementIndex] * 
-                                     currentStateChargeConfig[elecNeighborCharge2List[oldSiteSystemElementIndex]] * 
+                                     currentStateChargeConfig[elecNeighborListNeighborSEIndices[oldSiteSystemElementIndex]] * 
                                      self.coeffDistanceList[oldSiteSystemElementIndex])
         oldSiteElecIntEnergy = np.sum(individualInteractionList)
         
         individualInteractionList = (currentStateChargeConfig[newSiteSystemElementIndex] * 
-                                     currentStateChargeConfig[elecNeighborCharge2List[newSiteSystemElementIndex]] * 
+                                     currentStateChargeConfig[elecNeighborListNeighborSEIndices[newSiteSystemElementIndex]] * 
                                      self.coeffDistanceList[newSiteSystemElementIndex])
         oldNeighborSiteElecIntEnergy = np.sum(individualInteractionList)
         
         individualInteractionList = (newStateChargeConfig[newSiteSystemElementIndex] * 
-                                     newStateChargeConfig[elecNeighborCharge2List[newSiteSystemElementIndex]] * 
+                                     newStateChargeConfig[elecNeighborListNeighborSEIndices[newSiteSystemElementIndex]] * 
                                      self.coeffDistanceList[newSiteSystemElementIndex]) 
         newSiteElecIntEnergy = np.sum(individualInteractionList)
         
         individualInteractionList = (newStateChargeConfig[oldSiteSystemElementIndex] * 
-                                     newStateChargeConfig[elecNeighborCharge2List[oldSiteSystemElementIndex]] * 
+                                     newStateChargeConfig[elecNeighborListNeighborSEIndices[oldSiteSystemElementIndex]] * 
                                      self.coeffDistanceList[oldSiteSystemElementIndex]) 
         newNeighborSiteElecIntEnergy = np.sum(individualInteractionList)
         
@@ -700,7 +700,7 @@ class run(object):
                     else:
                         newStateChargeConfig = currentStateChargeConfig
                         newStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = currentStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
-                    delG0 = self.relativeElectrostaticInteractionEnergy(self.elecNeighborCharge2List, currentStateChargeConfig, newStateChargeConfig, 
+                    delG0 = self.relativeElectrostaticInteractionEnergy(self.elecNeighborListNeighborSEIndices, currentStateChargeConfig, newStateChargeConfig, 
                                                                         oldSiteSystemElementIndex, newSiteSystemElementIndex)
                     hopElementType = hopElementTypes[newStateIndex]
                     hopDistType = hopDistTypes[newStateIndex]
