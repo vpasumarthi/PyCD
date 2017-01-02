@@ -34,7 +34,7 @@ class material(object):
     :param float epsilon: Dielectric constant of the material
     
     The additional attributes are:
-        * **nElements** (np.array (n)): element-type wise total number of elements in a unit cell
+        * **nElementsPerUnitCell** (np.array (n)): element-type wise total number of elements in a unit cell
         * **siteList** (list): list of elements that act as sites
         * **elementTypeToSpeciesMap** (dict): dictionary of element to species mapping
         * **nonEmptySpeciesToElementTypeMap** (dict): dictionary of species to element mapping with elements excluding emptySpeciesType 
@@ -56,15 +56,16 @@ class material(object):
         self.unitcellCoords = np.zeros((len(materialParameters.unitcellCoords), 3))
         startIndex = 0
         length = len(self.elementTypes)
-        nElements = np.zeros(length, int)
+        nElementsPerUnitCell = np.zeros(length, int)
         for elementIndex in range(length):
             elementUnitCellCoords = materialParameters.unitcellCoords[materialParameters.elementTypeIndexList==elementIndex]
-            nElements[elementIndex] = len(elementUnitCellCoords)
-            endIndex = startIndex + nElements[elementIndex]
+            nElementsPerUnitCell[elementIndex] = len(elementUnitCellCoords)
+            endIndex = startIndex + nElementsPerUnitCell[elementIndex]
             self.unitcellCoords[startIndex:endIndex] = elementUnitCellCoords[elementUnitCellCoords[:,2].argsort()]
             startIndex = endIndex
         
-        self.nElements = nElements
+        self.nElementsPerUnitCell = nElementsPerUnitCell
+        self.totalElementsPerUnitCell = nElementsPerUnitCell.sum()
         self.elementTypeIndexList = materialParameters.elementTypeIndexList.astype(int)
         
         chargeTypes = materialParameters.chargeTypes
@@ -136,12 +137,12 @@ class material(object):
         assert all(size > 0 for size in cellSize), 'Input size should always be greater than 0'
         extractIndices = np.in1d(self.elementTypeIndexList, elementTypeIndices).nonzero()[0]
         unitcellElementCoords = self.unitcellCoords[extractIndices]
-        numCells = np.prod(cellSize)
-        nSitesPerUnitCell = np.sum(self.nElements[elementTypeIndices])
+        numCells = cellSize.prod()
+        nSitesPerUnitCell = self.nElementsPerUnitCell[elementTypeIndices].sum()
         unitcellElementIndexList = np.arange(nSitesPerUnitCell)
-        unitcellElementTypeIndex = np.reshape(np.concatenate((np.asarray([[elementTypeIndex] * self.nElements[elementTypeIndex] 
+        unitcellElementTypeIndex = np.reshape(np.concatenate((np.asarray([[elementTypeIndex] * self.nElementsPerUnitCell[elementTypeIndex] 
                                                                           for elementTypeIndex in elementTypeIndices]))), (nSitesPerUnitCell, 1))
-        unitCellElementTypeElementIndexList = np.reshape(np.concatenate(([np.arange(self.nElements[elementTypeIndex]) 
+        unitCellElementTypeElementIndexList = np.reshape(np.concatenate(([np.arange(self.nElementsPerUnitCell[elementTypeIndex]) 
                                                                           for elementTypeIndex in elementTypeIndices])), (nSitesPerUnitCell, 1))
         cellCoordinates = np.zeros((numCells * nSitesPerUnitCell, 3))
         # quantumIndex = [unitCellIndex, elementTypeIndex, elementIndex]
@@ -170,33 +171,31 @@ class material(object):
     def generateSystemElementIndex(self, systemSize, quantumIndices):
         """Returns the systemElementIndex of the element"""
         assert 0 not in systemSize, 'System size should be greater than 0 in any dimension'
-        assert quantumIndices[-1] < self.nElements[quantumIndices[-2]], 'Element Index exceed number of elements of the specified element type'
+        assert quantumIndices[-1] < self.nElementsPerUnitCell[quantumIndices[-2]], 'Element Index exceed number of elements of the specified element type'
         assert all(quantumIndex >= 0 for quantumIndex in quantumIndices), 'Quantum Indices cannot be negative'
         unitCellIndex = quantumIndices[:3]
         [elementTypeIndex, elementIndex] = quantumIndices[-2:]
-        nElementsPerUnitCell = np.sum(self.nElements)
-        systemElementIndex = elementIndex + np.sum(self.nElements[:elementTypeIndex])
+        systemElementIndex = elementIndex + self.nElementsPerUnitCell[:elementTypeIndex].sum()
         nDim = len(systemSize)
         for index in range(nDim):
             if index == 0:
-                systemElementIndex += nElementsPerUnitCell * unitCellIndex[nDim-1-index]
+                systemElementIndex += self.totalElementsPerUnitCell * unitCellIndex[nDim-1-index]
             else:
-                systemElementIndex += nElementsPerUnitCell * unitCellIndex[nDim-1-index] * np.prod(systemSize[-index:])
+                systemElementIndex += self.totalElementsPerUnitCell * unitCellIndex[nDim-1-index] * systemSize[-index:].prod()
         return systemElementIndex
     
     def generateQuantumIndices(self, systemSize, systemElementIndex):
         """Returns the quantum indices of the element"""
         assert systemElementIndex >= 0, 'System Element Index cannot be negative'
         quantumIndices = [0] * 5
-        nElementsPerUnitCell = np.sum(self.nElements)
-        nElementsPerUnitCellCumSum = np.cumsum(self.nElements)
-        unitcellElementIndex = systemElementIndex % nElementsPerUnitCell
-        quantumIndices[3] = np.min(np.where(nElementsPerUnitCellCumSum >= (unitcellElementIndex + 1)))
-        quantumIndices[4] = unitcellElementIndex - np.sum(self.nElements[:quantumIndices[3]])
-        nFilledUnitCells = (systemElementIndex - unitcellElementIndex) / nElementsPerUnitCell
+        totalElementsPerUnitCellCumSum = self.nElementsPerUnitCell.cumsum()
+        unitcellElementIndex = systemElementIndex % self.totalElementsPerUnitCell
+        quantumIndices[3] = np.where(totalElementsPerUnitCellCumSum >= (unitcellElementIndex + 1))[0][0]
+        quantumIndices[4] = unitcellElementIndex - self.nElementsPerUnitCell[:quantumIndices[3]].sum()
+        nFilledUnitCells = (systemElementIndex - unitcellElementIndex) / self.totalElementsPerUnitCell
         for index in range(3):
-            quantumIndices[index] = nFilledUnitCells / np.prod(systemSize[index+1:])
-            nFilledUnitCells -= quantumIndices[index] * np.prod(systemSize[index+1:])
+            quantumIndices[index] = nFilledUnitCells / systemSize[index+1:].prod()
+            nFilledUnitCells -= quantumIndices[index] * systemSize[index+1:].prod()
         return quantumIndices
 
 class neighbors(object):
@@ -209,7 +208,7 @@ class neighbors(object):
         self.pbc = pbc
         
         # total number of unit cells
-        self.numCells = np.prod(self.systemSize)
+        self.numCells = self.systemSize.prod()
         
         # generate all sites in the system
         elementTypeIndices = range(len(self.material.elementTypes))
@@ -372,18 +371,18 @@ class neighbors(object):
                 localBulkSites = self.material.generateSites(range(len(self.material.elementTypes)), 
                                                              localSystemSize)
                 centerSiteIndices = [self.material.generateSystemElementIndex(localSystemSize, np.concatenate((centerUnitCellIndex, np.array([centerSiteElementTypeIndex]), np.array([elementIndex])))) 
-                                     for elementIndex in range(self.material.nElements[centerSiteElementTypeIndex])]
+                                     for elementIndex in range(self.material.nElementsPerUnitCell[centerSiteElementTypeIndex])]
                 neighborSiteIndices = [self.material.generateSystemElementIndex(localSystemSize, np.array([xSize, ySize, zSize, neighborSiteElementTypeIndex, elementIndex])) 
                                        for xSize in range(localSystemSize[0]) for ySize in range(localSystemSize[1]) 
                                        for zSize in range(localSystemSize[2]) 
-                                       for elementIndex in range(self.material.nElements[neighborSiteElementTypeIndex])]
+                                       for elementIndex in range(self.material.nElementsPerUnitCell[neighborSiteElementTypeIndex])]
 
                 for cutoffDist in cutoffDistList:
                     cutoffDistLimits = [cutoffDist-tolDist, cutoffDist+tolDist]
                     neighborListCutoffDistKey.append(self.hopNeighborSites(localBulkSites, centerSiteIndices, 
                                                                            neighborSiteIndices, cutoffDistLimits, cutoffDistKey))
             else:
-                centerSiteIndices = neighborSiteIndices = np.arange(self.numCells * np.sum(self.material.nElements))
+                centerSiteIndices = neighborSiteIndices = np.arange(self.numCells * self.material.totalElementsPerUnitCell)
                 cutoffDistLimits = [0, cutoffDistList[0]]
                 neighborListCutoffDistKey.append(self.electrostaticNeighborSites(self.systemSize, self.bulkSites, centerSiteIndices, 
                                                                                  neighborSiteIndices, cutoffDistLimits, cutoffDistKey))
@@ -432,7 +431,7 @@ class initiateSystem(object):
                                                 rnd.randint(0, self.systemSize[1]-1), 
                                                 rnd.randint(0, self.systemSize[2]-1), 
                                                 siteElementTypeIndex, 
-                                                rnd.randint(0, self.material.nElements[siteElementTypeIndex]-1)])
+                                                rnd.randint(0, self.material.nElementsPerUnitCell[siteElementTypeIndex]-1)])
                 iSpeciesSystemElementIndex = self.material.generateSystemElementIndex(self.systemSize, iSpeciesSiteIndices)
                 if iSpeciesSystemElementIndex in iSpeciesSystemElementIndices:
                     iSpecies -= 1
@@ -462,7 +461,7 @@ class system(object):
         
         # total number of unit cells
         self.systemSize = self.neighbors.systemSize
-        self.numCells = np.prod(self.systemSize)
+        self.numCells = self.systemSize.prod()
         
         # generate lattice charge list
         unitCellChargeList = np.array([self.material.chargeTypes[self.material.elementTypes[elementTypeIndex]] 
@@ -561,12 +560,12 @@ class run(object):
                 nSpecies[speciesTypeKey] = len(self.system.occupancy[speciesTypeKey])
             elif speciesTypeKey is not self.material.emptySpeciesType:
                 nSpecies[speciesTypeKey] = 0
-            
-        nSpecies[self.material.emptySpeciesType] = (np.sum(self.material.nElements) * self.system.numCells - np.sum(nSpecies.values()))
+        
+        nSpecies[self.material.emptySpeciesType] = (self.material.totalElementsPerUnitCell * self.system.numCells - sum(nSpecies.values()))
         self.nSpecies = nSpecies
         
         # total number of species
-        self.totalSpecies = int(np.sum(self.nSpecies.values()) - self.nSpecies[self.material.emptySpeciesType])
+        self.totalSpecies = int(sum(self.nSpecies.values()) - self.nSpecies[self.material.emptySpeciesType])
     
         # Electrostatic interaction neighborlist:
         elecNeighborListSystemElementIndexMap = self.system.neighborList['E'][0].systemElementIndexMap
@@ -606,12 +605,14 @@ class run(object):
         hoppingSpeciesIndices = []
         speciesDisplacementVectorList = []
         systemElementIndexPairList = []
-
+        newStateOccupancy = currentStateOccupancy.copy()
+                                
         cumulativeSpeciesSiteSystemElementIndices = [systemElementIndex for speciesSiteSystemElementIndices in currentStateOccupancy.values() 
                                                  for systemElementIndex in speciesSiteSystemElementIndices]
         for speciesType in currentStateOccupancy.keys():
             for speciesTypeSpeciesIndex, speciesSiteSystemElementIndex in enumerate(currentStateOccupancy[speciesType]):
                 speciesIndex = cumulativeSpeciesSiteSystemElementIndices.index(speciesSiteSystemElementIndex)
+                siteSystemElementIndex = newStateOccupancy[speciesType][speciesTypeSpeciesIndex]
                 for hopElementType in self.material.hopElementTypes[speciesType]:
                     for hopDistTypeIndex in range(len(self.material.neighborCutoffDist[hopElementType])):
                         neighborOffsetList = neighborList[hopElementType][hopDistTypeIndex].offsetList
@@ -634,9 +635,9 @@ class run(object):
                             neighborQuantumIndices = neighborUnitCellIndices + neighborElementTypeIndex + neighborElementIndex
                             neighborSystemElementIndex = self.material.generateSystemElementIndex(self.systemSize, neighborQuantumIndices)
                             if neighborSystemElementIndex not in cumulativeSpeciesSiteSystemElementIndices:
-                                newStateOccupancy = currentStateOccupancy.copy()
                                 newStateOccupancy[speciesType][speciesTypeSpeciesIndex] = neighborSystemElementIndex
                                 newStateOccupancyList.append(newStateOccupancy)
+                                newStateOccupancy[speciesType][speciesTypeSpeciesIndex] = siteSystemElementIndex
                                 hopElementTypes.append(hopElementType)
                                 hopDistTypes.append(hopDistTypeIndex)
                                 hoppingSpeciesIndices.append(speciesIndex)
@@ -670,7 +671,9 @@ class run(object):
         pathIndex = 0
         currentStateConfig = self.system.config(currentStateOccupancy)
         currentStateChargeConfig = self.system.chargeConfig(currentStateOccupancy)
+        newStateChargeConfig = np.copy(currentStateChargeConfig)
         currentStateESPConfig = self.system.ESPConfig(currentStateChargeConfig)
+        newStateESPConfig = np.copy(currentStateESPConfig)
         shellChargeTypeKeys = [key for key in self.material.chargeTypes.keys() if self.material.elementTypeDelimiter in key]
         shellCharges = 0 if shellChargeTypeKeys==[] else 1
         assert 'E' in self.material.neighborCutoffDist.keys(), 'Please specify the cutoff distance for electrostatic interactions'
@@ -683,6 +686,7 @@ class run(object):
                 newStates = self.generateNewStates(currentStateOccupancy)
                 hopElementTypes = newStates.hopElementTypes
                 hopDistTypes = newStates.hopDistTypes
+                # TODO: not necessary
                 for newStateIndex in range(len(newStates.hoppingSpeciesIndices)):
                     [oldSiteSystemElementIndex, newSiteSystemElementIndex] = newStates.systemElementIndexPairList[newStateIndex]
                     if shellCharges:
@@ -690,12 +694,9 @@ class run(object):
                         newStateChargeConfig = self.system.chargeConfig(newStateOccupancy)
                         newStateESPConfig = self.system.ESPConfig(newStateChargeConfig)
                     else:
-                        newStateChargeConfig = np.copy(currentStateChargeConfig)
-                        # TODO: Is deepcopy necessary?
-                        newStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = currentStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
-                        newStateESPConfig = np.copy(currentStateESPConfig)
-                        multFactor = np.true_divide(currentStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]], 
-                                                    currentStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]])
+                        multFactor = np.true_divide(newStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]], 
+                                                    newStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]])
+                        newStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = newStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
                         newStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] *= multFactor[:, np.newaxis]
                         
                     delG0 = self.relativeElectrostaticInteractionEnergy(currentStateESPConfig, newStateESPConfig, 
@@ -707,24 +708,29 @@ class run(object):
                     VAB = self.VAB[hopElementType][hopDistType]
                     delGs = ((lambdaValue + delG0) ** 2 / (4 * lambdaValue)) - VAB
                     kList.append(self.vn * np.exp(-delGs / (self.material.KB * self.T)))
-                
+                    if not shellCharges:
+                        newStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = newStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
+                        newStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] /= multFactor[:, np.newaxis]
                 kTotal = np.sum(kList)
-                kCumSum = np.cumsum(kList / kTotal)
+                kCumSum = (kList / kTotal).cumsum()
                 rand1 = rnd.random()
-                procIndex = np.min(np.where(kCumSum > rand1))
+                procIndex = np.where(kCumSum > rand1)[0][0]
                 rand2 = rnd.random()
                 kmcTime -= np.log(rand2) / kTotal
                 currentStateOccupancy = newStates.newStateOccupancyList[procIndex]
                 if shellCharges:
                     currentStateChargeConfig = self.system.chargeConfig(currentStateOccupancy)
+                    newStateChargeConfig = self.system.chargeConfig(currentStateOccupancy)
                     currentStateESPConfig = self.system.ESPConfig(currentStateChargeConfig)
+                    newStateESPConfig = self.system.ESPConfig(currentStateChargeConfig)
                 else:
                     [oldSiteSystemElementIndex, newSiteSystemElementIndex] = newStates.systemElementIndexPairList[procIndex]
-                    # TODO: Is deepcopy necessary?
-                    currentStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = currentStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
                     multFactor = np.true_divide(currentStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]], 
                                                 currentStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]])
+                    currentStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = currentStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
+                    newStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = newStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
                     currentStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] *= multFactor[:, np.newaxis]
+                    newStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] *= multFactor[:, np.newaxis]
                     
                 # speciesIndex is different from speciesTypeSpeciesIndex
                 speciesIndex = newStates.hoppingSpeciesIndices[procIndex]
