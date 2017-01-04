@@ -581,27 +581,57 @@ class run(object):
         elecIntEnergy = np.sum(np.concatenate(individualInteractionList)) * self.material.J2EV # electron-volt
         return elecIntEnergy
         
-    def relativeElectrostaticInteractionEnergy(self, currentStateESPConfig, newStateESPConfig, 
+    def nonESPRelativeElectrostaticInteractionEnergy(self, currentStateChargeConfig, newStateChargeConfig, 
+                                                     oldSiteSystemElementIndex, newSiteSystemElementIndex):
+        """Subroutine to compute the relative electrostatic interaction energies between two states"""
+        individualInteractionList = (currentStateChargeConfig[oldSiteSystemElementIndex] * 
+                                     currentStateChargeConfig[self.elecNeighborListNeighborSEIndices[oldSiteSystemElementIndex]] * 
+                                     self.system.coeffDistanceList[oldSiteSystemElementIndex])
+        oldSiteElecIntEnergy = np.sum(individualInteractionList)
+        print 'nonESP'
+        print oldSiteElecIntEnergy
+        individualInteractionList = (currentStateChargeConfig[newSiteSystemElementIndex] * 
+                                     currentStateChargeConfig[self.elecNeighborListNeighborSEIndices[newSiteSystemElementIndex]] * 
+                                     self.system.coeffDistanceList[newSiteSystemElementIndex])
+        oldNeighborSiteElecIntEnergy = np.sum(individualInteractionList)
+        print oldNeighborSiteElecIntEnergy
+        individualInteractionList = (newStateChargeConfig[newSiteSystemElementIndex] * 
+                                     newStateChargeConfig[self.elecNeighborListNeighborSEIndices[newSiteSystemElementIndex]] * 
+                                     self.system.coeffDistanceList[newSiteSystemElementIndex]) 
+        newSiteElecIntEnergy = np.sum(individualInteractionList)
+        print newSiteElecIntEnergy
+        individualInteractionList = (newStateChargeConfig[oldSiteSystemElementIndex] * 
+                                     newStateChargeConfig[self.elecNeighborListNeighborSEIndices[oldSiteSystemElementIndex]] * 
+                                     self.system.coeffDistanceList[oldSiteSystemElementIndex]) 
+        newNeighborSiteElecIntEnergy = np.sum(individualInteractionList)
+        print newNeighborSiteElecIntEnergy
+        #TODO: Is absolute necessary?
+        relativeElecEnergy = abs(newSiteElecIntEnergy + newNeighborSiteElecIntEnergy 
+                                 - oldSiteElecIntEnergy - oldNeighborSiteElecIntEnergy) * self.material.J2EV
+        print relativeElecEnergy
+        return relativeElecEnergy
+
+    def ESPRelativeElectrostaticInteractionEnergy(self, currentStateESPConfig, newStateESPConfig, 
                                                currentStateChargeConfig, newStateChargeConfig, 
                                                oldSiteSystemElementIndex, newSiteSystemElementIndex):
         """Subroutine to compute the relative electrostatic interaction energies between two states"""
         oldSiteElecIntEnergy = np.sum(currentStateESPConfig[oldSiteSystemElementIndex] * 
                                       currentStateChargeConfig[self.elecNeighborListNeighborSEIndices[oldSiteSystemElementIndex]])
-        #print 'energies:'
-        #print oldSiteElecIntEnergy
+        print 'ESP:'
+        print oldSiteElecIntEnergy
         oldNeighborSiteElecIntEnergy = np.sum(currentStateESPConfig[newSiteSystemElementIndex] * 
                                               currentStateChargeConfig[self.elecNeighborListNeighborSEIndices[newSiteSystemElementIndex]])
-        #print oldNeighborSiteElecIntEnergy
+        print oldNeighborSiteElecIntEnergy
         newSiteElecIntEnergy = np.sum(newStateESPConfig[newSiteSystemElementIndex] * 
                                       newStateChargeConfig[self.elecNeighborListNeighborSEIndices[newSiteSystemElementIndex]])
-        #print newSiteElecIntEnergy
+        print newSiteElecIntEnergy
         newNeighborSiteElecIntEnergy = np.sum(newStateESPConfig[oldSiteSystemElementIndex] * 
                                               newStateChargeConfig[self.elecNeighborListNeighborSEIndices[oldSiteSystemElementIndex]])
-        #print newNeighborSiteElecIntEnergy
+        print newNeighborSiteElecIntEnergy
         #TODO: Is absolute necessary?
         relativeElecEnergy = abs(newSiteElecIntEnergy + newNeighborSiteElecIntEnergy - 
                                  oldSiteElecIntEnergy - oldNeighborSiteElecIntEnergy) * self.material.J2EV # electron-volt
-        #print relativeElecEnergy
+        print relativeElecEnergy
         return relativeElecEnergy
 
     def generateNewStates(self, currentStateOccupancy):
@@ -662,7 +692,7 @@ class run(object):
         return returnNewStates
 
     @profile
-    def doKMCSteps(self, outdir=None, report=1, randomSeed=1):
+    def doKMCSteps(self, outdir=None, ESPConfig=1, report=1, randomSeed=1):
         """Subroutine to run the KMC simulation by specified number of steps"""
         rnd.seed(randomSeed)
         nTraj = self.nTraj
@@ -707,9 +737,14 @@ class run(object):
                         newStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = newStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
                         newStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] *= multFactor[:, np.newaxis]
                         
-                    delG0 = self.relativeElectrostaticInteractionEnergy(currentStateESPConfig, newStateESPConfig, 
-                                                                        currentStateChargeConfig, newStateChargeConfig, 
-                                                                        oldSiteSystemElementIndex, newSiteSystemElementIndex)
+                    if ESPConfig:
+                        delG0 = self.ESPRelativeElectrostaticInteractionEnergy(currentStateESPConfig, newStateESPConfig, 
+                                                                               currentStateChargeConfig, newStateChargeConfig, 
+                                                                               oldSiteSystemElementIndex, newSiteSystemElementIndex)
+                    else:
+                        delG0 = self.nonESPRelativeElectrostaticInteractionEnergy(currentStateChargeConfig, newStateChargeConfig, 
+                                                                                  oldSiteSystemElementIndex, newSiteSystemElementIndex)
+
                     hopElementType = hopElementTypes[newStateIndex]
                     hopDistType = hopDistTypes[newStateIndex]
                     lambdaValue = self.lambdaValues[hopElementType][hopDistType]
