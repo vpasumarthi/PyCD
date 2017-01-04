@@ -570,8 +570,7 @@ class run(object):
         self.totalSpecies = int(sum(self.nSpecies.values()) - self.nSpecies[self.material.emptySpeciesType])
     
         # Electrostatic interaction neighborlist:
-        elecNeighborListSystemElementIndexMap = self.system.neighborList['E'][0].systemElementIndexMap
-        self.elecNeighborListNeighborSEIndices = elecNeighborListSystemElementIndexMap[1]
+        self.elecNeighborListNeighborSEIndices = self.system.neighborList['E'][0].systemElementIndexMap[1]
 
     def electrostaticInteractionEnergy(self, occupancy):
         """Subroutine to compute the electrostatic interaction energies"""
