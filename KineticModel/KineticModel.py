@@ -745,8 +745,8 @@ class run(object):
                         newStateChargeConfig = self.system.chargeConfig(newStateOccupancy)
                         newStateESPConfig = self.system.ESPConfig(newStateChargeConfig)
                     else:
-                        # TODO: Is it necessary to compute everytime?
                         if ESPConfig:
+                            # TODO: Is it necessary to compute multFactor every time?
                             multFactor = np.true_divide(currentStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]], 
                                                         currentStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]])
                             newStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] *= multFactor[:, np.newaxis]
@@ -785,8 +785,8 @@ class run(object):
                     newStateESPConfig = self.system.ESPConfig(currentStateChargeConfig)
                 else:
                     [oldSiteSystemElementIndex, newSiteSystemElementIndex] = newStates.systemElementIndexPairList[procIndex]
-                    # TODO: Is it necessary to compute multFactor every time?
                     if ESPConfig:
+                        # TODO: Is it necessary to compute multFactor every time?
                         multFactor = np.true_divide(currentStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]], 
                                                     currentStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]])
                         currentStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] *= multFactor[:, np.newaxis]
