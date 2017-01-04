@@ -605,6 +605,24 @@ class run(object):
         relativeElecEnergy = (newSiteElecIntEnergy + newNeighborSiteElecIntEnergy 
                               - oldSiteElecIntEnergy - oldNeighborSiteElecIntEnergy) * self.material.J2EV
         print relativeElecEnergy
+        '''
+        print 'Energies:'
+        oldSiteCharge2 = (currentStateChargeConfig[oldSiteSystemElementIndex] * 
+                          currentStateChargeConfig[self.elecNeighborListNeighborSEIndices[oldSiteSystemElementIndex]])
+        oldNeighborSiteCharge2 = (currentStateChargeConfig[newSiteSystemElementIndex] * 
+                                  currentStateChargeConfig[self.elecNeighborListNeighborSEIndices[newSiteSystemElementIndex]])
+        newSiteCharge2 = (newStateChargeConfig[newSiteSystemElementIndex] * 
+                          newStateChargeConfig[self.elecNeighborListNeighborSEIndices[newSiteSystemElementIndex]])
+        newNeighborSiteCharge2 = (newStateChargeConfig[oldSiteSystemElementIndex] * 
+                                  newStateChargeConfig[self.elecNeighborListNeighborSEIndices[oldSiteSystemElementIndex]])
+        relativeOldSiteElecIntEnergy = np.sum((newNeighborSiteCharge2 - oldSiteCharge2) * self.system.coeffDistanceList[oldSiteSystemElementIndex])
+        print relativeOldSiteElecIntEnergy
+        relativeNewSiteElecIntEnergy = np.sum((newSiteCharge2 - oldNeighborSiteCharge2) * self.system.coeffDistanceList[newSiteSystemElementIndex])
+        print relativeNewSiteElecIntEnergy
+        #TODO: Is absolute necessary?
+        relativeElecEnergy = (relativeOldSiteElecIntEnergy + relativeNewSiteElecIntEnergy) * self.material.J2EV
+        print relativeElecEnergy
+        '''
         return relativeElecEnergy
 
     def ESPRelativeElectrostaticInteractionEnergy(self, currentStateESPConfig, newStateESPConfig, 
