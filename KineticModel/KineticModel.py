@@ -586,15 +586,21 @@ class run(object):
         """Subroutine to compute the relative electrostatic interaction energies between two states"""
         oldSiteElecIntEnergy = np.sum(currentStateESPConfig[oldSiteSystemElementIndex] * 
                                       currentStateChargeConfig[self.elecNeighborListNeighborSEIndices[oldSiteSystemElementIndex]])
+        print 'energies:'
+        print oldSiteElecIntEnergy
         oldNeighborSiteElecIntEnergy = np.sum(currentStateESPConfig[newSiteSystemElementIndex] * 
                                               currentStateChargeConfig[self.elecNeighborListNeighborSEIndices[newSiteSystemElementIndex]])
+        print oldNeighborSiteElecIntEnergy
         newSiteElecIntEnergy = np.sum(newStateESPConfig[newSiteSystemElementIndex] * 
                                       newStateChargeConfig[self.elecNeighborListNeighborSEIndices[newSiteSystemElementIndex]])
+        print newSiteElecIntEnergy
         newNeighborSiteElecIntEnergy = np.sum(newStateESPConfig[oldSiteSystemElementIndex] * 
                                               newStateChargeConfig[self.elecNeighborListNeighborSEIndices[oldSiteSystemElementIndex]])
+        print newNeighborSiteElecIntEnergy
         #TODO: Is absolute necessary?
         relativeElecEnergy = abs(newSiteElecIntEnergy + newNeighborSiteElecIntEnergy - 
                                  oldSiteElecIntEnergy - oldNeighborSiteElecIntEnergy) * self.material.J2EV # electron-volt
+        print relativeElecEnergy
         return relativeElecEnergy
 
     def generateNewStates(self, currentStateOccupancy):
@@ -661,7 +667,7 @@ class run(object):
         kmcSteps = self.kmcSteps
         stepInterval = self.stepInterval
         currentStateOccupancy = self.system.occupancy
-        
+        import pdb; pdb.set_trace()
         numPathStepsPerTraj = int(kmcSteps / stepInterval) + 1
         timeArray = np.zeros(nTraj * numPathStepsPerTraj)
         unwrappedPositionArray = np.zeros(( nTraj * numPathStepsPerTraj, self.totalSpecies, 3))
