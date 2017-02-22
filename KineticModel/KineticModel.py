@@ -710,13 +710,6 @@ class run(object):
         returnNewStates.systemElementIndexPairList = systemElementIndexPairList
         return returnNewStates
     
-    def memory_usage_psutil(self):
-        # return the memory usage in MB
-        import psutil
-        process = psutil.Process(os.getpid())
-        mem = process.memory_info()[0] / float(2 ** 20)
-        return mem
-
     #@profile
     def doKMCSteps(self, outdir=None, ESPConfig=1, report=1, randomSeed=1):
         """Subroutine to run the KMC simulation by specified number of steps"""
@@ -725,7 +718,6 @@ class run(object):
         kmcSteps = self.kmcSteps
         stepInterval = self.stepInterval
         currentStateOccupancy = self.system.occupancy
-        #import pdb; pdb.set_trace()
         numPathStepsPerTraj = int(kmcSteps / stepInterval) + 1
         timeArray = np.zeros(nTraj * numPathStepsPerTraj)
         unwrappedPositionArray = np.zeros(( nTraj * numPathStepsPerTraj, self.totalSpecies, 3))
@@ -747,23 +739,6 @@ class run(object):
             kmcTime = 0
             speciesDisplacementVectorList = np.zeros((self.totalSpecies, 3))
             for step in range(kmcSteps):
-                if step % 100 == 0:
-                    totalSize = 0
-                    #print "\n"#\nVARIABLE - MEMORY(MB):"
-                    for var, obj in locals().items():
-                        #print var, sys.getsizeof(obj)/1024/1024.
-                        totalSize += sys.getsizeof(obj)
-                    print "local variables size =", totalSize/1024/1024., "MB"
-                    for var, obj in globals().items():
-                        #print var, sys.getsizeof(obj)/1024/1024.
-                        totalSize += sys.getsizeof(obj)
-                    print "globals variables size =", totalSize/1024/1024., "MB"
-                    print "Process Memory:", self.memory_usage_psutil(), "MB"
-                    mem = psutil.virtual_memory()
-                    print "Used RAM: ", mem.used/1024/1024, "MB"
-                    print "\n"
-                    #import pdb; pdb.set_trace()
-                    
                 kList = []
                 newStates = self.generateNewStates(currentStateOccupancy)
                 hopElementTypes = newStates.hopElementTypes
