@@ -11,7 +11,9 @@ from datetime import datetime
 import pickle
 import os.path
 from copy import deepcopy
-from memory_profiler import profile
+#from memory_profiler import profile
+import sys
+import psutil
 
 class material(object):
     """Defines the properties and structure of working material
@@ -513,7 +515,11 @@ class system(object):
         return chargeList
 
     def ESPConfig(self, currentStateChargeConfig):
-        ESPConfig = np.multiply(currentStateChargeConfig[:, np.newaxis], self.coeffDistanceList) # SI units
+        # TODO: Statement that caused memory leak
+        #ESPConfig = np.multiply(currentStateChargeConfig[:, np.newaxis], self.coeffDistanceList) # SI units
+        ESPConfig = np.copy(self.coeffDistanceList)
+        for rowIndex in range(len(currentStateChargeConfig)):
+            ESPConfig[rowIndex] *= currentStateChargeConfig[rowIndex]
         return ESPConfig
 
     def config(self, occupancy):
@@ -583,27 +589,27 @@ class run(object):
     def nonESPRelativeElectrostaticInteractionEnergy(self, currentStateChargeConfig, newStateChargeConfig, 
                                                      oldSiteSystemElementIndex, newSiteSystemElementIndex):
         """Subroutine to compute the relative electrostatic interaction energies between two states"""
-        print 'Energies:'
+        #print 'Energies:'
         oldSiteElecIntEnergy = np.sum(currentStateChargeConfig[oldSiteSystemElementIndex] * 
                                       currentStateChargeConfig[self.elecNeighborListNeighborSEIndices[oldSiteSystemElementIndex]] * 
                                       self.system.coeffDistanceList[oldSiteSystemElementIndex])
-        print oldSiteElecIntEnergy
+        #print oldSiteElecIntEnergy
         oldNeighborSiteElecIntEnergy = np.sum(currentStateChargeConfig[newSiteSystemElementIndex] * 
                                               currentStateChargeConfig[self.elecNeighborListNeighborSEIndices[newSiteSystemElementIndex]] * 
                                               self.system.coeffDistanceList[newSiteSystemElementIndex])
-        print oldNeighborSiteElecIntEnergy
+        #print oldNeighborSiteElecIntEnergy
         newSiteElecIntEnergy = np.sum(newStateChargeConfig[newSiteSystemElementIndex] * 
                                       newStateChargeConfig[self.elecNeighborListNeighborSEIndices[newSiteSystemElementIndex]] * 
                                       self.system.coeffDistanceList[newSiteSystemElementIndex]) 
-        print newSiteElecIntEnergy
+        #print newSiteElecIntEnergy
         newNeighborSiteElecIntEnergy = np.sum(newStateChargeConfig[oldSiteSystemElementIndex] * 
                                               newStateChargeConfig[self.elecNeighborListNeighborSEIndices[oldSiteSystemElementIndex]] * 
                                               self.system.coeffDistanceList[oldSiteSystemElementIndex]) 
-        print newNeighborSiteElecIntEnergy
+        #print newNeighborSiteElecIntEnergy
         #TODO: Is absolute necessary?
         relativeElecEnergy = (newSiteElecIntEnergy + newNeighborSiteElecIntEnergy 
                               - oldSiteElecIntEnergy - oldNeighborSiteElecIntEnergy) * self.material.J2EV
-        print relativeElecEnergy
+        #print relativeElecEnergy
         '''
         print 'Energies:'
         oldSiteCharge2 = (currentStateChargeConfig[oldSiteSystemElementIndex] * 
@@ -630,21 +636,21 @@ class run(object):
         """Subroutine to compute the relative electrostatic interaction energies between two states"""
         oldSiteElecIntEnergy = np.sum(currentStateESPConfig[oldSiteSystemElementIndex] * 
                                       currentStateChargeConfig[self.elecNeighborListNeighborSEIndices[oldSiteSystemElementIndex]])
-        print 'ESP:'
-        print oldSiteElecIntEnergy
+        #print 'ESP:'
+        #print oldSiteElecIntEnergy
         oldNeighborSiteElecIntEnergy = np.sum(currentStateESPConfig[newSiteSystemElementIndex] * 
                                               currentStateChargeConfig[self.elecNeighborListNeighborSEIndices[newSiteSystemElementIndex]])
-        print oldNeighborSiteElecIntEnergy
+        #print oldNeighborSiteElecIntEnergy
         newSiteElecIntEnergy = np.sum(newStateESPConfig[newSiteSystemElementIndex] * 
                                       newStateChargeConfig[self.elecNeighborListNeighborSEIndices[newSiteSystemElementIndex]])
-        print newSiteElecIntEnergy
+        #print newSiteElecIntEnergy
         newNeighborSiteElecIntEnergy = np.sum(newStateESPConfig[oldSiteSystemElementIndex] * 
                                               newStateChargeConfig[self.elecNeighborListNeighborSEIndices[oldSiteSystemElementIndex]])
-        print newNeighborSiteElecIntEnergy
+        #print newNeighborSiteElecIntEnergy
         #TODO: Is absolute necessary?
         relativeElecEnergy = abs(newSiteElecIntEnergy + newNeighborSiteElecIntEnergy - 
                                  oldSiteElecIntEnergy - oldNeighborSiteElecIntEnergy) * self.material.J2EV # electron-volt
-        print relativeElecEnergy
+        #print relativeElecEnergy
         return relativeElecEnergy
 
     def generateNewStates(self, currentStateOccupancy):
@@ -703,8 +709,15 @@ class run(object):
         returnNewStates.speciesDisplacementVectorList = speciesDisplacementVectorList
         returnNewStates.systemElementIndexPairList = systemElementIndexPairList
         return returnNewStates
+    
+    def memory_usage_psutil(self):
+        # return the memory usage in MB
+        import psutil
+        process = psutil.Process(os.getpid())
+        mem = process.memory_info()[0] / float(2 ** 20)
+        return mem
 
-    @profile
+    #@profile
     def doKMCSteps(self, outdir=None, ESPConfig=1, report=1, randomSeed=1):
         """Subroutine to run the KMC simulation by specified number of steps"""
         rnd.seed(randomSeed)
@@ -734,6 +747,23 @@ class run(object):
             kmcTime = 0
             speciesDisplacementVectorList = np.zeros((self.totalSpecies, 3))
             for step in range(kmcSteps):
+                if step % 100 == 0:
+                    totalSize = 0
+                    #print "\n"#\nVARIABLE - MEMORY(MB):"
+                    for var, obj in locals().items():
+                        #print var, sys.getsizeof(obj)/1024/1024.
+                        totalSize += sys.getsizeof(obj)
+                    print "local variables size =", totalSize/1024/1024., "MB"
+                    for var, obj in globals().items():
+                        #print var, sys.getsizeof(obj)/1024/1024.
+                        totalSize += sys.getsizeof(obj)
+                    print "globals variables size =", totalSize/1024/1024., "MB"
+                    print "Process Memory:", self.memory_usage_psutil(), "MB"
+                    mem = psutil.virtual_memory()
+                    print "Used RAM: ", mem.used/1024/1024, "MB"
+                    print "\n"
+                    #import pdb; pdb.set_trace()
+                    
                 kList = []
                 newStates = self.generateNewStates(currentStateOccupancy)
                 hopElementTypes = newStates.hopElementTypes
@@ -749,7 +779,10 @@ class run(object):
                             # TODO: Is it necessary to compute multFactor every time?
                             multFactor = np.true_divide(currentStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]], 
                                                         currentStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]])
-                            newStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] *= multFactor[:, np.newaxis]
+                            # TODO: Statement that didn't work with larger cutoffs
+                            #newStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] *= multFactor[:, np.newaxis]
+                            newStateESPConfig[oldSiteSystemElementIndex] *= multFactor[0]
+                            newStateESPConfig[newSiteSystemElementIndex] *= multFactor[1]
                         newStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = newStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
                         
                     if ESPConfig:
@@ -789,7 +822,10 @@ class run(object):
                         # TODO: Is it necessary to compute multFactor every time?
                         multFactor = np.true_divide(currentStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]], 
                                                     currentStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]])
-                        currentStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] *= multFactor[:, np.newaxis]
+                        # TODO: Statement that didn't work with larger cutoffs
+                        #currentStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] *= multFactor[:, np.newaxis]
+                        currentStateESPConfig[oldSiteSystemElementIndex] *= multFactor[0]
+                        currentStateESPConfig[newSiteSystemElementIndex] *= multFactor[1]
                         newStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = currentStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]]
                     currentStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = currentStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
                     newStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = newStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
