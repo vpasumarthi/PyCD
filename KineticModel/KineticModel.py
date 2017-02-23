@@ -47,17 +47,36 @@ class material(object):
     """ 
     def __init__(self, materialParameters):
         # CONSTANTS
-        self.ECHARGE = 1.6021766208E-19 # Coulomb, Ref: http://physics.nist.gov/cgi-bin/cuu/Value?e
-        self.ANG2M = 1E-10
-        self.J2EV = 1/self.ECHARGE
-        self.KB = 8.6173303E-05 # Boltzmann constant in eV/K
-        self.EPSILON0 = 8.854187817E-12 # vacuum permittivity in F.m-1
+        self.EPSILON0 = 8.854187817E-12 # Electric constant in F.m-1
+        self.ANG = 1E-10 # Angstrom in m
+        self.KB = 1.38064852E-23 # Boltzmann constant in J/K
+        
+        # FUNDAMENTAL ATOMIC UNITS (Ref: http://physics.nist.gov/cuu/Constants/Table/allascii.txt)
+        self.EMASS = 9.10938356E-31 # Electron mass in Kg
+        self.ECHARGE = 1.6021766208E-19 # Elementary charge in C
+        self.HBAR =  1.054571800E-34 # Reduced Planck's constant in J.sec
+        self.KE = 1 / (4 * np.pi * self.EPSILON0)
+        
+        # DERIVED ATOMIC UNITS
+        self.BOHR = self.HBAR**2 / (self.EMASS * self.ECHARGE**2 * self.KE) # Bohr radius in m
+        self.HARTREE = self.HBAR**2 / (self.EMASS * self.BOHR**2) # Hartree in J
+        self.AUTIME = self.HBAR / self.HARTREE # sec
+        self.AUTEMPERATURE = self.HARTREE / self.KB # K
+        # TODO: Is AUPOTENTIAL necessary?
+        #self.AUPOTENTIAL = self.HARTREE / self.ECHARGE # V
+        
+        # CONVERSIONS
+        self.EV2J = self.ECHARGE
+        self.ANG2BOHR = self.ANG / self.BOHR
+        self.J2HARTREE = 1 / self.HARTREE
+        self.SEC2AUTIME = 1 / self.AUTIME
+        self.K2AUTEMP = 1 / self.AUTEMPERATURE
         
         # TODO: introduce a method to view the material using ase atoms or other gui module
         self.name = materialParameters.name
         self.elementTypes = materialParameters.elementTypes
         self.speciesToElementTypeMap = materialParameters.speciesToElementTypeMap
-        self.unitcellCoords = np.zeros((len(materialParameters.unitcellCoords), 3))
+        self.unitcellCoords = np.zeros((len(materialParameters.unitcellCoords), 3)) # Initialization
         startIndex = 0
         length = len(self.elementTypes)
         nElementsPerUnitCell = np.zeros(length, int)
@@ -68,20 +87,31 @@ class material(object):
             self.unitcellCoords[startIndex:endIndex] = elementUnitCellCoords[elementUnitCellCoords[:,2].argsort()]
             startIndex = endIndex
         
+        self.unitcellCoords *= self.ANG2BOHR # Unit cell coordinates converted to atomic units
         self.nElementsPerUnitCell = nElementsPerUnitCell
         self.totalElementsPerUnitCell = nElementsPerUnitCell.sum()
         self.elementTypeIndexList = materialParameters.elementTypeIndexList.astype(int)
+        self.chargeTypes = materialParameters.chargeTypes
         
-        chargeTypes = materialParameters.chargeTypes
-        chargeTypes.update(( x, y * self.ECHARGE ) for x, y in chargeTypes.items())
-        self.chargeTypes = chargeTypes # Coulomb
+        self.latticeParameters = [0] * len(materialParameters.latticeParameters)
+        # lattice parameters being converted to atomic units
+        for index in range(len(materialParameters.latticeParameters)):
+            if index < 3:
+                self.latticeParameters[index] = materialParameters.latticeParameters[index] * self.ANG2BOHR
+            else:
+                self.latticeParameters[index] = materialParameters.latticeParameters[index]
         
-        self.latticeParameters = materialParameters.latticeParameters
-        self.vn = materialParameters.vn
+        self.vn = materialParameters.vn / self.SEC2AUTIME
         self.lambdaValues = materialParameters.lambdaValues
+        self.lambdaValues.update((x, [y[index] * self.EV2J * self.J2HARTREE for index in range(len(y))]) for x, y in self.lambdaValues.items())
+
         self.VAB = materialParameters.VAB
+        self.VAB.update((x, [y[index] * self.EV2J * self.J2HARTREE for index in range(len(y))]) for x, y in self.VAB.items())
+        
         self.neighborCutoffDist = materialParameters.neighborCutoffDist
-        self.neighborCutoffDistTol = materialParameters.neighborCutoffDistTol        
+        self.neighborCutoffDist.update((x, [y[index] * self.ANG2BOHR for index in range(len(y))]) for x, y in self.neighborCutoffDist.items())
+
+        self.neighborCutoffDistTol = materialParameters.neighborCutoffDistTol * self.ANG2BOHR
         self.elementTypeDelimiter = materialParameters.elementTypeDelimiter
         self.emptySpeciesType = materialParameters.emptySpeciesType
         self.siteIdentifier = materialParameters.siteIdentifier
@@ -473,8 +503,7 @@ class system(object):
         self.latticeChargeList = np.tile(unitCellChargeList, self.numCells)
         
         # Coefficient Distance List
-        self.KE = (1/(4 * np.pi * self.material.EPSILON0)) # Coulomb's constant
-        self.coeffDistanceList = self.KE / (self.material.dielectricConstant * self.neighborList['E'][0].displacementList * self.material.ANG2M) # SI units
+        self.coeffDistanceList = self.material.KE / (self.material.dielectricConstant * self.neighborList['E'][0].displacementList)
     
     def chargeConfig(self, occupancy):
         """Returns charge distribution of the current configuration"""
@@ -713,6 +742,7 @@ class run(object):
     #@profile
     def doKMCSteps(self, outdir=None, ESPConfig=1, report=1, randomSeed=1):
         """Subroutine to run the KMC simulation by specified number of steps"""
+        import pdb; pdb.set_trace()
         rnd.seed(randomSeed)
         nTraj = self.nTraj
         kmcSteps = self.kmcSteps
