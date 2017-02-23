@@ -405,6 +405,11 @@ class neighbors(object):
             cutoffDistList = self.material.neighborCutoffDist[cutoffDistKey]
             neighborListCutoffDistKey = []
             if cutoffDistKey is not 'E':
+                centerSiteIndices = neighborSiteIndices = np.arange(self.numCells * self.material.totalElementsPerUnitCell)
+                cutoffDistLimits = [0, cutoffDistList[0]]
+                neighborListCutoffDistKey.append(self.electrostaticNeighborSites(self.systemSize, self.bulkSites, centerSiteIndices, 
+                                                                                 neighborSiteIndices, cutoffDistLimits, cutoffDistKey))
+            else:
                 [centerElementType, neighborElementType] = cutoffDistKey.split(self.material.elementTypeDelimiter)
                 centerSiteElementTypeIndex = elementTypes.index(centerElementType) 
                 neighborSiteElementTypeIndex = elementTypes.index(neighborElementType)
@@ -421,11 +426,6 @@ class neighbors(object):
                     cutoffDistLimits = [cutoffDist-tolDist, cutoffDist+tolDist]
                     neighborListCutoffDistKey.append(self.hopNeighborSites(localBulkSites, centerSiteIndices, 
                                                                            neighborSiteIndices, cutoffDistLimits, cutoffDistKey))
-            else:
-                centerSiteIndices = neighborSiteIndices = np.arange(self.numCells * self.material.totalElementsPerUnitCell)
-                cutoffDistLimits = [0, cutoffDistList[0]]
-                neighborListCutoffDistKey.append(self.electrostaticNeighborSites(self.systemSize, self.bulkSites, centerSiteIndices, 
-                                                                                 neighborSiteIndices, cutoffDistLimits, cutoffDistKey))
             neighborList[cutoffDistKey] = neighborListCutoffDistKey
         
         np.save(neighborListFilePath, neighborList)
