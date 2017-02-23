@@ -278,6 +278,7 @@ class neighbors(object):
             iDisplacementVectors = []
             iDisplacements = []
             iNeighborSiteIndexList = []
+            iNumNeighbors = 0
             for neighborSiteIndex, neighborCoord in enumerate(neighborSiteCoords):
                 neighborImageDisplacementVectors = np.array([neighborCoord - centerCoord])
                 displacement = np.linalg.norm(neighborImageDisplacementVectors)
@@ -285,12 +286,14 @@ class neighbors(object):
                     iNeighborSiteIndexList.append(neighborSiteIndex)
                     iDisplacementVectors.append(neighborImageDisplacementVectors[0])
                     iDisplacements.append(displacement)
+                    iNumNeighbors += 1
             #print centerSiteIndex, cutoffDistKey, len(iDisplacements)#, sorted(iDisplacements)
             neighborSystemElementIndices.append(np.array(neighborSiteSystemElementIndexList[iNeighborSiteIndexList]))
             offsetList.append(centerSiteQuantumIndexList[centerSiteIndex, :3] - neighborSiteQuantumIndexList[iNeighborSiteIndexList, :3])
             neighborElementIndexList.append(neighborSiteQuantumIndexList[iNeighborSiteIndexList, 4])
             displacementVectorList.append(np.asarray(iDisplacementVectors))
             displacementList.append(iDisplacements)
+            numNeighbors.append(iNumNeighbors)
             
         # TODO: Avoid conversion and initialize the object beforehand
         neighborSystemElementIndices = np.asarray(neighborSystemElementIndices)
