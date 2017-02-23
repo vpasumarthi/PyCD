@@ -311,7 +311,7 @@ class neighbors(object):
         returnNeighbors.displacementVectorList = np.asarray(displacementVectorList)
         returnNeighbors.displacementList = np.asarray(displacementList)
         return returnNeighbors
-
+    
     def electrostaticNeighborSites(self, systemSize, bulkSites, centerSiteIndices, neighborSiteIndices, cutoffDistLimits, cutoffDistKey):
         """Returns systemElementIndexMap and distances between center sites and its 
         neighbor sites within cutoff distance"""
@@ -334,20 +334,20 @@ class neighbors(object):
         yRange = range(-1, 2) if self.pbc[1] == 1 else [0]
         zRange = range(-1, 2) if self.pbc[2] == 1 else [0]
         latticeMatrix = self.material.latticeMatrix
+        unitcellTranslationalCoords = np.zeros((3**sum(self.pbc), 3))
+        index = 0
+        for xOffset in xRange:
+            for yOffset in yRange:
+                for zOffset in zRange:
+                    unitcellTranslationalCoords[index] = np.dot(np.multiply(np.array([xOffset, yOffset, zOffset]), self.systemSize), latticeMatrix)
+                    index += 1
         for centerSiteIndex, centerCoord in enumerate(centerSiteCoords):
             iDisplacementVectors = []
             iDisplacements = []
             iNeighborSiteIndexList = []
             iNumNeighbors = 0
             for neighborSiteIndex, neighborCoord in enumerate(neighborSiteCoords):
-                neighborImageCoords = np.zeros((3**sum(self.pbc), 3))
-                index = 0
-                for xOffset in xRange:
-                    for yOffset in yRange:
-                        for zOffset in zRange:
-                            unitcellTranslationalCoords = np.dot(np.multiply(np.array([xOffset, yOffset, zOffset]), self.systemSize), latticeMatrix)
-                            neighborImageCoords[index] = neighborCoord + unitcellTranslationalCoords
-                            index += 1
+                neighborImageCoords = unitcellTranslationalCoords + neighborCoord
                 neighborImageDisplacementVectors = neighborImageCoords - centerCoord
                 neighborImageDisplacements = np.linalg.norm(neighborImageDisplacementVectors, axis=1)
                 [displacement, imageIndex] = [np.min(neighborImageDisplacements), np.argmin(neighborImageDisplacements)]
