@@ -388,49 +388,49 @@ class neighbors(object):
         returnNeighbors.displacementList = np.asarray(displacementList)
         return returnNeighbors
 
-    def generateNeighborList(self, replaceExistingNeighborList, outdir=None, report=1, localSystemSize=np.array([3, 3, 3]), 
+    def generateNeighborList(self, cutE, replaceExistingNeighborList, outdir=None, report=1, localSystemSize=np.array([3, 3, 3]), 
                              centerUnitCellIndex=np.array([1, 1, 1])):
         """Adds the neighbor list to the system object and returns the neighbor list"""
         assert all(size >= 3 for size in localSystemSize), 'Local system size in all dimensions should always be greater than or equal to 3'
-        neighborList = {}
-        tolDist = self.material.neighborCutoffDistTol
-        elementTypes = self.material.elementTypes
-        for cutoffDistKey in self.material.neighborCutoffDist.keys():
-            cutoffDistList = self.material.neighborCutoffDist[cutoffDistKey]
-            neighborListCutoffDistKey = []
-            if cutoffDistKey is not 'E':
-                [centerElementType, neighborElementType] = cutoffDistKey.split(self.material.elementTypeDelimiter)
-                centerSiteElementTypeIndex = elementTypes.index(centerElementType) 
-                neighborSiteElementTypeIndex = elementTypes.index(neighborElementType)
-                localBulkSites = self.material.generateSites(range(len(self.material.elementTypes)), 
-                                                             localSystemSize)
-                centerSiteIndices = [self.material.generateSystemElementIndex(localSystemSize, np.concatenate((centerUnitCellIndex, np.array([centerSiteElementTypeIndex]), np.array([elementIndex])))) 
-                                     for elementIndex in range(self.material.nElementsPerUnitCell[centerSiteElementTypeIndex])]
-                neighborSiteIndices = [self.material.generateSystemElementIndex(localSystemSize, np.array([xSize, ySize, zSize, neighborSiteElementTypeIndex, elementIndex])) 
-                                       for xSize in range(localSystemSize[0]) for ySize in range(localSystemSize[1]) 
-                                       for zSize in range(localSystemSize[2]) 
-                                       for elementIndex in range(self.material.nElementsPerUnitCell[neighborSiteElementTypeIndex])]
+        assert outdir != None, 'Please provide the destination path where neighbor list needs to be saved'
 
-                for cutoffDist in cutoffDistList:
-                    cutoffDistLimits = [cutoffDist-tolDist, cutoffDist+tolDist]
-                    neighborListCutoffDistKey.append(self.hopNeighborSites(localBulkSites, centerSiteIndices, 
-                                                                           neighborSiteIndices, cutoffDistLimits, cutoffDistKey))
-            else:
-                centerSiteIndices = neighborSiteIndices = np.arange(self.numCells * self.material.totalElementsPerUnitCell)
-                cutoffDistLimits = [0, cutoffDistList[0]]
-                neighborListCutoffDistKey.append(self.electrostaticNeighborSites(self.systemSize, self.bulkSites, centerSiteIndices, 
-                                                                                 neighborSiteIndices, cutoffDistLimits, cutoffDistKey))
-            neighborList[cutoffDistKey] = neighborListCutoffDistKey
-        if outdir:
-            fileName = 'E' + ('%2.1f' % self.material.neighborCutoffDist['E'][0])
-            neighborListFileName = 'NeighborList_' + fileName + '.npy'
-            neighborListFilePath = outdir + '/' + neighborListFileName
-            if not os.path.isfile(neighborListFilePath) or replaceExistingNeighborList:
-                np.save(neighborListFilePath, neighborList)
-                report = 1
-        if report:
+        fileName = 'E' + ('%2.1f' % cutE)
+        neighborListFileName = 'NeighborList_' + fileName + '.npy'
+        neighborListFilePath = outdir + '/' + neighborListFileName
+        if not os.path.isfile(neighborListFilePath) or replaceExistingNeighborList:
+            import pdb; pdb.set_trace()
+            neighborList = {}
+            tolDist = self.material.neighborCutoffDistTol
+            elementTypes = self.material.elementTypes
+            for cutoffDistKey in self.material.neighborCutoffDist.keys():
+                cutoffDistList = self.material.neighborCutoffDist[cutoffDistKey]
+                neighborListCutoffDistKey = []
+                if cutoffDistKey is not 'E':
+                    [centerElementType, neighborElementType] = cutoffDistKey.split(self.material.elementTypeDelimiter)
+                    centerSiteElementTypeIndex = elementTypes.index(centerElementType) 
+                    neighborSiteElementTypeIndex = elementTypes.index(neighborElementType)
+                    localBulkSites = self.material.generateSites(range(len(self.material.elementTypes)), 
+                                                                 localSystemSize)
+                    centerSiteIndices = [self.material.generateSystemElementIndex(localSystemSize, np.concatenate((centerUnitCellIndex, np.array([centerSiteElementTypeIndex]), np.array([elementIndex])))) 
+                                         for elementIndex in range(self.material.nElementsPerUnitCell[centerSiteElementTypeIndex])]
+                    neighborSiteIndices = [self.material.generateSystemElementIndex(localSystemSize, np.array([xSize, ySize, zSize, neighborSiteElementTypeIndex, elementIndex])) 
+                                           for xSize in range(localSystemSize[0]) for ySize in range(localSystemSize[1]) 
+                                           for zSize in range(localSystemSize[2]) 
+                                           for elementIndex in range(self.material.nElementsPerUnitCell[neighborSiteElementTypeIndex])]
+    
+                    for cutoffDist in cutoffDistList:
+                        cutoffDistLimits = [cutoffDist-tolDist, cutoffDist+tolDist]
+                        neighborListCutoffDistKey.append(self.hopNeighborSites(localBulkSites, centerSiteIndices, 
+                                                                               neighborSiteIndices, cutoffDistLimits, cutoffDistKey))
+                else:
+                    centerSiteIndices = neighborSiteIndices = np.arange(self.numCells * self.material.totalElementsPerUnitCell)
+                    cutoffDistLimits = [0, cutoffDistList[0]]
+                    neighborListCutoffDistKey.append(self.electrostaticNeighborSites(self.systemSize, self.bulkSites, centerSiteIndices, 
+                                                                                     neighborSiteIndices, cutoffDistLimits, cutoffDistKey))
+                neighborList[cutoffDistKey] = neighborListCutoffDistKey
+            
+            np.save(neighborListFilePath, neighborList)
             self.generateNeighborListReport(outdir, fileName)
-        return neighborList
     
     def generateNeighborListReport(self, outdir, fileName):
         """Generates a neighbor list and prints out a report to the output directory"""
