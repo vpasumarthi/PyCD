@@ -404,7 +404,7 @@ class neighbors(object):
         for cutoffDistKey in self.material.neighborCutoffDist.keys():
             cutoffDistList = self.material.neighborCutoffDist[cutoffDistKey]
             neighborListCutoffDistKey = []
-            if cutoffDistKey is not 'E':
+            if cutoffDistKey is 'E':
                 centerSiteIndices = neighborSiteIndices = np.arange(self.numCells * self.material.totalElementsPerUnitCell)
                 cutoffDistLimits = [0, cutoffDistList[0]]
                 neighborListCutoffDistKey.append(self.electrostaticNeighborSites(self.systemSize, self.bulkSites, centerSiteIndices, 
