@@ -246,8 +246,7 @@ class neighbors(object):
         
         # generate all sites in the system
         elementTypeIndices = range(len(self.material.elementTypes))
-        bulkSites = self.material.generateSites(elementTypeIndices, self.systemSize)
-        self.bulkSites = bulkSites
+        self.bulkSites = deepcopy(self.material.generateSites(elementTypeIndices, self.systemSize))
         
     def generateNeighborsFile(self, materialNeighbors, neighborsFileName, replaceExistingObjectFiles):
         """ """
@@ -349,6 +348,7 @@ class neighbors(object):
             iDisplacements = []
             iNeighborSiteIndexList = []
             iNumNeighbors = 0
+            print centerSiteIndex
             for neighborSiteIndex, neighborCoord in enumerate(neighborSiteCoords):
                 neighborImageCoords = unitcellTranslationalCoords + neighborCoord
                 neighborImageDisplacementVectors = neighborImageCoords - centerCoord
