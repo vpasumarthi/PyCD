@@ -74,13 +74,13 @@ class material(object):
         
         # TODO: introduce a method to view the material using ase atoms or other gui module
         self.name = materialParameters.name
-        self.elementTypes = materialParameters.elementTypes
-        self.speciesToElementTypeMap = materialParameters.speciesToElementTypeMap
+        self.elementTypes = materialParameters.elementTypes[:]
+        self.speciesToElementTypeMap = deepcopy(materialParameters.speciesToElementTypeMap)
         self.unitcellCoords = np.zeros((len(materialParameters.unitcellCoords), 3)) # Initialization
         startIndex = 0
-        length = len(self.elementTypes)
-        nElementsPerUnitCell = np.zeros(length, int)
-        for elementIndex in range(length):
+        self.nElementTypes = len(self.elementTypes)
+        nElementsPerUnitCell = np.zeros(self.nElementTypes, int)
+        for elementIndex in range(self.nElementTypes):
             elementUnitCellCoords = materialParameters.unitcellCoords[materialParameters.elementTypeIndexList==elementIndex]
             nElementsPerUnitCell[elementIndex] = len(elementUnitCellCoords)
             endIndex = startIndex + nElementsPerUnitCell[elementIndex]
@@ -88,10 +88,11 @@ class material(object):
             startIndex = endIndex
         
         self.unitcellCoords *= self.ANG2BOHR # Unit cell coordinates converted to atomic units
-        self.nElementsPerUnitCell = nElementsPerUnitCell
+        self.nElementsPerUnitCell = np.copy(nElementsPerUnitCell)
         self.totalElementsPerUnitCell = nElementsPerUnitCell.sum()
-        self.elementTypeIndexList = materialParameters.elementTypeIndexList.astype(int)
-        self.chargeTypes = materialParameters.chargeTypes
+        # TODO: Element Type order doesn't match with sorted array of unitcellCoords
+        self.elementTypeIndexList = np.sort(materialParameters.elementTypeIndexList.astype(int))
+        self.chargeTypes = deepcopy(materialParameters.chargeTypes)
         
         self.latticeParameters = [0] * len(materialParameters.latticeParameters)
         # lattice parameters being converted to atomic units
@@ -102,13 +103,13 @@ class material(object):
                 self.latticeParameters[index] = materialParameters.latticeParameters[index]
         
         self.vn = materialParameters.vn / self.SEC2AUTIME
-        self.lambdaValues = materialParameters.lambdaValues
+        self.lambdaValues = deepcopy(materialParameters.lambdaValues)
         self.lambdaValues.update((x, [y[index] * self.EV2J * self.J2HARTREE for index in range(len(y))]) for x, y in self.lambdaValues.items())
 
-        self.VAB = materialParameters.VAB
+        self.VAB = deepcopy(materialParameters.VAB)
         self.VAB.update((x, [y[index] * self.EV2J * self.J2HARTREE for index in range(len(y))]) for x, y in self.VAB.items())
         
-        self.neighborCutoffDist = materialParameters.neighborCutoffDist
+        self.neighborCutoffDist = deepcopy(materialParameters.neighborCutoffDist)
         self.neighborCutoffDist.update((x, [y[index] * self.ANG2BOHR for index in range(len(y))]) for x, y in self.neighborCutoffDist.items())
 
         self.neighborCutoffDistTol = materialParameters.neighborCutoffDistTol * self.ANG2BOHR
@@ -120,25 +121,20 @@ class material(object):
         siteList = [self.speciesToElementTypeMap[key] for key in self.speciesToElementTypeMap 
                     if key is not self.emptySpeciesType]
         self.siteList = list(set([item for sublist in siteList for item in sublist]))
+        self.nonEmptySpeciesToElementTypeMap = deepcopy(self.speciesToElementTypeMap)
+        del self.nonEmptySpeciesToElementTypeMap[self.emptySpeciesType]
         
-        nonEmptySpeciesToElementTypeMap = materialParameters.speciesToElementTypeMap.copy()
-        del nonEmptySpeciesToElementTypeMap[self.emptySpeciesType]
-        self.nonEmptySpeciesToElementTypeMap = nonEmptySpeciesToElementTypeMap
-        
-        elementTypeToSpeciesMap = {}
+        self.elementTypeToSpeciesMap = {}
         for elementType in self.elementTypes:
             speciesList = []
-            for speciesTypeKey in nonEmptySpeciesToElementTypeMap.keys():
-                if elementType in nonEmptySpeciesToElementTypeMap[speciesTypeKey]:
+            for speciesTypeKey in self.nonEmptySpeciesToElementTypeMap.keys():
+                if elementType in self.nonEmptySpeciesToElementTypeMap[speciesTypeKey]:
                     speciesList.append(speciesTypeKey)
-            elementTypeToSpeciesMap[elementType] = speciesList
-        self.elementTypeToSpeciesMap = elementTypeToSpeciesMap
-
-        hopElementTypes = {key: [self.elementTypeDelimiter.join(comb) 
-                                 for comb in list(itertools.product(self.speciesToElementTypeMap[key], repeat=2))] 
-                           for key in self.speciesToElementTypeMap if key is not self.emptySpeciesType}
-        self.hopElementTypes = hopElementTypes
+            self.elementTypeToSpeciesMap[elementType] = speciesList[:]
         
+        self.hopElementTypes = {key: [self.elementTypeDelimiter.join(comb) 
+                                      for comb in list(itertools.product(self.speciesToElementTypeMap[key], repeat=2))] 
+                                for key in self.speciesToElementTypeMap if key is not self.emptySpeciesType}
         [a, b, c, alpha, beta, gamma] = self.latticeParameters
         self.latticeMatrix = np.array([[ a                , 0                , 0],
                                        [ b * np.cos(gamma), b * np.sin(gamma), 0],
@@ -178,8 +174,8 @@ class material(object):
                                                                           for elementTypeIndex in elementTypeIndices]))), (nSitesPerUnitCell, 1))
         unitCellElementTypeElementIndexList = np.reshape(np.concatenate(([np.arange(self.nElementsPerUnitCell[elementTypeIndex]) 
                                                                           for elementTypeIndex in elementTypeIndices])), (nSitesPerUnitCell, 1))
-        cellCoordinates = np.zeros((numCells * nSitesPerUnitCell, 3))
-        # quantumIndex = [unitCellIndex, elementTypeIndex, elementIndex]
+        cellCoordinates = np.zeros((numCells * nSitesPerUnitCell, 3)) # Initialization
+        # quantumIndex = [unitCellIndex, elementTypeIndex, elementIndex] # Definition format of Quantum Indices
         quantumIndexList = np.zeros((numCells * nSitesPerUnitCell, 5), dtype=int)
         systemElementIndexList = np.zeros(numCells * nSitesPerUnitCell, dtype=int)
         iUnitCell = 0
@@ -207,7 +203,7 @@ class material(object):
         assert 0 not in systemSize, 'System size should be greater than 0 in any dimension'
         assert quantumIndices[-1] < self.nElementsPerUnitCell[quantumIndices[-2]], 'Element Index exceed number of elements of the specified element type'
         assert all(quantumIndex >= 0 for quantumIndex in quantumIndices), 'Quantum Indices cannot be negative'
-        unitCellIndex = quantumIndices[:3]
+        unitCellIndex = np.copy(quantumIndices[:3])
         [elementTypeIndex, elementIndex] = quantumIndices[-2:]
         systemElementIndex = elementIndex + self.nElementsPerUnitCell[:elementTypeIndex].sum()
         nDim = len(systemSize)
@@ -239,14 +235,14 @@ class neighbors(object):
         self.startTime = datetime.now()
         self.material = material
         self.systemSize = systemSize
-        self.pbc = pbc
+        self.pbc = pbc[:]
         
         # total number of unit cells
         self.numCells = self.systemSize.prod()
         
         # generate all sites in the system
         elementTypeIndices = range(len(self.material.elementTypes))
-        self.bulkSites = deepcopy(self.material.generateSites(elementTypeIndices, self.systemSize))
+        self.bulkSites = self.material.generateSites(elementTypeIndices, self.systemSize)
         
     def generateNeighborsFile(self, materialNeighbors, neighborsFileName, replaceExistingObjectFiles):
         """ """
@@ -336,7 +332,7 @@ class neighbors(object):
         yRange = range(-1, 2) if self.pbc[1] == 1 else [0]
         zRange = range(-1, 2) if self.pbc[2] == 1 else [0]
         latticeMatrix = self.material.latticeMatrix
-        unitcellTranslationalCoords = np.zeros((3**sum(self.pbc), 3))
+        unitcellTranslationalCoords = np.zeros((3**sum(self.pbc), 3)) # Initialization
         index = 0
         for xOffset in xRange:
             for yOffset in yRange:
@@ -348,7 +344,6 @@ class neighbors(object):
             iDisplacements = []
             iNeighborSiteIndexList = []
             iNumNeighbors = 0
-            print centerSiteIndex
             for neighborSiteIndex, neighborCoord in enumerate(neighborSiteCoords):
                 neighborImageCoords = unitcellTranslationalCoords + neighborCoord
                 neighborImageDisplacementVectors = neighborImageCoords - centerCoord
@@ -403,9 +398,9 @@ class neighbors(object):
         
         neighborList = {}
         tolDist = self.material.neighborCutoffDistTol
-        elementTypes = self.material.elementTypes
+        elementTypes = self.material.elementTypes[:]
         for cutoffDistKey in self.material.neighborCutoffDist.keys():
-            cutoffDistList = self.material.neighborCutoffDist[cutoffDistKey]
+            cutoffDistList = self.material.neighborCutoffDist[cutoffDistKey][:]
             neighborListCutoffDistKey = []
             if cutoffDistKey is 'E':
                 centerSiteIndices = neighborSiteIndices = np.arange(self.numCells * self.material.totalElementsPerUnitCell)
@@ -429,10 +424,10 @@ class neighbors(object):
                     cutoffDistLimits = [cutoffDist-tolDist, cutoffDist+tolDist]
                     neighborListCutoffDistKey.append(self.hopNeighborSites(localBulkSites, centerSiteIndices, 
                                                                            neighborSiteIndices, cutoffDistLimits, cutoffDistKey))
-            neighborList[cutoffDistKey] = neighborListCutoffDistKey
-        
+            neighborList[cutoffDistKey] = neighborListCutoffDistKey[:]
         np.save(neighborListFilePath, neighborList)
-        self.generateNeighborListReport(outdir, fileName)
+        if report:
+            self.generateNeighborListReport(outdir, fileName)
     
     def generateNeighborListReport(self, outdir, fileName):
         """Generates a neighbor list and prints out a report to the output directory"""
@@ -473,7 +468,7 @@ class initiateSystem(object):
                     iSpecies -= 1
                 else:
                     iSpeciesSystemElementIndices.append(iSpeciesSystemElementIndex)
-            occupancy[speciesType] = iSpeciesSystemElementIndices
+            occupancy[speciesType] = iSpeciesSystemElementIndices[:]
         return occupancy
     
 class system(object):
@@ -490,10 +485,9 @@ class system(object):
         self.occupancy = OrderedDict(occupancy)
         
         self.pbc = self.neighbors.pbc
-        speciesCount = {key: len(self.occupancy[key]) if key in self.occupancy.keys() else 0 
-                        for key in self.material.nonEmptySpeciesToElementTypeMap.keys() 
-                        if key is not self.material.emptySpeciesType}
-        self.speciesCount = speciesCount
+        self.speciesCount = {key: len(self.occupancy[key]) if key in self.occupancy.keys() else 0 
+                             for key in self.material.nonEmptySpeciesToElementTypeMap.keys() 
+                             if key is not self.material.emptySpeciesType}
         
         # total number of unit cells
         self.systemSize = self.neighbors.systemSize
@@ -509,18 +503,17 @@ class system(object):
     
     def chargeConfig(self, occupancy):
         """Returns charge distribution of the current configuration"""
-        chargeList = self.latticeChargeList
-        chargeTypes = self.material.chargeTypes
-        chargeTypeKeys = chargeTypes.keys()
+        chargeList = np.copy(self.latticeChargeList)
+        chargeTypeKeys = self.material.chargeTypes.keys()
         
         shellChargeTypeKeys = [key for key in chargeTypeKeys if self.material.elementTypeDelimiter in key]
         for chargeTypeKey in shellChargeTypeKeys:
             centerSiteElementType = chargeTypeKey.split(self.material.elementTypeDelimiter)[0]
-            neighborElementTypeSites = self.neighborList[chargeTypeKey]
+            neighborElementTypeSites = self.neighborList[chargeTypeKey][:]
             for speciesType in self.material.elementTypeToSpeciesMap[centerSiteElementType]:
-                centerSiteSystemElementIndices = self.occupancy[speciesType]
+                centerSiteSystemElementIndices = self.occupancy[speciesType][:]
                 for centerSiteSystemElementIndex in centerSiteSystemElementIndices:
-                    for shellIndex, chargeValue in enumerate(chargeTypes[chargeTypeKey]):
+                    for shellIndex, chargeValue in enumerate(self.material.chargeTypes[chargeTypeKey]):
                         neighborOffsetList = neighborElementTypeSites[shellIndex].offsetList
                         neighborElementIndexMap = neighborElementTypeSites[shellIndex].elementIndexMap
                         siteQuantumIndices = self.material.generateQuantumIndices(self.systemSize, centerSiteSystemElementIndex)
@@ -541,14 +534,14 @@ class system(object):
             for speciesType in self.material.elementTypeToSpeciesMap[centerSiteElementType]:
                 assert speciesType in self.occupancy.keys(), ('Invalid definition of charge type \'' + str(chargeKeyType) + '\', \'' + 
                                                               str(speciesType) + '\' species does not exist in this configuration') 
-                centerSiteSystemElementIndices = self.occupancy[speciesType]
-                chargeList[centerSiteSystemElementIndices] = chargeTypes[chargeKeyType]
+                centerSiteSystemElementIndices = self.occupancy[speciesType][:]
+                chargeList[centerSiteSystemElementIndices] = self.material.chargeTypes[chargeKeyType]
         return chargeList
 
     def ESPConfig(self, currentStateChargeConfig):
         # TODO: Statement that caused memory leak
         #ESPConfig = np.multiply(currentStateChargeConfig[:, np.newaxis], self.coeffDistanceList) # SI units
-        ESPConfig = np.copy(self.coeffDistanceList)
+        ESPConfig = deepcopy(self.coeffDistanceList)
         for rowIndex in range(len(currentStateChargeConfig)):
             ESPConfig[rowIndex] *= currentStateChargeConfig[rowIndex]
         return ESPConfig
@@ -578,7 +571,7 @@ class run(object):
         self.material = material
         self.system = system
         
-        self.T = T
+        self.T = T * self.material.K2AUTEMP
         self.nTraj = int(nTraj)
         self.kmcSteps = int(kmcSteps)
         self.stepInterval = int(stepInterval)
@@ -639,7 +632,7 @@ class run(object):
         #print newNeighborSiteElecIntEnergy
         #TODO: Is absolute necessary?
         relativeElecEnergy = (newSiteElecIntEnergy + newNeighborSiteElecIntEnergy 
-                              - oldSiteElecIntEnergy - oldNeighborSiteElecIntEnergy) * self.material.J2EV
+                              - oldSiteElecIntEnergy - oldNeighborSiteElecIntEnergy)
         #print relativeElecEnergy
         '''
         print 'Energies:'
@@ -667,21 +660,21 @@ class run(object):
         """Subroutine to compute the relative electrostatic interaction energies between two states"""
         oldSiteElecIntEnergy = np.sum(currentStateESPConfig[oldSiteSystemElementIndex] * 
                                       currentStateChargeConfig[self.elecNeighborListNeighborSEIndices[oldSiteSystemElementIndex]])
-        #print 'ESP:'
-        #print oldSiteElecIntEnergy
+        print 'ESP:'
+        print oldSiteElecIntEnergy
         oldNeighborSiteElecIntEnergy = np.sum(currentStateESPConfig[newSiteSystemElementIndex] * 
                                               currentStateChargeConfig[self.elecNeighborListNeighborSEIndices[newSiteSystemElementIndex]])
-        #print oldNeighborSiteElecIntEnergy
+        print oldNeighborSiteElecIntEnergy
         newSiteElecIntEnergy = np.sum(newStateESPConfig[newSiteSystemElementIndex] * 
                                       newStateChargeConfig[self.elecNeighborListNeighborSEIndices[newSiteSystemElementIndex]])
-        #print newSiteElecIntEnergy
+        print newSiteElecIntEnergy
         newNeighborSiteElecIntEnergy = np.sum(newStateESPConfig[oldSiteSystemElementIndex] * 
                                               newStateChargeConfig[self.elecNeighborListNeighborSEIndices[oldSiteSystemElementIndex]])
-        #print newNeighborSiteElecIntEnergy
+        print newNeighborSiteElecIntEnergy
         #TODO: Is absolute necessary?
         relativeElecEnergy = abs(newSiteElecIntEnergy + newNeighborSiteElecIntEnergy - 
-                                 oldSiteElecIntEnergy - oldNeighborSiteElecIntEnergy) * self.material.J2EV # electron-volt
-        #print relativeElecEnergy
+                                 oldSiteElecIntEnergy - oldNeighborSiteElecIntEnergy)
+        print relativeElecEnergy
         return relativeElecEnergy
 
     def generateNewStates(self, currentStateOccupancy):
@@ -741,15 +734,13 @@ class run(object):
         returnNewStates.systemElementIndexPairList = systemElementIndexPairList
         return returnNewStates
     
-    #@profile
     def doKMCSteps(self, outdir=None, ESPConfig=1, report=1, randomSeed=1):
         """Subroutine to run the KMC simulation by specified number of steps"""
-        import pdb; pdb.set_trace()
         rnd.seed(randomSeed)
         nTraj = self.nTraj
         kmcSteps = self.kmcSteps
         stepInterval = self.stepInterval
-        currentStateOccupancy = self.system.occupancy
+        currentStateOccupancy = deepcopy(self.system.occupancy)
         numPathStepsPerTraj = int(kmcSteps / stepInterval) + 1
         timeArray = np.zeros(nTraj * numPathStepsPerTraj)
         unwrappedPositionArray = np.zeros(( nTraj * numPathStepsPerTraj, self.totalSpecies, 3))
@@ -773,12 +764,12 @@ class run(object):
             for step in range(kmcSteps):
                 kList = []
                 newStates = self.generateNewStates(currentStateOccupancy)
-                hopElementTypes = newStates.hopElementTypes
-                hopDistTypes = newStates.hopDistTypes
+                hopElementTypes = newStates.hopElementTypes[:]
+                hopDistTypes = newStates.hopDistTypes[:]
                 for newStateIndex in range(len(newStates.hoppingSpeciesIndices)):
                     [oldSiteSystemElementIndex, newSiteSystemElementIndex] = newStates.systemElementIndexPairList[newStateIndex]
                     if shellCharges:
-                        newStateOccupancy = newStates.newStateOccupancyList[newStateIndex]
+                        newStateOccupancy = deepcopy(newStates.newStateOccupancyList[newStateIndex])
                         newStateChargeConfig = self.system.chargeConfig(newStateOccupancy)
                         newStateESPConfig = self.system.ESPConfig(newStateChargeConfig)
                     else:
@@ -817,7 +808,7 @@ class run(object):
                 procIndex = np.where(kCumSum > rand1)[0][0]
                 rand2 = rnd.random()
                 kmcTime -= np.log(rand2) / kTotal
-                currentStateOccupancy = newStates.newStateOccupancyList[procIndex]
+                currentStateOccupancy = deepcopy(newStates.newStateOccupancyList[procIndex])
                 if shellCharges:
                     currentStateChargeConfig = self.system.chargeConfig(currentStateOccupancy)
                     newStateChargeConfig = self.system.chargeConfig(currentStateOccupancy)
@@ -839,16 +830,16 @@ class run(object):
                     
                 # speciesIndex is different from speciesTypeSpeciesIndex
                 speciesIndex = newStates.hoppingSpeciesIndices[procIndex]
-                speciesDisplacementVector = newStates.speciesDisplacementVectorList[procIndex]
+                speciesDisplacementVector = np.copy(newStates.speciesDisplacementVectorList[procIndex])
                 speciesDisplacementVectorList[speciesIndex] += speciesDisplacementVector
                 # TODO: May not be necessary
-                currentStateConfig.chargeList = currentStateChargeConfig
-                currentStateConfig.occupancy = currentStateOccupancy
+                currentStateConfig.chargeList = np.copy(currentStateChargeConfig)
+                currentStateConfig.occupancy = deepcopy(currentStateOccupancy)
                 if step % stepInterval == 0:
                     speciesSystemElementIndices = np.concatenate((currentStateOccupancy.values())).astype(int)
                     timeArray[pathIndex] = kmcTime
-                    wrappedPositionArray[pathIndex] = currentStateConfig.positions[speciesSystemElementIndices]
-                    speciesDisplacementArray[pathIndex] = speciesDisplacementVectorList
+                    wrappedPositionArray[pathIndex] = np.copy(currentStateConfig.positions[speciesSystemElementIndices])
+                    speciesDisplacementArray[pathIndex] = np.copy(speciesDisplacementVectorList)
                     unwrappedPositionArray[pathIndex] = unwrappedPositionArray[pathIndex - 1] + speciesDisplacementVectorList
                     speciesDisplacementVectorList = np.zeros((self.totalSpecies, 3))
                     pathIndex += 1
@@ -872,7 +863,6 @@ class run(object):
             np.save(trajectoryDataFilePath, trajectoryData)
         if report:
             self.generateSimulationLogReport(outdir)
-        
         return trajectoryData
 
     def generateSimulationLogReport(self, outdir):
@@ -896,9 +886,7 @@ class analysis(object):
         
         '''
         self.startTime = datetime.now()
-        
         self.trajectoryData = trajectoryData
-
         self.nStepsMSD = int(nStepsMSD)
         self.nDispMSD = int(nDispMSD)
         self.binsize = binsize
@@ -936,6 +924,7 @@ class analysis(object):
                     timeNdisp2[workingRow, 0] = time[headStart + step + timestep] - time[headStart + step]
                     timeNdisp2[workingRow, 1:] = np.linalg.norm(positionArray[headStart + step + timestep] - 
                                                                 positionArray[headStart + step], axis=1)**2
+        # TODO: Copy necessary?
         timeArrayMSD = timeNdisp2[:, 0]
         minEndTime = np.min(timeArrayMSD[np.arange(self.nStepsMSD * self.nDispMSD - 1, self.nTraj * (self.nStepsMSD * self.nDispMSD), self.nStepsMSD * self.nDispMSD)])  
         bins = np.arange(0, minEndTime, self.binsize)
