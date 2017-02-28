@@ -784,9 +784,13 @@ class run(object):
                         newStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = newStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
                         
                     if ESPConfig:
-                        delG0 = self.ESPRelativeElectrostaticInteractionEnergy(currentStateESPConfig, newStateESPConfig, 
-                                                                               currentStateChargeConfig, newStateChargeConfig, 
-                                                                               oldSiteSystemElementIndex, newSiteSystemElementIndex)
+                        # TODO: Temporarily added to support single electron systems, remove as soon as conventional delG0 statement works fine.
+                        if sum(self.system.speciesCount.values()) == 1:
+                            delG0 = 0
+                        else:
+                            delG0 = self.ESPRelativeElectrostaticInteractionEnergy(currentStateESPConfig, newStateESPConfig, 
+                                                                                   currentStateChargeConfig, newStateChargeConfig, 
+                                                                                   oldSiteSystemElementIndex, newSiteSystemElementIndex)
                     else:
                         delG0 = self.nonESPRelativeElectrostaticInteractionEnergy(currentStateChargeConfig, newStateChargeConfig, 
                                                                                   oldSiteSystemElementIndex, newSiteSystemElementIndex)
@@ -796,7 +800,7 @@ class run(object):
                     lambdaValue = self.lambdaValues[hopElementType][hopDistType]
                     VAB = self.VAB[hopElementType][hopDistType]
                     delGs = ((lambdaValue + delG0) ** 2 / (4 * lambdaValue)) - VAB
-                    kList.append(self.vn * np.exp(-delGs / (self.material.KB * self.T)))
+                    kList.append(self.vn * np.exp(-delGs / self.T))
                     if not shellCharges:
                         newStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = newStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
                         if ESPConfig:
@@ -880,12 +884,13 @@ class run(object):
 
 class analysis(object):
     """Post-simulation analysis methods"""
-    def __init__(self, trajectoryData, nStepsMSD, nDispMSD, binsize, reprTime = 'ns', 
+    def __init__(self, material, trajectoryData, nStepsMSD, nDispMSD, binsize, reprTime = 'ns', 
                  reprDist = 'Angstrom'):
         '''
         
         '''
         self.startTime = datetime.now()
+        self.material = material
         self.trajectoryData = trajectoryData
         self.nStepsMSD = int(nStepsMSD)
         self.nDispMSD = int(nDispMSD)
@@ -895,14 +900,13 @@ class analysis(object):
         self.systemSize = self.trajectoryData.systemSize
         self.pbc = self.trajectoryData.pbc
         
-        self.timeConversion = 1E+09 if reprTime is 'ns' else 1E+00 
-        self.distConversion = 1E-10 if reprDist is 'm' else 1E+00
-        
+        self.timeConversion = (1E+09 if reprTime is 'ns' else 1E+00) / self.material.SEC2AUTIME 
+        self.distConversion = (1E-10 if reprDist is 'm' else 1E+00) / self.material.ANG2BOHR        
         self.nTraj = self.trajectoryData.nTraj
         self.kmcSteps = self.trajectoryData.kmcSteps
         self.stepInterval = self.trajectoryData.stepInterval
         self.EcutoffDist = self.trajectoryData.EcutoffDist
-
+        
     def computeMSD(self, timeArray, unwrappedPositionArray, outdir=None, report=1):
         """Returns the squared displacement of the trajectories"""
         time = timeArray * self.timeConversion
