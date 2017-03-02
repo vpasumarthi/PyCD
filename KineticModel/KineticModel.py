@@ -293,7 +293,8 @@ class neighbors(object):
                     iNumNeighbors += 1
             #print centerSiteIndex, cutoffDistKey, len(iDisplacements)#, sorted(iDisplacements)
             neighborSystemElementIndices.append(np.array(neighborSiteSystemElementIndexList[iNeighborSiteIndexList]))
-            offsetList.append(centerSiteQuantumIndexList[centerSiteIndex, :3] - neighborSiteQuantumIndexList[iNeighborSiteIndexList, :3])
+            # TODO: Here is where I have made a change to the polarity of the offset.
+            offsetList.append(neighborSiteQuantumIndexList[iNeighborSiteIndexList, :3] - centerSiteQuantumIndexList[centerSiteIndex, :3])
             neighborElementIndexList.append(neighborSiteQuantumIndexList[iNeighborSiteIndexList, 4])
             displacementVectorList.append(np.asarray(iDisplacementVectors))
             displacementList.append(iDisplacements)
@@ -331,7 +332,7 @@ class neighbors(object):
         
         neighborSystemElementIndices = []
         # TODO: Is offset necessary for electrostatic neighbor sites?
-        offsetList = []
+        #offsetList = []
         neighborElementTypeIndexList = []
         neighborElementIndexList = []
         numNeighbors = []
@@ -366,7 +367,7 @@ class neighbors(object):
                     iNumNeighbors += 1
             #print centerSiteIndex, cutoffDistKey, len(iDisplacements)#, sorted(iDisplacements)
             neighborSystemElementIndices.append(np.array(neighborSiteSystemElementIndexList[iNeighborSiteIndexList]))
-            offsetList.append(centerSiteQuantumIndexList[centerSiteIndex, :3] - neighborSiteQuantumIndexList[iNeighborSiteIndexList, :3])
+            #offsetList.append(centerSiteQuantumIndexList[centerSiteIndex, :3] - neighborSiteQuantumIndexList[iNeighborSiteIndexList, :3])
             neighborElementTypeIndexList.append(neighborSiteQuantumIndexList[iNeighborSiteIndexList, 3])
             neighborElementIndexList.append(neighborSiteQuantumIndexList[iNeighborSiteIndexList, 4])
             displacementVectorList.append(np.asarray(iDisplacementVectors))
@@ -377,7 +378,7 @@ class neighbors(object):
         neighborSystemElementIndices = np.asarray(neighborSystemElementIndices)
         systemElementIndexMap = np.empty(2, dtype=object)
         systemElementIndexMap[:] = [centerSiteSystemElementIndexList, neighborSystemElementIndices]
-        offsetList = np.asarray(offsetList)
+        #offsetList = np.asarray(offsetList)
         neighborElementIndexList = np.asarray(neighborElementIndexList)
         neighborElementTypeIndexList = np.asarray(neighborElementTypeIndexList)
         elementTypeIndexMap = np.empty(2, dtype=object)
@@ -388,7 +389,7 @@ class neighbors(object):
 
         returnNeighbors = returnValues()
         returnNeighbors.systemElementIndexMap = systemElementIndexMap
-        returnNeighbors.offsetList = offsetList
+        #returnNeighbors.offsetList = offsetList
         returnNeighbors.elementIndexMap = elementIndexMap
         returnNeighbors.numNeighbors = numNeighbors
         # TODO: Avoid conversion and initialize the object beforehand
