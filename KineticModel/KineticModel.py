@@ -331,8 +331,6 @@ class neighbors(object):
         centerSiteQuantumIndexList = bulkSites.quantumIndexList[centerSiteIndices]
         
         neighborSystemElementIndices = []
-        # TODO: Is offset necessary for electrostatic neighbor sites?
-        #offsetList = []
         neighborElementTypeIndexList = []
         neighborElementIndexList = []
         numNeighbors = []
@@ -367,7 +365,6 @@ class neighbors(object):
                     iNumNeighbors += 1
             #print centerSiteIndex, cutoffDistKey, len(iDisplacements)#, sorted(iDisplacements)
             neighborSystemElementIndices.append(np.array(neighborSiteSystemElementIndexList[iNeighborSiteIndexList]))
-            #offsetList.append(centerSiteQuantumIndexList[centerSiteIndex, :3] - neighborSiteQuantumIndexList[iNeighborSiteIndexList, :3])
             neighborElementTypeIndexList.append(neighborSiteQuantumIndexList[iNeighborSiteIndexList, 3])
             neighborElementIndexList.append(neighborSiteQuantumIndexList[iNeighborSiteIndexList, 4])
             displacementVectorList.append(np.asarray(iDisplacementVectors))
@@ -378,7 +375,6 @@ class neighbors(object):
         neighborSystemElementIndices = np.asarray(neighborSystemElementIndices)
         systemElementIndexMap = np.empty(2, dtype=object)
         systemElementIndexMap[:] = [centerSiteSystemElementIndexList, neighborSystemElementIndices]
-        #offsetList = np.asarray(offsetList)
         neighborElementIndexList = np.asarray(neighborElementIndexList)
         neighborElementTypeIndexList = np.asarray(neighborElementTypeIndexList)
         elementTypeIndexMap = np.empty(2, dtype=object)
@@ -389,7 +385,6 @@ class neighbors(object):
 
         returnNeighbors = returnValues()
         returnNeighbors.systemElementIndexMap = systemElementIndexMap
-        #returnNeighbors.offsetList = offsetList
         returnNeighbors.elementIndexMap = elementIndexMap
         returnNeighbors.numNeighbors = numNeighbors
         # TODO: Avoid conversion and initialize the object beforehand
@@ -703,7 +698,6 @@ class run(object):
                         speciesSiteElementIndex = speciesQuantumIndices[4]
                         numNeighbors = len(neighborElementIndexMap[1][speciesSiteElementIndex])
                         for neighborIndex in range(numNeighbors):
-                            #import pdb; pdb.set_trace()
                             neighborUnitCellIndices = [sum(x) for x in zip(speciesQuantumIndices[:3], neighborOffsetList[speciesSiteElementIndex][neighborIndex])]
                             # TODO: Try to avoid the loop and conditions
                             for index, neighborUnitCellIndex in enumerate(neighborUnitCellIndices):
