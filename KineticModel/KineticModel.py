@@ -219,6 +219,7 @@ class material(object):
     def generateQuantumIndices(self, systemSize, systemElementIndex):
         """Returns the quantum indices of the element"""
         assert systemElementIndex >= 0, 'System Element Index cannot be negative'
+        assert systemElementIndex < systemSize.prod() * self.totalElementsPerUnitCell, 'System Element Index out of range for the given system size'
         quantumIndices = [0] * 5
         totalElementsPerUnitCellCumSum = self.nElementsPerUnitCell.cumsum()
         unitcellElementIndex = systemElementIndex % self.totalElementsPerUnitCell
@@ -555,6 +556,7 @@ class system(object):
     def config(self, occupancy):
         """Generates the configuration array for the system"""
         elementTypeIndices = range(len(self.material.elementTypes))
+        # TODO: Are these (systemSites, positions, systemElementIndexList) any necessary?
         systemSites = self.material.generateSites(elementTypeIndices, self.systemSize)
         positions = systemSites.cellCoordinates
         systemElementIndexList = systemSites.systemElementIndexList
@@ -668,6 +670,16 @@ class run(object):
                                       newStateChargeConfig[self.elecNeighborListNeighborSEIndices[newSiteSystemElementIndex]])
         newNeighborSiteElecIntEnergy = np.sum(newStateESPConfig[oldSiteSystemElementIndex] * 
                                               newStateChargeConfig[self.elecNeighborListNeighborSEIndices[oldSiteSystemElementIndex]])
+        '''
+        oldSiteElecIntEnergy = np.sum(currentStateESPConfig[oldSiteSystemElementIndex] * 
+                                      currentStateChargeConfig[oldSiteSystemElementIndex])
+        oldNeighborSiteElecIntEnergy = np.sum(currentStateESPConfig[newSiteSystemElementIndex] * 
+                                              currentStateChargeConfig[newSiteSystemElementIndex])
+        newSiteElecIntEnergy = np.sum(newStateESPConfig[newSiteSystemElementIndex] * 
+                                      newStateChargeConfig[newSiteSystemElementIndex])
+        newNeighborSiteElecIntEnergy = np.sum(newStateESPConfig[oldSiteSystemElementIndex] * 
+                                              newStateChargeConfig[oldSiteSystemElementIndex])
+        '''
         relativeElecEnergy = (newSiteElecIntEnergy + newNeighborSiteElecIntEnergy - 
                               oldSiteElecIntEnergy - oldNeighborSiteElecIntEnergy)
         return relativeElecEnergy
@@ -731,6 +743,7 @@ class run(object):
     
     def doKMCSteps(self, outdir=None, ESPConfig=1, report=1, randomSeed=1):
         """Subroutine to run the KMC simulation by specified number of steps"""
+        #import pdb; pdb.set_trace()
         rnd.seed(randomSeed)
         nTraj = self.nTraj
         kmcSteps = self.kmcSteps
@@ -748,7 +761,7 @@ class run(object):
         newStateChargeConfig = np.copy(currentStateChargeConfig)
         if ESPConfig:
             currentStateESPConfig = self.system.ESPConfig(currentStateChargeConfig)
-            newStateESPConfig = np.copy(currentStateESPConfig)
+            newStateESPConfig = deepcopy(currentStateESPConfig)
         shellChargeTypeKeys = [key for key in self.material.chargeTypes.keys() if self.material.elementTypeDelimiter in key]
         shellCharges = 0 if shellChargeTypeKeys==[] else 1
         assert 'E' in self.material.neighborCutoffDist.keys(), 'Please specify the cutoff distance for electrostatic interactions'
@@ -761,6 +774,8 @@ class run(object):
                 newStates = self.generateNewStates(currentStateOccupancy)
                 hopElementTypes = newStates.hopElementTypes[:]
                 hopDistTypes = newStates.hopDistTypes[:]
+                delG0List = [0] * len(newStates.hoppingSpeciesIndices)
+                delGsList = [0] * len(newStates.hoppingSpeciesIndices)
                 for newStateIndex in range(len(newStates.hoppingSpeciesIndices)):
                     [oldSiteSystemElementIndex, newSiteSystemElementIndex] = newStates.systemElementIndexPairList[newStateIndex]
                     if shellCharges:
@@ -782,6 +797,7 @@ class run(object):
                         delG0 = self.ESPRelativeElectrostaticInteractionEnergy(currentStateESPConfig, newStateESPConfig, 
                                                                                currentStateChargeConfig, newStateChargeConfig, 
                                                                                oldSiteSystemElementIndex, newSiteSystemElementIndex)
+                        delG0List[newStateIndex] = delG0
                     else:
                         delG0 = self.nonESPRelativeElectrostaticInteractionEnergy(currentStateChargeConfig, newStateChargeConfig, 
                                                                                   oldSiteSystemElementIndex, newSiteSystemElementIndex)
@@ -791,21 +807,21 @@ class run(object):
                     lambdaValue = self.lambdaValues[hopElementType][hopDistType]
                     VAB = self.VAB[hopElementType][hopDistType]
                     delGs = ((lambdaValue + delG0) ** 2 / (4 * lambdaValue)) - VAB
-                    print "delG0, delGs"
-                    print delG0
-                    print delGs
+                    delGsList[newStateIndex] = delGs
                     kList.append(self.vn * np.exp(-delGs / self.T))
                     if not shellCharges:
                         newStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = newStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
                         if ESPConfig:
-                            newStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = currentStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]]
+                            newStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = deepcopy(currentStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]])
                         
                 kTotal = np.sum(kList)
-                print "kList, kTotal"
+                print "delG0List, delGsList, kList, kTotal"
+                print delG0List
+                print delGsList
                 print kList
                 print kTotal
                 print "\n"
-                import pdb; pdb.set_trace()
+                #import pdb; pdb.set_trace()
                 if kTotal == 0:
                     import pdb; pdb.set_trace()
                 kCumSum = (kList / kTotal).cumsum()
@@ -829,7 +845,7 @@ class run(object):
                         #currentStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] *= multFactor[:, np.newaxis]
                         currentStateESPConfig[oldSiteSystemElementIndex] *= multFactor[0]
                         currentStateESPConfig[newSiteSystemElementIndex] *= multFactor[1]
-                        newStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = currentStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]]
+                        newStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = deepcopy(currentStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]])
                     currentStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = currentStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
                     newStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = newStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
                     
@@ -848,7 +864,7 @@ class run(object):
                     unwrappedPositionArray[pathIndex] = unwrappedPositionArray[pathIndex - 1] + speciesDisplacementVectorList
                     speciesDisplacementVectorList = np.zeros((self.totalSpecies, 3))
                     pathIndex += 1
-        
+        import pdb; pdb.set_trace()
         trajectoryData = returnValues()
         trajectoryData.speciesCount = self.system.speciesCount
         trajectoryData.nTraj = nTraj
