@@ -815,12 +815,12 @@ class run(object):
                             newStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = deepcopy(currentStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]])
                         
                 kTotal = np.sum(kList)
-                print "delG0List, delGsList, kList, kTotal"
-                print delG0List
-                print delGsList
-                print kList
-                print kTotal
-                print "\n"
+                #print "delG0List, delGsList, kList, kTotal"
+                #print delG0List
+                #print delGsList
+                #print kList
+                #print kTotal
+                #print "\n"
                 #import pdb; pdb.set_trace()
                 if kTotal == 0:
                     import pdb; pdb.set_trace()
@@ -864,7 +864,7 @@ class run(object):
                     unwrappedPositionArray[pathIndex] = unwrappedPositionArray[pathIndex - 1] + speciesDisplacementVectorList
                     speciesDisplacementVectorList = np.zeros((self.totalSpecies, 3))
                     pathIndex += 1
-        import pdb; pdb.set_trace()
+        #import pdb; pdb.set_trace()
         trajectoryData = returnValues()
         trajectoryData.speciesCount = self.system.speciesCount
         trajectoryData.nTraj = nTraj
