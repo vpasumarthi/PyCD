@@ -346,7 +346,7 @@ class neighbors(object):
         numNeighbors = np.array([], dtype=int)
         displacementVectorList = np.empty(len(centerSiteCoords), dtype=object)
         displacementList = np.empty(len(centerSiteCoords), dtype=object)
-        import pdb; pdb.set_trace()
+        
         xRange = range(-1, 2) if self.pbc[0] == 1 else [0]
         yRange = range(-1, 2) if self.pbc[1] == 1 else [0]
         zRange = range(-1, 2) if self.pbc[2] == 1 else [0]
@@ -547,8 +547,6 @@ class system(object):
         return chargeList
 
     def ESPConfig(self, currentStateChargeConfig):
-        # TODO: Statement that caused memory leak
-        #ESPConfig = np.multiply(currentStateChargeConfig[:, np.newaxis], self.coeffDistanceList) # SI units
         ESPConfig = deepcopy(self.coeffDistanceList)
         for rowIndex in range(len(currentStateChargeConfig)):
             ESPConfig[rowIndex] *= currentStateChargeConfig[rowIndex]
@@ -557,7 +555,6 @@ class system(object):
     def config(self, occupancy):
         """Generates the configuration array for the system"""
         elementTypeIndices = range(len(self.material.elementTypes))
-        # TODO: Are these (systemSites, positions, systemElementIndexList) any necessary?
         systemSites = self.material.generateSites(elementTypeIndices, self.systemSize)
         positions = systemSites.cellCoordinates
         systemElementIndexList = systemSites.systemElementIndexList
@@ -651,16 +648,6 @@ class run(object):
                                       newStateChargeConfig[self.elecNeighborListNeighborSEIndices[newSiteSystemElementIndex]])
         newNeighborSiteElecIntEnergy = np.sum(newStateESPConfig[oldSiteSystemElementIndex] * 
                                               newStateChargeConfig[self.elecNeighborListNeighborSEIndices[oldSiteSystemElementIndex]])
-        '''
-        oldSiteElecIntEnergy = np.sum(currentStateESPConfig[oldSiteSystemElementIndex] * 
-                                      currentStateChargeConfig[oldSiteSystemElementIndex])
-        oldNeighborSiteElecIntEnergy = np.sum(currentStateESPConfig[newSiteSystemElementIndex] * 
-                                              currentStateChargeConfig[newSiteSystemElementIndex])
-        newSiteElecIntEnergy = np.sum(newStateESPConfig[newSiteSystemElementIndex] * 
-                                      newStateChargeConfig[newSiteSystemElementIndex])
-        newNeighborSiteElecIntEnergy = np.sum(newStateESPConfig[oldSiteSystemElementIndex] * 
-                                              newStateChargeConfig[oldSiteSystemElementIndex])
-        '''
         relativeElecEnergy = (newSiteElecIntEnergy + newNeighborSiteElecIntEnergy - 
                               oldSiteElecIntEnergy - oldNeighborSiteElecIntEnergy)
         return relativeElecEnergy
@@ -675,7 +662,7 @@ class run(object):
         speciesDisplacementVectorList = []
         systemElementIndexPairList = []
         newStateOccupancy = deepcopy(currentStateOccupancy)
-                                
+        
         cumulativeSpeciesSiteSystemElementIndices = [systemElementIndex for speciesSiteSystemElementIndices in currentStateOccupancy.values() 
                                                  for systemElementIndex in speciesSiteSystemElementIndices]
         for speciesType in currentStateOccupancy.keys():
@@ -692,7 +679,6 @@ class run(object):
                         numNeighbors = len(neighborElementIndexMap[1][speciesSiteElementIndex])
                         for neighborIndex in range(numNeighbors):
                             neighborUnitCellIndices = [sum(x) for x in zip(speciesQuantumIndices[:3], neighborOffsetList[speciesSiteElementIndex][neighborIndex])]
-                            # TODO: Try to avoid the loop and conditions
                             for index, neighborUnitCellIndex in enumerate(neighborUnitCellIndices):
                                 if neighborUnitCellIndex > self.systemSize[index] - 1:
                                     neighborUnitCellIndices[index] -= self.systemSize[index]
@@ -724,7 +710,6 @@ class run(object):
     
     def doKMCSteps(self, outdir=None, ESPConfig=1, report=1, randomSeed=1):
         """Subroutine to run the KMC simulation by specified number of steps"""
-        #import pdb; pdb.set_trace()
         rnd.seed(randomSeed)
         nTraj = self.nTraj
         kmcSteps = self.kmcSteps
@@ -734,7 +719,6 @@ class run(object):
         timeArray = np.zeros(nTraj * numPathStepsPerTraj)
         unwrappedPositionArray = np.zeros(( nTraj * numPathStepsPerTraj, self.totalSpecies, 3))
         wrappedPositionArray = np.zeros(( nTraj * numPathStepsPerTraj, self.totalSpecies, 3))
-        # TODO: speciesDisplacementArray = [speciesIndex, displacement]
         speciesDisplacementArray = np.zeros(( nTraj * numPathStepsPerTraj, self.totalSpecies, 3))
         pathIndex = 0
         currentStateConfig = self.system.config(currentStateOccupancy)
@@ -765,11 +749,8 @@ class run(object):
                         newStateESPConfig = self.system.ESPConfig(newStateChargeConfig)
                     else:
                         if ESPConfig:
-                            # TODO: Is it necessary to compute multFactor every time?
                             multFactor = np.true_divide(currentStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]], 
                                                         currentStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]])
-                            # TODO: Statement that didn't work with larger cutoffs
-                            #newStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] *= multFactor[:, np.newaxis]
                             newStateESPConfig[oldSiteSystemElementIndex] *= multFactor[0]
                             newStateESPConfig[newSiteSystemElementIndex] *= multFactor[1]
                         newStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = newStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
@@ -819,22 +800,15 @@ class run(object):
                 else:
                     [oldSiteSystemElementIndex, newSiteSystemElementIndex] = newStates.systemElementIndexPairList[procIndex]
                     if ESPConfig:
-                        # TODO: Is it necessary to compute multFactor every time?
-                        multFactor = np.true_divide(currentStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]], 
-                                                    currentStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]])
-                        # TODO: Statement that didn't work with larger cutoffs, essentially ndarray dtype=object
-                        #currentStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] *= multFactor[:, np.newaxis]
                         currentStateESPConfig[oldSiteSystemElementIndex] *= multFactor[0]
                         currentStateESPConfig[newSiteSystemElementIndex] *= multFactor[1]
                         newStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = deepcopy(currentStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]])
                     currentStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = currentStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
                     newStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = newStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
                     
-                # speciesIndex is different from speciesTypeSpeciesIndex
                 speciesIndex = newStates.hoppingSpeciesIndices[procIndex]
                 speciesDisplacementVector = np.copy(newStates.speciesDisplacementVectorList[procIndex])
                 speciesDisplacementVectorList[speciesIndex] += speciesDisplacementVector
-                # TODO: May not be necessary
                 currentStateConfig.chargeList = np.copy(currentStateChargeConfig)
                 currentStateConfig.occupancy = deepcopy(currentStateOccupancy)
                 if step % stepInterval == 0:
@@ -845,7 +819,7 @@ class run(object):
                     unwrappedPositionArray[pathIndex] = unwrappedPositionArray[pathIndex - 1] + speciesDisplacementVectorList
                     speciesDisplacementVectorList = np.zeros((self.totalSpecies, 3))
                     pathIndex += 1
-        #import pdb; pdb.set_trace()
+        
         trajectoryData = returnValues()
         trajectoryData.speciesCount = self.system.speciesCount
         trajectoryData.nTraj = nTraj
@@ -924,7 +898,6 @@ class analysis(object):
                     timeNdisp2[workingRow, 0] = time[headStart + step + timestep] - time[headStart + step]
                     timeNdisp2[workingRow, 1:] = np.linalg.norm(positionArray[headStart + step + timestep] - 
                                                                 positionArray[headStart + step], axis=1)**2
-        # TODO: Copy necessary?
         timeArrayMSD = timeNdisp2[:, 0]
         minEndTime = np.min(timeArrayMSD[np.arange(self.nStepsMSD * self.nDispMSD - 1, self.nTraj * (self.nStepsMSD * self.nDispMSD), self.nStepsMSD * self.nDispMSD)])  
         bins = np.arange(0, minEndTime, self.binsize)
