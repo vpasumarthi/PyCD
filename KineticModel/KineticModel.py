@@ -288,16 +288,16 @@ class neighbors(object):
         centerSiteSystemElementIndexList = bulkSites.systemElementIndexList[centerSiteIndices]
         centerSiteQuantumIndexList = bulkSites.quantumIndexList[centerSiteIndices]
         
-        neighborSystemElementIndices = []
-        offsetList = [] 
-        neighborElementIndexList = []
-        numNeighbors = []
-        displacementVectorList = []
-        displacementList = []
+        neighborSystemElementIndices = np.empty(len(centerSiteCoords), dtype=object)
+        offsetList = np.empty(len(centerSiteCoords), dtype=object)
+        neighborElementIndexList = np.empty(len(centerSiteCoords), dtype=object)
+        numNeighbors = np.array([], dtype=int)
+        displacementVectorList = np.empty(len(centerSiteCoords), dtype=object)
+        displacementList = np.empty(len(centerSiteCoords), dtype=object)
         
         for centerSiteIndex, centerCoord in enumerate(centerSiteCoords):
             iDisplacementVectors = []
-            iDisplacements = []
+            iDisplacements = np.array([])
             iNeighborSiteIndexList = []
             iNumNeighbors = 0
             for neighborSiteIndex, neighborCoord in enumerate(neighborSiteCoords):
@@ -306,35 +306,27 @@ class neighbors(object):
                 if cutoffDistLimits[0] < displacement <= cutoffDistLimits[1]:
                     iNeighborSiteIndexList.append(neighborSiteIndex)
                     iDisplacementVectors.append(neighborImageDisplacementVectors[0])
-                    iDisplacements.append(displacement)
+                    iDisplacements = np.append(iDisplacements, displacement)
                     iNumNeighbors += 1
-            #print centerSiteIndex, cutoffDistKey, len(iDisplacements)#, sorted(iDisplacements)
-            neighborSystemElementIndices.append(np.array(neighborSiteSystemElementIndexList[iNeighborSiteIndexList]))
-            # TODO: Here is where I have made a change to the polarity of the offset.
-            offsetList.append(neighborSiteQuantumIndexList[iNeighborSiteIndexList, :3] - centerSiteQuantumIndexList[centerSiteIndex, :3])
-            neighborElementIndexList.append(neighborSiteQuantumIndexList[iNeighborSiteIndexList, 4])
-            displacementVectorList.append(np.asarray(iDisplacementVectors))
-            displacementList.append(iDisplacements)
-            numNeighbors.append(iNumNeighbors)
+            neighborSystemElementIndices[centerSiteIndex] = neighborSiteSystemElementIndexList[iNeighborSiteIndexList]
+            offsetList[centerSiteIndex] = neighborSiteQuantumIndexList[iNeighborSiteIndexList, :3] - centerSiteQuantumIndexList[centerSiteIndex, :3]
+            neighborElementIndexList[centerSiteIndex] = neighborSiteQuantumIndexList[iNeighborSiteIndexList, 4]
+            numNeighbors = np.append(numNeighbors, iNumNeighbors)
+            displacementVectorList[centerSiteIndex] = np.asarray(iDisplacementVectors)
+            displacementList[centerSiteIndex] = iDisplacements
             
-        # TODO: Avoid conversion and initialize the object beforehand
-        neighborSystemElementIndices = np.asarray(neighborSystemElementIndices)
         systemElementIndexMap = np.empty(2, dtype=object)
         systemElementIndexMap[:] = [centerSiteSystemElementIndexList, neighborSystemElementIndices]
-        offsetList = np.asarray(offsetList)
-        neighborElementIndexList = np.asarray(neighborElementIndexList)
         elementIndexMap = np.empty(2, dtype=object)
         elementIndexMap[:] = [centerSiteQuantumIndexList[:,4], neighborElementIndexList]
-        numNeighbors = np.asarray(numNeighbors, int)
-
+        
         returnNeighbors = returnValues()
         returnNeighbors.systemElementIndexMap = systemElementIndexMap
         returnNeighbors.offsetList = offsetList
         returnNeighbors.elementIndexMap = elementIndexMap
         returnNeighbors.numNeighbors = numNeighbors
-        # TODO: Avoid conversion and initialize the object beforehand
-        returnNeighbors.displacementVectorList = np.asarray(displacementVectorList)
-        returnNeighbors.displacementList = np.asarray(displacementList)
+        returnNeighbors.displacementVectorList = displacementVectorList
+        returnNeighbors.displacementList = displacementList
         return returnNeighbors
     
     def electrostaticNeighborSites(self, systemSize, bulkSites, centerSiteIndices, neighborSiteIndices, cutoffDistLimits, cutoffDistKey):
@@ -347,27 +339,27 @@ class neighbors(object):
         centerSiteSystemElementIndexList = bulkSites.systemElementIndexList[centerSiteIndices]
         centerSiteQuantumIndexList = bulkSites.quantumIndexList[centerSiteIndices]
         
-        neighborSystemElementIndices = []
-        neighborElementTypeIndexList = []
-        neighborElementIndexList = []
-        numNeighbors = []
-        displacementVectorList = []
-        displacementList = []
-        
+        neighborSystemElementIndices = np.empty(len(centerSiteCoords), dtype=object)
+        neighborElementTypeIndexList = np.empty(len(centerSiteCoords), dtype=object)
+        offsetList = np.empty(len(centerSiteCoords), dtype=object)
+        neighborElementIndexList = np.empty(len(centerSiteCoords), dtype=object)
+        numNeighbors = np.array([], dtype=int)
+        displacementVectorList = np.empty(len(centerSiteCoords), dtype=object)
+        displacementList = np.empty(len(centerSiteCoords), dtype=object)
+        import pdb; pdb.set_trace()
         xRange = range(-1, 2) if self.pbc[0] == 1 else [0]
         yRange = range(-1, 2) if self.pbc[1] == 1 else [0]
         zRange = range(-1, 2) if self.pbc[2] == 1 else [0]
-        latticeMatrix = self.material.latticeMatrix
         unitcellTranslationalCoords = np.zeros((3**sum(self.pbc), 3)) # Initialization
         index = 0
         for xOffset in xRange:
             for yOffset in yRange:
                 for zOffset in zRange:
-                    unitcellTranslationalCoords[index] = np.dot(np.multiply(np.array([xOffset, yOffset, zOffset]), self.systemSize), latticeMatrix)
+                    unitcellTranslationalCoords[index] = np.dot(np.multiply(np.array([xOffset, yOffset, zOffset]), self.systemSize), self.material.latticeMatrix)
                     index += 1
         for centerSiteIndex, centerCoord in enumerate(centerSiteCoords):
             iDisplacementVectors = []
-            iDisplacements = []
+            iDisplacements = np.array([])
             iNeighborSiteIndexList = []
             iNumNeighbors = 0
             for neighborSiteIndex, neighborCoord in enumerate(neighborSiteCoords):
@@ -378,35 +370,28 @@ class neighbors(object):
                 if cutoffDistLimits[0] < displacement <= cutoffDistLimits[1]:
                     iNeighborSiteIndexList.append(neighborSiteIndex)
                     iDisplacementVectors.append(neighborImageDisplacementVectors[imageIndex])
-                    iDisplacements.append(displacement)
+                    iDisplacements = np.append(iDisplacements, displacement)
                     iNumNeighbors += 1
-            #print centerSiteIndex, cutoffDistKey, len(iDisplacements)#, sorted(iDisplacements)
-            neighborSystemElementIndices.append(np.array(neighborSiteSystemElementIndexList[iNeighborSiteIndexList]))
-            neighborElementTypeIndexList.append(neighborSiteQuantumIndexList[iNeighborSiteIndexList, 3])
-            neighborElementIndexList.append(neighborSiteQuantumIndexList[iNeighborSiteIndexList, 4])
-            displacementVectorList.append(np.asarray(iDisplacementVectors))
-            displacementList.append(np.asarray(iDisplacements))
-            numNeighbors.append(iNumNeighbors)
+            neighborSystemElementIndices[centerSiteIndex] = np.array(neighborSiteSystemElementIndexList[iNeighborSiteIndexList])
+            neighborElementTypeIndexList[centerSiteIndex] = neighborSiteQuantumIndexList[iNeighborSiteIndexList, 3]
+            neighborElementIndexList[centerSiteIndex] = neighborSiteQuantumIndexList[iNeighborSiteIndexList, 4]
+            numNeighbors = np.append(numNeighbors, iNumNeighbors)
+            displacementVectorList[centerSiteIndex] = np.asarray(iDisplacementVectors)
+            displacementList[centerSiteIndex] = iDisplacements
             
-        # TODO: Avoid conversion and initialize the object beforehand
-        neighborSystemElementIndices = np.asarray(neighborSystemElementIndices)
         systemElementIndexMap = np.empty(2, dtype=object)
         systemElementIndexMap[:] = [centerSiteSystemElementIndexList, neighborSystemElementIndices]
-        neighborElementIndexList = np.asarray(neighborElementIndexList)
-        neighborElementTypeIndexList = np.asarray(neighborElementTypeIndexList)
         elementTypeIndexMap = np.empty(2, dtype=object)
         elementTypeIndexMap[:] = [centerSiteQuantumIndexList[:,3], neighborElementTypeIndexList]
         elementIndexMap = np.empty(2, dtype=object)
         elementIndexMap[:] = [centerSiteQuantumIndexList[:,4], neighborElementIndexList]
-        numNeighbors = np.asarray(numNeighbors, int)
-
+        
         returnNeighbors = returnValues()
         returnNeighbors.systemElementIndexMap = systemElementIndexMap
         returnNeighbors.elementIndexMap = elementIndexMap
         returnNeighbors.numNeighbors = numNeighbors
-        # TODO: Avoid conversion and initialize the object beforehand
-        returnNeighbors.displacementVectorList = np.asarray(displacementVectorList)
-        returnNeighbors.displacementList = np.asarray(displacementList)
+        returnNeighbors.displacementVectorList = displacementVectorList
+        returnNeighbors.displacementList = displacementList
         return returnNeighbors
 
     def generateNeighborList(self, cutE, replaceExistingNeighborList, outdir=None, report=1, localSystemSize=np.array([3, 3, 3]), 
@@ -426,7 +411,6 @@ class neighbors(object):
             cutoffDistList = self.material.neighborCutoffDist[cutoffDistKey][:]
             neighborListCutoffDistKey = []
             if cutoffDistKey is 'E':
-                import pdb; pdb.set_trace()
                 centerSiteIndices = neighborSiteIndices = np.arange(self.numCells * self.material.totalElementsPerUnitCell)
                 cutoffDistLimits = [0, cutoffDistList[0]]
                 neighborListCutoffDistKey.append(self.electrostaticNeighborSites(self.systemSize, self.bulkSites, centerSiteIndices, 
@@ -740,7 +724,7 @@ class run(object):
     
     def doKMCSteps(self, outdir=None, ESPConfig=1, report=1, randomSeed=1):
         """Subroutine to run the KMC simulation by specified number of steps"""
-        import pdb; pdb.set_trace()
+        #import pdb; pdb.set_trace()
         rnd.seed(randomSeed)
         nTraj = self.nTraj
         kmcSteps = self.kmcSteps
