@@ -62,8 +62,6 @@ class material(object):
         self.HARTREE = self.HBAR**2 / (self.EMASS * self.BOHR**2) # Hartree in J
         self.AUTIME = self.HBAR / self.HARTREE # sec
         self.AUTEMPERATURE = self.HARTREE / self.KB # K
-        # TODO: Is AUPOTENTIAL necessary?
-        #self.AUPOTENTIAL = self.HARTREE / self.ECHARGE # V
         
         # CONVERSIONS
         self.EV2J = self.ECHARGE
@@ -90,7 +88,6 @@ class material(object):
         self.unitcellCoords *= self.ANG2BOHR # Unit cell coordinates converted to atomic units
         self.nElementsPerUnitCell = np.copy(nElementsPerUnitCell)
         self.totalElementsPerUnitCell = nElementsPerUnitCell.sum()
-        # TODO: Element Type order doesn't match with sorted array of unitcellCoords
         self.elementTypeIndexList = np.sort(materialParameters.elementTypeIndexList.astype(int))
         self.chargeTypes = deepcopy(materialParameters.chargeTypes)
         
@@ -197,47 +194,6 @@ class material(object):
         returnSites.systemElementIndexList = systemElementIndexList
         return returnSites
     
-    # TODO: Does this method belong here as systemSize is not part of material class definition
-    def generateSystemElementIndex(self, systemSize, quantumIndices):
-        """Returns the systemElementIndex of the element"""
-        assert 0 not in systemSize, 'System size should be greater than 0 in any dimension'
-        assert quantumIndices[-1] < self.nElementsPerUnitCell[quantumIndices[-2]], 'Element Index exceed number of elements of the specified element type'
-        assert all(quantumIndex >= 0 for quantumIndex in quantumIndices), 'Quantum Indices cannot be negative'
-        assert np.all(quantumIndices[:3] < systemSize), 'Unit cell indices exceed the given system size'
-        unitCellIndex = np.copy(quantumIndices[:3])
-        [elementTypeIndex, elementIndex] = quantumIndices[-2:]
-        systemElementIndex = elementIndex + self.nElementsPerUnitCell[:elementTypeIndex].sum()
-        nDim = len(systemSize)
-        for index in range(nDim):
-            if index == 0:
-                systemElementIndex += self.totalElementsPerUnitCell * unitCellIndex[nDim-1-index]
-            else:
-                systemElementIndex += self.totalElementsPerUnitCell * unitCellIndex[nDim-1-index] * systemSize[-index:].prod()
-        return systemElementIndex
-    
-    # TODO: Does this method belong here as systemSize is not part of material class definition
-    def generateQuantumIndices(self, systemSize, systemElementIndex):
-        """Returns the quantum indices of the element"""
-        assert systemElementIndex >= 0, 'System Element Index cannot be negative'
-        assert systemElementIndex < systemSize.prod() * self.totalElementsPerUnitCell, 'System Element Index out of range for the given system size'
-        quantumIndices = [0] * 5
-        totalElementsPerUnitCellCumSum = self.nElementsPerUnitCell.cumsum()
-        unitcellElementIndex = systemElementIndex % self.totalElementsPerUnitCell
-        quantumIndices[3] = np.where(totalElementsPerUnitCellCumSum >= (unitcellElementIndex + 1))[0][0]
-        quantumIndices[4] = unitcellElementIndex - self.nElementsPerUnitCell[:quantumIndices[3]].sum()
-        nFilledUnitCells = (systemElementIndex - unitcellElementIndex) / self.totalElementsPerUnitCell
-        for index in range(3):
-            quantumIndices[index] = nFilledUnitCells / systemSize[index+1:].prod()
-            nFilledUnitCells -= quantumIndices[index] * systemSize[index+1:].prod()
-        return quantumIndices
-    
-    def computeCoordinates(self, systemSize, systemElementIndex):
-        """Returns the coordinates in atomic units of the given system element index for a given system size"""
-        quantumIndices = self.generateQuantumIndices(systemSize, systemElementIndex)
-        unitcellTranslationalCoords = np.dot(quantumIndices[:3], self.latticeMatrix)
-        coordinates = unitcellTranslationalCoords + self.unitcellCoords[quantumIndices[4] + self.nElementsPerUnitCell[:quantumIndices[3]].sum()]
-        return coordinates
-    
 class neighbors(object):
     """Returns the neighbor list file"""
     
@@ -253,7 +209,7 @@ class neighbors(object):
         # generate all sites in the system
         elementTypeIndices = range(len(self.material.elementTypes))
         self.bulkSites = self.material.generateSites(elementTypeIndices, self.systemSize)
-        
+
     def generateNeighborsFile(self, materialNeighbors, neighborsFileName, replaceExistingObjectFiles):
         """ """
         if not os.path.isfile(neighborsFileName) or replaceExistingObjectFiles:
@@ -261,7 +217,67 @@ class neighbors(object):
             pickle.dump(materialNeighbors, file_Neighbors)
             file_Neighbors.close()
         pass
+
+    def generateSystemElementIndex(self, systemSize, quantumIndices):
+        """Returns the systemElementIndex of the element"""
+        assert 0 not in systemSize, 'System size should be greater than 0 in any dimension'
+        assert quantumIndices[-1] < self.material.nElementsPerUnitCell[quantumIndices[-2]], 'Element Index exceed number of elements of the specified element type'
+        assert all(quantumIndex >= 0 for quantumIndex in quantumIndices), 'Quantum Indices cannot be negative'
+        assert np.all(quantumIndices[:3] < systemSize), 'Unit cell indices exceed the given system size'
+        unitCellIndex = np.copy(quantumIndices[:3])
+        [elementTypeIndex, elementIndex] = quantumIndices[-2:]
+        systemElementIndex = elementIndex + self.material.nElementsPerUnitCell[:elementTypeIndex].sum()
+        nDim = len(systemSize)
+        for index in range(nDim):
+            if index == 0:
+                systemElementIndex += self.material.totalElementsPerUnitCell * unitCellIndex[nDim-1-index]
+            else:
+                systemElementIndex += self.material.totalElementsPerUnitCell * unitCellIndex[nDim-1-index] * systemSize[-index:].prod()
+        return systemElementIndex
+    
+    def generateQuantumIndices(self, systemSize, systemElementIndex):
+        """Returns the quantum indices of the element"""
+        assert systemElementIndex >= 0, 'System Element Index cannot be negative'
+        assert systemElementIndex < systemSize.prod() * self.material.totalElementsPerUnitCell, 'System Element Index out of range for the given system size'
+        quantumIndices = [0] * 5
+        totalElementsPerUnitCellCumSum = self.material.nElementsPerUnitCell.cumsum()
+        unitcellElementIndex = systemElementIndex % self.material.totalElementsPerUnitCell
+        quantumIndices[3] = np.where(totalElementsPerUnitCellCumSum >= (unitcellElementIndex + 1))[0][0]
+        quantumIndices[4] = unitcellElementIndex - self.material.nElementsPerUnitCell[:quantumIndices[3]].sum()
+        nFilledUnitCells = (systemElementIndex - unitcellElementIndex) / self.material.totalElementsPerUnitCell
+        for index in range(3):
+            quantumIndices[index] = nFilledUnitCells / systemSize[index+1:].prod()
+            nFilledUnitCells -= quantumIndices[index] * systemSize[index+1:].prod()
+        return quantumIndices
+    
+    def computeCoordinates(self, systemSize, systemElementIndex):
+        """Returns the coordinates in atomic units of the given system element index for a given system size"""
+        quantumIndices = self.generateQuantumIndices(systemSize, systemElementIndex)
+        unitcellTranslationalCoords = np.dot(quantumIndices[:3], self.material.latticeMatrix)
+        coordinates = unitcellTranslationalCoords + self.material.unitcellCoords[quantumIndices[4] + self.material.nElementsPerUnitCell[:quantumIndices[3]].sum()]
+        return coordinates
+    
+    def computeDistance(self, systemSize, systemElementIndex1, systemElementIndex2):
+        """Returns the distance in atomic units between the two system element indices for a given system size"""
+        centerCoord = self.computeCoordinates(systemSize, systemElementIndex1)
+        neighborCoord = self.computeCoordinates(systemSize, systemElementIndex2)
         
+        xRange = range(-1, 2) if self.pbc[0] == 1 else [0]
+        yRange = range(-1, 2) if self.pbc[1] == 1 else [0]
+        zRange = range(-1, 2) if self.pbc[2] == 1 else [0]
+        unitcellTranslationalCoords = np.zeros((3**sum(self.pbc), 3)) # Initialization
+        index = 0
+        for xOffset in xRange:
+            for yOffset in yRange:
+                for zOffset in zRange:
+                    unitcellTranslationalCoords[index] = np.dot(np.multiply(np.array([xOffset, yOffset, zOffset]), systemSize), self.material.latticeMatrix)
+                    index += 1
+        neighborImageCoords = unitcellTranslationalCoords + neighborCoord
+        neighborImageDisplacementVectors = neighborImageCoords - centerCoord
+        neighborImageDisplacements = np.linalg.norm(neighborImageDisplacementVectors, axis=1)
+        displacement = np.min(neighborImageDisplacements)
+        return displacement
+
     def hopNeighborSites(self, bulkSites, centerSiteIndices, neighborSiteIndices, cutoffDistLimits, cutoffDistKey):
         """Returns systemElementIndexMap and distances between center sites and its neighbor sites within cutoff 
         distance"""
@@ -410,6 +426,7 @@ class neighbors(object):
             cutoffDistList = self.material.neighborCutoffDist[cutoffDistKey][:]
             neighborListCutoffDistKey = []
             if cutoffDistKey is 'E':
+                import pdb; pdb.set_trace()
                 centerSiteIndices = neighborSiteIndices = np.arange(self.numCells * self.material.totalElementsPerUnitCell)
                 cutoffDistLimits = [0, cutoffDistList[0]]
                 neighborListCutoffDistKey.append(self.electrostaticNeighborSites(self.systemSize, self.bulkSites, centerSiteIndices, 
@@ -420,9 +437,9 @@ class neighbors(object):
                 neighborSiteElementTypeIndex = elementTypes.index(neighborElementType)
                 localBulkSites = self.material.generateSites(range(len(self.material.elementTypes)), 
                                                              localSystemSize)
-                centerSiteIndices = [self.material.generateSystemElementIndex(localSystemSize, np.concatenate((centerUnitCellIndex, np.array([centerSiteElementTypeIndex]), np.array([elementIndex])))) 
+                centerSiteIndices = [self.generateSystemElementIndex(localSystemSize, np.concatenate((centerUnitCellIndex, np.array([centerSiteElementTypeIndex]), np.array([elementIndex])))) 
                                      for elementIndex in range(self.material.nElementsPerUnitCell[centerSiteElementTypeIndex])]
-                neighborSiteIndices = [self.material.generateSystemElementIndex(localSystemSize, np.array([xSize, ySize, zSize, neighborSiteElementTypeIndex, elementIndex])) 
+                neighborSiteIndices = [self.generateSystemElementIndex(localSystemSize, np.array([xSize, ySize, zSize, neighborSiteElementTypeIndex, elementIndex])) 
                                        for xSize in range(localSystemSize[0]) for ySize in range(localSystemSize[1]) 
                                        for zSize in range(localSystemSize[2]) 
                                        for elementIndex in range(self.material.nElementsPerUnitCell[neighborSiteElementTypeIndex])]
@@ -470,7 +487,7 @@ class initiateSystem(object):
                                                 rnd.randint(0, self.systemSize[2]-1), 
                                                 siteElementTypeIndex, 
                                                 rnd.randint(0, self.material.nElementsPerUnitCell[siteElementTypeIndex]-1)])
-                iSpeciesSystemElementIndex = self.material.generateSystemElementIndex(self.systemSize, iSpeciesSiteIndices)
+                iSpeciesSystemElementIndex = self.neighbors.generateSystemElementIndex(self.systemSize, iSpeciesSiteIndices)
                 if iSpeciesSystemElementIndex in iSpeciesSystemElementIndices:
                     iSpecies -= 1
                 else:
@@ -523,7 +540,7 @@ class system(object):
                     for shellIndex, chargeValue in enumerate(self.material.chargeTypes[chargeTypeKey]):
                         neighborOffsetList = neighborElementTypeSites[shellIndex].offsetList
                         neighborElementIndexMap = neighborElementTypeSites[shellIndex].elementIndexMap
-                        siteQuantumIndices = self.material.generateQuantumIndices(self.systemSize, centerSiteSystemElementIndex)
+                        siteQuantumIndices = self.neighbors.generateQuantumIndices(self.systemSize, centerSiteSystemElementIndex)
                         siteElementIndex = siteQuantumIndices[4]
                         neighborSystemElementIndices = []
                         for neighborIndex in range(len(neighborElementIndexMap[1][siteElementIndex])):
@@ -531,7 +548,7 @@ class system(object):
                             neighborElementTypeIndex = [self.material.elementTypes.index(chargeTypeKey.split(self.material.elementTypeDelimiter)[1])]
                             neighborElementIndex = [neighborElementIndexMap[1][siteElementIndex][neighborIndex]]
                             neighborQuantumIndices = neighborUnitCellIndex + neighborElementTypeIndex + neighborElementIndex
-                            neighborSystemElementIndex = self.material.generateSystemElementIndex(self.systemSize, neighborQuantumIndices)
+                            neighborSystemElementIndex = self.neighbors.generateSystemElementIndex(self.systemSize, neighborQuantumIndices)
                             neighborSystemElementIndices.append(neighborSystemElementIndex)
                         chargeList[neighborSystemElementIndices] = chargeValue
 
@@ -569,35 +586,15 @@ class system(object):
         returnConfig.occupancy = occupancy
         return returnConfig
 
-    def computeDistance(self, systemSize, systemElementIndex1, systemElementIndex2):
-        """Returns the distance in atomic units between the two system element indices for a given system size"""
-        centerCoord = self.material.computeCoordinates(systemSize, systemElementIndex1)
-        neighborCoord = self.material.computeCoordinates(systemSize, systemElementIndex2)
-        
-        xRange = range(-1, 2) if self.pbc[0] == 1 else [0]
-        yRange = range(-1, 2) if self.pbc[1] == 1 else [0]
-        zRange = range(-1, 2) if self.pbc[2] == 1 else [0]
-        unitcellTranslationalCoords = np.zeros((3**sum(self.pbc), 3)) # Initialization
-        index = 0
-        for xOffset in xRange:
-            for yOffset in yRange:
-                for zOffset in zRange:
-                    unitcellTranslationalCoords[index] = np.dot(np.multiply(np.array([xOffset, yOffset, zOffset]), systemSize), self.material.latticeMatrix)
-                    index += 1
-        neighborImageCoords = unitcellTranslationalCoords + neighborCoord
-        neighborImageDisplacementVectors = neighborImageCoords - centerCoord
-        neighborImageDisplacements = np.linalg.norm(neighborImageDisplacementVectors, axis=1)
-        displacement = np.min(neighborImageDisplacements)
-        return displacement
-
 class run(object):
     """defines the subroutines for running Kinetic Monte Carlo and computing electrostatic 
     interaction energies"""
-    def __init__(self, material, system, T, nTraj, kmcSteps, stepInterval, gui):
+    def __init__(self, material, neighbors, system, T, nTraj, kmcSteps, stepInterval, gui):
         """Returns the PBC condition of the system"""
         self.startTime = datetime.now()
         
         self.material = material
+        self.neighbors = neighbors
         self.system = system
         
         self.T = T * self.material.K2AUTEMP
@@ -706,7 +703,7 @@ class run(object):
                         neighborElementIndexMap = neighborList[hopElementType][hopDistTypeIndex].elementIndexMap
                         speciesSiteToNeighborDisplacementVectorList = neighborList[hopElementType][hopDistTypeIndex].displacementVectorList
                         
-                        speciesQuantumIndices = self.material.generateQuantumIndices(self.systemSize, speciesSiteSystemElementIndex)
+                        speciesQuantumIndices = self.neighbors.generateQuantumIndices(self.systemSize, speciesSiteSystemElementIndex)
                         speciesSiteElementIndex = speciesQuantumIndices[4]
                         numNeighbors = len(neighborElementIndexMap[1][speciesSiteElementIndex])
                         for neighborIndex in range(numNeighbors):
@@ -720,7 +717,7 @@ class run(object):
                             neighborElementTypeIndex = [self.material.elementTypes.index(hopElementType.split(self.material.elementTypeDelimiter)[1])]
                             neighborElementIndex = [neighborElementIndexMap[1][speciesSiteElementIndex][neighborIndex]]
                             neighborQuantumIndices = neighborUnitCellIndices + neighborElementTypeIndex + neighborElementIndex
-                            neighborSystemElementIndex = self.material.generateSystemElementIndex(self.systemSize, neighborQuantumIndices)
+                            neighborSystemElementIndex = self.neighbors.generateSystemElementIndex(self.systemSize, neighborQuantumIndices)
                             if neighborSystemElementIndex not in cumulativeSpeciesSiteSystemElementIndices:
                                 newStateOccupancy[speciesType][speciesTypeSpeciesIndex] = neighborSystemElementIndex
                                 newStateOccupancyList.append(deepcopy(newStateOccupancy))
@@ -743,7 +740,7 @@ class run(object):
     
     def doKMCSteps(self, outdir=None, ESPConfig=1, report=1, randomSeed=1):
         """Subroutine to run the KMC simulation by specified number of steps"""
-        #import pdb; pdb.set_trace()
+        import pdb; pdb.set_trace()
         rnd.seed(randomSeed)
         nTraj = self.nTraj
         kmcSteps = self.kmcSteps
