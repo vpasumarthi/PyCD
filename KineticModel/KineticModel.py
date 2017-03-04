@@ -107,8 +107,8 @@ class material(object):
         self.VAB.update((x, [y[index] * self.EV2J * self.J2HARTREE for index in range(len(y))]) for x, y in self.VAB.items())
         
         self.neighborCutoffDist = deepcopy(materialParameters.neighborCutoffDist)
-        self.neighborCutoffDist.update((x, [y[index] * self.ANG2BOHR for index in range(len(y))]) for x, y in self.neighborCutoffDist.items())
-
+        self.neighborCutoffDist.update((x, [(y[index] * self.ANG2BOHR) if y[index] else None for index in range(len(y))]) for x, y in self.neighborCutoffDist.items())
+        
         self.neighborCutoffDistTol = materialParameters.neighborCutoffDistTol * self.ANG2BOHR
         self.elementTypeDelimiter = materialParameters.elementTypeDelimiter
         self.emptySpeciesType = materialParameters.emptySpeciesType
@@ -341,7 +341,6 @@ class neighbors(object):
         
         neighborSystemElementIndices = np.empty(len(centerSiteCoords), dtype=object)
         neighborElementTypeIndexList = np.empty(len(centerSiteCoords), dtype=object)
-        offsetList = np.empty(len(centerSiteCoords), dtype=object)
         neighborElementIndexList = np.empty(len(centerSiteCoords), dtype=object)
         numNeighbors = np.array([], dtype=int)
         displacementVectorList = np.empty(len(centerSiteCoords), dtype=object)
@@ -388,12 +387,132 @@ class neighbors(object):
         
         returnNeighbors = returnValues()
         returnNeighbors.systemElementIndexMap = systemElementIndexMap
+        returnNeighbors.elementTypeIndexMap = elementTypeIndexMap
         returnNeighbors.elementIndexMap = elementIndexMap
         returnNeighbors.numNeighbors = numNeighbors
         returnNeighbors.displacementVectorList = displacementVectorList
         returnNeighbors.displacementList = displacementList
         return returnNeighbors
 
+    def extractElectrostaticNeighborSites(self, parentElecNeighborList, cutE):
+        """Returns systemElementIndexMap and distances between center sites and its 
+        neighbor sites within cutoff distance"""
+        parentSystemElementIndexMap = parentElecNeighborList.systemElementIndexMap
+        parentElementTypeIndexMap = parentElecNeighborList.elementTypeIndexMap
+        parentElementIndexMap = parentElecNeighborList.elementIndexMap
+        parentDisplacementVectorList = parentElecNeighborList.displacementVectorList
+        parentDisplacementList = parentElecNeighborList.displacementList
+        
+        numSystemElements = len(parentNeighborList['E'][0].numNeighbors)
+        extractIndices = np.where(0 < parentNeighborList['E'][0].displacementList <= cutE * self.material.ANG2BOHR)
+        
+        neighborSystemElementIndices = np.empty(numSystemElements, dtype=object)
+        neighborElementTypeIndexList = np.empty(numSystemElements, dtype=object)
+        neighborElementIndexList = np.empty(numSystemElements, dtype=object)
+        numNeighbors = np.asarray(collections.Counter(extractIndices[0].values()), dtype=int)
+        displacementVectorList = np.empty(numSystemElements, dtype=object)
+        displacementList = np.empty(numSystemElements, dtype=object)
+        
+        startIndex = 0
+        for centerSiteIndex in range(numSystemElements):
+            endIndex = startIndex + numNeighbors[centerSiteIndex]
+            iNeighborSiteIndexList = extractIndices[1][startIndex:endIndex]
+            neighborSystemElementIndices[centerSiteIndex] = np.asarray(parentSystemElementIndexMap[1][centerSiteIndex][iNeighborSiteIndexList])
+            neighborElementTypeIndexList[centerSiteIndex] = np.asarray(parentElementTypeIndexMap[1][centerSiteIndex][iNeighborSiteIndexList])
+            neighborElementIndexList[centerSiteIndex] = np.asarray(parentElementIndexMap[1][centerSiteIndex][iNeighborSiteIndexList])
+            displacementVectorList[centerSiteIndex] = np.asarray(parentDisplacementVectorList[centerSiteIndex][iNeighborSiteIndexList])
+            displacementList[centerSiteIndex] = np.asarray(parentDisplacementList[centerSiteIndex][iNeighborSiteIndexList])
+            startIndex = endIndex
+            
+        systemElementIndexMap = np.empty(2, dtype=object)
+        systemElementIndexMap[:] = [parentSystemElementIndexMap[0], neighborSystemElementIndices]
+        elementTypeIndexMap = np.empty(2, dtype=object)
+        elementTypeIndexMap[:] = [parentElementTypeIndexMap[0], neighborElementTypeIndexList]
+        elementIndexMap = np.empty(2, dtype=object)
+        elementIndexMap[:] = [parentElementIndexMap[0], neighborElementIndexList]
+        
+        returnNeighbors = returnValues()
+        returnNeighbors.systemElementIndexMap = systemElementIndexMap
+        returnNeighbors.elementTypeIndexMap = elementTypeIndexMap
+        returnNeighbors.elementIndexMap = elementIndexMap
+        returnNeighbors.numNeighbors = numNeighbors
+        returnNeighbors.displacementVectorList = displacementVectorList
+        returnNeighbors.displacementList = displacementList
+        return returnNeighbors
+
+    def generateNeighborList(self, parent, extract=0, cutE=None, replaceExistingNeighborList=0, outdir=None, report=1, localSystemSize=np.array([3, 3, 3]), 
+                                 centerUnitCellIndex=np.array([1, 1, 1])):
+        """Adds the neighbor list to the system object and returns the neighbor list"""
+        if parent == 1:
+            assert not extract, 'Use extract flag only to generate child neighbor list'
+            assert not cutE, 'Do not provide a cutoff while generating parent neighbor list'
+        else:
+            assert cutE, 'Provide a desired cutoff distance in angstroms to generate child neighbor list'
+        fileName = ('SystemSize=' + str(self.systemSize).replace(' ', ',')) if parent else ('E' + ('%2.1f' % cutE)) 
+        neighborListFileName = ('Parent' if parent else '') + 'NeighborList_' + fileName + '.npy'
+        neighborListFilePath = outdir + '/' + neighborListFileName
+        assert (not os.path.isfile(neighborListFilePath) or replaceExistingNeighborList), 'Requested neighbor list file already exists in the destination folder.'
+        assert outdir, 'Please provide the destination path where neighbor list needs to be saved'
+        assert all(size >= 3 for size in localSystemSize), 'Local system size in all dimensions should always be greater than or equal to 3'
+        
+        if extract:
+            parentNeighborListFileName = 'ParentNeighborList_SystemSize=' + str(self.systemSize).replace(' ', ',') + '.npy'
+            parentNeighborListFilePath = outdir + '/' + parentNeighborListFileName
+            parentNeighborList = np.load(parentNeighborListFilePath)[()]
+            neighborList = {}
+            for cutoffDistKey in parentNeighborList.keys():
+                if cutoffDistKey is 'E':
+                    neighborList[cutoffDistKey] = self.extractElectrostaticNeighborSites(parentNeighborList['E'][0], cutE)
+                else:
+                    neighborList[cutoffDistKey] = deepcopy(parentNeighborList[cutoffDistKey])
+        else:
+            neighborList = {}
+            tolDist = self.material.neighborCutoffDistTol
+            elementTypes = self.material.elementTypes[:]
+            for cutoffDistKey in self.material.neighborCutoffDist.keys():
+                cutoffDistList = self.material.neighborCutoffDist[cutoffDistKey][:]
+                neighborListCutoffDistKey = []
+                if cutoffDistKey is 'E':
+                    centerSiteIndices = neighborSiteIndices = np.arange(self.numCells * self.material.totalElementsPerUnitCell)
+                    cutoffDistLimits = [0, np.inf if parent else cutoffDistList[0]]
+                    neighborListCutoffDistKey.append(self.electrostaticNeighborSites(self.systemSize, self.bulkSites, centerSiteIndices, 
+                                                                                     neighborSiteIndices, cutoffDistLimits, cutoffDistKey))
+                else:
+                    [centerElementType, neighborElementType] = cutoffDistKey.split(self.material.elementTypeDelimiter)
+                    centerSiteElementTypeIndex = elementTypes.index(centerElementType) 
+                    neighborSiteElementTypeIndex = elementTypes.index(neighborElementType)
+                    localBulkSites = self.material.generateSites(range(len(self.material.elementTypes)), 
+                                                                 localSystemSize)
+                    centerSiteIndices = [self.generateSystemElementIndex(localSystemSize, np.concatenate((centerUnitCellIndex, np.array([centerSiteElementTypeIndex]), np.array([elementIndex])))) 
+                                         for elementIndex in range(self.material.nElementsPerUnitCell[centerSiteElementTypeIndex])]
+                    neighborSiteIndices = [self.generateSystemElementIndex(localSystemSize, np.array([xSize, ySize, zSize, neighborSiteElementTypeIndex, elementIndex])) 
+                                           for xSize in range(localSystemSize[0]) for ySize in range(localSystemSize[1]) 
+                                           for zSize in range(localSystemSize[2]) 
+                                           for elementIndex in range(self.material.nElementsPerUnitCell[neighborSiteElementTypeIndex])]
+    
+                    for cutoffDist in cutoffDistList:
+                        cutoffDistLimits = [cutoffDist-tolDist, cutoffDist+tolDist]
+                        neighborListCutoffDistKey.append(self.hopNeighborSites(localBulkSites, centerSiteIndices, 
+                                                                               neighborSiteIndices, cutoffDistLimits, cutoffDistKey))
+                neighborList[cutoffDistKey] = neighborListCutoffDistKey[:]
+        np.save(neighborListFilePath, neighborList)
+        if report:
+            self.generateNeighborListReport(parent, outdir, fileName)
+
+    def generateNeighborListReport(self, parent, outdir, fileName):
+        """Generates a neighbor list and prints out a report to the output directory"""
+        neighborListLogName = ('Parent' if parent else '') + 'NeighborList_' + fileName + '.log' 
+        neighborListLogPath = outdir + '/' + neighborListLogName
+        report = open(neighborListLogPath, 'w')
+        endTime = datetime.now()
+        timeElapsed = endTime - self.startTime
+        report.write('Time elapsed: ' + ('%2d days, ' % timeElapsed.days if timeElapsed.days else '') +
+                     ('%2d hours' % ((timeElapsed.seconds // 3600) % 24)) + 
+                     (', %2d minutes' % ((timeElapsed.seconds // 60) % 60)) + 
+                     (', %2d seconds' % (timeElapsed.seconds % 60)))
+        report.close()
+    
+    '''    
     def generateNeighborList(self, cutE, replaceExistingNeighborList, outdir=None, report=1, localSystemSize=np.array([3, 3, 3]), 
                              centerUnitCellIndex=np.array([1, 1, 1])):
         """Adds the neighbor list to the system object and returns the neighbor list"""
@@ -449,7 +568,8 @@ class neighbors(object):
                      (', %2d minutes' % ((timeElapsed.seconds // 60) % 60)) + 
                      (', %2d seconds' % (timeElapsed.seconds % 60)))
         report.close()
-    
+    '''
+
 class initiateSystem(object):
     """ """
     def __init__(self, material, neighbors):
