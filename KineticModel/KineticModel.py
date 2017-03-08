@@ -220,9 +220,11 @@ class neighbors(object):
 
     def generateSystemElementIndex(self, systemSize, quantumIndices):
         """Returns the systemElementIndex of the element"""
-        assert 0 not in systemSize, 'System size should be greater than 0 in any dimension'
-        assert quantumIndices[-1] < self.material.nElementsPerUnitCell[quantumIndices[-2]], 'Element Index exceed number of elements of the specified element type'
+        assert type(systemSize) is np.ndarray, 'Please input systemSize as a numpy array'
+        assert type(quantumIndices) is np.ndarray, 'Please input quantumIndices as a numpy array'
+        assert np.all(systemSize > 0), 'System size should be positive in all dimensions'
         assert all(quantumIndex >= 0 for quantumIndex in quantumIndices), 'Quantum Indices cannot be negative'
+        assert quantumIndices[-1] < self.material.nElementsPerUnitCell[quantumIndices[-2]], 'Element Index exceed number of elements of the specified element type'
         assert np.all(quantumIndices[:3] < systemSize), 'Unit cell indices exceed the given system size'
         unitCellIndex = np.copy(quantumIndices[:3])
         [elementTypeIndex, elementIndex] = quantumIndices[-2:]
@@ -240,9 +242,8 @@ class neighbors(object):
         assert systemElementIndex >= 0, 'System Element Index cannot be negative'
         assert systemElementIndex < systemSize.prod() * self.material.totalElementsPerUnitCell, 'System Element Index out of range for the given system size'
         quantumIndices = [0] * 5
-        totalElementsPerUnitCellCumSum = self.material.nElementsPerUnitCell.cumsum()
         unitcellElementIndex = systemElementIndex % self.material.totalElementsPerUnitCell
-        quantumIndices[3] = np.where(totalElementsPerUnitCellCumSum >= (unitcellElementIndex + 1))[0][0]
+        quantumIndices[3] = np.where(self.material.nElementsPerUnitCell.cumsum() >= (unitcellElementIndex + 1))[0][0]
         quantumIndices[4] = unitcellElementIndex - self.material.nElementsPerUnitCell[:quantumIndices[3]].sum()
         nFilledUnitCells = (systemElementIndex - unitcellElementIndex) / self.material.totalElementsPerUnitCell
         for index in range(3):
@@ -413,7 +414,6 @@ class neighbors(object):
         
         startIndex = 0
         for centerSiteIndex in range(numSystemElements):
-            centerSiteIndex
             extractIndices = np.where((0 < parentElecNeighborList.displacementList[centerSiteIndex]) & (parentElecNeighborList.displacementList[centerSiteIndex] <= cutE * self.material.ANG2BOHR))
             numNeighbors[centerSiteIndex] = len(extractIndices[0])
             endIndex = startIndex + numNeighbors[centerSiteIndex]
@@ -574,9 +574,9 @@ class system(object):
         self.numCells = self.systemSize.prod()
         
         # generate lattice charge list
-        unitCellChargeList = np.array([self.material.chargeTypes[self.material.elementTypes[elementTypeIndex]] 
+        unitcellChargeList = np.array([self.material.chargeTypes[self.material.elementTypes[elementTypeIndex]] 
                                        for elementTypeIndex in self.material.elementTypeIndexList])
-        self.latticeChargeList = np.tile(unitCellChargeList, self.numCells)
+        self.latticeChargeList = np.tile(unitcellChargeList, self.numCells)
         
         # Coefficient Distance List
         self.coeffDistanceList = 1 / (self.material.dielectricConstant * self.neighborList['E'][0].displacementList)
@@ -714,14 +714,19 @@ class run(object):
         """Subroutine to compute the relative electrostatic interaction energies between two states"""
         oldSiteElecIntEnergy = np.sum(currentStateESPConfig[oldSiteSystemElementIndex] * 
                                       currentStateChargeConfig[self.elecNeighborListNeighborSEIndices[oldSiteSystemElementIndex]])
+        #print oldSiteElecIntEnergy
         oldNeighborSiteElecIntEnergy = np.sum(currentStateESPConfig[newSiteSystemElementIndex] * 
                                               currentStateChargeConfig[self.elecNeighborListNeighborSEIndices[newSiteSystemElementIndex]])
+        #print oldNeighborSiteElecIntEnergy
         newSiteElecIntEnergy = np.sum(newStateESPConfig[newSiteSystemElementIndex] * 
                                       newStateChargeConfig[self.elecNeighborListNeighborSEIndices[newSiteSystemElementIndex]])
+        #print newSiteElecIntEnergy
         newNeighborSiteElecIntEnergy = np.sum(newStateESPConfig[oldSiteSystemElementIndex] * 
                                               newStateChargeConfig[self.elecNeighborListNeighborSEIndices[oldSiteSystemElementIndex]])
+        #print newNeighborSiteElecIntEnergy
         relativeElecEnergy = (newSiteElecIntEnergy + newNeighborSiteElecIntEnergy - 
                               oldSiteElecIntEnergy - oldNeighborSiteElecIntEnergy)
+        #print relativeElecEnergy
         return relativeElecEnergy
 
     def generateNewStates(self, currentStateOccupancy):
@@ -758,7 +763,7 @@ class run(object):
                                     neighborUnitCellIndices[index] += self.systemSize[index]
                             neighborElementTypeIndex = [self.material.elementTypes.index(hopElementType.split(self.material.elementTypeDelimiter)[1])]
                             neighborElementIndex = [neighborElementIndexMap[1][speciesSiteElementIndex][neighborIndex]]
-                            neighborQuantumIndices = neighborUnitCellIndices + neighborElementTypeIndex + neighborElementIndex
+                            neighborQuantumIndices = np.asarray(neighborUnitCellIndices + neighborElementTypeIndex + neighborElementIndex)
                             neighborSystemElementIndex = self.neighbors.generateSystemElementIndex(self.systemSize, neighborQuantumIndices)
                             if neighborSystemElementIndex not in cumulativeSpeciesSiteSystemElementIndices:
                                 newStateOccupancy[speciesType][speciesTypeSpeciesIndex] = neighborSystemElementIndex
@@ -782,6 +787,7 @@ class run(object):
     
     def doKMCSteps(self, outdir=None, ESPConfig=1, report=1, randomSeed=1):
         """Subroutine to run the KMC simulation by specified number of steps"""
+        #import pdb; pdb.set_trace()
         rnd.seed(randomSeed)
         nTraj = self.nTraj
         kmcSteps = self.kmcSteps
@@ -806,6 +812,7 @@ class run(object):
             pathIndex += 1
             kmcTime = 0
             speciesDisplacementVectorList = np.zeros((self.totalSpecies, 3))
+            procIndexList = [100] * kmcSteps
             for step in range(kmcSteps):
                 kList = []
                 newStates = self.generateNewStates(currentStateOccupancy)
@@ -828,9 +835,12 @@ class run(object):
                         newStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = newStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
                         
                     if ESPConfig:
-                        delG0 = self.ESPRelativeElectrostaticInteractionEnergy(currentStateESPConfig, newStateESPConfig, 
-                                                                               currentStateChargeConfig, newStateChargeConfig, 
-                                                                               oldSiteSystemElementIndex, newSiteSystemElementIndex)
+                        if self.totalSpecies is 0:
+                            delG0 = 0
+                        else:
+                            delG0 = self.ESPRelativeElectrostaticInteractionEnergy(currentStateESPConfig, newStateESPConfig, 
+                                                                                   currentStateChargeConfig, newStateChargeConfig, 
+                                                                                   oldSiteSystemElementIndex, newSiteSystemElementIndex)
                         delG0List[newStateIndex] = delG0
                     else:
                         delG0 = self.nonESPRelativeElectrostaticInteractionEnergy(currentStateChargeConfig, newStateChargeConfig, 
@@ -849,18 +859,17 @@ class run(object):
                             newStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = deepcopy(currentStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]])
                         
                 kTotal = np.sum(kList)
+                #print "\n"
                 #print "delG0List, delGsList, kList, kTotal"
                 #print delG0List
                 #print delGsList
                 #print kList
                 #print kTotal
-                #print "\n"
                 #import pdb; pdb.set_trace()
-                if kTotal == 0:
-                    import pdb; pdb.set_trace()
                 kCumSum = (kList / kTotal).cumsum()
                 rand1 = rnd.random()
                 procIndex = np.where(kCumSum > rand1)[0][0]
+                procIndexList[step] = procIndex
                 rand2 = rnd.random()
                 kmcTime -= np.log(rand2) / kTotal
                 currentStateOccupancy = deepcopy(newStates.newStateOccupancyList[procIndex])
@@ -880,6 +889,7 @@ class run(object):
                     
                 speciesIndex = newStates.hoppingSpeciesIndices[procIndex]
                 speciesDisplacementVector = np.copy(newStates.speciesDisplacementVectorList[procIndex])
+                #print np.linalg.norm(speciesDisplacementVector) / self.material.ANG2BOHR
                 speciesDisplacementVectorList[speciesIndex] += speciesDisplacementVector
                 currentStateConfig.chargeList = np.copy(currentStateChargeConfig)
                 currentStateConfig.occupancy = deepcopy(currentStateOccupancy)
@@ -891,7 +901,7 @@ class run(object):
                     unwrappedPositionArray[pathIndex] = unwrappedPositionArray[pathIndex - 1] + speciesDisplacementVectorList
                     speciesDisplacementVectorList = np.zeros((self.totalSpecies, 3))
                     pathIndex += 1
-        
+
         trajectoryData = returnValues()
         trajectoryData.speciesCount = self.system.speciesCount
         trajectoryData.nTraj = nTraj
@@ -1034,7 +1044,34 @@ class analysis(object):
             figureName = 'MSD_Plot_' + fileName + '.jpg'
             figurePath = outdir + '/' + figureName
             plt.savefig(figurePath)
-        
+    
+    # TODO: Finish writing the method soon.
+    def displayCollectiveMSDPlot(self, msdData, speciesTypes, fileName, outdir=None):
+        """Returns a line plot of the MSD data"""
+        import matplotlib
+        matplotlib.use('Agg')
+        import matplotlib.pyplot as plt
+        from textwrap import wrap
+        plt.figure()
+        figNum = 0
+        numRow = 3
+        numCol = 2
+        for iPlot in range(numPlots):
+            for speciesIndex, speciesType in enumerate(speciesTypes):
+                plt.subplot(numRow, numCol, figNum)
+                plt.plot(msdData[:,0], msdData[:,speciesIndex + 1], label=speciesType)
+                figNum += 1
+            
+        plt.xlabel('Time (' + self.reprTime + ')')
+        plt.ylabel('MSD (' + self.reprDist + '**2)')
+        figureTitle = 'MSD_' + fileName
+        plt.title('\n'.join(wrap(figureTitle,60)))
+        plt.legend()
+        if outdir:
+            figureName = 'MSD_Plot_' + fileName + '.jpg'
+            figurePath = outdir + '/' + figureName
+            plt.savefig(figurePath)
+
     def displayWrappedTrajectories(self):
         """ """
         pass
