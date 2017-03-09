@@ -11,9 +11,12 @@ from datetime import datetime
 import pickle
 import os.path
 from copy import deepcopy
+import platform
 #from memory_profiler import profile
 import sys
 import psutil
+
+directorySeparator = '\\' if platform.uname()[0]=='Windows' else '/'
 
 class material(object):
     """Defines the properties and structure of working material
@@ -455,12 +458,12 @@ class neighbors(object):
         
         if extract:
             parentNeighborListFileName = 'ParentNeighborList_SystemSize=' + str(self.systemSize).replace(' ', ',') + '.npy'
-            parentNeighborListFilePath = outdir + '/' + parentNeighborListFileName
+            parentNeighborListFilePath = outdir + directorySeparator + parentNeighborListFileName
             parentNeighborList = np.load(parentNeighborListFilePath)[()]
             for iCutE in cutE:
                 fileName = 'E' + ('%2.1f' % iCutE)
                 ChildNeighborListFileName = 'NeighborList_' + fileName + '.npy'
-                ChildNeighborListFilePath = outdir + '/' + ChildNeighborListFileName
+                ChildNeighborListFilePath = outdir + directorySeparator + ChildNeighborListFileName
                 assert (not os.path.isfile(ChildNeighborListFilePath) or replaceExistingNeighborList), 'Requested neighbor list file already exists in the destination folder.'
                 neighborList = {}
                 for cutoffDistKey in parentNeighborList.keys():
@@ -474,7 +477,7 @@ class neighbors(object):
         else:
             fileName = 'SystemSize=' + str(self.systemSize).replace(' ', ',') if parent else ('E' + ('' if extract else ('%2.1f' % cutE)))
             neighborListFileName = ('Parent' if parent else '') + 'NeighborList_' + fileName + '.npy'
-            neighborListFilePath = outdir + '/' + neighborListFileName
+            neighborListFilePath = outdir + directorySeparator + neighborListFileName
             assert (not os.path.isfile(neighborListFilePath) or replaceExistingNeighborList), 'Requested neighbor list file already exists in the destination folder.'
             neighborList = {}
             tolDist = self.material.neighborCutoffDistTol
@@ -512,7 +515,7 @@ class neighbors(object):
     def generateNeighborListReport(self, parent, outdir, fileName):
         """Generates a neighbor list and prints out a report to the output directory"""
         neighborListLogName = ('Parent' if parent else '') + 'NeighborList_' + fileName + '.log' 
-        neighborListLogPath = outdir + '/' + neighborListLogName
+        neighborListLogPath = outdir + directorySeparator + neighborListLogName
         report = open(neighborListLogPath, 'w')
         endTime = datetime.now()
         timeElapsed = endTime - self.startTime
@@ -917,7 +920,7 @@ class run(object):
         
         if outdir:
             trajectoryDataFileName = 'TrajectoryData.npy'
-            trajectoryDataFilePath = outdir + '/' + trajectoryDataFileName
+            trajectoryDataFilePath = outdir + directorySeparator + trajectoryDataFileName
             np.save(trajectoryDataFilePath, trajectoryData)
         if report:
             self.generateSimulationLogReport(outdir)
@@ -926,7 +929,7 @@ class run(object):
     def generateSimulationLogReport(self, outdir):
         """Generates an log report of the simulation and outputs to the working directory"""
         simulationLogFileName = 'Run.log'
-        simulationLogFilePath = outdir + '/' + simulationLogFileName
+        simulationLogFilePath = outdir + directorySeparator + simulationLogFileName
         report = open(simulationLogFilePath, 'w')
         endTime = datetime.now()
         timeElapsed = endTime - self.startTime
@@ -1002,7 +1005,7 @@ class analysis(object):
                         ('%1.2E' % self.nDispMSD) + 'nDispMSD')
 
             msdFileName = 'MSD_Data_' + fileName + '.npy'
-            msdFilePath = outdir + '/' + msdFileName
+            msdFilePath = outdir + directorySeparator + msdFileName
             np.save(msdFilePath, msdData)
         if report:
             self.generateMSDAnalysisLogReport(outdir, fileName)
@@ -1015,7 +1018,7 @@ class analysis(object):
     def generateMSDAnalysisLogReport(self, outdir, fileName):
         """Generates an log report of the MSD Analysis and outputs to the working directory"""
         msdAnalysisLogFileName = 'MSD_Analysis_' + fileName + '.log'
-        msdLogFilePath = outdir + '/' + msdAnalysisLogFileName
+        msdLogFilePath = outdir + directorySeparator + msdAnalysisLogFileName
         report = open(msdLogFilePath, 'w')
         endTime = datetime.now()
         timeElapsed = endTime - self.startTime
@@ -1040,9 +1043,10 @@ class analysis(object):
         figureTitle = 'MSD_' + fileName
         plt.title('\n'.join(wrap(figureTitle,60)))
         plt.legend()
+        plt.show() # Temp change
         if outdir:
             figureName = 'MSD_Plot_' + fileName + '.jpg'
-            figurePath = outdir + '/' + figureName
+            figurePath = outdir + directorySeparator + figureName
             plt.savefig(figurePath)
     
     # TODO: Finish writing the method soon.
@@ -1057,6 +1061,7 @@ class analysis(object):
         numRow = 3
         numCol = 2
         for iPlot in range(numPlots):
+            #msdData = 
             for speciesIndex, speciesType in enumerate(speciesTypes):
                 plt.subplot(numRow, numCol, figNum)
                 plt.plot(msdData[:,0], msdData[:,speciesIndex + 1], label=speciesType)
@@ -1069,7 +1074,7 @@ class analysis(object):
         plt.legend()
         if outdir:
             figureName = 'MSD_Plot_' + fileName + '.jpg'
-            figurePath = outdir + '/' + figureName
+            figurePath = outdir + directorySeparator + figureName
             plt.savefig(figurePath)
 
     def displayWrappedTrajectories(self):
