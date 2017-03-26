@@ -111,8 +111,9 @@ class material(object):
         
         self.neighborCutoffDist = deepcopy(materialParameters.neighborCutoffDist)
         self.neighborCutoffDist.update((x, [(y[index] * self.ANG2BOHR) if y[index] else None for index in range(len(y))]) for x, y in self.neighborCutoffDist.items())
+        self.neighborCutoffDistTol = deepcopy(materialParameters.neighborCutoffDistTol)
+        self.neighborCutoffDistTol.update((x, [(y[index] * self.ANG2BOHR) if y[index] else None for index in range(len(y))]) for x, y in self.neighborCutoffDistTol.items())
         
-        self.neighborCutoffDistTol = materialParameters.neighborCutoffDistTol * self.ANG2BOHR
         self.elementTypeDelimiter = materialParameters.elementTypeDelimiter
         self.emptySpeciesType = materialParameters.emptySpeciesType
         self.siteIdentifier = materialParameters.siteIdentifier
@@ -455,6 +456,7 @@ class neighbors(object):
         
         assert outdir, 'Please provide the destination path where neighbor list needs to be saved'
         assert all(size >= 3 for size in localSystemSize), 'Local system size in all dimensions should always be greater than or equal to 3'
+        del self.material.neighborCutoffDist['E']
         
         if extract:
             parentNeighborListFileName = 'ParentNeighborList_SystemSize=' + str(self.systemSize).replace(' ', ',') + '.npy'
@@ -502,9 +504,9 @@ class neighbors(object):
                                            for xSize in range(localSystemSize[0]) for ySize in range(localSystemSize[1]) 
                                            for zSize in range(localSystemSize[2]) 
                                            for elementIndex in range(self.material.nElementsPerUnitCell[neighborSiteElementTypeIndex])]
-    
-                    for cutoffDist in cutoffDistList:
-                        cutoffDistLimits = [cutoffDist-tolDist, cutoffDist+tolDist]
+                    
+                    for iCutoffDist in range(len(cutoffDistList)):
+                        cutoffDistLimits = [cutoffDistList[iCutoffDist] - tolDist[cutoffDistKey][iCutoffDist], cutoffDistList[iCutoffDist] + tolDist[cutoffDistKey][iCutoffDist]]
                         neighborListCutoffDistKey.append(self.hopNeighborSites(localBulkSites, centerSiteIndices, 
                                                                                neighborSiteIndices, cutoffDistLimits, cutoffDistKey))
                 neighborList[cutoffDistKey] = neighborListCutoffDistKey[:]
@@ -790,7 +792,6 @@ class run(object):
     
     def doKMCSteps(self, outdir=None, ESPConfig=1, report=1, randomSeed=1):
         """Subroutine to run the KMC simulation by specified number of steps"""
-        #import pdb; pdb.set_trace()
         rnd.seed(randomSeed)
         nTraj = self.nTraj
         kmcSteps = self.kmcSteps
@@ -808,6 +809,7 @@ class run(object):
         if ESPConfig:
             currentStateESPConfig = self.system.ESPConfig(currentStateChargeConfig)
             newStateESPConfig = deepcopy(currentStateESPConfig)
+        
         shellChargeTypeKeys = [key for key in self.material.chargeTypes.keys() if self.material.elementTypeDelimiter in key]
         shellCharges = 0 if shellChargeTypeKeys==[] else 1
         assert 'E' in self.material.neighborCutoffDist.keys(), 'Please specify the cutoff distance for electrostatic interactions'
@@ -838,13 +840,9 @@ class run(object):
                         newStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = newStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
                         
                     if ESPConfig:
-                        if self.totalSpecies is 0:
-                            delG0 = 0
-                        else:
-                            delG0 = self.ESPRelativeElectrostaticInteractionEnergy(currentStateESPConfig, newStateESPConfig, 
-                                                                                   currentStateChargeConfig, newStateChargeConfig, 
-                                                                                   oldSiteSystemElementIndex, newSiteSystemElementIndex)
-                        delG0List[newStateIndex] = delG0
+                        delG0 = self.ESPRelativeElectrostaticInteractionEnergy(currentStateESPConfig, newStateESPConfig, 
+                                                                               currentStateChargeConfig, newStateChargeConfig, 
+                                                                               oldSiteSystemElementIndex, newSiteSystemElementIndex)
                     else:
                         delG0 = self.nonESPRelativeElectrostaticInteractionEnergy(currentStateChargeConfig, newStateChargeConfig, 
                                                                                   oldSiteSystemElementIndex, newSiteSystemElementIndex)
@@ -854,7 +852,6 @@ class run(object):
                     lambdaValue = self.lambdaValues[hopElementType][hopDistType]
                     VAB = self.VAB[hopElementType][hopDistType]
                     delGs = ((lambdaValue + delG0) ** 2 / (4 * lambdaValue)) - VAB
-                    delGsList[newStateIndex] = delGs
                     kList.append(self.vn * np.exp(-delGs / self.T))
                     if not shellCharges:
                         newStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = newStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
@@ -862,19 +859,13 @@ class run(object):
                             newStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = deepcopy(currentStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]])
                         
                 kTotal = np.sum(kList)
-                #print "\n"
-                #print "delG0List, delGsList, kList, kTotal"
-                #print delG0List
-                #print delGsList
-                #print kList
-                #print kTotal
-                #import pdb; pdb.set_trace()
                 kCumSum = (kList / kTotal).cumsum()
                 rand1 = rnd.random()
                 procIndex = np.where(kCumSum > rand1)[0][0]
                 procIndexList[step] = procIndex
                 rand2 = rnd.random()
                 kmcTime -= np.log(rand2) / kTotal
+                
                 currentStateOccupancy = deepcopy(newStates.newStateOccupancyList[procIndex])
                 if shellCharges:
                     currentStateChargeConfig = self.system.chargeConfig(currentStateOccupancy)
@@ -892,7 +883,6 @@ class run(object):
                     
                 speciesIndex = newStates.hoppingSpeciesIndices[procIndex]
                 speciesDisplacementVector = np.copy(newStates.speciesDisplacementVectorList[procIndex])
-                #print np.linalg.norm(speciesDisplacementVector) / self.material.ANG2BOHR
                 speciesDisplacementVectorList[speciesIndex] += speciesDisplacementVector
                 currentStateConfig.chargeList = np.copy(currentStateChargeConfig)
                 currentStateConfig.occupancy = deepcopy(currentStateOccupancy)
@@ -904,7 +894,7 @@ class run(object):
                     unwrappedPositionArray[pathIndex] = unwrappedPositionArray[pathIndex - 1] + speciesDisplacementVectorList
                     speciesDisplacementVectorList = np.zeros((self.totalSpecies, 3))
                     pathIndex += 1
-
+        
         trajectoryData = returnValues()
         trajectoryData.speciesCount = self.system.speciesCount
         trajectoryData.nTraj = nTraj
@@ -989,6 +979,7 @@ class analysis(object):
         nBins = len(bins) - 1
         speciesMSDData = np.zeros((nBins, nSpecies))
         msdHistogram, dummy = np.histogram(timeArrayMSD, bins)
+        
         for iSpecies in range(nSpecies):
             iSpeciesHist, dummy = np.histogram(timeArrayMSD, bins, weights=timeNdisp2[:, iSpecies + 1])
             speciesMSDData[:, iSpecies] = iSpeciesHist / msdHistogram
