@@ -739,7 +739,7 @@ class run(object):
         speciesDisplacementVectorList = []
         systemElementIndexPairList = []
         newStateOccupancy = deepcopy(currentStateOccupancy)
-        import pdb; pdb.set_trace()
+        
         cumulativeSpeciesSiteSystemElementIndices = [systemElementIndex for speciesSiteSystemElementIndices in currentStateOccupancy.values() 
                                                  for systemElementIndex in speciesSiteSystemElementIndices]
         for speciesType in currentStateOccupancy.keys():
