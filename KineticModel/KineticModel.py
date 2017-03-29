@@ -712,28 +712,23 @@ class run(object):
         relativeElecEnergy = (newSiteElecIntEnergy + newNeighborSiteElecIntEnergy 
                               - oldSiteElecIntEnergy - oldNeighborSiteElecIntEnergy)
         return relativeElecEnergy
-
+    
     def ESPRelativeElectrostaticInteractionEnergy(self, currentStateESPConfig, newStateESPConfig, 
                                                currentStateChargeConfig, newStateChargeConfig, 
                                                oldSiteSystemElementIndex, newSiteSystemElementIndex):
         """Subroutine to compute the relative electrostatic interaction energies between two states"""
         oldSiteElecIntEnergy = np.sum(currentStateESPConfig[oldSiteSystemElementIndex] * 
                                       currentStateChargeConfig[self.elecNeighborListNeighborSEIndices[oldSiteSystemElementIndex]])
-        #print oldSiteElecIntEnergy
         oldNeighborSiteElecIntEnergy = np.sum(currentStateESPConfig[newSiteSystemElementIndex] * 
                                               currentStateChargeConfig[self.elecNeighborListNeighborSEIndices[newSiteSystemElementIndex]])
-        #print oldNeighborSiteElecIntEnergy
         newSiteElecIntEnergy = np.sum(newStateESPConfig[newSiteSystemElementIndex] * 
                                       newStateChargeConfig[self.elecNeighborListNeighborSEIndices[newSiteSystemElementIndex]])
-        #print newSiteElecIntEnergy
         newNeighborSiteElecIntEnergy = np.sum(newStateESPConfig[oldSiteSystemElementIndex] * 
                                               newStateChargeConfig[self.elecNeighborListNeighborSEIndices[oldSiteSystemElementIndex]])
-        #print newNeighborSiteElecIntEnergy
         relativeElecEnergy = (newSiteElecIntEnergy + newNeighborSiteElecIntEnergy - 
                               oldSiteElecIntEnergy - oldNeighborSiteElecIntEnergy)
-        #print relativeElecEnergy
         return relativeElecEnergy
-
+    
     def generateNewStates(self, currentStateOccupancy):
         """generates a list of new occupancy states possible from the current state"""
         neighborList = self.system.neighborList
@@ -744,7 +739,7 @@ class run(object):
         speciesDisplacementVectorList = []
         systemElementIndexPairList = []
         newStateOccupancy = deepcopy(currentStateOccupancy)
-        
+        import pdb; pdb.set_trace()
         cumulativeSpeciesSiteSystemElementIndices = [systemElementIndex for speciesSiteSystemElementIndices in currentStateOccupancy.values() 
                                                  for systemElementIndex in speciesSiteSystemElementIndices]
         for speciesType in currentStateOccupancy.keys():
@@ -823,8 +818,6 @@ class run(object):
                 newStates = self.generateNewStates(currentStateOccupancy)
                 hopElementTypes = newStates.hopElementTypes[:]
                 hopDistTypes = newStates.hopDistTypes[:]
-                delG0List = [0] * len(newStates.hoppingSpeciesIndices)
-                delGsList = [0] * len(newStates.hoppingSpeciesIndices)
                 for newStateIndex in range(len(newStates.hoppingSpeciesIndices)):
                     [oldSiteSystemElementIndex, newSiteSystemElementIndex] = newStates.systemElementIndexPairList[newStateIndex]
                     if shellCharges:
