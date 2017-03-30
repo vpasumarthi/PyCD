@@ -738,7 +738,7 @@ class run(object):
         hoppingSpeciesIndices = []
         speciesDisplacementVectorList = []
         systemElementIndexPairList = []
-        newStateOccupancy = deepcopy(currentStateOccupancy)
+        newStateOccupancy = OrderedDict((key, values[:]) for key, values in currentStateOccupancy.items())
         
         cumulativeSpeciesSiteSystemElementIndices = [systemElementIndex for speciesSiteSystemElementIndices in currentStateOccupancy.values() 
                                                  for systemElementIndex in speciesSiteSystemElementIndices]
@@ -767,7 +767,7 @@ class run(object):
                             neighborSystemElementIndex = self.neighbors.generateSystemElementIndex(self.systemSize, neighborQuantumIndices)
                             if neighborSystemElementIndex not in cumulativeSpeciesSiteSystemElementIndices:
                                 newStateOccupancy[speciesType][speciesTypeSpeciesIndex] = neighborSystemElementIndex
-                                newStateOccupancyList.append(deepcopy(newStateOccupancy))
+                                newStateOccupancyList.append(OrderedDict((key, values[:]) for key, values in newStateOccupancy.items()))
                                 newStateOccupancy[speciesType][speciesTypeSpeciesIndex] = speciesSiteSystemElementIndex
                                 hopElementTypes.append(hopElementType)
                                 hopDistTypes.append(hopDistTypeIndex)
