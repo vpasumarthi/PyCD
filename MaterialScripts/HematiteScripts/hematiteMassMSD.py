@@ -8,11 +8,11 @@ def hematiteMassMSD(pbc, systemSize, nTrajList, cutE_List, nSpeciesList, TempLis
     import platform
 
     cwd = os.path.dirname(os.path.realpath(__file__))
+    nLevelUp = 4
     directorySeparator = '\\' if platform.uname()[0]=='Windows' else '/'
-    cwd = (cwd + directorySeparator + ('PBC' if pbc else 'NoPBC') + directorySeparator + 
-           'SystemSize' + str(systemSize).replace(' ', ''))
+    systemDirectoryPath = directorySeparator.join(cwd.split(directorySeparator)[:-nLevelUp] + ['KineticModelSimulations', 'Hematite', ('PBC' if pbc else 'NoPBC'), 
+                                                       ('SystemSize' + str(systemSize).replace(' ', ''))])
     for nTraj in nTrajList:
-        dirPath = cwd # directory where neighborList is located
         for cutE in cutE_List:
             parentDir1 = 'E_' + str(cutE)
             for speciesIndex in range(len(nSpeciesList[0])):
@@ -23,7 +23,7 @@ def hematiteMassMSD(pbc, systemSize, nTrajList, cutE_List, nSpeciesList, TempLis
                 for iTemp in TempList:
                     parentDir3 = str(iTemp) + 'K'
                     parentDir = [parentDir1, parentDir2, parentDir3]
-                    parentDirPath = cwd + directorySeparator + directorySeparator.join(parentDir)
+                    parentDirPath = systemDirectoryPath + directorySeparator + directorySeparator.join(parentDir)
                     workDir = (('%1.2E' % kmcSteps) + 'Steps,' + 
                                ('%1.2E' % (kmcSteps/stepInterval)) + 'PathSteps,' + 
                                ('%1.2E' % nTraj) + 'Traj')
@@ -38,5 +38,5 @@ def hematiteMassMSD(pbc, systemSize, nTrajList, cutE_List, nSpeciesList, TempLis
                     if not fileExists or overWrite:
                         nStepsMSD = nStepsMSDList[speciesIndex]
                         nDispMSD = nDispMSDList[speciesIndex]
-                        hematiteMSD(trajectoryDataFileName, shellCharges, cutE, dirPath, nStepsMSD, nDispMSD, binsize, 
+                        hematiteMSD(trajectoryDataFileName, shellCharges, cutE, systemDirectoryPath, nStepsMSD, nDispMSD, binsize, 
                                     reprTime, reprDist, outdir)

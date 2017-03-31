@@ -246,7 +246,7 @@ class neighbors(object):
     
     def generateQuantumIndices(self, systemSize, systemElementIndex):
         """Returns the quantum indices of the element"""
-        assert systemElementIndex >= 0, 'System Element Index cannot be negative'
+        #assert systemElementIndex >= 0, 'System Element Index cannot be negative'
         #assert systemElementIndex < systemSize.prod() * self.material.totalElementsPerUnitCell, 'System Element Index out of range for the given system size'
         quantumIndices = np.zeros(5, dtype=int)#[0] * 5
         unitcellElementIndex = systemElementIndex % self.material.totalElementsPerUnitCell
@@ -838,7 +838,6 @@ class run(object):
             for step in range(kmcSteps):
                 kList = []
                 newStates = self.generateNewStates(currentStateOccupancy)
-                import pdb; pdb.set_trace()
                 hopElementTypes = newStates.hopElementTypes[:]
                 hopDistTypes = newStates.hopDistTypes[:]
                 for newStateIndex in range(len(newStates.hoppingSpeciesIndices)):

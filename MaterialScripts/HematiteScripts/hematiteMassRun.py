@@ -24,7 +24,7 @@ def hematiteMassRun(pbc, systemSize, nTrajList, cutE_List, nSpeciesList, TempLis
             if not os.path.exists(parentDir1):
                 os.mkdir(parentDir1)
             os.chdir(parentDir1)
-            parentDir1Path = neighborListDirectoryPath + directorySeparator + parentDir1
+            parentDir1Path = systemDirectoryPath + directorySeparator + parentDir1
             for speciesIndex in range(len(nSpeciesList[0])):
                 nElectrons = nSpeciesList[0][speciesIndex]
                 nHoles = nSpeciesList[1][speciesIndex]
