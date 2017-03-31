@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-def hematiteRun(neighborList, shellCharges, cutE, dirPath, speciesCount, T, nTraj, kmcSteps, 
+def hematiteRun(neighborList, shellCharges, cutE, systemDirectoryPath, speciesCount, T, nTraj, kmcSteps, 
                 stepInterval, gui, outdir, ESPConfig, report, randomSeed):
         
     from KineticModel import system, run, initiateSystem
@@ -11,7 +11,7 @@ def hematiteRun(neighborList, shellCharges, cutE, dirPath, speciesCount, T, nTra
     tailName = '_Shell' if shellCharges else '_NoShell' + '_E' + str(cutE) + '.obj'
     directorySeparator = '\\' if platform.uname()[0]=='Windows' else '/'
     objectFileDirectoryName = 'ObjectFiles'
-    objectFileDirPath = dirPath + directorySeparator + objectFileDirectoryName
+    objectFileDirPath = systemDirectoryPath + directorySeparator + objectFileDirectoryName
     materialFileName = objectFileDirPath + directorySeparator + materialName + tailName
     neighborsFileName = objectFileDirPath + directorySeparator + materialName + 'Neighbors' + tailName
     

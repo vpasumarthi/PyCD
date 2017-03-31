@@ -23,7 +23,7 @@ def hematiteSetup(chargeTypes, cutE, shellCharges, shellChargeTypes, systemSize,
     cutE = cutE if extract else [cutE]
 
     for iCutE in cutE:        
-        tailName = '_Shell' if shellCharges else '_NoShell' + ('_E' + 'parent' if parent else str(iCutE)) + '.obj'
+        tailName = '_Shell' if shellCharges else '_NoShell' + ('_Parent' if parent else ('_E' + str(iCutE))) + '.obj'
         
         hematite = material(hematiteParameters)
         materialFileName = objectFileOutDir + directorySeparator + materialName + tailName
@@ -32,4 +32,4 @@ def hematiteSetup(chargeTypes, cutE, shellCharges, shellChargeTypes, systemSize,
         hematiteNeighbors = neighbors(hematite, systemSize, pbc)
         neighborsFileName = objectFileOutDir + directorySeparator + materialName + 'Neighbors' + tailName
         hematiteNeighbors.generateNeighborsFile(hematiteNeighbors, neighborsFileName, replaceExistingObjectFiles)
-    hematiteNeighbors.generateNeighborList(parent, extract, cutE if extract else cutE[0], replaceExistingNeighborList, neighborListOutDir)
+    #hematiteNeighbors.generateNeighborList(parent, extract, cutE if extract else cutE[0], replaceExistingNeighborList, neighborListOutDir)

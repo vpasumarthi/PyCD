@@ -199,7 +199,10 @@ class material(object):
         return returnSites
     
 class neighbors(object):
-    """Returns the neighbor list file"""
+    """Returns the neighbor list file
+    :param systemSize: size of the super cell in terms of number of unit cell in three dimensions
+    :type systemSize: np.array (3x1)
+    """
     
     def __init__(self, material, systemSize=np.array([10, 10, 10]), pbc=[1, 1, 1]):
         self.startTime = datetime.now()
@@ -224,12 +227,12 @@ class neighbors(object):
     
     def generateSystemElementIndex(self, systemSize, quantumIndices):
         """Returns the systemElementIndex of the element"""
-        assert type(systemSize) is np.ndarray, 'Please input systemSize as a numpy array'
-        assert type(quantumIndices) is np.ndarray, 'Please input quantumIndices as a numpy array'
-        assert np.all(systemSize > 0), 'System size should be positive in all dimensions'
-        assert all(quantumIndex >= 0 for quantumIndex in quantumIndices), 'Quantum Indices cannot be negative'
-        assert quantumIndices[-1] < self.material.nElementsPerUnitCell[quantumIndices[-2]], 'Element Index exceed number of elements of the specified element type'
-        assert np.all(quantumIndices[:3] < systemSize), 'Unit cell indices exceed the given system size'
+        #assert type(systemSize) is np.ndarray, 'Please input systemSize as a numpy array'
+        #assert type(quantumIndices) is np.ndarray, 'Please input quantumIndices as a numpy array'
+        #assert np.all(systemSize > 0), 'System size should be positive in all dimensions'
+        #assert all(quantumIndex >= 0 for quantumIndex in quantumIndices), 'Quantum Indices cannot be negative'
+        #assert quantumIndices[-1] < self.material.nElementsPerUnitCell[quantumIndices[-2]], 'Element Index exceed number of elements of the specified element type'
+        #assert np.all(quantumIndices[:3] < systemSize), 'Unit cell indices exceed the given system size'
         unitCellIndex = np.copy(quantumIndices[:3])
         [elementTypeIndex, elementIndex] = quantumIndices[-2:]
         systemElementIndex = elementIndex + self.material.nElementsPerUnitCell[:elementTypeIndex].sum()
@@ -244,8 +247,8 @@ class neighbors(object):
     def generateQuantumIndices(self, systemSize, systemElementIndex):
         """Returns the quantum indices of the element"""
         assert systemElementIndex >= 0, 'System Element Index cannot be negative'
-        assert systemElementIndex < systemSize.prod() * self.material.totalElementsPerUnitCell, 'System Element Index out of range for the given system size'
-        quantumIndices = [0] * 5
+        #assert systemElementIndex < systemSize.prod() * self.material.totalElementsPerUnitCell, 'System Element Index out of range for the given system size'
+        quantumIndices = np.zeros(5, dtype=int)#[0] * 5
         unitcellElementIndex = systemElementIndex % self.material.totalElementsPerUnitCell
         quantumIndices[3] = np.where(self.material.nElementsPerUnitCell.cumsum() >= (unitcellElementIndex + 1))[0][0]
         quantumIndices[4] = unitcellElementIndex - self.material.nElementsPerUnitCell[:quantumIndices[3]].sum()
@@ -456,8 +459,11 @@ class neighbors(object):
         
         assert outdir, 'Please provide the destination path where neighbor list needs to be saved'
         assert all(size >= 3 for size in localSystemSize), 'Local system size in all dimensions should always be greater than or equal to 3'
-        del self.material.neighborCutoffDist['E']
         
+        '''
+        # DEBUG: NewHopNeighbors
+        del self.material.neighborCutoffDist['E']
+        '''
         if extract:
             parentNeighborListFileName = 'ParentNeighborList_SystemSize=' + str(self.systemSize).replace(' ', ',') + '.npy'
             parentNeighborListFilePath = outdir + directorySeparator + parentNeighborListFileName
@@ -504,11 +510,27 @@ class neighbors(object):
                                            for xSize in range(localSystemSize[0]) for ySize in range(localSystemSize[1]) 
                                            for zSize in range(localSystemSize[2]) 
                                            for elementIndex in range(self.material.nElementsPerUnitCell[neighborSiteElementTypeIndex])]
-                    
                     for iCutoffDist in range(len(cutoffDistList)):
                         cutoffDistLimits = [cutoffDistList[iCutoffDist] - tolDist[cutoffDistKey][iCutoffDist], cutoffDistList[iCutoffDist] + tolDist[cutoffDistKey][iCutoffDist]]
+                        
                         neighborListCutoffDistKey.append(self.hopNeighborSites(localBulkSites, centerSiteIndices, 
                                                                                neighborSiteIndices, cutoffDistLimits, cutoffDistKey))
+                        '''
+                        # DEBUG: NewHopNeighbors
+                        hopNeighborSites = self.hopNeighborSites(localBulkSites, centerSiteIndices, neighborSiteIndices, cutoffDistLimits, cutoffDistKey)
+                        systemHopNeighborSites = deepcopy(hopNeighborSites)
+                        systemHopNeighborSites.systemElementIndexMap = systemElementIndexMap
+                        #systemHopNeighborSites.elementIndexMap = np.tile(systemHopNeighborSites.elementIndexMap, self.numCells)
+                        #systemHopNeighborSites.numNeighbors = np.tile(systemHopNeighborSites.numNeighbors, self.numCells)
+                        #systemHopNeighborSites.displacementVectorList = np.tile(systemHopNeighborSites.displacementVectorList, self.numCells)
+                        #systemHopNeighborSites.displacementList = np.tile(systemHopNeighborSites.displacementList, self.numCells)
+                        '''
+                        for key in hopNeighborSites(cutoffDistKey)[iCutoffDist].__dict__.keys():
+                            systemHopNeighborSites[key] = np.tile(hopNeighborSites(cutoffDistKey)[iCutoffDist].key)
+                        neighborListCutoffDistKey.append(systemHopNeighborSites)
+                        
+                    
+
                 neighborList[cutoffDistKey] = neighborListCutoffDistKey[:]
             np.save(neighborListFilePath, neighborList)
             if report:
@@ -816,6 +838,7 @@ class run(object):
             for step in range(kmcSteps):
                 kList = []
                 newStates = self.generateNewStates(currentStateOccupancy)
+                import pdb; pdb.set_trace()
                 hopElementTypes = newStates.hopElementTypes[:]
                 hopDistTypes = newStates.hopDistTypes[:]
                 for newStateIndex in range(len(newStates.hoppingSpeciesIndices)):

@@ -1,6 +1,11 @@
 #!/usr/bin/env python
 import numpy as np
 import os
+import platform
+
+directorySeparator = '\\' if platform.uname()[0]=='Windows' else '/'
+inputCoordinatesDirectoryName= 'InputCoordinates'
+inputCoordinateFileName = 'Fe2O3_RelaxCell_Trial03_index_coord.txt'
 
 class hematiteParameters(object):
     
@@ -9,7 +14,7 @@ class hematiteParameters(object):
         self.elementTypes = ['Fe', 'O']
         self.speciesToElementTypeMap = {'electron': ['Fe'], 'empty': ['Fe', 'O'], 'hole': ['O']}
         cwd = os.path.dirname(os.path.realpath(__file__))
-        inputFileLocation = cwd + "/Fe2O3_RelaxCell_Trial03_index_coord.txt"
+        inputFileLocation = cwd + directorySeparator + inputCoordinatesDirectoryName + directorySeparator + inputCoordinateFileName
         index_pos = np.loadtxt(inputFileLocation)
         self.unitcellCoords = index_pos[:, 1:] 
         self.elementTypeIndexList = index_pos[:,0]

@@ -10,21 +10,21 @@ def hematiteMassRun(pbc, systemSize, nTrajList, cutE_List, nSpeciesList, TempLis
     
     cwd = os.path.dirname(os.path.realpath(__file__))
     directorySeparator = '\\' if platform.uname()[0]=='Windows' else '/'
-    cwd = (cwd + directorySeparator + ('PBC' if pbc else 'NoPBC') + directorySeparator + 
-           'SystemSize' + str(systemSize).replace(' ', ''))
+    nLevelUp = 4
     neighborListDirectoryName = 'NeighborListFiles'
+    systemDirectoryPath = directorySeparator.join(cwd.split(directorySeparator)[:-nLevelUp] + ['KineticModelSimulations', 'Hematite', ('PBC' if pbc else 'NoPBC'), 
+                                                       ('SystemSize' + str(systemSize).replace(' ', ''))])
+    neighborListDirectoryPath = systemDirectoryPath + directorySeparator + neighborListDirectoryName
     for nTraj in nTrajList:
-        dirPath = cwd # directory where neighborList is located
         for cutE in cutE_List:
-            os.chdir(dirPath)
-            neighborListFileName = (dirPath + directorySeparator + neighborListDirectoryName + 
-                                    directorySeparator + 'NeighborList' + '_E' + str(cutE) + '.npy')
+            os.chdir(neighborListDirectoryPath)
+            neighborListFileName = (neighborListDirectoryPath + directorySeparator + 'NeighborList' + '_E' + str(cutE) + '.npy')
             neighborList = np.load(neighborListFileName)
             parentDir1 = 'E_' + str(cutE)
             if not os.path.exists(parentDir1):
                 os.mkdir(parentDir1)
             os.chdir(parentDir1)
-            parentDir1Path = dirPath + directorySeparator + parentDir1
+            parentDir1Path = neighborListDirectoryPath + directorySeparator + parentDir1
             for speciesIndex in range(len(nSpeciesList[0])):
                 nElectrons = nSpeciesList[0][speciesIndex]
                 nHoles = nSpeciesList[1][speciesIndex]
@@ -56,5 +56,5 @@ def hematiteMassRun(pbc, systemSize, nTrajList, cutE_List, nSpeciesList, TempLis
                         if fname.endswith('.log') and fname.startswith('TrajectoryData'):
                             fileExists = 1
                     if not fileExists or overWrite:
-                        hematiteRun(neighborList, shellCharges, cutE, dirPath, speciesCount, iTemp, nTraj, 
+                        hematiteRun(neighborList, shellCharges, cutE, systemDirectoryPath, speciesCount, iTemp, nTraj, 
                                     kmcSteps, stepInterval, gui, outdir, ESPConfig, report, randomSeed)
