@@ -757,24 +757,11 @@ class run(object):
                 speciesIndex = cumulativeSpeciesSiteSystemElementIndices.index(speciesSiteSystemElementIndex)
                 for hopElementType in self.material.hopElementTypes[speciesType]:
                     for hopDistTypeIndex in range(len(self.material.neighborCutoffDist[hopElementType])):
-                        neighborOffsetList = neighborList[hopElementType][hopDistTypeIndex].offsetList
-                        neighborElementIndexMap = neighborList[hopElementType][hopDistTypeIndex].elementIndexMap
-                        speciesSiteToNeighborDisplacementVectorList = neighborList[hopElementType][hopDistTypeIndex].displacementVectorList
-                        
-                        speciesQuantumIndices = self.neighbors.generateQuantumIndices(self.systemSize, speciesSiteSystemElementIndex)
-                        speciesSiteElementIndex = speciesQuantumIndices[4]
-                        numNeighbors = len(neighborElementIndexMap[1][speciesSiteElementIndex])
+                        rowIndex = np.where(neighborList[hopElementType][hopDistTypeIndex].systemElementIndexMap[0] == speciesSiteSystemElementIndex)[0][0]
+                        neighborSystemElementIndices = neighborList[hopElementType][hopDistTypeIndex].systemElementIndexMap[1][rowIndex]
+                        numNeighbors = len(neighborSystemElementIndices)
                         for neighborIndex in range(numNeighbors):
-                            neighborUnitCellIndices = [sum(x) for x in zip(speciesQuantumIndices[:3], neighborOffsetList[speciesSiteElementIndex][neighborIndex])]
-                            for index, neighborUnitCellIndex in enumerate(neighborUnitCellIndices):
-                                if neighborUnitCellIndex > self.systemSize[index] - 1:
-                                    neighborUnitCellIndices[index] -= self.systemSize[index]
-                                elif neighborUnitCellIndex < 0:
-                                    neighborUnitCellIndices[index] += self.systemSize[index]
-                            neighborElementTypeIndex = [self.material.elementTypes.index(hopElementType.split(self.material.elementTypeDelimiter)[1])]
-                            neighborElementIndex = [neighborElementIndexMap[1][speciesSiteElementIndex][neighborIndex]]
-                            neighborQuantumIndices = np.asarray(neighborUnitCellIndices + neighborElementTypeIndex + neighborElementIndex)
-                            neighborSystemElementIndex = self.neighbors.generateSystemElementIndex(self.systemSize, neighborQuantumIndices)
+                            neighborSystemElementIndex = neighborSystemElementIndices[neighborIndex]
                             if neighborSystemElementIndex not in cumulativeSpeciesSiteSystemElementIndices:
                                 newStateOccupancy[speciesTypeIndex][speciesTypeSpeciesIndex] = neighborSystemElementIndex
                                 newStateOccupancyList.append([newStateOccupancy[localSpeciesTypeIndex][:] for localSpeciesTypeIndex in range(len(newStateOccupancy))])
@@ -782,7 +769,7 @@ class run(object):
                                 hopElementTypes.append(hopElementType)
                                 hopDistTypes.append(hopDistTypeIndex)
                                 hoppingSpeciesIndices.append(speciesIndex)
-                                speciesDisplacementVector = speciesSiteToNeighborDisplacementVectorList[speciesSiteElementIndex][neighborIndex]
+                                speciesDisplacementVector = neighborList[hopElementType][hopDistTypeIndex].displacementVectorList[rowIndex][neighborIndex] 
                                 speciesDisplacementVectorList.append(speciesDisplacementVector)
                                 systemElementIndexPairList.append([speciesSiteSystemElementIndex, neighborSystemElementIndex])
                     
