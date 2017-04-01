@@ -5,12 +5,17 @@ def hematiteSetup(chargeTypes, cutE, shellCharges, shellChargeTypes, systemSize,
     from hematiteParameters import hematiteParameters
     from KineticModel import material, neighbors
     import platform
+    import os
     
     directorySeparator = '\\' if platform.uname()[0]=='Windows' else '/'
     objectFileDirectoryName = 'ObjectFiles'
     neighborListDirectoryName = 'NeighborListFiles'
     objectFileOutDir = outdir + directorySeparator + objectFileDirectoryName
+    if not os.path.exists(objectFileOutDir):
+        os.mkdir(objectFileOutDir)
     neighborListOutDir = outdir + directorySeparator + neighborListDirectoryName
+    if not os.path.exists(neighborListOutDir):
+        os.mkdir(neighborListOutDir)
     
     materialName = 'hematite'
     hematiteParameters = hematiteParameters()
@@ -32,4 +37,4 @@ def hematiteSetup(chargeTypes, cutE, shellCharges, shellChargeTypes, systemSize,
         hematiteNeighbors = neighbors(hematite, systemSize, pbc)
         neighborsFileName = objectFileOutDir + directorySeparator + materialName + 'Neighbors' + tailName
         hematiteNeighbors.generateNeighborsFile(hematiteNeighbors, neighborsFileName, replaceExistingObjectFiles)
-    #hematiteNeighbors.generateNeighborList(parent, extract, cutE if extract else cutE[0], replaceExistingNeighborList, neighborListOutDir)
+    hematiteNeighbors.generateNeighborList(parent, extract, cutE if extract else cutE[0], replaceExistingNeighborList, neighborListOutDir)

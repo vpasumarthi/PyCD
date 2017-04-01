@@ -20,7 +20,9 @@ def hematiteMassRun(pbc, systemSize, nTrajList, cutE_List, nSpeciesList, TempLis
             os.chdir(neighborListDirectoryPath)
             neighborListFileName = (neighborListDirectoryPath + directorySeparator + 'NeighborList' + '_E' + str(cutE) + '.npy')
             neighborList = np.load(neighborListFileName)
+            os.chdir(systemDirectoryPath)
             parentDir1 = 'E_' + str(cutE)
+            #import pdb; pdb.set_trace()
             if not os.path.exists(parentDir1):
                 os.mkdir(parentDir1)
             os.chdir(parentDir1)

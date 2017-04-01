@@ -286,7 +286,7 @@ class neighbors(object):
         neighborImageDisplacements = np.linalg.norm(neighborImageDisplacementVectors, axis=1)
         displacement = np.min(neighborImageDisplacements)
         return displacement
-
+    #@profile
     def hopNeighborSites(self, bulkSites, centerSiteIndices, neighborSiteIndices, cutoffDistLimits, cutoffDistKey):
         """Returns systemElementIndexMap and distances between center sites and its neighbor sites within cutoff 
         distance"""
@@ -304,17 +304,29 @@ class neighbors(object):
         displacementVectorList = np.empty(len(centerSiteCoords), dtype=object)
         displacementList = np.empty(len(centerSiteCoords), dtype=object)
         
+        xRange = range(-1, 2) if self.pbc[0] == 1 else [0]
+        yRange = range(-1, 2) if self.pbc[1] == 1 else [0]
+        zRange = range(-1, 2) if self.pbc[2] == 1 else [0]
+        unitcellTranslationalCoords = np.zeros((3**sum(self.pbc), 3)) # Initialization
+        index = 0
+        for xOffset in xRange:
+            for yOffset in yRange:
+                for zOffset in zRange:
+                    unitcellTranslationalCoords[index] = np.dot(np.multiply(np.array([xOffset, yOffset, zOffset]), self.systemSize), self.material.latticeMatrix)
+                    index += 1
         for centerSiteIndex, centerCoord in enumerate(centerSiteCoords):
             iDisplacementVectors = []
             iDisplacements = np.array([])
             iNeighborSiteIndexList = []
             iNumNeighbors = 0
             for neighborSiteIndex, neighborCoord in enumerate(neighborSiteCoords):
-                neighborImageDisplacementVectors = np.array([neighborCoord - centerCoord])
-                displacement = np.linalg.norm(neighborImageDisplacementVectors)
+                neighborImageCoords = unitcellTranslationalCoords + neighborCoord
+                neighborImageDisplacementVectors = neighborImageCoords - centerCoord
+                neighborImageDisplacements = np.linalg.norm(neighborImageDisplacementVectors, axis=1)
+                [displacement, imageIndex] = [np.min(neighborImageDisplacements), np.argmin(neighborImageDisplacements)]
                 if cutoffDistLimits[0] < displacement <= cutoffDistLimits[1]:
                     iNeighborSiteIndexList.append(neighborSiteIndex)
-                    iDisplacementVectors.append(neighborImageDisplacementVectors[0])
+                    iDisplacementVectors.append(neighborImageDisplacementVectors[imageIndex])
                     iDisplacements = np.append(iDisplacements, displacement)
                     iNumNeighbors += 1
             neighborSystemElementIndices[centerSiteIndex] = neighborSiteSystemElementIndexList[iNeighborSiteIndexList]
@@ -448,7 +460,7 @@ class neighbors(object):
         returnNeighbors.displacementVectorList = displacementVectorList
         returnNeighbors.displacementList = displacementList
         return returnNeighbors
-
+    #@profile
     def generateNeighborList(self, parent, extract=0, cutE=None, replaceExistingNeighborList=0, outdir=None, report=1, localSystemSize=np.array([3, 3, 3]), 
                                  centerUnitCellIndex=np.array([1, 1, 1])):
         """Adds the neighbor list to the system object and returns the neighbor list"""
@@ -461,10 +473,9 @@ class neighbors(object):
         assert outdir, 'Please provide the destination path where neighbor list needs to be saved'
         assert all(size >= 3 for size in localSystemSize), 'Local system size in all dimensions should always be greater than or equal to 3'
         
-        '''
         # DEBUG: NewHopNeighbors
-        del self.material.neighborCutoffDist['E']
-        '''
+        # del self.material.neighborCutoffDist['E']
+        
         if extract:
             parentNeighborListFileName = 'ParentNeighborList_SystemSize=' + str(self.systemSize).replace(' ', ',') + '.npy'
             parentNeighborListFilePath = outdir + directorySeparator + parentNeighborListFileName
@@ -504,34 +515,17 @@ class neighbors(object):
                     centerSiteElementTypeIndex = elementTypes.index(centerElementType) 
                     neighborSiteElementTypeIndex = elementTypes.index(neighborElementType)
                     localBulkSites = self.material.generateSites(range(len(self.material.elementTypes)), 
-                                                                 localSystemSize)
-                    centerSiteIndices = [self.generateSystemElementIndex(localSystemSize, np.concatenate((centerUnitCellIndex, np.array([centerSiteElementTypeIndex]), np.array([elementIndex])))) 
-                                         for elementIndex in range(self.material.nElementsPerUnitCell[centerSiteElementTypeIndex])]
-                    neighborSiteIndices = [self.generateSystemElementIndex(localSystemSize, np.array([xSize, ySize, zSize, neighborSiteElementTypeIndex, elementIndex])) 
-                                           for xSize in range(localSystemSize[0]) for ySize in range(localSystemSize[1]) 
-                                           for zSize in range(localSystemSize[2]) 
-                                           for elementIndex in range(self.material.nElementsPerUnitCell[neighborSiteElementTypeIndex])]
+                                                                 self.systemSize)
+                    systemElementIndexOffsetArray = (np.repeat(np.arange(0, self.material.totalElementsPerUnitCell * self.numCells, self.material.totalElementsPerUnitCell), 
+                                                               self.material.nElementsPerUnitCell[centerSiteElementTypeIndex]))
+                    centerSiteIndices = neighborSiteIndices = (np.tile(self.material.nElementsPerUnitCell[:centerSiteElementTypeIndex].sum() + 
+                                                                       np.arange(0, self.material.nElementsPerUnitCell[centerSiteElementTypeIndex]), self.numCells) + systemElementIndexOffsetArray)
+
                     for iCutoffDist in range(len(cutoffDistList)):
                         cutoffDistLimits = [cutoffDistList[iCutoffDist] - tolDist[cutoffDistKey][iCutoffDist], cutoffDistList[iCutoffDist] + tolDist[cutoffDistKey][iCutoffDist]]
                         
                         neighborListCutoffDistKey.append(self.hopNeighborSites(localBulkSites, centerSiteIndices, 
                                                                                neighborSiteIndices, cutoffDistLimits, cutoffDistKey))
-                        '''
-                        # DEBUG: NewHopNeighbors
-                        hopNeighborSites = self.hopNeighborSites(localBulkSites, centerSiteIndices, neighborSiteIndices, cutoffDistLimits, cutoffDistKey)
-                        systemHopNeighborSites = deepcopy(hopNeighborSites)
-                        systemHopNeighborSites.systemElementIndexMap = systemElementIndexMap
-                        #systemHopNeighborSites.elementIndexMap = np.tile(systemHopNeighborSites.elementIndexMap, self.numCells)
-                        #systemHopNeighborSites.numNeighbors = np.tile(systemHopNeighborSites.numNeighbors, self.numCells)
-                        #systemHopNeighborSites.displacementVectorList = np.tile(systemHopNeighborSites.displacementVectorList, self.numCells)
-                        #systemHopNeighborSites.displacementList = np.tile(systemHopNeighborSites.displacementList, self.numCells)
-                        '''
-                        for key in hopNeighborSites(cutoffDistKey)[iCutoffDist].__dict__.keys():
-                            systemHopNeighborSites[key] = np.tile(hopNeighborSites(cutoffDistKey)[iCutoffDist].key)
-                        neighborListCutoffDistKey.append(systemHopNeighborSites)
-                        
-                    
-
                 neighborList[cutoffDistKey] = neighborListCutoffDistKey[:]
             np.save(neighborListFilePath, neighborList)
             if report:
