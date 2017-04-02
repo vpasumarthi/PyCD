@@ -755,9 +755,7 @@ class run(object):
                 for hopDistTypeIndex in range(len(self.material.neighborCutoffDist[hopElementType])):
                     rowIndex = np.where(neighborList[hopElementType][hopDistTypeIndex].systemElementIndexMap[0] == speciesSiteSystemElementIndex)[0][0]
                     neighborSystemElementIndices = neighborList[hopElementType][hopDistTypeIndex].systemElementIndexMap[1][rowIndex]
-                    numNeighbors = len(neighborSystemElementIndices)
-                    for neighborIndex in range(numNeighbors):
-                        neighborSystemElementIndex = neighborSystemElementIndices[neighborIndex]
+                    for neighborIndex, neighborSystemElementIndex in enumerate(neighborSystemElementIndices):
                         if neighborSystemElementIndex not in currentStateOccupancy:
                             newStateOccupancy[speciesIndex] = neighborSystemElementIndex
                             newStateOccupancyList.append(newStateOccupancy[:])
@@ -787,8 +785,8 @@ class run(object):
         numPathStepsPerTraj = int(kmcSteps / stepInterval) + 1
         timeArray = np.zeros(nTraj * numPathStepsPerTraj)
         unwrappedPositionArray = np.zeros(( nTraj * numPathStepsPerTraj, self.totalSpecies, 3))
-        wrappedPositionArray = np.zeros(( nTraj * numPathStepsPerTraj, self.totalSpecies, 3))
-        speciesDisplacementArray = np.zeros(( nTraj * numPathStepsPerTraj, self.totalSpecies, 3))
+        #wrappedPositionArray = np.zeros(( nTraj * numPathStepsPerTraj, self.totalSpecies, 3))
+        #speciesDisplacementArray = np.zeros(( nTraj * numPathStepsPerTraj, self.totalSpecies, 3))
         pathIndex = 0
         currentStateConfig = self.system.config(currentStateOccupancy)
         currentStateChargeConfig = self.system.chargeConfig(currentStateOccupancy)
@@ -810,10 +808,9 @@ class run(object):
                 newStates = self.generateNewStates(currentStateOccupancy)
                 hopElementTypes = newStates.hopElementTypes[:]
                 hopDistTypes = newStates.hopDistTypes[:]
-                for newStateIndex in range(len(newStates.hoppingSpeciesIndices)):
-                    [oldSiteSystemElementIndex, newSiteSystemElementIndex] = newStates.systemElementIndexPairList[newStateIndex]
+                for newStateIndex, [oldSiteSystemElementIndex, newSiteSystemElementIndex] in enumerate(newStates.systemElementIndexPairList):
                     if shellCharges:
-                        newStateOccupancy = [newStates.newStateOccupancyList[newStateIndex][LocalSpeciesTypeIndex][:] for LocalSpeciesTypeIndex in range(len(newStates.newStateOccupancyList[newStateIndex]))] 
+                        newStateOccupancy = newStates.newStateOccupancyList[newStateIndex][:] 
                         newStateChargeConfig = self.system.chargeConfig(newStateOccupancy)
                         newStateESPConfig = self.system.ESPConfig(newStateChargeConfig)
                     else:
@@ -874,8 +871,8 @@ class run(object):
                 if step % stepInterval == 0:
                     speciesSystemElementIndices = np.asarray(currentStateOccupancy)
                     timeArray[pathIndex] = kmcTime
-                    wrappedPositionArray[pathIndex] = np.copy(currentStateConfig.positions[speciesSystemElementIndices])
-                    speciesDisplacementArray[pathIndex] = np.copy(speciesDisplacementVectorList)
+                    #wrappedPositionArray[pathIndex] = np.copy(currentStateConfig.positions[speciesSystemElementIndices])
+                    #speciesDisplacementArray[pathIndex] = np.copy(speciesDisplacementVectorList)
                     unwrappedPositionArray[pathIndex] = unwrappedPositionArray[pathIndex - 1] + speciesDisplacementVectorList
                     speciesDisplacementVectorList = np.zeros((self.totalSpecies, 3))
                     pathIndex += 1
@@ -889,8 +886,8 @@ class run(object):
         trajectoryData.systemSize = self.systemSize
         trajectoryData.timeArray = timeArray
         trajectoryData.unwrappedPositionArray = unwrappedPositionArray
-        trajectoryData.wrappedPositionArray = wrappedPositionArray
-        trajectoryData.speciesDisplacementArray = speciesDisplacementArray
+        #trajectoryData.wrappedPositionArray = wrappedPositionArray
+        #trajectoryData.speciesDisplacementArray = speciesDisplacementArray
         trajectoryData.EcutoffDist = self.material.neighborCutoffDist['E'][0]
         
         if outdir:
