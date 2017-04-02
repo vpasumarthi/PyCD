@@ -32,7 +32,7 @@ def hematiteMassRun(pbc, systemSize, nTrajList, cutE_List, nSpeciesList, TempLis
                 nHoles = nSpeciesList[1][speciesIndex]
                 kmcSteps = kmcStepsList[speciesIndex]
                 os.chdir(parentDir1Path)
-                speciesCount = {'electron': nElectrons, 'hole':  nHoles}
+                speciesCount = np.array([nElectrons, nHoles])
                 parentDir2 = str(nElectrons) + ('electron' if nElectrons==1 else 'electrons') + ', ' + str(nHoles) + ('hole' if nHoles==1 else 'holes')
                 if not os.path.exists(parentDir2):
                     os.mkdir(parentDir2)

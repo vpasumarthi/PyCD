@@ -27,7 +27,7 @@ def hematiteRun(neighborList, shellCharges, cutE, systemDirectoryPath, speciesCo
     initialOccupancy =  initiateHematiteSystem.generateRandomOccupancy(speciesCount)
     # TODO: No electron system
     # del initialOccupancy['electron'][0]
-    hematiteSystem = system(hematite, hematiteNeighbors, neighborList[()], initialOccupancy)
+    hematiteSystem = system(hematite, hematiteNeighbors, neighborList[()], initialOccupancy, speciesCount)
     hematiteRun = run(hematite, hematiteNeighbors, hematiteSystem, T, nTraj, kmcSteps, stepInterval, gui)
     
     hematiteRun.doKMCSteps(outdir, ESPConfig, report, randomSeed)
