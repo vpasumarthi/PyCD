@@ -543,13 +543,34 @@ class neighbors(object):
                      (', %2d seconds' % (timeElapsed.seconds % 60)))
         report.close()
     
-class initiateSystem(object):
-    """ """
-    def __init__(self, material, neighbors):
+class system(object):
+    """defines the system we are working on
+    
+    Attributes:
+    size: An array (3 x 1) defining the system size in multiple of unit cells
+    """
+    def __init__(self, material, neighbors, neighborList, speciesCount):
+        """Return a system object whose size is *size*"""
         self.material = material
         self.neighbors = neighbors
+        self.neighborList = neighborList
+        
+        self.pbc = self.neighbors.pbc
+        self.speciesCount = speciesCount
+        self.speciesCountCumSum = speciesCount.cumsum()
+        
+        # total number of unit cells
         self.systemSize = self.neighbors.systemSize
-
+        self.numCells = self.systemSize.prod()
+        
+        # generate lattice charge list
+        unitcellChargeList = np.array([self.material.chargeTypes[self.material.elementTypes[elementTypeIndex]] 
+                                       for elementTypeIndex in self.material.elementTypeIndexList])
+        self.latticeChargeList = np.tile(unitcellChargeList, self.numCells)
+        
+        # Coefficient Distance List
+        self.coeffDistanceList = 1 / (self.material.dielectricConstant * self.neighborList['E'][0].displacementList)
+        
     def generateRandomOccupancy(self, speciesCount):
         """generates initial occupancy list based on species count"""
         occupancy = []
@@ -571,35 +592,6 @@ class initiateSystem(object):
             occupancy.extend(iSpeciesSystemElementIndices[:])
         return occupancy
     
-class system(object):
-    """defines the system we are working on
-    
-    Attributes:
-    size: An array (3 x 1) defining the system size in multiple of unit cells
-    """
-    def __init__(self, material, neighbors, neighborList, occupancy, speciesCount):
-        """Return a system object whose size is *size*"""
-        self.material = material
-        self.neighbors = neighbors
-        self.neighborList = neighborList
-        self.occupancy = occupancy
-        
-        self.pbc = self.neighbors.pbc
-        self.speciesCount = speciesCount
-        self.speciesCountCumSum = speciesCount.cumsum()
-        
-        # total number of unit cells
-        self.systemSize = self.neighbors.systemSize
-        self.numCells = self.systemSize.prod()
-        
-        # generate lattice charge list
-        unitcellChargeList = np.array([self.material.chargeTypes[self.material.elementTypes[elementTypeIndex]] 
-                                       for elementTypeIndex in self.material.elementTypeIndexList])
-        self.latticeChargeList = np.tile(unitcellChargeList, self.numCells)
-        
-        # Coefficient Distance List
-        self.coeffDistanceList = 1 / (self.material.dielectricConstant * self.neighborList['E'][0].displacementList)
-    
     def chargeConfig(self, occupancy):
         """Returns charge distribution of the current configuration"""
         chargeList = np.copy(self.latticeChargeList)
@@ -614,7 +606,7 @@ class system(object):
                 speciesTypeIndex = self.material.speciesTypes.index(speciesType)
                 startIndex = 0 + self.speciesCount[:speciesTypeIndex].sum()
                 endIndex = self.speciesCountCumSum[speciesTypeIndex]
-                centerSiteSystemElementIndices = self.occupancy[startIndex:endIndex][:]
+                centerSiteSystemElementIndices = occupancy[startIndex:endIndex][:]
                 chargeList[centerSiteSystemElementIndices] = self.material.chargeTypes[chargeKeyType]
         return chargeList
 
@@ -681,6 +673,9 @@ class run(object):
 
         # Electrostatic interaction neighborlist:
         self.elecNeighborListNeighborSEIndices = self.system.neighborList['E'][0].systemElementIndexMap[1]
+        
+        # initial Occupancy
+        self.initialOccupancy = self.system.generateRandomOccupancy(self.system.speciesCount)
 
     def electrostaticInteractionEnergy(self, occupancy):
         """Subroutine to compute the electrostatic interaction energies"""
@@ -713,7 +708,7 @@ class run(object):
         nTraj = self.nTraj
         kmcSteps = self.kmcSteps
         stepInterval = self.stepInterval
-        currentStateOccupancy = self.system.occupancy[:] 
+        currentStateOccupancy = self.initialOccupancy[:] 
         numPathStepsPerTraj = int(kmcSteps / stepInterval) + 1
         timeArray = np.zeros(nTraj * numPathStepsPerTraj)
         unwrappedPositionArray = np.zeros(( nTraj * numPathStepsPerTraj, self.totalSpecies, 3))

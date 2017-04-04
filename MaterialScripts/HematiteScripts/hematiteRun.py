@@ -2,7 +2,7 @@
 def hematiteRun(neighborList, cutE, systemDirectoryPath, speciesCount, T, nTraj, kmcSteps, 
                 stepInterval, gui, outdir, report, randomSeed):
         
-    from KineticModel import system, run, initiateSystem
+    from KineticModel import system, run
     import numpy as np
     import pickle
     import platform
@@ -23,11 +23,9 @@ def hematiteRun(neighborList, cutE, systemDirectoryPath, speciesCount, T, nTraj,
     hematiteNeighbors = pickle.load(file_hematiteNeighbors)
     file_hematiteNeighbors.close()
     
-    initiateHematiteSystem = initiateSystem(hematite, hematiteNeighbors)
-    initialOccupancy =  initiateHematiteSystem.generateRandomOccupancy(speciesCount)
     # TODO: No electron system
     # del initialOccupancy['electron'][0]
-    hematiteSystem = system(hematite, hematiteNeighbors, neighborList[()], initialOccupancy, speciesCount)
+    hematiteSystem = system(hematite, hematiteNeighbors, neighborList[()], speciesCount)
     hematiteRun = run(hematite, hematiteNeighbors, hematiteSystem, T, nTraj, kmcSteps, stepInterval, gui)
     
     hematiteRun.doKMCSteps(outdir, report, randomSeed)
