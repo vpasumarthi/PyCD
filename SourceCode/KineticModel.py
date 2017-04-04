@@ -749,7 +749,6 @@ class run(object):
     #@profile
     def generateNewStates(self, currentStateOccupancy):
         """generates a list of new occupancy states possible from the current state"""
-        neighborList = self.system.neighborList
         newStateOccupancyList = []
         hopElementTypes = []
         hopDistTypes = []
@@ -758,6 +757,7 @@ class run(object):
         systemElementIndexPairList = []
         newStateOccupancy = currentStateOccupancy[:]
         
+        neighborSystemElementIndicesPool = []
         for speciesIndex, speciesSiteSystemElementIndex in enumerate(currentStateOccupancy):
             speciesType = self.speciesTypeList[speciesIndex]
             siteElementTypeIndex = self.siteElementTypeIndexList[speciesIndex]
@@ -765,22 +765,30 @@ class run(object):
             rowIndex = (speciesSiteSystemElementIndex / self.material.totalElementsPerUnitCell * self.material.nElementsPerUnitCell[siteElementTypeIndex] + 
                         speciesSiteSystemElementIndex % self.material.totalElementsPerUnitCell - self.headStart_nElementsPerUnitCellCumSum[siteElementTypeIndex])
             for hopDistTypeIndex in range(self.lenHopDistTypeList[speciesIndex]):
-                neighborSystemElementIndices = neighborList[hopElementType][hopDistTypeIndex].systemElementIndexMap[1][rowIndex]
+                #numNeighbors = self.system.neighborList[hopElementType][hopDistTypeIndex].numNeighbors[rowIndex]
+                #childOccupancyList = [currentStateOccupancy[:] for iNeighbor in range(numNeighbors)]
+                
+                neighborSystemElementIndices = self.system.neighborList[hopElementType][hopDistTypeIndex].systemElementIndexMap[1][rowIndex]
+                neighborSystemElementIndicesPool.extend(list(self.system.neighborList[hopElementType][hopDistTypeIndex].systemElementIndexMap[1][rowIndex]))
+                #import pdb; pdb.set_trace()
                 # Delete neighbor indices where charge carriers already exist in currentStateOccupancy
                 # neighborSystemElementIndices = np.delete(neighborSystemElementIndices, np.in1d(neighborSystemElementIndices, currentStateOccupancy).nonzero()[0])
                 # COMMENT: Can use range as an alternative to enumerate
+                numInvalidNeighbors = 0
                 for neighborIndex, neighborSystemElementIndex in enumerate(neighborSystemElementIndices):
                     # COMMENT: Ignoring that charge carriers can localize on immediately next sites
                     if neighborSystemElementIndex not in currentStateOccupancy:
                         newStateOccupancy[speciesIndex] = neighborSystemElementIndex
                         newStateOccupancyList.append(newStateOccupancy[:])
                         newStateOccupancy[speciesIndex] = speciesSiteSystemElementIndex
-                        hopElementTypes.append(hopElementType)
-                        hopDistTypes.append(hopDistTypeIndex)
-                        hoppingSpeciesIndices.append(speciesIndex)
-                        speciesDisplacementVector = neighborList[hopElementType][hopDistTypeIndex].displacementVectorList[rowIndex][neighborIndex] 
-                        speciesDisplacementVectorList.append(speciesDisplacementVector)
+                        speciesDisplacementVectorList.append(self.system.neighborList[hopElementType][hopDistTypeIndex].displacementVectorList[rowIndex][neighborIndex])
+                        #import pdb; pdb.set_trace()
                         systemElementIndexPairList.append([speciesSiteSystemElementIndex, neighborSystemElementIndex])
+                    else:
+                        numInvalidNeighbors += 1
+                hopElementTypes.extend([hopElementType] * (neighborIndex - numInvalidNeighbors + 1))
+                hopDistTypes.extend([hopDistTypeIndex] * (neighborIndex - numInvalidNeighbors + 1))
+                hoppingSpeciesIndices.extend([speciesIndex] * (neighborIndex - numInvalidNeighbors + 1))
 
         returnNewStates = returnValues()
         returnNewStates.newStateOccupancyList = newStateOccupancyList
@@ -801,8 +809,9 @@ class run(object):
         numPathStepsPerTraj = int(kmcSteps / stepInterval) + 1
         timeArray = np.zeros(nTraj * numPathStepsPerTraj)
         unwrappedPositionArray = np.zeros(( nTraj * numPathStepsPerTraj, self.totalSpecies, 3))
-        #wrappedPositionArray = np.zeros(( nTraj * numPathStepsPerTraj, self.totalSpecies, 3))
-        #speciesDisplacementArray = np.zeros(( nTraj * numPathStepsPerTraj, self.totalSpecies, 3))
+        # Not necessary for now
+        # wrappedPositionArray = np.zeros(( nTraj * numPathStepsPerTraj, self.totalSpecies, 3))
+        # speciesDisplacementArray = np.zeros(( nTraj * numPathStepsPerTraj, self.totalSpecies, 3))
         pathIndex = 0
         currentStateConfig = self.system.config(currentStateOccupancy)
         currentStateChargeConfig = self.system.chargeConfig(currentStateOccupancy)
@@ -856,8 +865,7 @@ class run(object):
                         if ESPConfig:
                             newStateESPConfig[oldSiteSystemElementIndex] = np.copy(currentStateESPConfig[oldSiteSystemElementIndex])
                             newStateESPConfig[newSiteSystemElementIndex] = np.copy(currentStateESPConfig[newSiteSystemElementIndex])
-                            #newStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = deepcopy(currentStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]])
-                        
+                            
                 kTotal = np.sum(kList)
                 kCumSum = (kList / kTotal).cumsum()
                 rand1 = rnd.random()
@@ -879,7 +887,6 @@ class run(object):
                         currentStateESPConfig[newSiteSystemElementIndex] *= multFactor[1]
                         newStateESPConfig[oldSiteSystemElementIndex] = np.copy(currentStateESPConfig[oldSiteSystemElementIndex])
                         newStateESPConfig[newSiteSystemElementIndex] = np.copy(currentStateESPConfig[newSiteSystemElementIndex])
-                        #newStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = deepcopy(currentStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]])
                     currentStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = currentStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
                     newStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = newStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
                     
@@ -891,8 +898,9 @@ class run(object):
                 if step % stepInterval == 0:
                     speciesSystemElementIndices = np.asarray(currentStateOccupancy)
                     timeArray[pathIndex] = kmcTime
-                    #wrappedPositionArray[pathIndex] = np.copy(currentStateConfig.positions[speciesSystemElementIndices])
-                    #speciesDisplacementArray[pathIndex] = np.copy(speciesDisplacementVectorList)
+                    # Not needed for now
+                    # wrappedPositionArray[pathIndex] = np.copy(currentStateConfig.positions[speciesSystemElementIndices])
+                    # speciesDisplacementArray[pathIndex] = np.copy(speciesDisplacementVectorList)
                     unwrappedPositionArray[pathIndex] = unwrappedPositionArray[pathIndex - 1] + speciesDisplacementVectorList
                     speciesDisplacementVectorList = np.zeros((self.totalSpecies, 3))
                     pathIndex += 1
@@ -906,8 +914,9 @@ class run(object):
         trajectoryData.systemSize = self.systemSize
         trajectoryData.timeArray = timeArray
         trajectoryData.unwrappedPositionArray = unwrappedPositionArray
-        #trajectoryData.wrappedPositionArray = wrappedPositionArray
-        #trajectoryData.speciesDisplacementArray = speciesDisplacementArray
+        # Not needed for now
+        # trajectoryData.wrappedPositionArray = wrappedPositionArray
+        # trajectoryData.speciesDisplacementArray = speciesDisplacementArray
         trajectoryData.EcutoffDist = self.material.neighborCutoffDist['E'][0]
         
         if outdir:
