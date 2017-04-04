@@ -698,6 +698,9 @@ class run(object):
         self.hopElementTypeList = [self.material.hopElementTypes[speciesType][0] for speciesType in self.speciesTypeList]
         self.lenHopDistTypeList = [len(self.material.neighborCutoffDist[hopElementType]) for hopElementType in self.hopElementTypeList]
         
+        # symmetry and uniqueness
+        
+        
         # total number of species
         self.totalSpecies = self.system.speciesCount.sum()
 
@@ -757,7 +760,6 @@ class run(object):
         systemElementIndexPairList = []
         newStateOccupancy = currentStateOccupancy[:]
         
-        neighborSystemElementIndicesPool = []
         for speciesIndex, speciesSiteSystemElementIndex in enumerate(currentStateOccupancy):
             speciesType = self.speciesTypeList[speciesIndex]
             siteElementTypeIndex = self.siteElementTypeIndexList[speciesIndex]
@@ -765,30 +767,21 @@ class run(object):
             rowIndex = (speciesSiteSystemElementIndex / self.material.totalElementsPerUnitCell * self.material.nElementsPerUnitCell[siteElementTypeIndex] + 
                         speciesSiteSystemElementIndex % self.material.totalElementsPerUnitCell - self.headStart_nElementsPerUnitCellCumSum[siteElementTypeIndex])
             for hopDistTypeIndex in range(self.lenHopDistTypeList[speciesIndex]):
-                #numNeighbors = self.system.neighborList[hopElementType][hopDistTypeIndex].numNeighbors[rowIndex]
-                #childOccupancyList = [currentStateOccupancy[:] for iNeighbor in range(numNeighbors)]
-                
                 neighborSystemElementIndices = self.system.neighborList[hopElementType][hopDistTypeIndex].systemElementIndexMap[1][rowIndex]
-                neighborSystemElementIndicesPool.extend(list(self.system.neighborList[hopElementType][hopDistTypeIndex].systemElementIndexMap[1][rowIndex]))
-                #import pdb; pdb.set_trace()
-                # Delete neighbor indices where charge carriers already exist in currentStateOccupancy
-                # neighborSystemElementIndices = np.delete(neighborSystemElementIndices, np.in1d(neighborSystemElementIndices, currentStateOccupancy).nonzero()[0])
-                # COMMENT: Can use range as an alternative to enumerate
                 numInvalidNeighbors = 0
                 for neighborIndex, neighborSystemElementIndex in enumerate(neighborSystemElementIndices):
-                    # COMMENT: Ignoring that charge carriers can localize on immediately next sites
                     if neighborSystemElementIndex not in currentStateOccupancy:
                         newStateOccupancy[speciesIndex] = neighborSystemElementIndex
                         newStateOccupancyList.append(newStateOccupancy[:])
                         newStateOccupancy[speciesIndex] = speciesSiteSystemElementIndex
                         speciesDisplacementVectorList.append(self.system.neighborList[hopElementType][hopDistTypeIndex].displacementVectorList[rowIndex][neighborIndex])
-                        #import pdb; pdb.set_trace()
                         systemElementIndexPairList.append([speciesSiteSystemElementIndex, neighborSystemElementIndex])
                     else:
                         numInvalidNeighbors += 1
-                hopElementTypes.extend([hopElementType] * (neighborIndex - numInvalidNeighbors + 1))
-                hopDistTypes.extend([hopDistTypeIndex] * (neighborIndex - numInvalidNeighbors + 1))
-                hoppingSpeciesIndices.extend([speciesIndex] * (neighborIndex - numInvalidNeighbors + 1))
+                numValidEntries = neighborIndex - numInvalidNeighbors + 1
+                hopElementTypes.extend([hopElementType] * numValidEntries)
+                hopDistTypes.extend([hopDistTypeIndex] * numValidEntries)
+                hoppingSpeciesIndices.extend([speciesIndex] * numValidEntries)
 
         returnNewStates = returnValues()
         returnNewStates.newStateOccupancyList = newStateOccupancyList
