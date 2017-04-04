@@ -605,31 +605,6 @@ class system(object):
         chargeList = np.copy(self.latticeChargeList)
         chargeTypeKeys = self.material.chargeTypes.keys()
         
-        shellChargeTypeKeys = [key for key in chargeTypeKeys if self.material.elementTypeDelimiter in key]
-        for chargeTypeKey in shellChargeTypeKeys:
-            centerSiteElementType = chargeTypeKey.split(self.material.elementTypeDelimiter)[0]
-            neighborElementTypeSites = self.neighborList[chargeTypeKey][:]
-            for speciesType in self.material.elementTypeToSpeciesMap[centerSiteElementType]:
-                speciesTypeIndex = self.material.speciesTypes.index(speciesType)
-                startIndex = 0 + self.speciesCount[:speciesTypeIndex].sum()
-                endIndex = self.speciesCountCumSum[speciesTypeIndex]
-                centerSiteSystemElementIndices = self.occupancy[startIndex:endIndex][:]
-                for centerSiteSystemElementIndex in centerSiteSystemElementIndices:
-                    for shellIndex, chargeValue in enumerate(self.material.chargeTypes[chargeTypeKey]):
-                        neighborOffsetList = neighborElementTypeSites[shellIndex].offsetList
-                        neighborElementIndexMap = neighborElementTypeSites[shellIndex].elementIndexMap
-                        siteQuantumIndices = self.neighbors.generateQuantumIndices(self.systemSize, centerSiteSystemElementIndex)
-                        siteElementIndex = siteQuantumIndices[4]
-                        neighborSystemElementIndices = []
-                        for neighborIndex in range(len(neighborElementIndexMap[1][siteElementIndex])):
-                            neighborUnitCellIndex = [sum(x) for x in zip(siteQuantumIndices[:3], neighborOffsetList[siteElementIndex][neighborIndex])]
-                            neighborElementTypeIndex = [self.material.elementTypes.index(chargeTypeKey.split(self.material.elementTypeDelimiter)[1])]
-                            neighborElementIndex = [neighborElementIndexMap[1][siteElementIndex][neighborIndex]]
-                            neighborQuantumIndices = neighborUnitCellIndex + neighborElementTypeIndex + neighborElementIndex
-                            neighborSystemElementIndex = self.neighbors.generateSystemElementIndex(self.systemSize, neighborQuantumIndices)
-                            neighborSystemElementIndices.append(neighborSystemElementIndex)
-                        chargeList[neighborSystemElementIndices] = chargeValue
-
         siteChargeTypeKeys = [key for key in chargeTypeKeys if key not in self.material.siteList if self.material.siteIdentifier in key]
         for chargeKeyType in siteChargeTypeKeys:
             centerSiteElementType = chargeKeyType.replace(self.material.siteIdentifier,'')
@@ -752,8 +727,6 @@ class run(object):
         currentStateESPConfig = self.system.ESPConfig(currentStateChargeConfig)
         newStateESPConfig = deepcopy(currentStateESPConfig)
     
-        shellChargeTypeKeys = [key for key in self.material.chargeTypes.keys() if self.material.elementTypeDelimiter in key]
-        shellCharges = 0 if shellChargeTypeKeys==[] else 1
         assert 'E' in self.material.neighborCutoffDist.keys(), 'Please specify the cutoff distance for electrostatic interactions'
         for dummy in range(nTraj):
             pathIndex += 1
@@ -784,17 +757,11 @@ class run(object):
                                 hopDistTypeList.append(hopDistType)
                                 rowIndexList.append(rowIndex)
                                 neighborIndexList.append(neighborIndex)
-                                if shellCharges:
-                                    newStateOccupancy = currentStateOccupancy[:]
-                                    newStateOccupancy[speciesIndex] = neighborSystemElementIndex 
-                                    newStateChargeConfig = self.system.chargeConfig(newStateOccupancy)
-                                    newStateESPConfig = self.system.ESPConfig(newStateChargeConfig)
-                                else:
-                                    multFactor = np.true_divide(currentStateChargeConfig[[neighborSystemElementIndex, speciesSiteSystemElementIndex]], 
-                                                                currentStateChargeConfig[[speciesSiteSystemElementIndex, neighborSystemElementIndex]])
-                                    newStateESPConfig[speciesSiteSystemElementIndex] *= multFactor[0]
-                                    newStateESPConfig[neighborSystemElementIndex] *= multFactor[1]
-                                    newStateChargeConfig[[speciesSiteSystemElementIndex, neighborSystemElementIndex]] = newStateChargeConfig[[neighborSystemElementIndex, speciesSiteSystemElementIndex]]
+                                multFactor = np.true_divide(currentStateChargeConfig[[neighborSystemElementIndex, speciesSiteSystemElementIndex]], 
+                                                            currentStateChargeConfig[[speciesSiteSystemElementIndex, neighborSystemElementIndex]])
+                                newStateESPConfig[speciesSiteSystemElementIndex] *= multFactor[0]
+                                newStateESPConfig[neighborSystemElementIndex] *= multFactor[1]
+                                newStateChargeConfig[[speciesSiteSystemElementIndex, neighborSystemElementIndex]] = newStateChargeConfig[[neighborSystemElementIndex, speciesSiteSystemElementIndex]]
                                 delG0 = self.ESPRelativeElectrostaticInteractionEnergy(currentStateESPConfig, newStateESPConfig, 
                                                                                        currentStateChargeConfig, newStateChargeConfig, 
                                                                                        speciesSiteSystemElementIndex, neighborSystemElementIndex)
@@ -802,10 +769,9 @@ class run(object):
                                 VAB = self.VAB[hopElementType][hopDistType]
                                 delGs = ((lambdaValue + delG0) ** 2 / (4 * lambdaValue)) - VAB
                                 kList.append(self.vn * np.exp(-delGs / self.T))
-                                if not shellCharges:
-                                    newStateChargeConfig[[speciesSiteSystemElementIndex, neighborSystemElementIndex]] = newStateChargeConfig[[neighborSystemElementIndex, speciesSiteSystemElementIndex]]
-                                    newStateESPConfig[speciesSiteSystemElementIndex] = np.copy(currentStateESPConfig[speciesSiteSystemElementIndex])
-                                    newStateESPConfig[neighborSystemElementIndex] = np.copy(currentStateESPConfig[neighborSystemElementIndex])
+                                newStateChargeConfig[[speciesSiteSystemElementIndex, neighborSystemElementIndex]] = newStateChargeConfig[[neighborSystemElementIndex, speciesSiteSystemElementIndex]]
+                                newStateESPConfig[speciesSiteSystemElementIndex] = np.copy(currentStateESPConfig[speciesSiteSystemElementIndex])
+                                newStateESPConfig[neighborSystemElementIndex] = np.copy(currentStateESPConfig[neighborSystemElementIndex])
                             
                 kTotal = np.sum(kList)
                 kCumSum = (kList / kTotal).cumsum()
@@ -819,19 +785,12 @@ class run(object):
                 newSiteSystemElementIndex = neighborSystemElementIndexList[procIndex]
                 currentStateOccupancy[speciesIndexList[procIndex]] = newSiteSystemElementIndex
                 
-                if shellCharges:
-                    currentStateChargeConfig = self.system.chargeConfig(currentStateOccupancy)
-                    newStateChargeConfig = self.system.chargeConfig(currentStateOccupancy)
-                    currentStateESPConfig = self.system.ESPConfig(currentStateChargeConfig)
-                    newStateESPConfig = self.system.ESPConfig(currentStateChargeConfig)
-                else:
-                    currentStateESPConfig[oldSiteSystemElementIndex] *= multFactor[0]
-                    currentStateESPConfig[newSiteSystemElementIndex] *= multFactor[1]
-                    newStateESPConfig[oldSiteSystemElementIndex] = np.copy(currentStateESPConfig[oldSiteSystemElementIndex])
-                    newStateESPConfig[newSiteSystemElementIndex] = np.copy(currentStateESPConfig[newSiteSystemElementIndex])
-                    currentStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = currentStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
-                    newStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = newStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
-                
+                currentStateESPConfig[oldSiteSystemElementIndex] *= multFactor[0]
+                currentStateESPConfig[newSiteSystemElementIndex] *= multFactor[1]
+                newStateESPConfig[oldSiteSystemElementIndex] = np.copy(currentStateESPConfig[oldSiteSystemElementIndex])
+                newStateESPConfig[newSiteSystemElementIndex] = np.copy(currentStateESPConfig[newSiteSystemElementIndex])
+                currentStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = currentStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
+                newStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = newStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
                 
                 speciesIndex = speciesIndexList[procIndex]
                 hopElementType = hopElementTypeList[procIndex]

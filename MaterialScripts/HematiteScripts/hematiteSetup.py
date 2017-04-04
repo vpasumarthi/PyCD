@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-def hematiteSetup(chargeTypes, cutE, shellCharges, shellChargeTypes, systemSize, pbc, 
-                  replaceExistingObjectFiles, parent, extract, replaceExistingNeighborList, outdir):
+def hematiteSetup(chargeTypes, cutE, systemSize, pbc, replaceExistingObjectFiles, 
+                  parent, extract, replaceExistingNeighborList, outdir):
     """Prepare material class object file, neighborlist and saves to the provided destination path"""
     from hematiteParameters import hematiteParameters
     from KineticModel import material, neighbors
@@ -21,14 +21,11 @@ def hematiteSetup(chargeTypes, cutE, shellCharges, shellChargeTypes, systemSize,
     hematiteParameters = hematiteParameters()
     hematiteParameters.chargeTypes = chargeTypes
     hematiteParameters.neighborCutoffDist['E'] = cutE if extract else [cutE]
-    if not shellCharges:
-        for iShellChargeType in shellChargeTypes:
-            del hematiteParameters.neighborCutoffDist[iShellChargeType]
     
     cutE = cutE if extract else [cutE]
 
     for iCutE in cutE:        
-        tailName = '_Shell' if shellCharges else '_NoShell' + ('_Parent' if parent else ('_E' + str(iCutE))) + '.obj'
+        tailName = ('_Parent' if parent else ('_E' + str(iCutE))) + '.obj'
         
         hematite = material(hematiteParameters)
         materialFileName = objectFileOutDir + directorySeparator + materialName + tailName
@@ -37,4 +34,4 @@ def hematiteSetup(chargeTypes, cutE, shellCharges, shellChargeTypes, systemSize,
         hematiteNeighbors = neighbors(hematite, systemSize, pbc)
         neighborsFileName = objectFileOutDir + directorySeparator + materialName + 'Neighbors' + tailName
         hematiteNeighbors.generateNeighborsFile(hematiteNeighbors, neighborsFileName, replaceExistingObjectFiles)
-    hematiteNeighbors.generateNeighborList(parent, extract, cutE if extract else cutE[0], replaceExistingNeighborList, neighborListOutDir)
+    #hematiteNeighbors.generateNeighborList(parent, extract, cutE if extract else cutE[0], replaceExistingNeighborList, neighborListOutDir)

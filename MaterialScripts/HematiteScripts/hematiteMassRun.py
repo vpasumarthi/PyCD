@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-def hematiteMassRun(pbc, systemSize, nTrajList, cutE_List, nSpeciesList, TempList, shellCharges, 
+def hematiteMassRun(pbc, systemSize, nTrajList, cutE_List, nSpeciesList, TempList, 
                     kmcStepsList, stepInterval, gui, report, randomSeed, overWrite):
     
     from hematiteRun import hematiteRun
@@ -58,5 +58,5 @@ def hematiteMassRun(pbc, systemSize, nTrajList, cutE_List, nSpeciesList, TempLis
                         if fname.endswith('.log') and fname.startswith('TrajectoryData'):
                             fileExists = 1
                     if not fileExists or overWrite:
-                        hematiteRun(neighborList, shellCharges, cutE, systemDirectoryPath, speciesCount, iTemp, nTraj, 
+                        hematiteRun(neighborList, cutE, systemDirectoryPath, speciesCount, iTemp, nTraj, 
                                     kmcSteps, stepInterval, gui, outdir, report, randomSeed)
