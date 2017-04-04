@@ -520,7 +520,6 @@ class neighbors(object):
                                                                self.material.nElementsPerUnitCell[centerSiteElementTypeIndex]))
                     centerSiteIndices = neighborSiteIndices = (np.tile(self.material.nElementsPerUnitCell[:centerSiteElementTypeIndex].sum() + 
                                                                        np.arange(0, self.material.nElementsPerUnitCell[centerSiteElementTypeIndex]), self.numCells) + systemElementIndexOffsetArray)
-
                     for iCutoffDist in range(len(cutoffDistList)):
                         cutoffDistLimits = [cutoffDistList[iCutoffDist] - tolDist[cutoffDistKey][iCutoffDist], cutoffDistList[iCutoffDist] + tolDist[cutoffDistKey][iCutoffDist]]
                         
@@ -688,7 +687,17 @@ class run(object):
         self.vn = self.material.vn
         self.lambdaValues = self.material.lambdaValues
         self.VAB = self.material.VAB
-
+        
+        # nElementsPerUnitCell
+        self.headStart_nElementsPerUnitCellCumSum = [self.material.nElementsPerUnitCell[:siteElementTypeIndex].sum() for siteElementTypeIndex in range(self.material.nElementTypes)]
+        
+        # speciesTypeList
+        self.speciesTypeList = [self.material.speciesTypes[index] for index, value in enumerate(self.system.speciesCount) for i in range(value)]
+        self.siteElementTypeIndexList = [self.material.elementTypes.index(self.material.speciesToElementTypeMap[speciesType][0]) 
+                                         for speciesType in self.speciesTypeList]
+        self.hopElementTypeList = [self.material.hopElementTypes[speciesType][0] for speciesType in self.speciesTypeList]
+        self.lenHopDistTypeList = [len(self.material.neighborCutoffDist[hopElementType]) for hopElementType in self.hopElementTypeList]
+        
         # total number of species
         self.totalSpecies = self.system.speciesCount.sum()
 
@@ -750,22 +759,29 @@ class run(object):
         newStateOccupancy = currentStateOccupancy[:]
         
         for speciesIndex, speciesSiteSystemElementIndex in enumerate(currentStateOccupancy):
-            speciesType = self.material.speciesTypes[np.where(self.system.speciesCountCumSum > speciesIndex)[0][0]] 
-            for hopElementType in self.material.hopElementTypes[speciesType]:
-                for hopDistTypeIndex in range(len(self.material.neighborCutoffDist[hopElementType])):
-                    rowIndex = np.where(neighborList[hopElementType][hopDistTypeIndex].systemElementIndexMap[0] == speciesSiteSystemElementIndex)[0][0]
-                    neighborSystemElementIndices = neighborList[hopElementType][hopDistTypeIndex].systemElementIndexMap[1][rowIndex]
-                    for neighborIndex, neighborSystemElementIndex in enumerate(neighborSystemElementIndices):
-                        if neighborSystemElementIndex not in currentStateOccupancy:
-                            newStateOccupancy[speciesIndex] = neighborSystemElementIndex
-                            newStateOccupancyList.append(newStateOccupancy[:])
-                            newStateOccupancy[speciesIndex] = speciesSiteSystemElementIndex
-                            hopElementTypes.append(hopElementType)
-                            hopDistTypes.append(hopDistTypeIndex)
-                            hoppingSpeciesIndices.append(speciesIndex)
-                            speciesDisplacementVector = neighborList[hopElementType][hopDistTypeIndex].displacementVectorList[rowIndex][neighborIndex] 
-                            speciesDisplacementVectorList.append(speciesDisplacementVector)
-                            systemElementIndexPairList.append([speciesSiteSystemElementIndex, neighborSystemElementIndex])
+            speciesType = self.speciesTypeList[speciesIndex]
+            siteElementTypeIndex = self.siteElementTypeIndexList[speciesIndex]
+            hopElementType = self.hopElementTypeList[speciesIndex]
+            rowIndex = (speciesSiteSystemElementIndex / self.material.totalElementsPerUnitCell * self.material.nElementsPerUnitCell[siteElementTypeIndex] + 
+                        speciesSiteSystemElementIndex % self.material.totalElementsPerUnitCell - self.headStart_nElementsPerUnitCellCumSum[siteElementTypeIndex])
+            for hopDistTypeIndex in range(self.lenHopDistTypeList[speciesIndex]):
+                neighborSystemElementIndices = neighborList[hopElementType][hopDistTypeIndex].systemElementIndexMap[1][rowIndex]
+                # Delete neighbor indices where charge carriers already exist in currentStateOccupancy
+                # neighborSystemElementIndices = np.delete(neighborSystemElementIndices, np.in1d(neighborSystemElementIndices, currentStateOccupancy).nonzero()[0])
+                # COMMENT: Can use range as an alternative to enumerate
+                for neighborIndex, neighborSystemElementIndex in enumerate(neighborSystemElementIndices):
+                    # COMMENT: Ignoring that charge carriers can localize on immediately next sites
+                    if neighborSystemElementIndex not in currentStateOccupancy:
+                        newStateOccupancy[speciesIndex] = neighborSystemElementIndex
+                        newStateOccupancyList.append(newStateOccupancy[:])
+                        newStateOccupancy[speciesIndex] = speciesSiteSystemElementIndex
+                        hopElementTypes.append(hopElementType)
+                        hopDistTypes.append(hopDistTypeIndex)
+                        hoppingSpeciesIndices.append(speciesIndex)
+                        speciesDisplacementVector = neighborList[hopElementType][hopDistTypeIndex].displacementVectorList[rowIndex][neighborIndex] 
+                        speciesDisplacementVectorList.append(speciesDisplacementVector)
+                        systemElementIndexPairList.append([speciesSiteSystemElementIndex, neighborSystemElementIndex])
+
         returnNewStates = returnValues()
         returnNewStates.newStateOccupancyList = newStateOccupancyList
         returnNewStates.hopElementTypes = hopElementTypes
@@ -838,7 +854,9 @@ class run(object):
                     if not shellCharges:
                         newStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = newStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
                         if ESPConfig:
-                            newStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = deepcopy(currentStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]])
+                            newStateESPConfig[oldSiteSystemElementIndex] = np.copy(currentStateESPConfig[oldSiteSystemElementIndex])
+                            newStateESPConfig[newSiteSystemElementIndex] = np.copy(currentStateESPConfig[newSiteSystemElementIndex])
+                            #newStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = deepcopy(currentStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]])
                         
                 kTotal = np.sum(kList)
                 kCumSum = (kList / kTotal).cumsum()
@@ -859,7 +877,9 @@ class run(object):
                     if ESPConfig:
                         currentStateESPConfig[oldSiteSystemElementIndex] *= multFactor[0]
                         currentStateESPConfig[newSiteSystemElementIndex] *= multFactor[1]
-                        newStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = deepcopy(currentStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]])
+                        newStateESPConfig[oldSiteSystemElementIndex] = np.copy(currentStateESPConfig[oldSiteSystemElementIndex])
+                        newStateESPConfig[newSiteSystemElementIndex] = np.copy(currentStateESPConfig[newSiteSystemElementIndex])
+                        #newStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = deepcopy(currentStateESPConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]])
                     currentStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = currentStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
                     newStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = newStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
                     
