@@ -715,25 +715,6 @@ class run(object):
         elecIntEnergy = np.sum(np.concatenate(individualInteractionList)) * self.material.J2EV # electron-volt
         return elecIntEnergy
         
-    def nonESPRelativeElectrostaticInteractionEnergy(self, currentStateChargeConfig, newStateChargeConfig, 
-                                                     oldSiteSystemElementIndex, newSiteSystemElementIndex):
-        """Subroutine to compute the relative electrostatic interaction energies between two states"""
-        oldSiteElecIntEnergy = np.sum(currentStateChargeConfig[oldSiteSystemElementIndex] * 
-                                      currentStateChargeConfig[self.elecNeighborListNeighborSEIndices[oldSiteSystemElementIndex]] * 
-                                      self.system.coeffDistanceList[oldSiteSystemElementIndex])
-        oldNeighborSiteElecIntEnergy = np.sum(currentStateChargeConfig[newSiteSystemElementIndex] * 
-                                              currentStateChargeConfig[self.elecNeighborListNeighborSEIndices[newSiteSystemElementIndex]] * 
-                                              self.system.coeffDistanceList[newSiteSystemElementIndex])
-        newSiteElecIntEnergy = np.sum(newStateChargeConfig[newSiteSystemElementIndex] * 
-                                      newStateChargeConfig[self.elecNeighborListNeighborSEIndices[newSiteSystemElementIndex]] * 
-                                      self.system.coeffDistanceList[newSiteSystemElementIndex]) 
-        newNeighborSiteElecIntEnergy = np.sum(newStateChargeConfig[oldSiteSystemElementIndex] * 
-                                              newStateChargeConfig[self.elecNeighborListNeighborSEIndices[oldSiteSystemElementIndex]] * 
-                                              self.system.coeffDistanceList[oldSiteSystemElementIndex]) 
-        relativeElecEnergy = (newSiteElecIntEnergy + newNeighborSiteElecIntEnergy 
-                              - oldSiteElecIntEnergy - oldNeighborSiteElecIntEnergy)
-        return relativeElecEnergy
-    
     def ESPRelativeElectrostaticInteractionEnergy(self, currentStateESPConfig, newStateESPConfig, 
                                                currentStateChargeConfig, newStateChargeConfig, 
                                                oldSiteSystemElementIndex, newSiteSystemElementIndex):
@@ -751,7 +732,7 @@ class run(object):
         return relativeElecEnergy
 
     #@profile
-    def doKMCSteps(self, outdir=None, ESPConfig=1, report=1, randomSeed=1):
+    def doKMCSteps(self, outdir=None, report=1, randomSeed=1):
         """Subroutine to run the KMC simulation by specified number of steps"""
         rnd.seed(randomSeed)
         nTraj = self.nTraj
@@ -768,10 +749,9 @@ class run(object):
         currentStateConfig = self.system.config(currentStateOccupancy)
         currentStateChargeConfig = self.system.chargeConfig(currentStateOccupancy)
         newStateChargeConfig = np.copy(currentStateChargeConfig)
-        if ESPConfig:
-            currentStateESPConfig = self.system.ESPConfig(currentStateChargeConfig)
-            newStateESPConfig = deepcopy(currentStateESPConfig)
-        
+        currentStateESPConfig = self.system.ESPConfig(currentStateChargeConfig)
+        newStateESPConfig = deepcopy(currentStateESPConfig)
+    
         shellChargeTypeKeys = [key for key in self.material.chargeTypes.keys() if self.material.elementTypeDelimiter in key]
         shellCharges = 0 if shellChargeTypeKeys==[] else 1
         assert 'E' in self.material.neighborCutoffDist.keys(), 'Please specify the cutoff distance for electrostatic interactions'
@@ -810,28 +790,22 @@ class run(object):
                                     newStateChargeConfig = self.system.chargeConfig(newStateOccupancy)
                                     newStateESPConfig = self.system.ESPConfig(newStateChargeConfig)
                                 else:
-                                    if ESPConfig:
-                                        multFactor = np.true_divide(currentStateChargeConfig[[neighborSystemElementIndex, speciesSiteSystemElementIndex]], 
-                                                                    currentStateChargeConfig[[speciesSiteSystemElementIndex, neighborSystemElementIndex]])
-                                        newStateESPConfig[speciesSiteSystemElementIndex] *= multFactor[0]
-                                        newStateESPConfig[neighborSystemElementIndex] *= multFactor[1]
+                                    multFactor = np.true_divide(currentStateChargeConfig[[neighborSystemElementIndex, speciesSiteSystemElementIndex]], 
+                                                                currentStateChargeConfig[[speciesSiteSystemElementIndex, neighborSystemElementIndex]])
+                                    newStateESPConfig[speciesSiteSystemElementIndex] *= multFactor[0]
+                                    newStateESPConfig[neighborSystemElementIndex] *= multFactor[1]
                                     newStateChargeConfig[[speciesSiteSystemElementIndex, neighborSystemElementIndex]] = newStateChargeConfig[[neighborSystemElementIndex, speciesSiteSystemElementIndex]]
-                                if ESPConfig:
-                                    delG0 = self.ESPRelativeElectrostaticInteractionEnergy(currentStateESPConfig, newStateESPConfig, 
-                                                                                           currentStateChargeConfig, newStateChargeConfig, 
-                                                                                           speciesSiteSystemElementIndex, neighborSystemElementIndex)
-                                else:
-                                    delG0 = self.nonESPRelativeElectrostaticInteractionEnergy(currentStateChargeConfig, newStateChargeConfig, 
-                                                                                              speciesSiteSystemElementIndex, neighborSystemElementIndex)
+                                delG0 = self.ESPRelativeElectrostaticInteractionEnergy(currentStateESPConfig, newStateESPConfig, 
+                                                                                       currentStateChargeConfig, newStateChargeConfig, 
+                                                                                       speciesSiteSystemElementIndex, neighborSystemElementIndex)
                                 lambdaValue = self.lambdaValues[hopElementType][hopDistType]
                                 VAB = self.VAB[hopElementType][hopDistType]
                                 delGs = ((lambdaValue + delG0) ** 2 / (4 * lambdaValue)) - VAB
                                 kList.append(self.vn * np.exp(-delGs / self.T))
                                 if not shellCharges:
                                     newStateChargeConfig[[speciesSiteSystemElementIndex, neighborSystemElementIndex]] = newStateChargeConfig[[neighborSystemElementIndex, speciesSiteSystemElementIndex]]
-                                    if ESPConfig:
-                                        newStateESPConfig[speciesSiteSystemElementIndex] = np.copy(currentStateESPConfig[speciesSiteSystemElementIndex])
-                                        newStateESPConfig[neighborSystemElementIndex] = np.copy(currentStateESPConfig[neighborSystemElementIndex])
+                                    newStateESPConfig[speciesSiteSystemElementIndex] = np.copy(currentStateESPConfig[speciesSiteSystemElementIndex])
+                                    newStateESPConfig[neighborSystemElementIndex] = np.copy(currentStateESPConfig[neighborSystemElementIndex])
                             
                 kTotal = np.sum(kList)
                 kCumSum = (kList / kTotal).cumsum()
@@ -851,11 +825,10 @@ class run(object):
                     currentStateESPConfig = self.system.ESPConfig(currentStateChargeConfig)
                     newStateESPConfig = self.system.ESPConfig(currentStateChargeConfig)
                 else:
-                    if ESPConfig:
-                        currentStateESPConfig[oldSiteSystemElementIndex] *= multFactor[0]
-                        currentStateESPConfig[newSiteSystemElementIndex] *= multFactor[1]
-                        newStateESPConfig[oldSiteSystemElementIndex] = np.copy(currentStateESPConfig[oldSiteSystemElementIndex])
-                        newStateESPConfig[newSiteSystemElementIndex] = np.copy(currentStateESPConfig[newSiteSystemElementIndex])
+                    currentStateESPConfig[oldSiteSystemElementIndex] *= multFactor[0]
+                    currentStateESPConfig[newSiteSystemElementIndex] *= multFactor[1]
+                    newStateESPConfig[oldSiteSystemElementIndex] = np.copy(currentStateESPConfig[oldSiteSystemElementIndex])
+                    newStateESPConfig[newSiteSystemElementIndex] = np.copy(currentStateESPConfig[newSiteSystemElementIndex])
                     currentStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = currentStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
                     newStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = newStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
                 

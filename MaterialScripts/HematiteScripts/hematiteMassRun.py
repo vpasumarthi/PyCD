@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 def hematiteMassRun(pbc, systemSize, nTrajList, cutE_List, nSpeciesList, TempList, shellCharges, 
-                    kmcStepsList, stepInterval, gui, ESPConfig, report, randomSeed, overWrite):
+                    kmcStepsList, stepInterval, gui, report, randomSeed, overWrite):
     
     from hematiteRun import hematiteRun
     import os
@@ -59,4 +59,4 @@ def hematiteMassRun(pbc, systemSize, nTrajList, cutE_List, nSpeciesList, TempLis
                             fileExists = 1
                     if not fileExists or overWrite:
                         hematiteRun(neighborList, shellCharges, cutE, systemDirectoryPath, speciesCount, iTemp, nTraj, 
-                                    kmcSteps, stepInterval, gui, outdir, ESPConfig, report, randomSeed)
+                                    kmcSteps, stepInterval, gui, outdir, report, randomSeed)

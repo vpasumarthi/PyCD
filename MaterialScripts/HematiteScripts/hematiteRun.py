@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 def hematiteRun(neighborList, shellCharges, cutE, systemDirectoryPath, speciesCount, T, nTraj, kmcSteps, 
-                stepInterval, gui, outdir, ESPConfig, report, randomSeed):
+                stepInterval, gui, outdir, report, randomSeed):
         
     from KineticModel import system, run, initiateSystem
     import numpy as np
@@ -30,4 +30,4 @@ def hematiteRun(neighborList, shellCharges, cutE, systemDirectoryPath, speciesCo
     hematiteSystem = system(hematite, hematiteNeighbors, neighborList[()], initialOccupancy, speciesCount)
     hematiteRun = run(hematite, hematiteNeighbors, hematiteSystem, T, nTraj, kmcSteps, stepInterval, gui)
     
-    hematiteRun.doKMCSteps(outdir, ESPConfig, report, randomSeed)
+    hematiteRun.doKMCSteps(outdir, report, randomSeed)
