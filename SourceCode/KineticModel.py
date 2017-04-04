@@ -808,18 +808,11 @@ class run(object):
                     pathIndex += 1
         
         trajectoryData = returnValues()
-        trajectoryData.speciesCount = self.system.speciesCount
-        trajectoryData.nTraj = nTraj
-        trajectoryData.kmcSteps = kmcSteps
-        trajectoryData.stepInterval = stepInterval
-        trajectoryData.pbc = self.system.pbc
-        trajectoryData.systemSize = self.systemSize
         trajectoryData.timeArray = timeArray
         trajectoryData.unwrappedPositionArray = unwrappedPositionArray
         # Not needed for now
         # trajectoryData.wrappedPositionArray = wrappedPositionArray
         # trajectoryData.speciesDisplacementArray = speciesDisplacementArray
-        trajectoryData.EcutoffDist = self.material.neighborCutoffDist['E'][0]
         
         if outdir:
             trajectoryDataFileName = 'TrajectoryData.npy'
@@ -844,32 +837,30 @@ class run(object):
 
 class analysis(object):
     """Post-simulation analysis methods"""
-    def __init__(self, material, trajectoryData, nStepsMSD, nDispMSD, binsize, reprTime = 'ns', 
-                 reprDist = 'Angstrom'):
+    def __init__(self, material, trajectoryData, speciesCount, nTraj, kmcSteps, stepInterval, 
+                 nStepsMSD, nDispMSD, binsize, reprTime = 'ns', reprDist = 'Angstrom'):
         """"""
         self.startTime = datetime.now()
         self.material = material
         self.trajectoryData = trajectoryData
+        self.speciesCount = speciesCount
+        self.nTraj = int(nTraj)
+        self.kmcSteps = kmcSteps
+        self.stepInterval = stepInterval
         self.nStepsMSD = int(nStepsMSD)
         self.nDispMSD = int(nDispMSD)
         self.binsize = binsize
         self.reprTime = reprTime
         self.reprDist = reprDist
-        self.systemSize = self.trajectoryData.systemSize
-        self.pbc = self.trajectoryData.pbc
         
         self.timeConversion = (1E+09 if reprTime is 'ns' else 1E+00) / self.material.SEC2AUTIME 
         self.distConversion = (1E-10 if reprDist is 'm' else 1E+00) / self.material.ANG2BOHR        
-        self.nTraj = self.trajectoryData.nTraj
-        self.kmcSteps = self.trajectoryData.kmcSteps
-        self.stepInterval = self.trajectoryData.stepInterval
-        self.EcutoffDist = self.trajectoryData.EcutoffDist
         
-    def computeMSD(self, timeArray, unwrappedPositionArray, outdir=None, report=1):
+    def computeMSD(self, outdir=None, report=1):
         """Returns the squared displacement of the trajectories"""
-        time = timeArray * self.timeConversion
-        positionArray = unwrappedPositionArray * self.distConversion
-        speciesCount = self.trajectoryData.speciesCount
+        time = self.trajectoryData.timeArray * self.timeConversion
+        positionArray = self.trajectoryData.unwrappedPositionArray * self.distConversion
+        speciesCount = self.speciesCount
         nSpecies = sum(speciesCount)
         nSpeciesTypes = len(self.material.speciesTypes)
         timeNdisp2 = np.zeros((self.nTraj * (self.nStepsMSD * self.nDispMSD), nSpecies + 1))

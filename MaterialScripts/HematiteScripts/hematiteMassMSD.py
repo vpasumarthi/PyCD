@@ -6,6 +6,7 @@ def hematiteMassMSD(pbc, systemSize, nTrajList, cutE_List, nSpeciesList, TempLis
     from hematiteMSD import hematiteMSD
     import os.path
     import platform
+    import numpy as np
 
     cwd = os.path.dirname(os.path.realpath(__file__))
     nLevelUp = 4 if platform.uname()[0]=='Windows' else 3
@@ -19,6 +20,7 @@ def hematiteMassMSD(pbc, systemSize, nTrajList, cutE_List, nSpeciesList, TempLis
                 kmcSteps = kmcStepsList[speciesIndex]
                 nElectrons = nSpeciesList[0][speciesIndex]
                 nHoles = nSpeciesList[1][speciesIndex]
+                speciesCount = np.array([nElectrons, nHoles])
                 parentDir2 = str(nElectrons) + ('electron' if nElectrons==1 else 'electrons') + ', ' + str(nHoles) + ('hole' if nHoles==1 else 'holes')
                 for iTemp in TempList:
                     parentDir3 = str(iTemp) + 'K'
@@ -38,5 +40,5 @@ def hematiteMassMSD(pbc, systemSize, nTrajList, cutE_List, nSpeciesList, TempLis
                     if not fileExists or overWrite:
                         nStepsMSD = nStepsMSDList[speciesIndex]
                         nDispMSD = nDispMSDList[speciesIndex]
-                        hematiteMSD(trajectoryDataFileName, shellCharges, cutE, systemDirectoryPath, nStepsMSD, nDispMSD, binsize, 
-                                    reprTime, reprDist, outdir)
+                        hematiteMSD(trajectoryDataFileName, shellCharges, cutE, systemDirectoryPath, speciesCount, 
+                                    nTraj, kmcSteps, stepInterval, nStepsMSD, nDispMSD, binsize, reprTime, reprDist, outdir)
