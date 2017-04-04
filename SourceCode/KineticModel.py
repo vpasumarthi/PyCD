@@ -720,8 +720,8 @@ class run(object):
         # Not necessary for now
         # wrappedPositionArray = np.zeros(( nTraj * numPathStepsPerTraj, self.totalSpecies, 3))
         # speciesDisplacementArray = np.zeros(( nTraj * numPathStepsPerTraj, self.totalSpecies, 3))
+        # currentStateConfig = self.system.config(currentStateOccupancy)
         pathIndex = 0
-        currentStateConfig = self.system.config(currentStateOccupancy)
         currentStateChargeConfig = self.system.chargeConfig(currentStateOccupancy)
         newStateChargeConfig = np.copy(currentStateChargeConfig)
         currentStateESPConfig = self.system.ESPConfig(currentStateChargeConfig)
@@ -799,8 +799,9 @@ class run(object):
                 neighborIndex = neighborIndexList[procIndex]
                 speciesDisplacementVector = np.copy(self.system.neighborList[hopElementType][hopDistType].displacementVectorList[rowIndex][neighborIndex]) 
                 speciesDisplacementVectorList[speciesIndex] += speciesDisplacementVector
-                currentStateConfig.chargeList = np.copy(currentStateChargeConfig)
-                currentStateConfig.occupancy = currentStateOccupancy[:]
+                # Not needed for now
+                # currentStateConfig.chargeList = np.copy(currentStateChargeConfig)
+                # currentStateConfig.occupancy = currentStateOccupancy[:]
                 if step % stepInterval == 0:
                     speciesSystemElementIndices = np.asarray(currentStateOccupancy)
                     timeArray[pathIndex] = kmcTime
