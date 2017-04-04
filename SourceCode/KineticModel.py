@@ -749,48 +749,7 @@ class run(object):
         relativeElecEnergy = (newSiteElecIntEnergy + newNeighborSiteElecIntEnergy - 
                               oldSiteElecIntEnergy - oldNeighborSiteElecIntEnergy)
         return relativeElecEnergy
-    #@profile
-    def generateNewStates(self, currentStateOccupancy):
-        """generates a list of new occupancy states possible from the current state"""
-        newStateOccupancyList = []
-        hopElementTypes = []
-        hopDistTypes = []
-        hoppingSpeciesIndices = []
-        speciesDisplacementVectorList = []
-        systemElementIndexPairList = []
-        newStateOccupancy = currentStateOccupancy[:]
-        
-        for speciesIndex, speciesSiteSystemElementIndex in enumerate(currentStateOccupancy):
-            speciesType = self.speciesTypeList[speciesIndex]
-            siteElementTypeIndex = self.siteElementTypeIndexList[speciesIndex]
-            hopElementType = self.hopElementTypeList[speciesIndex]
-            rowIndex = (speciesSiteSystemElementIndex / self.material.totalElementsPerUnitCell * self.material.nElementsPerUnitCell[siteElementTypeIndex] + 
-                        speciesSiteSystemElementIndex % self.material.totalElementsPerUnitCell - self.headStart_nElementsPerUnitCellCumSum[siteElementTypeIndex])
-            for hopDistTypeIndex in range(self.lenHopDistTypeList[speciesIndex]):
-                neighborSystemElementIndices = self.system.neighborList[hopElementType][hopDistTypeIndex].systemElementIndexMap[1][rowIndex]
-                numInvalidNeighbors = 0
-                for neighborIndex, neighborSystemElementIndex in enumerate(neighborSystemElementIndices):
-                    if neighborSystemElementIndex not in currentStateOccupancy:
-                        newStateOccupancy[speciesIndex] = neighborSystemElementIndex
-                        newStateOccupancyList.append(newStateOccupancy[:])
-                        newStateOccupancy[speciesIndex] = speciesSiteSystemElementIndex
-                        speciesDisplacementVectorList.append(self.system.neighborList[hopElementType][hopDistTypeIndex].displacementVectorList[rowIndex][neighborIndex])
-                        systemElementIndexPairList.append([speciesSiteSystemElementIndex, neighborSystemElementIndex])
-                    else:
-                        numInvalidNeighbors += 1
-                numValidEntries = neighborIndex - numInvalidNeighbors + 1
-                hopElementTypes.extend([hopElementType] * numValidEntries)
-                hopDistTypes.extend([hopDistTypeIndex] * numValidEntries)
-                hoppingSpeciesIndices.extend([speciesIndex] * numValidEntries)
 
-        returnNewStates = returnValues()
-        returnNewStates.newStateOccupancyList = newStateOccupancyList
-        returnNewStates.hopElementTypes = hopElementTypes
-        returnNewStates.hopDistTypes = hopDistTypes
-        returnNewStates.hoppingSpeciesIndices = hoppingSpeciesIndices
-        returnNewStates.speciesDisplacementVectorList = speciesDisplacementVectorList
-        returnNewStates.systemElementIndexPairList = systemElementIndexPairList
-        return returnNewStates
     #@profile
     def doKMCSteps(self, outdir=None, ESPConfig=1, report=1, randomSeed=1):
         """Subroutine to run the KMC simulation by specified number of steps"""
@@ -823,41 +782,56 @@ class run(object):
             procIndexList = [100] * kmcSteps
             for step in range(kmcSteps):
                 kList = []
-                newStates = self.generateNewStates(currentStateOccupancy)
-                hopElementTypes = newStates.hopElementTypes[:]
-                hopDistTypes = newStates.hopDistTypes[:]
-                for newStateIndex, [oldSiteSystemElementIndex, newSiteSystemElementIndex] in enumerate(newStates.systemElementIndexPairList):
-                    if shellCharges:
-                        newStateOccupancy = newStates.newStateOccupancyList[newStateIndex][:] 
-                        newStateChargeConfig = self.system.chargeConfig(newStateOccupancy)
-                        newStateESPConfig = self.system.ESPConfig(newStateChargeConfig)
-                    else:
-                        if ESPConfig:
-                            multFactor = np.true_divide(currentStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]], 
-                                                        currentStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]])
-                            newStateESPConfig[oldSiteSystemElementIndex] *= multFactor[0]
-                            newStateESPConfig[newSiteSystemElementIndex] *= multFactor[1]
-                        newStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = newStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
-                        
-                    if ESPConfig:
-                        delG0 = self.ESPRelativeElectrostaticInteractionEnergy(currentStateESPConfig, newStateESPConfig, 
-                                                                               currentStateChargeConfig, newStateChargeConfig, 
-                                                                               oldSiteSystemElementIndex, newSiteSystemElementIndex)
-                    else:
-                        delG0 = self.nonESPRelativeElectrostaticInteractionEnergy(currentStateChargeConfig, newStateChargeConfig, 
-                                                                                  oldSiteSystemElementIndex, newSiteSystemElementIndex)
-
-                    hopElementType = hopElementTypes[newStateIndex]
-                    hopDistType = hopDistTypes[newStateIndex]
-                    lambdaValue = self.lambdaValues[hopElementType][hopDistType]
-                    VAB = self.VAB[hopElementType][hopDistType]
-                    delGs = ((lambdaValue + delG0) ** 2 / (4 * lambdaValue)) - VAB
-                    kList.append(self.vn * np.exp(-delGs / self.T))
-                    if not shellCharges:
-                        newStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = newStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
-                        if ESPConfig:
-                            newStateESPConfig[oldSiteSystemElementIndex] = np.copy(currentStateESPConfig[oldSiteSystemElementIndex])
-                            newStateESPConfig[newSiteSystemElementIndex] = np.copy(currentStateESPConfig[newSiteSystemElementIndex])
+                speciesIndexList = []
+                hopElementTypeList = []
+                hopDistTypeList = []
+                neighborSystemElementIndexList = []
+                rowIndexList = []
+                neighborIndexList = []
+                for speciesIndex, speciesSiteSystemElementIndex in enumerate(currentStateOccupancy):
+                    speciesType = self.speciesTypeList[speciesIndex]
+                    siteElementTypeIndex = self.siteElementTypeIndexList[speciesIndex]
+                    hopElementType = self.hopElementTypeList[speciesIndex]
+                    rowIndex = (speciesSiteSystemElementIndex / self.material.totalElementsPerUnitCell * self.material.nElementsPerUnitCell[siteElementTypeIndex] + 
+                                speciesSiteSystemElementIndex % self.material.totalElementsPerUnitCell - self.headStart_nElementsPerUnitCellCumSum[siteElementTypeIndex])
+                    for hopDistType in range(self.lenHopDistTypeList[speciesIndex]):
+                        neighborSystemElementIndices = self.system.neighborList[hopElementType][hopDistType].systemElementIndexMap[1][rowIndex]
+                        for neighborIndex, neighborSystemElementIndex in enumerate(neighborSystemElementIndices):
+                            if neighborSystemElementIndex not in currentStateOccupancy:
+                                neighborSystemElementIndexList.append(neighborSystemElementIndex)
+                                speciesIndexList.append(speciesIndex)
+                                hopElementTypeList.append(hopElementType)
+                                hopDistTypeList.append(hopDistType)
+                                rowIndexList.append(rowIndex)
+                                neighborIndexList.append(neighborIndex)
+                                if shellCharges:
+                                    newStateOccupancy = currentStateOccupancy[:]
+                                    newStateOccupancy[speciesIndex] = neighborSystemElementIndex 
+                                    newStateChargeConfig = self.system.chargeConfig(newStateOccupancy)
+                                    newStateESPConfig = self.system.ESPConfig(newStateChargeConfig)
+                                else:
+                                    if ESPConfig:
+                                        multFactor = np.true_divide(currentStateChargeConfig[[neighborSystemElementIndex, speciesSiteSystemElementIndex]], 
+                                                                    currentStateChargeConfig[[speciesSiteSystemElementIndex, neighborSystemElementIndex]])
+                                        newStateESPConfig[speciesSiteSystemElementIndex] *= multFactor[0]
+                                        newStateESPConfig[neighborSystemElementIndex] *= multFactor[1]
+                                    newStateChargeConfig[[speciesSiteSystemElementIndex, neighborSystemElementIndex]] = newStateChargeConfig[[neighborSystemElementIndex, speciesSiteSystemElementIndex]]
+                                if ESPConfig:
+                                    delG0 = self.ESPRelativeElectrostaticInteractionEnergy(currentStateESPConfig, newStateESPConfig, 
+                                                                                           currentStateChargeConfig, newStateChargeConfig, 
+                                                                                           speciesSiteSystemElementIndex, neighborSystemElementIndex)
+                                else:
+                                    delG0 = self.nonESPRelativeElectrostaticInteractionEnergy(currentStateChargeConfig, newStateChargeConfig, 
+                                                                                              speciesSiteSystemElementIndex, neighborSystemElementIndex)
+                                lambdaValue = self.lambdaValues[hopElementType][hopDistType]
+                                VAB = self.VAB[hopElementType][hopDistType]
+                                delGs = ((lambdaValue + delG0) ** 2 / (4 * lambdaValue)) - VAB
+                                kList.append(self.vn * np.exp(-delGs / self.T))
+                                if not shellCharges:
+                                    newStateChargeConfig[[speciesSiteSystemElementIndex, neighborSystemElementIndex]] = newStateChargeConfig[[neighborSystemElementIndex, speciesSiteSystemElementIndex]]
+                                    if ESPConfig:
+                                        newStateESPConfig[speciesSiteSystemElementIndex] = np.copy(currentStateESPConfig[speciesSiteSystemElementIndex])
+                                        newStateESPConfig[neighborSystemElementIndex] = np.copy(currentStateESPConfig[neighborSystemElementIndex])
                             
                 kTotal = np.sum(kList)
                 kCumSum = (kList / kTotal).cumsum()
@@ -867,14 +841,16 @@ class run(object):
                 rand2 = rnd.random()
                 kmcTime -= np.log(rand2) / kTotal
                 
-                currentStateOccupancy = newStates.newStateOccupancyList[procIndex][:]
+                oldSiteSystemElementIndex = currentStateOccupancy[speciesIndexList[procIndex]]
+                newSiteSystemElementIndex = neighborSystemElementIndexList[procIndex]
+                currentStateOccupancy[speciesIndexList[procIndex]] = newSiteSystemElementIndex
+                
                 if shellCharges:
                     currentStateChargeConfig = self.system.chargeConfig(currentStateOccupancy)
                     newStateChargeConfig = self.system.chargeConfig(currentStateOccupancy)
                     currentStateESPConfig = self.system.ESPConfig(currentStateChargeConfig)
                     newStateESPConfig = self.system.ESPConfig(currentStateChargeConfig)
                 else:
-                    [oldSiteSystemElementIndex, newSiteSystemElementIndex] = newStates.systemElementIndexPairList[procIndex]
                     if ESPConfig:
                         currentStateESPConfig[oldSiteSystemElementIndex] *= multFactor[0]
                         currentStateESPConfig[newSiteSystemElementIndex] *= multFactor[1]
@@ -882,9 +858,14 @@ class run(object):
                         newStateESPConfig[newSiteSystemElementIndex] = np.copy(currentStateESPConfig[newSiteSystemElementIndex])
                     currentStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = currentStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
                     newStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = newStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
-                    
-                speciesIndex = newStates.hoppingSpeciesIndices[procIndex]
-                speciesDisplacementVector = np.copy(newStates.speciesDisplacementVectorList[procIndex])
+                
+                
+                speciesIndex = speciesIndexList[procIndex]
+                hopElementType = hopElementTypeList[procIndex]
+                hopDistType = hopDistTypeList[procIndex]
+                rowIndex = rowIndexList[procIndex]
+                neighborIndex = neighborIndexList[procIndex]
+                speciesDisplacementVector = np.copy(self.system.neighborList[hopElementType][hopDistType].displacementVectorList[rowIndex][neighborIndex]) 
                 speciesDisplacementVectorList[speciesIndex] += speciesDisplacementVector
                 currentStateConfig.chargeList = np.copy(currentStateChargeConfig)
                 currentStateConfig.occupancy = currentStateOccupancy[:]
