@@ -806,8 +806,10 @@ class run(object):
                                 delGs = ((lambdaValue + delG0) ** 2 / (4 * lambdaValue)) - VAB
                                 kList.append(self.vn * np.exp(-delGs / self.T))
                                 newStateChargeConfig[[speciesSiteSystemElementIndex, neighborSystemElementIndex]] = newStateChargeConfig[[neighborSystemElementIndex, speciesSiteSystemElementIndex]]
-                                newStateESPConfig[speciesSiteSystemElementIndex] = np.copy(currentStateESPConfig[speciesSiteSystemElementIndex])
-                                newStateESPConfig[neighborSystemElementIndex] = np.copy(currentStateESPConfig[neighborSystemElementIndex])
+                                #newStateESPConfig[speciesSiteSystemElementIndex] = np.copy(currentStateESPConfig[speciesSiteSystemElementIndex])
+                                #newStateESPConfig[neighborSystemElementIndex] = np.copy(currentStateESPConfig[neighborSystemElementIndex])
+                                newStateESPConfig[speciesSiteSystemElementIndex] /= multFactor[0]
+                                newStateESPConfig[neighborSystemElementIndex] /= multFactor[1]
                             
                 kTotal = np.sum(kList)
                 kCumSum = (kList / kTotal).cumsum()
@@ -830,8 +832,10 @@ class run(object):
                 currentStateESPConfig[oldSiteSystemElementIndex] *= multFactor[0]
                 currentStateESPConfig[newSiteSystemElementIndex] *= multFactor[1]
                 # Can multiply for newStateESPConfig as well.
-                newStateESPConfig[oldSiteSystemElementIndex] = np.copy(currentStateESPConfig[oldSiteSystemElementIndex])
-                newStateESPConfig[newSiteSystemElementIndex] = np.copy(currentStateESPConfig[newSiteSystemElementIndex])
+                #newStateESPConfig[oldSiteSystemElementIndex] = np.copy(currentStateESPConfig[oldSiteSystemElementIndex])
+                #newStateESPConfig[newSiteSystemElementIndex] = np.copy(currentStateESPConfig[newSiteSystemElementIndex])
+                newStateESPConfig[oldSiteSystemElementIndex] *= multFactor[0]
+                newStateESPConfig[newSiteSystemElementIndex] *= multFactor[1]
                 currentStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = currentStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
                 newStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = newStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
                 
@@ -840,8 +844,7 @@ class run(object):
                 hopDistType = hopDistTypeList[procIndex]
                 rowIndex = rowIndexList[procIndex]
                 neighborIndex = neighborIndexList[procIndex]
-                speciesDisplacementVector = np.copy(self.system.neighborList[hopElementType][hopDistType].displacementVectorList[rowIndex][neighborIndex]) 
-                speciesDisplacementVectorList[speciesIndex] += speciesDisplacementVector
+                speciesDisplacementVectorList[speciesIndex] += np.copy(self.system.neighborList[hopElementType][hopDistType].displacementVectorList[rowIndex][neighborIndex])
                 # Not needed for now
                 # currentStateConfig.chargeList = np.copy(currentStateChargeConfig)
                 # currentStateConfig.occupancy = currentStateOccupancy[:]
