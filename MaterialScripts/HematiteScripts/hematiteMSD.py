@@ -9,7 +9,7 @@ def hematiteMSD(trajectoryDataFileName, shellCharges, cutE, dirPath, speciesCoun
     import platform
     
     materialName = 'hematite'
-    tailName = '_Shell' if shellCharges else '_NoShell' + '_E' + str(cutE) + '.obj'
+    tailName = '_E' + str(cutE) + '.obj'
     directorySeparator = '\\' if platform.uname()[0]=='Windows' else '/'
     objectFileDirectoryName = 'ObjectFiles'
     objectFileDirPath = dirPath + directorySeparator + objectFileDirectoryName

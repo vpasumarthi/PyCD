@@ -10,7 +10,7 @@ def hematiteMassRun(pbc, systemSize, nTrajList, cutE_List, nSpeciesList, TempLis
     
     cwd = os.path.dirname(os.path.realpath(__file__))
     directorySeparator = '\\' if platform.uname()[0]=='Windows' else '/'
-    nLevelUp = 4 if platform.uname()[0]=='Windows' else 3
+    nLevelUp = 4 if platform.uname()[0]=='Windows' or 'Darwin' else 3
     neighborListDirectoryName = 'NeighborListFiles'
     systemDirectoryPath = directorySeparator.join(cwd.split(directorySeparator)[:-nLevelUp] + ['KineticModelSimulations', 'Hematite', ('PBC' if pbc else 'NoPBC'), 
                                                        ('SystemSize' + str(systemSize).replace(' ', ''))])
