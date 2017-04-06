@@ -304,6 +304,7 @@ class neighbors(object):
         displacementVectorList = np.empty(len(centerSiteCoords), dtype=object)
         displacementList = np.empty(len(centerSiteCoords), dtype=object)
         
+        # DEBUG: Quick test for number of neighbors: Switch Off Start
         xRange = range(-1, 2) if self.pbc[0] == 1 else [0]
         yRange = range(-1, 2) if self.pbc[1] == 1 else [0]
         zRange = range(-1, 2) if self.pbc[2] == 1 else [0]
@@ -335,6 +336,31 @@ class neighbors(object):
             numNeighbors = np.append(numNeighbors, iNumNeighbors)
             displacementVectorList[centerSiteIndex] = np.asarray(iDisplacementVectors)
             displacementList[centerSiteIndex] = iDisplacements
+        # DEBUG: Quick test for number of neighbors: Switch OFF End
+        
+        # DEBUG: Quick test for number of neighbors: Switch ON Start
+        '''
+        for centerSiteIndex, centerCoord in enumerate(centerSiteCoords):
+            iDisplacementVectors = []
+            iDisplacements = np.array([])
+            iNeighborSiteIndexList = []
+            iNumNeighbors = 0
+            for neighborSiteIndex, neighborCoord in enumerate(neighborSiteCoords):
+                neighborImageDisplacementVectors = np.array([neighborCoord - centerCoord])
+                displacement = np.linalg.norm(neighborImageDisplacementVectors)
+                if cutoffDistLimits[0] < displacement <= cutoffDistLimits[1]:
+                    iNeighborSiteIndexList.append(neighborSiteIndex)
+                    iDisplacementVectors.append(neighborImageDisplacementVectors[0])
+                    iDisplacements = np.append(iDisplacements, displacement)
+                    iNumNeighbors += 1
+            neighborSystemElementIndices[centerSiteIndex] = neighborSiteSystemElementIndexList[iNeighborSiteIndexList]
+            offsetList[centerSiteIndex] = neighborSiteQuantumIndexList[iNeighborSiteIndexList, :3] - centerSiteQuantumIndexList[centerSiteIndex, :3]
+            neighborElementIndexList[centerSiteIndex] = neighborSiteQuantumIndexList[iNeighborSiteIndexList, 4]
+            numNeighbors = np.append(numNeighbors, iNumNeighbors)
+            displacementVectorList[centerSiteIndex] = np.asarray(iDisplacementVectors)
+            displacementList[centerSiteIndex] = iDisplacements
+        '''
+        # DEBUG: Quick test for number of neighbors: Switch ON End
             
         systemElementIndexMap = np.empty(2, dtype=object)
         systemElementIndexMap[:] = [centerSiteSystemElementIndexList, neighborSystemElementIndices]
@@ -473,8 +499,9 @@ class neighbors(object):
         assert outdir, 'Please provide the destination path where neighbor list needs to be saved'
         assert all(size >= 3 for size in localSystemSize), 'Local system size in all dimensions should always be greater than or equal to 3'
         
-        # DEBUG: NewHopNeighbors
+        # DEBUG: Quick test for number of neighbors: Switch ON Start
         # del self.material.neighborCutoffDist['E']
+        # DEBUG: Quick test for number of neighbors: Switch ON End
         
         if extract:
             parentNeighborListFileName = 'ParentNeighborList_SystemSize=' + str(self.systemSize).replace(' ', ',') + '.npy'
@@ -514,12 +541,31 @@ class neighbors(object):
                     [centerElementType, neighborElementType] = cutoffDistKey.split(self.material.elementTypeDelimiter)
                     centerSiteElementTypeIndex = elementTypes.index(centerElementType) 
                     neighborSiteElementTypeIndex = elementTypes.index(neighborElementType)
+                    # DEBUG: Quick test for number of neighbors: Switch OFF Start
                     localBulkSites = self.material.generateSites(range(len(self.material.elementTypes)), 
                                                                  self.systemSize)
+                    # DEBUG: Quick test for number of neighbors: Switch OFF End
+                    # DEBUG: Quick test for number of neighbors: Switch ON Start
+                    '''
+                    localBulkSites = self.material.generateSites(range(len(self.material.elementTypes)), 
+                                                                 localSystemSize)
+                    '''
                     systemElementIndexOffsetArray = (np.repeat(np.arange(0, self.material.totalElementsPerUnitCell * self.numCells, self.material.totalElementsPerUnitCell), 
                                                                self.material.nElementsPerUnitCell[centerSiteElementTypeIndex]))
+                    # DEBUG: Quick test for number of neighbors: Switch ON Start
                     centerSiteIndices = neighborSiteIndices = (np.tile(self.material.nElementsPerUnitCell[:centerSiteElementTypeIndex].sum() + 
                                                                        np.arange(0, self.material.nElementsPerUnitCell[centerSiteElementTypeIndex]), self.numCells) + systemElementIndexOffsetArray)
+                    # DEBUG: Quick test for number of neighbors: Switch ON End
+                    # DEBUG: Quick test for number of neighbors: Switch OFF Start
+                    '''
+                    centerSiteIndices = [self.generateSystemElementIndex(localSystemSize, np.concatenate((centerUnitCellIndex, np.array([centerSiteElementTypeIndex]), np.array([elementIndex])))) 
+                                         for elementIndex in range(self.material.nElementsPerUnitCell[centerSiteElementTypeIndex])]
+                    neighborSiteIndices = [self.generateSystemElementIndex(localSystemSize, np.array([xSize, ySize, zSize, neighborSiteElementTypeIndex, elementIndex])) 
+                                           for xSize in range(localSystemSize[0]) for ySize in range(localSystemSize[1]) 
+                                           for zSize in range(localSystemSize[2]) 
+                                           for elementIndex in range(self.material.nElementsPerUnitCell[neighborSiteElementTypeIndex])]
+                    '''
+                    # DEBUG: Quick test for number of neighbors: Switch OFF End
                     for iCutoffDist in range(len(cutoffDistList)):
                         cutoffDistLimits = [cutoffDistList[iCutoffDist] - tolDist[cutoffDistKey][iCutoffDist], cutoffDistList[iCutoffDist] + tolDist[cutoffDistKey][iCutoffDist]]
                         
@@ -869,7 +915,7 @@ class analysis(object):
             headStart = trajIndex * numPathStepsPerTraj
             for timestep in range(1, self.nStepsMSD + 1):
                 for step in range(self.nDispMSD):
-                    workingRow = trajIndex * (self.nStepsMSD * self.nDispMSD) + (timestep-1) * self.nDispMSD + step 
+                    workingRow = trajIndex * (self.nStepsMSD * self.nDispMSD) + (timestep-1) * self.nDispMSD + step
                     timeNdisp2[workingRow, 0] = time[headStart + step + timestep] - time[headStart + step]
                     timeNdisp2[workingRow, 1:] = np.linalg.norm(positionArray[headStart + step + timestep] - 
                                                                 positionArray[headStart + step], axis=1)**2
@@ -879,7 +925,6 @@ class analysis(object):
         nBins = len(bins) - 1
         speciesMSDData = np.zeros((nBins, nSpecies))
         msdHistogram, dummy = np.histogram(timeArrayMSD, bins)
-        
         for iSpecies in range(nSpecies):
             iSpeciesHist, dummy = np.histogram(timeArrayMSD, bins, weights=timeNdisp2[:, iSpecies + 1])
             speciesMSDData[:, iSpecies] = iSpeciesHist / msdHistogram

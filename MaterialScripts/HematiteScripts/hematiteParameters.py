@@ -5,7 +5,7 @@ import platform
 
 directorySeparator = '\\' if platform.uname()[0]=='Windows' else '/'
 inputCoordinatesDirectoryName= 'InputCoordinates'
-inputCoordinateFileName = 'Fe2O3_RelaxCell_Trial03_index_coord.txt'
+inputCoordinateFileName = 'Fe2O3_RelaxCell_Trial08_index_coord.txt'
 
 class hematiteParameters(object):
     
@@ -23,9 +23,12 @@ class hematiteParameters(object):
         #a = 5.038 # lattice constant along x-axis
         #b = 5.038 # lattice constant along y-axis
         #c = 13.772 # lattice constant along z-axis
-        a = 4.783 # lattice constant along x-axis # RelaxCell_Trial03
-        b = 4.783 # lattice constant along y-axis # RelaxCell_Trial03
-        c = 13.376 # lattice constant along z-axis # RelaxCell_Trial03
+        #a = 4.783 # lattice constant along x-axis # RelaxCell_Trial03
+        #b = 4.783 # lattice constant along y-axis # RelaxCell_Trial03
+        #c = 13.376 # lattice constant along z-axis # RelaxCell_Trial03
+        a = 5.0180397814313995 # lattice constant along x-axis # RelaxCell_Trial08
+        b = 5.0180397814313995 # lattice constant along y-axis # RelaxCell_Trial08
+        c = 13.8742926905499075 # lattice constant along z-axis # RelaxCell_Trial08
         alpha = 90. / 180 * np.pi # interaxial angle between b-c
         beta = 90. / 180 * np.pi # lattice angle between a-c
         gamma = 120. / 180 * np.pi # lattice angle between a-b
@@ -38,8 +41,10 @@ class hematiteParameters(object):
         #self.neighborCutoffDistTol = {'Fe:Fe': [0.033, 0.097], 'O:O': [0.237], 'Fe:O': [0.126]} # Fixed Cell
         #self.neighborCutoffDist = {'Fe:Fe': [2.931, 2.659], 'O:O': [2.870], 'Fe:O': [2.024]} # Fixed Cell_Trial03
         #self.neighborCutoffDistTol = {'Fe:Fe': [0.002, 0.002], 'O:O': [0.123], 'Fe:O': [0.047]} # Fixed Cell_Trial03
-        self.neighborCutoffDist = {'Fe:Fe': [2.783, 2.569], 'O:O': [2.722], 'Fe:O': [1.936]} # Relax Cell_Trial03
-        self.neighborCutoffDistTol = {'Fe:Fe': [0.003, 0.002], 'O:O': [0.128], 'Fe:O': [0.041]} # Relax Cell_Trial03
+        #self.neighborCutoffDist = {'Fe:Fe': [2.783, 2.569], 'O:O': [2.722], 'Fe:O': [1.936]} # Relax Cell_Trial03
+        #self.neighborCutoffDistTol = {'Fe:Fe': [0.003, 0.002], 'O:O': [0.128], 'Fe:O': [0.041]} # Relax Cell_Trial03
+        self.neighborCutoffDist = {'Fe:Fe': [2.963, 2.930], 'O:O': [2.847], 'Fe:O': [2.033]} # Relax Cell_Trial08
+        self.neighborCutoffDistTol = {'Fe:Fe': [0.002, 0.002], 'O:O': [0.163], 'Fe:O': [0.103]} # Relax Cell_Trial08
         #self.neighborCutoffDist = {'Fe:Fe': [2.780, 2.572], 'O:O': [3.000], 'Fe:O': [2.000]} # Relax Cell
         #self.neighborCutoffDistTol = {'Fe:Fe': [0.156, 0.014], 'O:O': [0.500], 'Fe:O': [0.500]} # Relax Cell
         self.elementTypeDelimiter = ':' 
