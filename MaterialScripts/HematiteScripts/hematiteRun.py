@@ -25,7 +25,7 @@ def hematiteRun(neighborList, cutE, systemDirectoryPath, speciesCount, T, nTraj,
     
     # TODO: No electron system
     # del initialOccupancy['electron'][0]
-    hematiteSystem = system(hematite, hematiteNeighbors, neighborList[()], speciesCount)
-    hematiteRun = run(hematite, hematiteNeighbors, hematiteSystem, T, nTraj, kmcSteps, stepInterval, gui)
+    hematiteSystem = system(hematite, hematiteNeighbors, neighborList, speciesCount)
+    hematiteRun = run(hematiteSystem, T, nTraj, kmcSteps, stepInterval, gui)
     
     hematiteRun.doKMCSteps(outdir, report, randomSeed)

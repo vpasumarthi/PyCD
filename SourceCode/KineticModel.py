@@ -680,15 +680,12 @@ class system(object):
 class run(object):
     """defines the subroutines for running Kinetic Monte Carlo and computing electrostatic 
     interaction energies"""
-    def __init__(self, material, neighbors, system, T, nTraj, kmcSteps, stepInterval, gui):
+    def __init__(self, system, T, nTraj, kmcSteps, stepInterval, gui):
         """Returns the PBC condition of the system"""
         self.startTime = datetime.now()
         
-        self.material = material
-        self.neighbors = neighbors
         self.system = system
-        
-        self.T = T * self.material.K2AUTEMP
+        self.T = T * self.system.material.K2AUTEMP
         self.nTraj = int(nTraj)
         self.kmcSteps = int(kmcSteps)
         self.stepInterval = int(stepInterval)
@@ -697,19 +694,19 @@ class run(object):
         self.systemSize = self.system.systemSize
 
         # import parameters from material class
-        self.vn = self.material.vn
-        self.lambdaValues = self.material.lambdaValues
-        self.VAB = self.material.VAB
+        self.vn = self.system.material.vn
+        self.lambdaValues = self.system.material.lambdaValues
+        self.VAB = self.system.material.VAB
         
         # nElementsPerUnitCell
-        self.headStart_nElementsPerUnitCellCumSum = [self.material.nElementsPerUnitCell[:siteElementTypeIndex].sum() for siteElementTypeIndex in range(self.material.nElementTypes)]
+        self.headStart_nElementsPerUnitCellCumSum = [self.system.material.nElementsPerUnitCell[:siteElementTypeIndex].sum() for siteElementTypeIndex in range(self.system.material.nElementTypes)]
         
         # speciesTypeList
-        self.speciesTypeList = [self.material.speciesTypes[index] for index, value in enumerate(self.system.speciesCount) for i in range(value)]
-        self.siteElementTypeIndexList = [self.material.elementTypes.index(self.material.speciesToElementTypeMap[speciesType][0]) 
+        self.speciesTypeList = [self.system.material.speciesTypes[index] for index, value in enumerate(self.system.speciesCount) for i in range(value)]
+        self.siteElementTypeIndexList = [self.system.material.elementTypes.index(self.system.material.speciesToElementTypeMap[speciesType][0]) 
                                          for speciesType in self.speciesTypeList]
-        self.hopElementTypeList = [self.material.hopElementTypes[speciesType][0] for speciesType in self.speciesTypeList]
-        self.lenHopDistTypeList = [len(self.material.neighborCutoffDist[hopElementType]) for hopElementType in self.hopElementTypeList]
+        self.hopElementTypeList = [self.system.material.hopElementTypes[speciesType][0] for speciesType in self.speciesTypeList]
+        self.lenHopDistTypeList = [len(self.system.material.neighborCutoffDist[hopElementType]) for hopElementType in self.hopElementTypeList]
         
         # symmetry and uniqueness
         
@@ -728,7 +725,7 @@ class run(object):
         chargeConfig = self.system.chargeConfig(occupancy)
         ESPConfig = self.system.ESPConfig(chargeConfig)
         individualInteractionList = (ESPConfig * chargeConfig[self.elecNeighborListNeighborSEIndices])
-        elecIntEnergy = np.sum(np.concatenate(individualInteractionList)) * self.material.J2EV # electron-volt
+        elecIntEnergy = np.sum(np.concatenate(individualInteractionList)) * self.system.material.J2EV # electron-volt
         return elecIntEnergy
         
     def ESPRelativeElectrostaticInteractionEnergy(self, currentStateESPConfig, newStateESPConfig, 
@@ -768,7 +765,7 @@ class run(object):
         currentStateESPConfig = self.system.ESPConfig(currentStateChargeConfig)
         newStateESPConfig = deepcopy(currentStateESPConfig)
     
-        assert 'E' in self.material.neighborCutoffDist.keys(), 'Please specify the cutoff distance for electrostatic interactions'
+        assert 'E' in self.system.material.neighborCutoffDist.keys(), 'Please specify the cutoff distance for electrostatic interactions'
         for dummy in range(nTraj):
             pathIndex += 1
             kmcTime = 0
@@ -786,8 +783,8 @@ class run(object):
                     speciesType = self.speciesTypeList[speciesIndex]
                     siteElementTypeIndex = self.siteElementTypeIndexList[speciesIndex]
                     hopElementType = self.hopElementTypeList[speciesIndex]
-                    rowIndex = (speciesSiteSystemElementIndex / self.material.totalElementsPerUnitCell * self.material.nElementsPerUnitCell[siteElementTypeIndex] + 
-                                speciesSiteSystemElementIndex % self.material.totalElementsPerUnitCell - self.headStart_nElementsPerUnitCellCumSum[siteElementTypeIndex])
+                    rowIndex = (speciesSiteSystemElementIndex / self.system.material.totalElementsPerUnitCell * self.system.material.nElementsPerUnitCell[siteElementTypeIndex] + 
+                                speciesSiteSystemElementIndex % self.system.material.totalElementsPerUnitCell - self.headStart_nElementsPerUnitCellCumSum[siteElementTypeIndex])
                     for hopDistType in range(self.lenHopDistTypeList[speciesIndex]):
                         neighborSystemElementIndices = self.system.neighborList[hopElementType][hopDistType].systemElementIndexMap[1][rowIndex]
                         for neighborIndex, neighborSystemElementIndex in enumerate(neighborSystemElementIndices):
