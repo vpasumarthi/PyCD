@@ -716,9 +716,6 @@ class run(object):
 
         # Electrostatic interaction neighborlist:
         self.elecNeighborListNeighborSEIndices = self.system.neighborList['E'][0].systemElementIndexMap[1]
-        
-        # initial Occupancy
-        self.initialOccupancy = self.system.generateRandomOccupancy(self.system.speciesCount)
 
     def electrostaticInteractionEnergy(self, occupancy):
         """Subroutine to compute the electrostatic interaction energies"""
@@ -751,6 +748,7 @@ class run(object):
         nTraj = self.nTraj
         kmcSteps = self.kmcSteps
         stepInterval = self.stepInterval
+        self.initialOccupancy = self.system.generateRandomOccupancy(self.system.speciesCount)
         currentStateOccupancy = self.initialOccupancy[:] 
         numPathStepsPerTraj = int(kmcSteps / stepInterval) + 1
         timeArray = np.zeros(nTraj * numPathStepsPerTraj)
