@@ -625,6 +625,7 @@ class system(object):
             iSpeciesSystemElementIndices = []
             for iSpecies in range(numSpecies):
                 siteElementTypeIndex = rnd.choice(siteElementTypesIndices)
+                # Enlist all electron eligible sites, hole eligible sites depending on speciesCount, choose randomly from the list. No need for generateSystemElementIndex
                 iSpeciesSiteIndices = np.array([rnd.randint(0, self.systemSize[0]-1), 
                                                 rnd.randint(0, self.systemSize[1]-1), 
                                                 rnd.randint(0, self.systemSize[2]-1), 
@@ -768,7 +769,6 @@ class run(object):
             pathIndex += 1
             kmcTime = 0
             speciesDisplacementVectorList = np.zeros((self.totalSpecies, 3))
-            procIndexList = [100] * kmcSteps
             for step in range(kmcSteps):
                 kList = []
                 speciesIndexList = []
@@ -813,16 +813,23 @@ class run(object):
                 kCumSum = (kList / kTotal).cumsum()
                 rand1 = rnd.random()
                 procIndex = np.where(kCumSum > rand1)[0][0]
-                procIndexList[step] = procIndex
                 rand2 = rnd.random()
                 kmcTime -= np.log(rand2) / kTotal
+                
+                # In case of np.random, use np.random.seed, use np.random.randint in generateInitialOccupancy
+                #kTotal = np.sum(kList)
+                #procIndex = kList.index(np.random.choice(kList, 1, p=kList/kTotal))
+                #kmcTime -= np.log(np.random.random()) / kTotal
                 
                 oldSiteSystemElementIndex = currentStateOccupancy[speciesIndexList[procIndex]]
                 newSiteSystemElementIndex = neighborSystemElementIndexList[procIndex]
                 currentStateOccupancy[speciesIndexList[procIndex]] = newSiteSystemElementIndex
-                
+
+                multFactor = np.true_divide(currentStateChargeConfig[[neighborSystemElementIndex, speciesSiteSystemElementIndex]], 
+                                            currentStateChargeConfig[[speciesSiteSystemElementIndex, neighborSystemElementIndex]])
                 currentStateESPConfig[oldSiteSystemElementIndex] *= multFactor[0]
                 currentStateESPConfig[newSiteSystemElementIndex] *= multFactor[1]
+                # Can multiply for newStateESPConfig as well.
                 newStateESPConfig[oldSiteSystemElementIndex] = np.copy(currentStateESPConfig[oldSiteSystemElementIndex])
                 newStateESPConfig[newSiteSystemElementIndex] = np.copy(currentStateESPConfig[newSiteSystemElementIndex])
                 currentStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = currentStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
