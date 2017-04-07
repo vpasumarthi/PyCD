@@ -9,7 +9,7 @@ def hematiteMassMSD(pbc, systemSize, nTrajList, cutE_List, nSpeciesList, TempLis
     import numpy as np
 
     cwd = os.path.dirname(os.path.realpath(__file__))
-    nLevelUp = 4 if platform.uname()[0]=='Windows' or 'Darwin' else 3
+    nLevelUp = 3 if platform.uname()[0]=='Linux' else 4
     directorySeparator = '\\' if platform.uname()[0]=='Windows' else '/'
     systemDirectoryPath = directorySeparator.join(cwd.split(directorySeparator)[:-nLevelUp] + ['KineticModelSimulations', 'Hematite', ('PBC' if pbc else 'NoPBC'), 
                                                        ('SystemSize' + str(systemSize).replace(' ', ''))])
