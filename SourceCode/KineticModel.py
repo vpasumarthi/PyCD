@@ -852,15 +852,9 @@ class run(object):
                 rowIndex = rowIndexList[procIndex]
                 neighborIndex = neighborIndexList[procIndex]
                 speciesDisplacementVectorList[speciesIndex] += np.copy(self.system.neighborList[hopElementType][hopDistType].displacementVectorList[rowIndex][neighborIndex])
-                # Not needed for now
-                # currentStateConfig.chargeList = np.copy(currentStateChargeConfig)
-                # currentStateConfig.occupancy = currentStateOccupancy[:]
                 if step % stepInterval == 0:
                     speciesSystemElementIndices = np.asarray(currentStateOccupancy)
                     timeArray[pathIndex] = kmcTime
-                    # Not needed for now
-                    # wrappedPositionArray[pathIndex] = np.copy(currentStateConfig.positions[speciesSystemElementIndices])
-                    # speciesDisplacementArray[pathIndex] = np.copy(speciesDisplacementVectorList)
                     unwrappedPositionArray[pathIndex] = unwrappedPositionArray[pathIndex - 1] + speciesDisplacementVectorList
                     speciesDisplacementVectorList = np.zeros((self.totalSpecies, 3))
                     pathIndex += 1
@@ -868,9 +862,6 @@ class run(object):
         trajectoryData = returnValues()
         trajectoryData.timeArray = timeArray
         trajectoryData.unwrappedPositionArray = unwrappedPositionArray
-        # Not needed for now
-        # trajectoryData.wrappedPositionArray = wrappedPositionArray
-        # trajectoryData.speciesDisplacementArray = speciesDisplacementArray
         
         if outdir:
             trajectoryDataFileName = 'TrajectoryData.npy'
