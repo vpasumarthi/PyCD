@@ -710,8 +710,9 @@ class run(object):
         self.lenHopDistTypeList = [len(self.system.material.neighborCutoffDist[hopElementType]) for hopElementType in self.hopElementTypeList]
         
         unOccupantOccupancy = []
-        unOccupantChargeConfig = self.system.chargeConfig(unOccupantOccupancy)
-        self.unOccupantESPConfig = self.system.ESPConfig(unOccupantChargeConfig)
+        self.unOccupantChargeConfig = self.system.chargeConfig(unOccupantOccupancy)
+        self.occupantChargeConfig = deepcopy(self.unOccupantChargeConfig)
+        self.unOccupantESPConfig = self.system.ESPConfig(self.unOccupantChargeConfig)
         self.occupantESPConfig = deepcopy(self.unOccupantESPConfig)
         # number of kinetic processes
         self.nProc = 0
@@ -726,6 +727,7 @@ class run(object):
                                                        self.material.nElementsPerUnitCell[centerSiteElementTypeIndex]))
             speciesTypeSiteIndices = (np.tile(self.material.nElementsPerUnitCell[:centerSiteElementTypeIndex].sum() + 
                                                                np.arange(0, self.material.nElementsPerUnitCell[centerSiteElementTypeIndex]), self.system.numCells) + systemElementIndexOffsetArray)
+            self.occupantChargeConfig[speciesTypeSiteIndices] = self.material.chargeTypes[centerElementType + self.material.siteIdentifier]
             self.occupantESPConfig[speciesTypeSiteIndices] *= self.multFactor[speciesTypeIndex]
             for hopDistTypeIndex in range(self.lenHopDistTypeList[hopElementTypeIndex]):
                 if self.system.speciesCount[speciesTypeIndex] != 0:
@@ -815,8 +817,9 @@ class run(object):
                             hopDistTypeList[iNeighborIndex] = hopDistType
                             rowIndexList[iNeighborIndex] = rowIndex
                             neighborIndexList[iNeighborIndex] = neighborIndex
-
-                            newStateChargeConfig[[speciesSiteSystemElementIndex, neighborSystemElementIndex]] = newStateChargeConfig[[neighborSystemElementIndex, speciesSiteSystemElementIndex]]
+                            
+                            newStateChargeConfig[speciesSiteSystemElementIndex] = self.unOccupantChargeConfig[speciesSiteSystemElementIndex]
+                            newStateChargeConfig[neighborSystemElementIndex] = self.occupantChargeConfig[neighborSystemElementIndex]
                             delG0 = self.ESPRelativeElectrostaticInteractionEnergy(currentStateChargeConfig, newStateChargeConfig, 
                                                                                    speciesSiteSystemElementIndex, neighborSystemElementIndex)
                             lambdaValue = self.lambdaValues[hopElementType][hopDistType]
@@ -836,8 +839,12 @@ class run(object):
                 newSiteSystemElementIndex = neighborSystemElementIndexList[procIndex]
                 currentStateOccupancy[speciesIndexList[procIndex]] = newSiteSystemElementIndex
                 speciesTypeIndex = speciesTypeIndexList[procIndex]
-                currentStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = currentStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
-                newStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = newStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
+
+                currentStateChargeConfig[oldSiteSystemElementIndex] = self.unOccupantChargeConfig[oldSiteSystemElementIndex]
+                currentStateChargeConfig[newSiteSystemElementIndex] = self.occupantChargeConfig[newSiteSystemElementIndex]
+                
+                newStateChargeConfig[oldSiteSystemElementIndex] = self.unOccupantChargeConfig[oldSiteSystemElementIndex]
+                newStateChargeConfig[newSiteSystemElementIndex] = self.occupantChargeConfig[newSiteSystemElementIndex]
                 
                 speciesIndex = speciesIndexList[procIndex]
                 hopElementType = hopElementTypeList[procIndex]
