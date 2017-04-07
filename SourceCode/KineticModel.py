@@ -703,6 +703,7 @@ class run(object):
         
         # speciesTypeList
         self.speciesTypeList = [self.system.material.speciesTypes[index] for index, value in enumerate(self.system.speciesCount) for i in range(value)]
+        self.speciesTypeIndexList = [index for index, value in enumerate(self.system.speciesCount) for iValue in range(value)]
         self.siteElementTypeIndexList = [self.system.material.elementTypes.index(self.system.material.speciesToElementTypeMap[speciesType][0]) 
                                          for speciesType in self.speciesTypeList]
         self.hopElementTypeList = [self.system.material.hopElementTypes[speciesType][0] for speciesType in self.speciesTypeList]
@@ -777,6 +778,7 @@ class run(object):
         kList = np.zeros(self.nProc)
         neighborSystemElementIndexList = np.zeros(self.nProc, dtype=int)
         speciesIndexList = np.zeros(self.nProc, dtype=int)
+        speciesTypeIndexList = np.zeros(self.nProc, dtype=int)
         hopElementTypeList = self.nProc * ['']
         hopDistTypeList = np.zeros(self.nProc, dtype=int)
         rowIndexList = np.zeros(self.nProc, dtype=int)
@@ -789,6 +791,7 @@ class run(object):
             for step in range(kmcSteps):
                 for speciesIndex, speciesSiteSystemElementIndex in enumerate(currentStateOccupancy):
                     speciesType = self.speciesTypeList[speciesIndex]
+                    speciesTypeIndex = self.speciesTypeIndexList[speciesIndex]
                     siteElementTypeIndex = self.siteElementTypeIndexList[speciesIndex]
                     hopElementType = self.hopElementTypeList[speciesIndex]
                     rowIndex = (speciesSiteSystemElementIndex / self.material.totalElementsPerUnitCell * self.material.nElementsPerUnitCell[siteElementTypeIndex] + 
@@ -799,14 +802,14 @@ class run(object):
                         for neighborIndex, neighborSystemElementIndex in enumerate(neighborSystemElementIndices):
                             neighborSystemElementIndexList[iNeighborIndex] = neighborSystemElementIndex
                             speciesIndexList[iNeighborIndex] = speciesIndex
+                            speciesTypeIndexList[iNeighborIndex] = speciesTypeIndex
                             hopElementTypeList[iNeighborIndex] = hopElementType
                             hopDistTypeList[iNeighborIndex] = hopDistType
                             rowIndexList[iNeighborIndex] = rowIndex
                             neighborIndexList[iNeighborIndex] = neighborIndex
-                            multFactor = np.true_divide(currentStateChargeConfig[[neighborSystemElementIndex, speciesSiteSystemElementIndex]], 
-                                                        currentStateChargeConfig[[speciesSiteSystemElementIndex, neighborSystemElementIndex]])
-                            newStateESPConfig[speciesSiteSystemElementIndex] *= multFactor[0]
-                            newStateESPConfig[neighborSystemElementIndex] *= multFactor[1]
+
+                            newStateESPConfig[speciesSiteSystemElementIndex] /= self.multFactor[speciesTypeIndex]
+                            newStateESPConfig[neighborSystemElementIndex] *= self.multFactor[speciesTypeIndex]
                             newStateChargeConfig[[speciesSiteSystemElementIndex, neighborSystemElementIndex]] = newStateChargeConfig[[neighborSystemElementIndex, speciesSiteSystemElementIndex]]
                             delG0 = self.ESPRelativeElectrostaticInteractionEnergy(currentStateESPConfig, newStateESPConfig, 
                                                                                    currentStateChargeConfig, newStateChargeConfig, 
@@ -818,8 +821,8 @@ class run(object):
                             newStateChargeConfig[[speciesSiteSystemElementIndex, neighborSystemElementIndex]] = newStateChargeConfig[[neighborSystemElementIndex, speciesSiteSystemElementIndex]]
                             #newStateESPConfig[speciesSiteSystemElementIndex] = np.copy(currentStateESPConfig[speciesSiteSystemElementIndex])
                             #newStateESPConfig[neighborSystemElementIndex] = np.copy(currentStateESPConfig[neighborSystemElementIndex])
-                            newStateESPConfig[speciesSiteSystemElementIndex] /= multFactor[0]
-                            newStateESPConfig[neighborSystemElementIndex] /= multFactor[1]
+                            newStateESPConfig[speciesSiteSystemElementIndex] *= self.multFactor[speciesTypeIndex]
+                            newStateESPConfig[neighborSystemElementIndex] /= self.multFactor[speciesTypeIndex]
                             iNeighborIndex += 1
                 kTotal = np.sum(kList)
                 kCumSum = (kList / kTotal).cumsum()
@@ -836,16 +839,14 @@ class run(object):
                 oldSiteSystemElementIndex = currentStateOccupancy[speciesIndexList[procIndex]]
                 newSiteSystemElementIndex = neighborSystemElementIndexList[procIndex]
                 currentStateOccupancy[speciesIndexList[procIndex]] = newSiteSystemElementIndex
-
-                multFactor = np.true_divide(currentStateChargeConfig[[neighborSystemElementIndex, speciesSiteSystemElementIndex]], 
-                                            currentStateChargeConfig[[speciesSiteSystemElementIndex, neighborSystemElementIndex]])
-                currentStateESPConfig[oldSiteSystemElementIndex] *= multFactor[0]
-                currentStateESPConfig[newSiteSystemElementIndex] *= multFactor[1]
+                speciesTypeIndex = speciesTypeIndexList[procIndex]
+                currentStateESPConfig[oldSiteSystemElementIndex] /= self.multFactor[speciesTypeIndex]
+                currentStateESPConfig[newSiteSystemElementIndex] *= self.multFactor[speciesTypeIndex]
                 # Can multiply for newStateESPConfig as well.
                 #newStateESPConfig[oldSiteSystemElementIndex] = np.copy(currentStateESPConfig[oldSiteSystemElementIndex])
                 #newStateESPConfig[newSiteSystemElementIndex] = np.copy(currentStateESPConfig[newSiteSystemElementIndex])
-                newStateESPConfig[oldSiteSystemElementIndex] *= multFactor[0]
-                newStateESPConfig[newSiteSystemElementIndex] *= multFactor[1]
+                newStateESPConfig[oldSiteSystemElementIndex] /= self.multFactor[speciesTypeIndex]
+                newStateESPConfig[newSiteSystemElementIndex] *= self.multFactor[speciesTypeIndex]
                 currentStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = currentStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
                 newStateChargeConfig[[oldSiteSystemElementIndex, newSiteSystemElementIndex]] = newStateChargeConfig[[newSiteSystemElementIndex, oldSiteSystemElementIndex]]
                 
