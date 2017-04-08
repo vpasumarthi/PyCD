@@ -614,6 +614,9 @@ class system(object):
         # Coefficient Distance List
         self.coeffDistanceList = 1 / (self.material.dielectricConstant * self.neighborList['E'][0].displacementList)
         
+        # Electrostatic interaction neighborlist:
+        self.elecNeighborListNeighborSEIndices = self.neighborList['E'][0].systemElementIndexMap[1]
+        
     def generateRandomOccupancy(self, speciesCount):
         """generates initial occupancy list based on species count"""
         occupancy = []
@@ -655,9 +658,9 @@ class system(object):
         return chargeList
 
     def ESPConfig(self, currentStateChargeConfig):
-        ESPConfig = deepcopy(self.coeffDistanceList)
-        for rowIndex in range(len(currentStateChargeConfig)):
-            ESPConfig[rowIndex] *= currentStateChargeConfig[rowIndex]
+        ESPConfig = np.zeros(self.numCells * self.material.totalElementsPerUnitCell)
+        for rowIndex in range(self.numCells * self.material.totalElementsPerUnitCell):
+            ESPConfig[rowIndex] = np.sum(self.coeffDistanceList[rowIndex] * currentStateChargeConfig[self.elecNeighborListNeighborSEIndices[rowIndex]])
         return ESPConfig
 
     def config(self, occupancy):
@@ -749,30 +752,7 @@ class run(object):
 
         # Electrostatic interaction neighborlist:
         self.elecNeighborListNeighborSEIndices = self.system.neighborList['E'][0].systemElementIndexMap[1]
-
-    def electrostaticInteractionEnergy(self, occupancy):
-        """Subroutine to compute the electrostatic interaction energies"""
-        chargeConfig = self.system.chargeConfig(occupancy)
-        ESPConfig = self.system.ESPConfig(chargeConfig)
-        individualInteractionList = (ESPConfig * chargeConfig[self.elecNeighborListNeighborSEIndices])
-        elecIntEnergy = np.sum(np.concatenate(individualInteractionList)) * self.system.material.J2EV # electron-volt
-        return elecIntEnergy
         
-    def ESPRelativeElectrostaticInteractionEnergy(self, currentStateChargeConfig, newStateChargeConfig, 
-                                                  oldSiteSystemElementIndex, newSiteSystemElementIndex):
-        """Subroutine to compute the relative electrostatic interaction energies between two states"""
-        oldSiteElecIntEnergy = np.sum(self.occupantESPConfig[oldSiteSystemElementIndex] * 
-                                      currentStateChargeConfig[self.elecNeighborListNeighborSEIndices[oldSiteSystemElementIndex]])
-        oldNeighborSiteElecIntEnergy = np.sum(self.unOccupantESPConfig[newSiteSystemElementIndex] * 
-                                              currentStateChargeConfig[self.elecNeighborListNeighborSEIndices[newSiteSystemElementIndex]])
-        newSiteElecIntEnergy = np.sum(self.occupantESPConfig[newSiteSystemElementIndex] * 
-                                      newStateChargeConfig[self.elecNeighborListNeighborSEIndices[newSiteSystemElementIndex]])
-        newNeighborSiteElecIntEnergy = np.sum(self.unOccupantESPConfig[oldSiteSystemElementIndex] * 
-                                              newStateChargeConfig[self.elecNeighborListNeighborSEIndices[oldSiteSystemElementIndex]])
-        relativeElecEnergy = (newSiteElecIntEnergy + newNeighborSiteElecIntEnergy - 
-                              oldSiteElecIntEnergy - oldNeighborSiteElecIntEnergy)
-        return relativeElecEnergy
-
     #@profile
     def doKMCSteps(self, outdir=None, report=1, randomSeed=1):
         """Subroutine to run the KMC simulation by specified number of steps"""
@@ -787,8 +767,8 @@ class run(object):
         unwrappedPositionArray = np.zeros(( nTraj * numPathStepsPerTraj, self.totalSpecies, 3))
         pathIndex = 0
         currentStateChargeConfig = self.system.chargeConfig(currentStateOccupancy)
-        newStateChargeConfig = np.copy(currentStateChargeConfig)
-
+        currentStateESPConfig = self.system.ESPConfig(currentStateChargeConfig)
+        
         kList = np.zeros(self.nProc)
         neighborSystemElementIndexList = np.zeros(self.nProc, dtype=int)
         rowIndexList = np.zeros(self.nProc, dtype=int)
@@ -799,21 +779,25 @@ class run(object):
             kmcTime = 0
             speciesDisplacementVectorList = np.zeros((self.totalSpecies, 3))
             for step in range(kmcSteps):
+                '''
                 speciesSiteSystemElementIndices = []
                 neighborSystemElementIndices = self.system.neighborList[hopElementType][hopDistType].systemElementIndexMap[1][rowIndex]
                 neighborSystemElementIndices = []
                 for iProc in range(self.nProc):
                     speciesSiteSystemElementIndex = speciesSiteSystemElementIndices[iProc]
                     neighborSystemElementIndex = neighborSystemElementIndices[iProc]
-                    newStateChargeConfig[speciesSiteSystemElementIndex] = self.unOccupantChargeConfig[speciesSiteSystemElementIndex]
-                    newStateChargeConfig[neighborSystemElementIndex] = self.occupantChargeConfig[neighborSystemElementIndex]
-                    delG0 = self.ESPRelativeElectrostaticInteractionEnergy(currentStateChargeConfig, newStateChargeConfig, 
-                                                                           speciesSiteSystemElementIndex, neighborSystemElementIndex)
+                    #newStateChargeConfig[speciesSiteSystemElementIndex] = self.unOccupantChargeConfig[speciesSiteSystemElementIndex]
+                    #newStateChargeConfig[neighborSystemElementIndex] = self.occupantChargeConfig[neighborSystemElementIndex]
+                    delG0 = ((currentStateChargeConfig[neighborSystemElementIndex] - currentStateChargeConfig[speciesSiteSystemElementIndex]) *
+                             ((currentStateChargeConfig[speciesSiteSystemElementIndex] - currentStateChargeConfig[neighborSystemElementIndex]) / self.neighbors.computeDistance(self.system.systemSize, speciesSiteSystemElementIndex, neighborSystemElementIndex)
+                              + currentStateESPConfig[speciesSiteSystemElementIndex] - currentStateESPConfig[neighborSystemElementIndex]))
+                    
+                    #delG0 = self.ESPRelativeElectrostaticInteractionEnergy(currentStateChargeConfig, newStateChargeConfig, 
+                    #                                                       speciesSiteSystemElementIndex, neighborSystemElementIndex)
                     delGs = ((self.nProcLambdaValues[iProc] + delG0) ** 2 / (4 * self.nProcLambdaValues[iProc])) - self.nProcVABList[iProc]
                     kList[iProc] = self.vn * np.exp(-delGs / self.T)
-                    newStateChargeConfig[speciesSiteSystemElementIndex] = self.occupantChargeConfig[speciesSiteSystemElementIndex]
-                    newStateChargeConfig[neighborSystemElementIndex] = self.unOccupantChargeConfig[neighborSystemElementIndex]
-                    
+                    #newStateChargeConfig[speciesSiteSystemElementIndex] = self.occupantChargeConfig[speciesSiteSystemElementIndex]
+                    #newStateChargeConfig[neighborSystemElementIndex] = self.unOccupantChargeConfig[neighborSystemElementIndex]
                 '''
                 iProc = 0
                 for speciesSiteSystemElementIndex in currentStateOccupancy:
@@ -828,18 +812,16 @@ class run(object):
                             neighborSystemElementIndexList[iProc] = neighborSystemElementIndex
                             rowIndexList[iProc] = rowIndex
                             neighborIndexList[iProc] = neighborIndex
+                            delCharge = (currentStateChargeConfig[neighborSystemElementIndex] - currentStateChargeConfig[speciesSiteSystemElementIndex]) 
+                            delG0 = (delCharge * (-delCharge / self.neighbors.computeDistance(self.system.systemSize, speciesSiteSystemElementIndex, neighborSystemElementIndex) 
+                                                  + currentStateESPConfig[speciesSiteSystemElementIndex] - currentStateESPConfig[neighborSystemElementIndex]))
                             
-                            newStateChargeConfig[speciesSiteSystemElementIndex] = self.unOccupantChargeConfig[speciesSiteSystemElementIndex]
-                            newStateChargeConfig[neighborSystemElementIndex] = self.occupantChargeConfig[neighborSystemElementIndex]
-                            delG0 = self.ESPRelativeElectrostaticInteractionEnergy(currentStateChargeConfig, newStateChargeConfig, 
-                                                                                   speciesSiteSystemElementIndex, neighborSystemElementIndex)
                             lambdaValue = self.lambdaValues[hopElementType][hopDistType]
                             VAB = self.VAB[hopElementType][hopDistType]
                             delGs = ((lambdaValue + delG0) ** 2 / (4 * lambdaValue)) - VAB
                             kList[iProc] = self.vn * np.exp(-delGs / self.T)
-                            newStateChargeConfig[[speciesSiteSystemElementIndex, neighborSystemElementIndex]] = newStateChargeConfig[[neighborSystemElementIndex, speciesSiteSystemElementIndex]]
                             iProc += 1
-                '''
+
                 kTotal = np.sum(kList)
                 kCumSum = (kList / kTotal).cumsum()
                 rand1 = rnd.random()
@@ -852,11 +834,10 @@ class run(object):
                 newSiteSystemElementIndex = neighborSystemElementIndexList[procIndex]
                 currentStateOccupancy[speciesIndex] = newSiteSystemElementIndex
                 
-                currentStateChargeConfig[oldSiteSystemElementIndex] = self.unOccupantChargeConfig[oldSiteSystemElementIndex]
-                currentStateChargeConfig[newSiteSystemElementIndex] = self.occupantChargeConfig[newSiteSystemElementIndex]
-                
-                newStateChargeConfig[oldSiteSystemElementIndex] = self.unOccupantChargeConfig[oldSiteSystemElementIndex]
-                newStateChargeConfig[newSiteSystemElementIndex] = self.occupantChargeConfig[newSiteSystemElementIndex]
+                addOn = ((currentStateChargeConfig[oldSiteSystemElementIndex] - currentStateChargeConfig[newSiteSystemElementIndex]) / 
+                         self.neighbors.computeDistance(self.system.systemSize, oldSiteSystemElementIndex, newSiteSystemElementIndex))
+                currentStateChargeConfig[oldSiteSystemElementIndex] += addOn
+                currentStateChargeConfig[newSiteSystemElementIndex] -= addOn
                 
                 hopElementType = self.nProcHopElementTypeList[procIndex]
                 hopDistType = self.nProcHopDistTypeList[procIndex]
