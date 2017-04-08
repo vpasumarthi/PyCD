@@ -719,6 +719,8 @@ class run(object):
         self.multFactor = np.zeros(len(self.material.speciesTypes))
         self.nProcHopElementTypeList = []
         self.nProcHopDistTypeList = []
+        self.nProcSpeciesIndexList = []
+        self.nProcSiteElementTypeIndexList = []
         for hopElementTypeIndex, hopElementType in enumerate(self.hopElementTypeList):
             centerElementType = hopElementType.split(self.material.elementTypeDelimiter)[0]
             speciesTypeIndex = self.material.speciesTypes.index(self.material.elementTypeToSpeciesMap[centerElementType][0])
@@ -739,7 +741,9 @@ class run(object):
                         self.nProc += numNeighbors[0] * self.system.speciesCount[speciesTypeIndex]
                         self.nProcHopElementTypeList.extend([hopElementType] * numNeighbors[0])
                         self.nProcHopDistTypeList.extend([hopDistTypeIndex] * numNeighbors[0])
-
+                        self.nProcSpeciesIndexList.extend([hopElementTypeIndex] * numNeighbors[0])
+                        self.nProcSiteElementTypeIndexList.extend([centerSiteElementTypeIndex] * numNeighbors[0])
+        #import pdb; pdb.set_trace()
         # total number of species
         self.totalSpecies = self.system.speciesCount.sum()
 
@@ -787,8 +791,6 @@ class run(object):
 
         kList = np.zeros(self.nProc)
         neighborSystemElementIndexList = np.zeros(self.nProc, dtype=int)
-        speciesIndexList = np.zeros(self.nProc, dtype=int)
-        speciesTypeIndexList = np.zeros(self.nProc, dtype=int)
         rowIndexList = np.zeros(self.nProc, dtype=int)
         neighborIndexList = np.zeros(self.nProc, dtype=int)
         assert 'E' in self.system.material.neighborCutoffDist.keys(), 'Please specify the cutoff distance for electrostatic interactions'
@@ -797,18 +799,33 @@ class run(object):
             kmcTime = 0
             speciesDisplacementVectorList = np.zeros((self.totalSpecies, 3))
             for step in range(kmcSteps):
+                speciesSiteSystemElementIndices = []
+                neighborSystemElementIndices = self.system.neighborList[hopElementType][hopDistType].systemElementIndexMap[1][rowIndex]
+                neighborSystemElementIndices = []
+                for iProc in range(self.nProc):
+                    speciesSiteSystemElementIndex = speciesSiteSystemElementIndices[iProc]
+                    neighborSystemElementIndex = neighborSystemElementIndices[iProc]
+                    newStateChargeConfig[speciesSiteSystemElementIndex] = self.unOccupantChargeConfig[speciesSiteSystemElementIndex]
+                    newStateChargeConfig[neighborSystemElementIndex] = self.occupantChargeConfig[neighborSystemElementIndex]
+                    delG0 = self.ESPRelativeElectrostaticInteractionEnergy(currentStateChargeConfig, newStateChargeConfig, 
+                                                                           speciesSiteSystemElementIndex, neighborSystemElementIndex)
+                    delGs = ((self.nProcLambdaValues[iProc] + delG0) ** 2 / (4 * self.nProcLambdaValues[iProc])) - self.nProcVABList[iProc]
+                    kList[iProc] = self.vn * np.exp(-delGs / self.T)
+                    newStateChargeConfig[speciesSiteSystemElementIndex] = self.occupantChargeConfig[speciesSiteSystemElementIndex]
+                    newStateChargeConfig[neighborSystemElementIndex] = self.unOccupantChargeConfig[neighborSystemElementIndex]
+                    
+                '''
                 iProc = 0
-                for speciesIndex, speciesSiteSystemElementIndex in enumerate(currentStateOccupancy):
-                    speciesType = self.speciesTypeList[speciesIndex]
-                    siteElementTypeIndex = self.siteElementTypeIndexList[speciesIndex]
-                    hopElementType = self.hopElementTypeList[speciesIndex]
+                for speciesSiteSystemElementIndex in currentStateOccupancy:
+                    speciesIndex = self.nProcSpeciesIndexList[iProc]
+                    hopElementType = self.nProcHopElementTypeList[iProc]
+                    siteElementTypeIndex = self.nProcSiteElementTypeIndexList[iProc]
                     rowIndex = (speciesSiteSystemElementIndex / self.material.totalElementsPerUnitCell * self.material.nElementsPerUnitCell[siteElementTypeIndex] + 
                                 speciesSiteSystemElementIndex % self.material.totalElementsPerUnitCell - self.headStart_nElementsPerUnitCellCumSum[siteElementTypeIndex])
                     for hopDistType in range(self.lenHopDistTypeList[speciesIndex]):
                         neighborSystemElementIndices = self.system.neighborList[hopElementType][hopDistType].systemElementIndexMap[1][rowIndex]
                         for neighborIndex, neighborSystemElementIndex in enumerate(neighborSystemElementIndices):
                             neighborSystemElementIndexList[iProc] = neighborSystemElementIndex
-                            speciesIndexList[iProc] = speciesIndex
                             rowIndexList[iProc] = rowIndex
                             neighborIndexList[iProc] = neighborIndex
                             
@@ -822,6 +839,7 @@ class run(object):
                             kList[iProc] = self.vn * np.exp(-delGs / self.T)
                             newStateChargeConfig[[speciesSiteSystemElementIndex, neighborSystemElementIndex]] = newStateChargeConfig[[neighborSystemElementIndex, speciesSiteSystemElementIndex]]
                             iProc += 1
+                '''
                 kTotal = np.sum(kList)
                 kCumSum = (kList / kTotal).cumsum()
                 rand1 = rnd.random()
@@ -829,9 +847,10 @@ class run(object):
                 rand2 = rnd.random()
                 kmcTime -= np.log(rand2) / kTotal
                 
-                oldSiteSystemElementIndex = currentStateOccupancy[speciesIndexList[procIndex]]
+                speciesIndex = self.nProcSpeciesIndexList[procIndex]
+                oldSiteSystemElementIndex = currentStateOccupancy[speciesIndex]
                 newSiteSystemElementIndex = neighborSystemElementIndexList[procIndex]
-                currentStateOccupancy[speciesIndexList[procIndex]] = newSiteSystemElementIndex
+                currentStateOccupancy[speciesIndex] = newSiteSystemElementIndex
                 
                 currentStateChargeConfig[oldSiteSystemElementIndex] = self.unOccupantChargeConfig[oldSiteSystemElementIndex]
                 currentStateChargeConfig[newSiteSystemElementIndex] = self.occupantChargeConfig[newSiteSystemElementIndex]
@@ -839,7 +858,6 @@ class run(object):
                 newStateChargeConfig[oldSiteSystemElementIndex] = self.unOccupantChargeConfig[oldSiteSystemElementIndex]
                 newStateChargeConfig[newSiteSystemElementIndex] = self.occupantChargeConfig[newSiteSystemElementIndex]
                 
-                speciesIndex = speciesIndexList[procIndex]
                 hopElementType = self.nProcHopElementTypeList[procIndex]
                 hopDistType = self.nProcHopDistTypeList[procIndex]
                 rowIndex = rowIndexList[procIndex]
