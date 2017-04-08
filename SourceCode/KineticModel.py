@@ -389,6 +389,7 @@ class neighbors(object):
         numNeighbors = np.array([], dtype=int)
         displacementVectorList = np.empty(len(centerSiteCoords), dtype=object)
         displacementList = np.empty(len(centerSiteCoords), dtype=object)
+        cumulativeDisplacementList = np.empty((len(centerSiteCoords), len(centerSiteCoords)))
         
         xRange = range(-1, 2) if self.pbc[0] == 1 else [0]
         yRange = range(-1, 2) if self.pbc[1] == 1 else [0]
@@ -410,6 +411,7 @@ class neighbors(object):
                 neighborImageDisplacementVectors = neighborImageCoords - centerCoord
                 neighborImageDisplacements = np.linalg.norm(neighborImageDisplacementVectors, axis=1)
                 [displacement, imageIndex] = [np.min(neighborImageDisplacements), np.argmin(neighborImageDisplacements)]
+                cumulativeDisplacementList[centerSiteIndex, neighborSiteIndex] = displacement
                 if cutoffDistLimits[0] < displacement <= cutoffDistLimits[1]:
                     iNeighborSiteIndexList.append(neighborSiteIndex)
                     iDisplacementVectors.append(neighborImageDisplacementVectors[imageIndex])
@@ -430,6 +432,7 @@ class neighbors(object):
         elementIndexMap[:] = [centerSiteQuantumIndexList[:,4], neighborElementIndexList]
         
         returnNeighbors = returnValues()
+        returnNeighbors.cumulativeDisplacementList = cumulativeDisplacementList
         returnNeighbors.systemElementIndexMap = systemElementIndexMap
         returnNeighbors.elementTypeIndexMap = elementTypeIndexMap
         returnNeighbors.elementIndexMap = elementIndexMap
@@ -476,12 +479,13 @@ class neighbors(object):
         elementIndexMap[:] = [parentElementIndexMap[0], neighborElementIndexList]
         
         returnNeighbors = returnValues()
+        returnNeighbors.cumulativeDisplacementList = cumulativeDisplacementList
         returnNeighbors.systemElementIndexMap = systemElementIndexMap
         returnNeighbors.elementTypeIndexMap = elementTypeIndexMap
         returnNeighbors.elementIndexMap = elementIndexMap
         returnNeighbors.numNeighbors = numNeighbors
         returnNeighbors.displacementVectorList = displacementVectorList
-        returnNeighbors.displacementList = displacementList
+        returnNeighbors.cumulativeDisplacementList = parentElecNeighborList.cumulativeDisplacementList
         return returnNeighbors
     #@profile
     def generateNeighborList(self, parent, extract=0, cutE=None, replaceExistingNeighborList=0, outdir=None, report=1, localSystemSize=np.array([3, 3, 3]), 
@@ -717,6 +721,7 @@ class run(object):
         self.occupantChargeConfig = deepcopy(self.unOccupantChargeConfig)
         self.unOccupantESPConfig = self.system.ESPConfig(self.unOccupantChargeConfig)
         self.occupantESPConfig = deepcopy(self.unOccupantESPConfig)
+        
         # number of kinetic processes
         self.nProc = 0
         self.multFactor = np.zeros(len(self.material.speciesTypes))
@@ -786,18 +791,7 @@ class run(object):
                 for iProc in range(self.nProc):
                     speciesSiteSystemElementIndex = speciesSiteSystemElementIndices[iProc]
                     neighborSystemElementIndex = neighborSystemElementIndices[iProc]
-                    #newStateChargeConfig[speciesSiteSystemElementIndex] = self.unOccupantChargeConfig[speciesSiteSystemElementIndex]
-                    #newStateChargeConfig[neighborSystemElementIndex] = self.occupantChargeConfig[neighborSystemElementIndex]
-                    delG0 = ((currentStateChargeConfig[neighborSystemElementIndex] - currentStateChargeConfig[speciesSiteSystemElementIndex]) *
-                             ((currentStateChargeConfig[speciesSiteSystemElementIndex] - currentStateChargeConfig[neighborSystemElementIndex]) / self.neighbors.computeDistance(self.system.systemSize, speciesSiteSystemElementIndex, neighborSystemElementIndex)
-                              + currentStateESPConfig[speciesSiteSystemElementIndex] - currentStateESPConfig[neighborSystemElementIndex]))
-                    
-                    #delG0 = self.ESPRelativeElectrostaticInteractionEnergy(currentStateChargeConfig, newStateChargeConfig, 
-                    #                                                       speciesSiteSystemElementIndex, neighborSystemElementIndex)
                     delGs = ((self.nProcLambdaValues[iProc] + delG0) ** 2 / (4 * self.nProcLambdaValues[iProc])) - self.nProcVABList[iProc]
-                    kList[iProc] = self.vn * np.exp(-delGs / self.T)
-                    #newStateChargeConfig[speciesSiteSystemElementIndex] = self.occupantChargeConfig[speciesSiteSystemElementIndex]
-                    #newStateChargeConfig[neighborSystemElementIndex] = self.unOccupantChargeConfig[neighborSystemElementIndex]
                 '''
                 iProc = 0
                 for speciesSiteSystemElementIndex in currentStateOccupancy:
@@ -813,7 +807,7 @@ class run(object):
                             rowIndexList[iProc] = rowIndex
                             neighborIndexList[iProc] = neighborIndex
                             delCharge = (currentStateChargeConfig[neighborSystemElementIndex] - currentStateChargeConfig[speciesSiteSystemElementIndex]) 
-                            delG0 = (delCharge * (-delCharge / self.neighbors.computeDistance(self.system.systemSize, speciesSiteSystemElementIndex, neighborSystemElementIndex) 
+                            delG0 = (delCharge * (-delCharge / self.system.neighborList['E'][0].cumulativeDisplacementList[speciesSiteSystemElementIndex][neighborSystemElementIndex] 
                                                   + currentStateESPConfig[speciesSiteSystemElementIndex] - currentStateESPConfig[neighborSystemElementIndex]))
                             
                             lambdaValue = self.lambdaValues[hopElementType][hopDistType]
@@ -835,7 +829,7 @@ class run(object):
                 currentStateOccupancy[speciesIndex] = newSiteSystemElementIndex
                 
                 addOn = ((currentStateChargeConfig[oldSiteSystemElementIndex] - currentStateChargeConfig[newSiteSystemElementIndex]) / 
-                         self.neighbors.computeDistance(self.system.systemSize, oldSiteSystemElementIndex, newSiteSystemElementIndex))
+                         self.system.neighborList['E'][0].cumulativeDisplacementList[oldSiteSystemElementIndex][newSiteSystemElementIndex])
                 currentStateChargeConfig[oldSiteSystemElementIndex] += addOn
                 currentStateChargeConfig[newSiteSystemElementIndex] -= addOn
                 
