@@ -290,17 +290,11 @@ class neighbors(object):
         distance"""
         neighborSiteCoords = bulkSites.cellCoordinates[neighborSiteIndices]
         neighborSiteSystemElementIndexList = bulkSites.systemElementIndexList[neighborSiteIndices]
-        #neighborSiteQuantumIndexList = bulkSites.quantumIndexList[neighborSiteIndices]
         centerSiteCoords = bulkSites.cellCoordinates[centerSiteIndices]
         centerSiteSystemElementIndexList = bulkSites.systemElementIndexList[centerSiteIndices]
-        #centerSiteQuantumIndexList = bulkSites.quantumIndexList[centerSiteIndices]
         
         neighborSystemElementIndices = np.empty(len(centerSiteCoords), dtype=object)
-        #offsetList = np.empty(len(centerSiteCoords), dtype=object)
-        #neighborElementIndexList = np.empty(len(centerSiteCoords), dtype=object)
         numNeighbors = np.array([], dtype=int)
-        #displacementVectorList = np.empty(len(centerSiteCoords), dtype=object)
-        #displacementList = np.empty(len(centerSiteCoords), dtype=object)
         
         # DEBUG: Quick test for number of neighbors: Switch Off Start
         xRange = range(-1, 2) if self.pbc[0] == 1 else [0]
@@ -314,8 +308,6 @@ class neighbors(object):
                     unitcellTranslationalCoords[index] = np.dot(np.multiply(np.array([xOffset, yOffset, zOffset]), self.systemSize), self.material.latticeMatrix)
                     index += 1
         for centerSiteIndex, centerCoord in enumerate(centerSiteCoords):
-            #iDisplacementVectors = []
-            #iDisplacements = np.array([])
             iNeighborSiteIndexList = []
             iNumNeighbors = 0
             for neighborSiteIndex, neighborCoord in enumerate(neighborSiteCoords):
@@ -325,15 +317,9 @@ class neighbors(object):
                 [displacement, imageIndex] = [np.min(neighborImageDisplacements), np.argmin(neighborImageDisplacements)]
                 if cutoffDistLimits[0] < displacement <= cutoffDistLimits[1]:
                     iNeighborSiteIndexList.append(neighborSiteIndex)
-                    #iDisplacementVectors.append(neighborImageDisplacementVectors[imageIndex])
-                    #iDisplacements = np.append(iDisplacements, displacement)
                     iNumNeighbors += 1
             neighborSystemElementIndices[centerSiteIndex] = neighborSiteSystemElementIndexList[iNeighborSiteIndexList]
-            #offsetList[centerSiteIndex] = neighborSiteQuantumIndexList[iNeighborSiteIndexList, :3] - centerSiteQuantumIndexList[centerSiteIndex, :3]
-            #neighborElementIndexList[centerSiteIndex] = neighborSiteQuantumIndexList[iNeighborSiteIndexList, 4]
             numNeighbors = np.append(numNeighbors, iNumNeighbors)
-            #displacementVectorList[centerSiteIndex] = np.asarray(iDisplacementVectors)
-            #displacementList[centerSiteIndex] = iDisplacements
         # DEBUG: Quick test for number of neighbors: Switch OFF End
         
         # DEBUG: Quick test for number of neighbors: Switch ON Start
@@ -362,16 +348,10 @@ class neighbors(object):
             
         systemElementIndexMap = np.empty(2, dtype=object)
         systemElementIndexMap[:] = [centerSiteSystemElementIndexList, neighborSystemElementIndices]
-        #elementIndexMap = np.empty(2, dtype=object)
-        #elementIndexMap[:] = [centerSiteQuantumIndexList[:,4], neighborElementIndexList]
         
         returnNeighbors = returnValues()
         returnNeighbors.systemElementIndexMap = systemElementIndexMap
-        #returnNeighbors.offsetList = offsetList
-        #returnNeighbors.elementIndexMap = elementIndexMap
         returnNeighbors.numNeighbors = numNeighbors
-        #returnNeighbors.displacementVectorList = displacementVectorList
-        #returnNeighbors.displacementList = displacementList
         return returnNeighbors
     
     def electrostaticNeighborSites(self, systemSize, bulkSites, centerSiteIndices, neighborSiteIndices, cutoffDistLimits, cutoffDistKey):
@@ -379,17 +359,11 @@ class neighbors(object):
         neighbor sites within cutoff distance"""
         neighborSiteCoords = bulkSites.cellCoordinates[neighborSiteIndices]
         neighborSiteSystemElementIndexList = bulkSites.systemElementIndexList[neighborSiteIndices]
-        #neighborSiteQuantumIndexList = bulkSites.quantumIndexList[neighborSiteIndices]
         centerSiteCoords = bulkSites.cellCoordinates[centerSiteIndices]
-        #centerSiteSystemElementIndexList = bulkSites.systemElementIndexList[centerSiteIndices]
-        #centerSiteQuantumIndexList = bulkSites.quantumIndexList[centerSiteIndices]
         
         numElements = len(centerSiteCoords)
         neighborSystemElementIndices = np.empty(numElements, dtype=object)
-        #neighborElementTypeIndexList = np.empty(len(centerSiteCoords), dtype=object)
-        #neighborElementIndexList = np.empty(len(centerSiteCoords), dtype=object)
         numNeighbors = np.empty(numElements, dtype=int)
-        #displacementVectorList = np.empty(len(centerSiteCoords), dtype=object)
         displacementList = np.empty(numElements, dtype=object)
         cumulativeDisplacementList = np.empty((numElements, numElements))
         cumulativeDisplacementVectorList = np.empty((numElements, numElements, 3))
@@ -405,7 +379,6 @@ class neighbors(object):
                     unitcellTranslationalCoords[index] = np.dot(np.multiply(np.array([xOffset, yOffset, zOffset]), self.systemSize), self.material.latticeMatrix)
                     index += 1
         for centerSiteIndex, centerCoord in enumerate(centerSiteCoords):
-            #iDisplacementVectors = []
             iDisplacements = np.array([])
             iNeighborSiteIndexList = []
             iNumNeighbors = 0
@@ -418,85 +391,38 @@ class neighbors(object):
                 cumulativeDisplacementList[centerSiteIndex][neighborSiteIndex] = displacement
                 if cutoffDistLimits[0] < displacement <= cutoffDistLimits[1]:
                     iNeighborSiteIndexList.append(neighborSiteIndex)
-                    #iDisplacementVectors.append(neighborImageDisplacementVectors[imageIndex])
                     iDisplacements = np.append(iDisplacements, displacement)
                     iNumNeighbors += 1
             neighborSystemElementIndices[centerSiteIndex] = np.array(neighborSiteSystemElementIndexList[iNeighborSiteIndexList])
-            #neighborElementTypeIndexList[centerSiteIndex] = neighborSiteQuantumIndexList[iNeighborSiteIndexList, 3]
-            #neighborElementIndexList[centerSiteIndex] = neighborSiteQuantumIndexList[iNeighborSiteIndexList, 4]
             numNeighbors[centerSiteIndex] = iNumNeighbors
-            #displacementVectorList[centerSiteIndex] = np.asarray(iDisplacementVectors)
             displacementList[centerSiteIndex] = iDisplacements
             
-        #systemElementIndexMap = np.empty(2, dtype=object)
-        #systemElementIndexMap[:] = [centerSiteSystemElementIndexList, neighborSystemElementIndices]
-        #elementTypeIndexMap = np.empty(2, dtype=object)
-        #elementTypeIndexMap[:] = [centerSiteQuantumIndexList[:,3], neighborElementTypeIndexList]
-        #elementIndexMap = np.empty(2, dtype=object)
-        #elementIndexMap[:] = [centerSiteQuantumIndexList[:,4], neighborElementIndexList]
-        
         returnNeighbors = returnValues()
-        #returnNeighbors.systemElementIndexMap = systemElementIndexMap
-        #returnNeighbors.elementTypeIndexMap = elementTypeIndexMap
-        #returnNeighbors.elementIndexMap = elementIndexMap
         returnNeighbors.neighborSystemElementIndices = neighborSystemElementIndices
         returnNeighbors.numNeighbors = numNeighbors
         returnNeighbors.cumulativeDisplacementVectorList = cumulativeDisplacementVectorList
         returnNeighbors.cumulativeDisplacementList = cumulativeDisplacementList
-        #returnNeighbors.displacementVectorList = displacementVectorList
         returnNeighbors.displacementList = displacementList
         return returnNeighbors
 
     def extractElectrostaticNeighborSites(self, parentElecNeighborList, cutE):
         """Returns systemElementIndexMap and distances between center sites and its 
         neighbor sites within cutoff distance"""
-        #parentSystemElementIndexMap = parentElecNeighborList.systemElementIndexMap
-        #parentElementTypeIndexMap = parentElecNeighborList.elementTypeIndexMap
-        #parentElementIndexMap = parentElecNeighborList.elementIndexMap
-        #parentDisplacementVectorList = parentElecNeighborList.displacementVectorList
-        #parentDisplacementList = parentElecNeighborList.displacementList
-        
         numSystemElements = len(parentElecNeighborList.numNeighbors)
         neighborSystemElementIndices = np.empty(numSystemElements, dtype=object)
-        #neighborElementTypeIndexList = np.empty(numSystemElements, dtype=object)
-        #neighborElementIndexList = np.empty(numSystemElements, dtype=object)
         numNeighbors = np.empty(numSystemElements, dtype=int)
-        #displacementVectorList = np.empty(numSystemElements, dtype=object)
         displacementList = np.empty(numSystemElements, dtype=object)
-        #import pdb; pdb.set_trace()
-        #startIndex = 0
         for centerSiteIndex in range(numSystemElements):
-            #extractIndices = 
-            #numNeighbors[centerSiteIndex] = len(extractIndices[0])
-            #endIndex = startIndex + numNeighbors[centerSiteIndex]
             iNeighborSiteIndexList = np.where((0 < parentElecNeighborList.cumulativeDisplacementList[centerSiteIndex]) & (parentElecNeighborList.cumulativeDisplacementList[centerSiteIndex] <= cutE * self.material.ANG2BOHR))[0]
-            #print centerSiteIndex
-            #import pdb; pdb.set_trace()
             neighborSystemElementIndices[centerSiteIndex] = np.where((0 < parentElecNeighborList.cumulativeDisplacementList[centerSiteIndex]) & (parentElecNeighborList.cumulativeDisplacementList[centerSiteIndex] <= cutE * self.material.ANG2BOHR))[0]
             numNeighbors[centerSiteIndex] = len(neighborSystemElementIndices[centerSiteIndex])
-            #np.asarray(parentElecNeighborList.neighborSystemElementIndices[centerSiteIndex][iNeighborSiteIndexList])
-            #neighborElementTypeIndexList[centerSiteIndex] = np.asarray(parentElementTypeIndexMap[1][centerSiteIndex][iNeighborSiteIndexList])
-            #neighborElementIndexList[centerSiteIndex] = np.asarray(parentElementIndexMap[1][centerSiteIndex][iNeighborSiteIndexList])
-            #displacementVectorList[centerSiteIndex] = np.asarray(parentDisplacementVectorList[centerSiteIndex][iNeighborSiteIndexList])
             displacementList[centerSiteIndex] = np.asarray(parentElecNeighborList.cumulativeDisplacementList[centerSiteIndex][iNeighborSiteIndexList])
-            #startIndex = endIndex
             
-        #systemElementIndexMap = np.empty(2, dtype=object)
-        #systemElementIndexMap[:] = [parentSystemElementIndexMap[0], neighborSystemElementIndices]
-        #elementTypeIndexMap = np.empty(2, dtype=object)
-        #elementTypeIndexMap[:] = [parentElementTypeIndexMap[0], neighborElementTypeIndexList]
-        #elementIndexMap = np.empty(2, dtype=object)
-        #elementIndexMap[:] = [parentElementIndexMap[0], neighborElementIndexList]
-        
         returnNeighbors = returnValues()
         returnNeighbors.cumulativeDisplacementVectorList = parentElecNeighborList.cumulativeDisplacementVectorList
         returnNeighbors.cumulativeDisplacementList = parentElecNeighborList.cumulativeDisplacementList
         returnNeighbors.neighborSystemElementIndices = neighborSystemElementIndices
-        #returnNeighbors.systemElementIndexMap = systemElementIndexMap
-        #returnNeighbors.elementTypeIndexMap = elementTypeIndexMap
-        #returnNeighbors.elementIndexMap = elementIndexMap
         returnNeighbors.numNeighbors = numNeighbors
-        #returnNeighbors.displacementVectorList = displacementVectorList
         returnNeighbors.displacementList = displacementList
         return returnNeighbors
     #@profile
@@ -630,6 +556,9 @@ class system(object):
         # Coefficient Distance List
         self.coeffDistanceList = 1 / (self.material.dielectricConstant * self.neighborList['E'][0].displacementList)
         
+        # inverse of cumulative Distance
+        self.inverseCoeffDistanceList = 1 / (self.material.dielectricConstant * self.neighborList['E'][0].cumulativeDisplacementList)
+        
         # Electrostatic interaction neighborlist:
         self.elecNeighborListNeighborSEIndices = self.neighborList['E'][0].neighborSystemElementIndices
         
@@ -674,9 +603,10 @@ class system(object):
         return chargeList
 
     def ESPConfig(self, currentStateChargeConfig):
-        ESPConfig = np.zeros(self.numCells * self.material.totalElementsPerUnitCell)
-        for rowIndex in range(self.numCells * self.material.totalElementsPerUnitCell):
-            ESPConfig[rowIndex] = np.sum(self.coeffDistanceList[rowIndex] * currentStateChargeConfig[self.elecNeighborListNeighborSEIndices[rowIndex]])
+        numSystemElements = self.numCells * self.material.totalElementsPerUnitCell
+        ESPConfig = np.zeros(numSystemElements)
+        for elementIndex in range(numSystemElements):
+            ESPConfig[elementIndex] = np.sum(self.coeffDistanceList[elementIndex] * currentStateChargeConfig[self.elecNeighborListNeighborSEIndices[elementIndex]])
         return ESPConfig
 
     def config(self, occupancy):
@@ -713,9 +643,9 @@ class run(object):
         self.systemSize = self.system.systemSize
 
         # import parameters from material class
-        self.vn = self.system.material.vn
-        self.lambdaValues = self.system.material.lambdaValues
-        self.VAB = self.system.material.VAB
+        self.vn = self.material.vn
+        self.lambdaValues = self.material.lambdaValues
+        self.VAB = self.material.VAB
         
         # nElementsPerUnitCell
         self.headStart_nElementsPerUnitCellCumSum = [self.system.material.nElementsPerUnitCell[:siteElementTypeIndex].sum() for siteElementTypeIndex in range(self.system.material.nElementTypes)]
@@ -724,20 +654,11 @@ class run(object):
         self.speciesTypeList = [self.system.material.speciesTypes[index] for index, value in enumerate(self.system.speciesCount) for i in range(value)]
         self.speciesTypeIndexList = [index for index, value in enumerate(self.system.speciesCount) for iValue in range(value)]
         self.speciesChargeList = [self.material.speciesChargeList[index] for index in self.speciesTypeIndexList]
-        self.siteElementTypeIndexList = [self.system.material.elementTypes.index(self.system.material.speciesToElementTypeMap[speciesType][0]) 
-                                         for speciesType in self.speciesTypeList]
         self.hopElementTypeList = [self.system.material.hopElementTypes[speciesType][0] for speciesType in self.speciesTypeList]
         self.lenHopDistTypeList = [len(self.system.material.neighborCutoffDist[hopElementType]) for hopElementType in self.hopElementTypeList]
         
-        unOccupantOccupancy = []
-        self.unOccupantChargeConfig = self.system.chargeConfig(unOccupantOccupancy)
-        self.occupantChargeConfig = deepcopy(self.unOccupantChargeConfig)
-        self.unOccupantESPConfig = self.system.ESPConfig(self.unOccupantChargeConfig)
-        self.occupantESPConfig = deepcopy(self.unOccupantESPConfig)
-        
         # number of kinetic processes
         self.nProc = 0
-        self.multFactor = np.zeros(len(self.material.speciesTypes))
         self.nProcHopElementTypeList = []
         self.nProcHopDistTypeList = []
         self.nProcSpeciesIndexList = []
@@ -745,15 +666,7 @@ class run(object):
         for hopElementTypeIndex, hopElementType in enumerate(self.hopElementTypeList):
             centerElementType = hopElementType.split(self.material.elementTypeDelimiter)[0]
             speciesTypeIndex = self.material.speciesTypes.index(self.material.elementTypeToSpeciesMap[centerElementType][0])
-            self.multFactor[speciesTypeIndex] = np.true_divide(self.material.chargeTypes[centerElementType + self.material.siteIdentifier], 
-                                                               self.material.chargeTypes[centerElementType])
             centerSiteElementTypeIndex = self.material.elementTypes.index(centerElementType)
-            systemElementIndexOffsetArray = (np.repeat(np.arange(0, self.material.totalElementsPerUnitCell * self.system.numCells, self.material.totalElementsPerUnitCell), 
-                                                       self.material.nElementsPerUnitCell[centerSiteElementTypeIndex]))
-            speciesTypeSiteIndices = (np.tile(self.material.nElementsPerUnitCell[:centerSiteElementTypeIndex].sum() + 
-                                                               np.arange(0, self.material.nElementsPerUnitCell[centerSiteElementTypeIndex]), self.system.numCells) + systemElementIndexOffsetArray)
-            self.occupantChargeConfig[speciesTypeSiteIndices] = self.material.chargeTypes[centerElementType + self.material.siteIdentifier]
-            self.occupantESPConfig[speciesTypeSiteIndices] *= self.multFactor[speciesTypeIndex]
             for hopDistTypeIndex in range(self.lenHopDistTypeList[hopElementTypeIndex]):
                 if self.system.speciesCount[speciesTypeIndex] != 0:
                     numNeighbors = np.unique(self.system.neighborList[hopElementType][hopDistTypeIndex].numNeighbors)
@@ -767,9 +680,6 @@ class run(object):
         # total number of species
         self.totalSpecies = self.system.speciesCount.sum()
 
-        # Electrostatic interaction neighborlist:
-        self.elecNeighborListNeighborSEIndices = self.system.neighborList['E'][0].neighborSystemElementIndices
-        
     #@profile
     def doKMCSteps(self, outdir=None, report=1, randomSeed=1):
         """Subroutine to run the KMC simulation by specified number of steps"""
@@ -789,22 +699,12 @@ class run(object):
         kList = np.zeros(self.nProc)
         neighborSystemElementIndexList = np.zeros(self.nProc, dtype=int)
         rowIndexList = np.zeros(self.nProc, dtype=int)
-        neighborIndexList = np.zeros(self.nProc, dtype=int)
         assert 'E' in self.system.material.neighborCutoffDist.keys(), 'Please specify the cutoff distance for electrostatic interactions'
         for dummy in range(nTraj):
             pathIndex += 1
             kmcTime = 0
             speciesDisplacementVectorList = np.zeros((self.totalSpecies, 3))
             for step in range(kmcSteps):
-                '''
-                speciesSiteSystemElementIndices = []
-                neighborSystemElementIndices = self.system.neighborList[hopElementType][hopDistType].systemElementIndexMap[1][rowIndex]
-                neighborSystemElementIndices = []
-                for iProc in range(self.nProc):
-                    speciesSiteSystemElementIndex = speciesSiteSystemElementIndices[iProc]
-                    neighborSystemElementIndex = neighborSystemElementIndices[iProc]
-                    delGs = ((self.nProcLambdaValues[iProc] + delG0) ** 2 / (4 * self.nProcLambdaValues[iProc])) - self.nProcVABList[iProc]
-                '''
                 iProc = 0
                 for speciesSiteSystemElementIndex in currentStateOccupancy:
                     speciesIndex = self.nProcSpeciesIndexList[iProc]
@@ -814,13 +714,12 @@ class run(object):
                                 speciesSiteSystemElementIndex % self.material.totalElementsPerUnitCell - self.headStart_nElementsPerUnitCellCumSum[siteElementTypeIndex])
                     for hopDistType in range(self.lenHopDistTypeList[speciesIndex]):
                         neighborSystemElementIndices = self.system.neighborList[hopElementType][hopDistType].systemElementIndexMap[1][rowIndex]
-                        for neighborIndex, neighborSystemElementIndex in enumerate(neighborSystemElementIndices):
-                            neighborSystemElementIndexList[iProc] = neighborSystemElementIndex
+                        for neighborSiteSystemElementIndex in neighborSystemElementIndices:
+                            neighborSystemElementIndexList[iProc] = neighborSiteSystemElementIndex
                             rowIndexList[iProc] = rowIndex
-                            neighborIndexList[iProc] = neighborIndex
-                            delCharge = (currentStateChargeConfig[neighborSystemElementIndex] - currentStateChargeConfig[speciesSiteSystemElementIndex]) 
-                            delG0 = (self.speciesChargeList[speciesIndex] * ((delCharge / self.system.neighborList['E'][0].cumulativeDisplacementList[speciesSiteSystemElementIndex][neighborSystemElementIndex]) + 
-                                                                             currentStateESPConfig[neighborSystemElementIndex] - currentStateESPConfig[speciesSiteSystemElementIndex]))
+                            delCharge = (currentStateChargeConfig[neighborSiteSystemElementIndex] - currentStateChargeConfig[speciesSiteSystemElementIndex]) 
+                            delG0 = (self.speciesChargeList[speciesIndex] * ((delCharge * self.system.inverseCoeffDistanceList[speciesSiteSystemElementIndex][neighborSiteSystemElementIndex]) + 
+                                                                             currentStateESPConfig[neighborSiteSystemElementIndex] - currentStateESPConfig[speciesSiteSystemElementIndex]))
                             lambdaValue = self.lambdaValues[hopElementType][hopDistType]
                             VAB = self.VAB[hopElementType][hopDistType]
                             delGs = ((lambdaValue + delG0) ** 2 / (4 * lambdaValue)) - VAB
@@ -834,21 +733,19 @@ class run(object):
                 kmcTime -= np.log(rand2) / kTotal
                 
                 speciesIndex = self.nProcSpeciesIndexList[procIndex]
+                hopElementType = self.nProcHopElementTypeList[procIndex]
+                hopDistType = self.nProcHopDistTypeList[procIndex]
                 oldSiteSystemElementIndex = currentStateOccupancy[speciesIndex]
                 newSiteSystemElementIndex = neighborSystemElementIndexList[procIndex]
                 currentStateOccupancy[speciesIndex] = newSiteSystemElementIndex
-                
-                addOn = self.speciesChargeList[speciesIndex] / self.system.neighborList['E'][0].cumulativeDisplacementList[oldSiteSystemElementIndex][newSiteSystemElementIndex]
-                currentStateESPConfig[oldSiteSystemElementIndex] += addOn
-                currentStateESPConfig[newSiteSystemElementIndex] -= addOn
+                speciesDisplacementVectorList[speciesIndex] += self.system.neighborList['E'][0].cumulativeDisplacementVectorList[oldSiteSystemElementIndex][newSiteSystemElementIndex]
+
+                oldSiteNeighbors = self.system.neighborList['E'][0].neighborSystemElementIndices[oldSiteSystemElementIndex]
+                newSiteNeighbors = self.system.neighborList['E'][0].neighborSystemElementIndices[newSiteSystemElementIndex]
+                currentStateESPConfig[oldSiteNeighbors] -= self.speciesChargeList[speciesIndex] * self.system.inverseCoeffDistanceList[oldSiteSystemElementIndex][oldSiteNeighbors]
+                currentStateESPConfig[newSiteNeighbors] += self.speciesChargeList[speciesIndex] * self.system.inverseCoeffDistanceList[newSiteSystemElementIndex][newSiteNeighbors]
                 currentStateChargeConfig[oldSiteSystemElementIndex] -= self.speciesChargeList[speciesIndex]
                 currentStateChargeConfig[newSiteSystemElementIndex] += self.speciesChargeList[speciesIndex]
-                
-                hopElementType = self.nProcHopElementTypeList[procIndex]
-                hopDistType = self.nProcHopDistTypeList[procIndex]
-                rowIndex = rowIndexList[procIndex]
-                neighborIndex = neighborIndexList[procIndex]
-                speciesDisplacementVectorList[speciesIndex] += self.system.neighborList['E'][0].cumulativeDisplacementVectorList[oldSiteSystemElementIndex][newSiteSystemElementIndex]
                 if step % stepInterval == 0:
                     timeArray[pathIndex] = kmcTime
                     unwrappedPositionArray[pathIndex] = unwrappedPositionArray[pathIndex - 1] + speciesDisplacementVectorList
