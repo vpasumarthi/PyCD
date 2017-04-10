@@ -13,6 +13,7 @@ class hematiteParameters(object):
         self.name = 'Fe2O3'
         self.elementTypes = ['Fe', 'O']
         self.speciesTypes = ['electron', 'hole']
+        self.speciesChargeList = [-1, +1]
         self.speciesToElementTypeMap = {'electron': ['Fe'], 'empty': ['Fe', 'O'], 'hole': ['O']}
         cwd = os.path.dirname(os.path.realpath(__file__))
         inputFileLocation = cwd + directorySeparator + inputCoordinatesDirectoryName + directorySeparator + inputCoordinateFileName

@@ -74,6 +74,7 @@ class material(object):
         self.name = materialParameters.name
         self.elementTypes = materialParameters.elementTypes[:]
         self.speciesTypes = materialParameters.speciesTypes[:]
+        self.speciesChargeList = materialParameters.speciesChargeList[:]
         self.speciesToElementTypeMap = deepcopy(materialParameters.speciesToElementTypeMap)
         self.unitcellCoords = np.zeros((len(materialParameters.unitcellCoords), 3)) # Initialization
         startIndex = 0
@@ -722,6 +723,7 @@ class run(object):
         # speciesTypeList
         self.speciesTypeList = [self.system.material.speciesTypes[index] for index, value in enumerate(self.system.speciesCount) for i in range(value)]
         self.speciesTypeIndexList = [index for index, value in enumerate(self.system.speciesCount) for iValue in range(value)]
+        self.speciesChargeList = [self.material.speciesChargeList[index] for index in self.speciesTypeIndexList]
         self.siteElementTypeIndexList = [self.system.material.elementTypes.index(self.system.material.speciesToElementTypeMap[speciesType][0]) 
                                          for speciesType in self.speciesTypeList]
         self.hopElementTypeList = [self.system.material.hopElementTypes[speciesType][0] for speciesType in self.speciesTypeList]
@@ -762,7 +764,6 @@ class run(object):
                         self.nProcHopDistTypeList.extend([hopDistTypeIndex] * numNeighbors[0])
                         self.nProcSpeciesIndexList.extend([hopElementTypeIndex] * numNeighbors[0])
                         self.nProcSiteElementTypeIndexList.extend([centerSiteElementTypeIndex] * numNeighbors[0])
-        #import pdb; pdb.set_trace()
         # total number of species
         self.totalSpecies = self.system.speciesCount.sum()
 
@@ -818,15 +819,13 @@ class run(object):
                             rowIndexList[iProc] = rowIndex
                             neighborIndexList[iProc] = neighborIndex
                             delCharge = (currentStateChargeConfig[neighborSystemElementIndex] - currentStateChargeConfig[speciesSiteSystemElementIndex]) 
-                            delG0 = (delCharge * (-delCharge / self.system.neighborList['E'][0].cumulativeDisplacementList[speciesSiteSystemElementIndex][neighborSystemElementIndex] 
-                                                  + currentStateESPConfig[speciesSiteSystemElementIndex] - currentStateESPConfig[neighborSystemElementIndex]))
-                            
+                            delG0 = (self.speciesChargeList[speciesIndex] * ((delCharge / self.system.neighborList['E'][0].cumulativeDisplacementList[speciesSiteSystemElementIndex][neighborSystemElementIndex]) + 
+                                                                             currentStateESPConfig[neighborSystemElementIndex] - currentStateESPConfig[speciesSiteSystemElementIndex]))
                             lambdaValue = self.lambdaValues[hopElementType][hopDistType]
                             VAB = self.VAB[hopElementType][hopDistType]
                             delGs = ((lambdaValue + delG0) ** 2 / (4 * lambdaValue)) - VAB
                             kList[iProc] = self.vn * np.exp(-delGs / self.T)
                             iProc += 1
-
                 kTotal = np.sum(kList)
                 kCumSum = (kList / kTotal).cumsum()
                 rand1 = rnd.random()
@@ -839,17 +838,17 @@ class run(object):
                 newSiteSystemElementIndex = neighborSystemElementIndexList[procIndex]
                 currentStateOccupancy[speciesIndex] = newSiteSystemElementIndex
                 
-                addOn = ((currentStateChargeConfig[oldSiteSystemElementIndex] - currentStateChargeConfig[newSiteSystemElementIndex]) / 
-                         self.system.neighborList['E'][0].cumulativeDisplacementList[oldSiteSystemElementIndex][newSiteSystemElementIndex])
-                currentStateChargeConfig[oldSiteSystemElementIndex] += addOn
-                currentStateChargeConfig[newSiteSystemElementIndex] -= addOn
+                addOn = self.speciesChargeList[speciesIndex] / self.system.neighborList['E'][0].cumulativeDisplacementList[oldSiteSystemElementIndex][newSiteSystemElementIndex]
+                currentStateESPConfig[oldSiteSystemElementIndex] += addOn
+                currentStateESPConfig[newSiteSystemElementIndex] -= addOn
+                currentStateChargeConfig[oldSiteSystemElementIndex] -= self.speciesChargeList[speciesIndex]
+                currentStateChargeConfig[newSiteSystemElementIndex] += self.speciesChargeList[speciesIndex]
                 
                 hopElementType = self.nProcHopElementTypeList[procIndex]
                 hopDistType = self.nProcHopDistTypeList[procIndex]
                 rowIndex = rowIndexList[procIndex]
                 neighborIndex = neighborIndexList[procIndex]
                 speciesDisplacementVectorList[speciesIndex] += self.system.neighborList['E'][0].cumulativeDisplacementVectorList[oldSiteSystemElementIndex][newSiteSystemElementIndex]
-                #speciesDisplacementVectorList[speciesIndex] += np.copy(self.system.neighborList[hopElementType][hopDistType].displacementVectorList[rowIndex][neighborIndex])
                 if step % stepInterval == 0:
                     timeArray[pathIndex] = kmcTime
                     unwrappedPositionArray[pathIndex] = unwrappedPositionArray[pathIndex - 1] + speciesDisplacementVectorList
