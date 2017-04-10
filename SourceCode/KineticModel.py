@@ -223,7 +223,7 @@ class neighbors(object):
             pickle.dump(materialNeighbors, file_Neighbors)
             file_Neighbors.close()
         pass
-    @profile
+    #@profile
     def generateSystemElementIndex(self, systemSize, quantumIndices):
         """Returns the systemElementIndex of the element"""
         #assert type(systemSize) is np.ndarray, 'Please input systemSize as a numpy array'
@@ -242,7 +242,7 @@ class neighbors(object):
             else:
                 systemElementIndex += self.material.totalElementsPerUnitCell * unitCellIndex[nDim-1-index] * systemSize[-index:].prod()
         return systemElementIndex
-    @profile
+    #@profile
     def generateQuantumIndices(self, systemSize, systemElementIndex):
         """Returns the quantum indices of the element"""
         #assert systemElementIndex >= 0, 'System Element Index cannot be negative'
@@ -284,7 +284,7 @@ class neighbors(object):
         neighborImageDisplacements = np.linalg.norm(neighborImageDisplacementVectors, axis=1)
         displacement = np.min(neighborImageDisplacements)
         return displacement
-    @profile
+    #@profile
     def hopNeighborSites(self, bulkSites, centerSiteIndices, neighborSiteIndices, cutoffDistLimits, cutoffDistKey):
         """Returns systemElementIndexMap and distances between center sites and its neighbor sites within cutoff 
         distance"""
@@ -414,7 +414,7 @@ class neighbors(object):
         returnNeighbors.neighborSystemElementIndices = neighborSystemElementIndices
         returnNeighbors.numNeighbors = numNeighbors
         return returnNeighbors
-    @profile
+    #@profile
     def generateNeighborList(self, parent, extract=0, cutE=None, replaceExistingNeighborList=0, outdir=None, report=1, localSystemSize=np.array([3, 3, 3]), 
                                  centerUnitCellIndex=np.array([1, 1, 1])):
         """Adds the neighbor list to the system object and returns the neighbor list"""
@@ -543,8 +543,10 @@ class system(object):
         self.latticeChargeList = np.tile(unitcellChargeList, self.numCells)
         
         # inverse of cumulative Distance
+        np.seterr(divide='ignore')
         self.inverseCoeffDistanceList = 1 / (self.material.dielectricConstant * self.neighborList['E'][0].cumulativeDisplacementList)
-        
+        np.seterr(divide='warn')
+    
     def generateRandomOccupancy(self, speciesCount):
         """generates initial occupancy list based on species count"""
         occupancy = []
@@ -618,7 +620,7 @@ class run(object):
         self.system = system
         self.material = self.system.material
         self.neighbors = self.system.neighbors
-        self.T = T * self.system.material.K2AUTEMP
+        self.T = T * self.material.K2AUTEMP
         self.nTraj = int(nTraj)
         self.kmcSteps = int(kmcSteps)
         self.stepInterval = int(stepInterval)
@@ -626,26 +628,23 @@ class run(object):
 
         self.systemSize = self.system.systemSize
 
-        # import parameters from material class
-        self.vn = self.material.vn
-        self.lambdaValues = self.material.lambdaValues
-        self.VAB = self.material.VAB
-        
         # nElementsPerUnitCell
-        self.headStart_nElementsPerUnitCellCumSum = [self.system.material.nElementsPerUnitCell[:siteElementTypeIndex].sum() for siteElementTypeIndex in range(self.system.material.nElementTypes)]
+        self.headStart_nElementsPerUnitCellCumSum = [self.material.nElementsPerUnitCell[:siteElementTypeIndex].sum() for siteElementTypeIndex in range(self.material.nElementTypes)]
         
         # speciesTypeList
-        self.speciesTypeList = [self.system.material.speciesTypes[index] for index, value in enumerate(self.system.speciesCount) for i in range(value)]
+        self.speciesTypeList = [self.material.speciesTypes[index] for index, value in enumerate(self.system.speciesCount) for i in range(value)]
         self.speciesTypeIndexList = [index for index, value in enumerate(self.system.speciesCount) for iValue in range(value)]
         self.speciesChargeList = [self.material.speciesChargeList[index] for index in self.speciesTypeIndexList]
-        self.hopElementTypeList = [self.system.material.hopElementTypes[speciesType][0] for speciesType in self.speciesTypeList]
-        self.lenHopDistTypeList = [len(self.system.material.neighborCutoffDist[hopElementType]) for hopElementType in self.hopElementTypeList]
+        self.hopElementTypeList = [self.material.hopElementTypes[speciesType][0] for speciesType in self.speciesTypeList]
+        self.lenHopDistTypeList = [len(self.material.neighborCutoffDist[hopElementType]) for hopElementType in self.hopElementTypeList]
         # number of kinetic processes
         self.nProc = 0
         self.nProcHopElementTypeList = []
         self.nProcHopDistTypeList = []
         self.nProcSpeciesIndexList = []
         self.nProcSiteElementTypeIndexList = []
+        self.nProcLambdaValueList = []
+        self.nProcVABList = []
         for hopElementTypeIndex, hopElementType in enumerate(self.hopElementTypeList):
             centerElementType = hopElementType.split(self.material.elementTypeDelimiter)[0]
             speciesTypeIndex = self.material.speciesTypes.index(self.material.elementTypeToSpeciesMap[centerElementType][0])
@@ -660,10 +659,13 @@ class run(object):
                         self.nProcHopDistTypeList.extend([hopDistTypeIndex] * numNeighbors[0])
                         self.nProcSpeciesIndexList.extend([hopElementTypeIndex] * numNeighbors[0])
                         self.nProcSiteElementTypeIndexList.extend([centerSiteElementTypeIndex] * numNeighbors[0])
+                        self.nProcLambdaValueList.extend([self.material.lambdaValues[hopElementType][hopDistTypeIndex]] * numNeighbors[0])
+                        self.nProcVABList.extend([self.material.VAB[hopElementType][hopDistTypeIndex]] * numNeighbors[0])
+                        
         # total number of species
         self.totalSpecies = self.system.speciesCount.sum()
 
-    @profile
+    #@profile
     def doKMCSteps(self, outdir=None, report=1, randomSeed=1):
         """Subroutine to run the KMC simulation by specified number of steps"""
         rnd.seed(randomSeed)
@@ -681,7 +683,7 @@ class run(object):
         
         kList = np.zeros(self.nProc)
         neighborSiteSystemElementIndexList = np.zeros(self.nProc, dtype=int)
-        assert 'E' in self.system.material.neighborCutoffDist.keys(), 'Please specify the cutoff distance for electrostatic interactions'
+        assert 'E' in self.material.neighborCutoffDist.keys(), 'Please specify the cutoff distance for electrostatic interactions'
         for dummy in range(nTraj):
             pathIndex += 1
             kmcTime = 0
@@ -701,10 +703,10 @@ class run(object):
                             delCharge = (currentStateChargeConfig[neighborSiteSystemElementIndex] - currentStateChargeConfig[speciesSiteSystemElementIndex]) 
                             delG0 = (self.speciesChargeList[speciesIndex] * ((delCharge * self.system.inverseCoeffDistanceList[speciesSiteSystemElementIndex][neighborSiteSystemElementIndex]) + 
                                                                              currentStateESPConfig[neighborSiteSystemElementIndex] - currentStateESPConfig[speciesSiteSystemElementIndex]))
-                            lambdaValue = self.lambdaValues[hopElementType][hopDistType]
-                            VAB = self.VAB[hopElementType][hopDistType]
+                            lambdaValue = self.nProcLambdaValueList[iProc]
+                            VAB = self.nProcVABList[iProc]
                             delGs = ((lambdaValue + delG0) ** 2 / (4 * lambdaValue)) - VAB
-                            kList[iProc] = self.vn * np.exp(-delGs / self.T)
+                            kList[iProc] = self.material.vn * np.exp(-delGs / self.T)
                             iProc += 1
                 kTotal = sum(kList)
                 kCumSum = (kList / kTotal).cumsum()
