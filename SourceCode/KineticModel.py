@@ -326,7 +326,6 @@ class neighbors(object):
         '''
         for centerSiteIndex, centerCoord in enumerate(centerSiteCoords):
             iDisplacementVectors = []
-            iDisplacements = np.array([])
             iNeighborSiteIndexList = []
             iNumNeighbors = 0
             for neighborSiteIndex, neighborCoord in enumerate(neighborSiteCoords):
@@ -335,14 +334,12 @@ class neighbors(object):
                 if cutoffDistLimits[0] < displacement <= cutoffDistLimits[1]:
                     iNeighborSiteIndexList.append(neighborSiteIndex)
                     iDisplacementVectors.append(neighborImageDisplacementVectors[0])
-                    iDisplacements = np.append(iDisplacements, displacement)
                     iNumNeighbors += 1
             neighborSystemElementIndices[centerSiteIndex] = neighborSiteSystemElementIndexList[iNeighborSiteIndexList]
             offsetList[centerSiteIndex] = neighborSiteQuantumIndexList[iNeighborSiteIndexList, :3] - centerSiteQuantumIndexList[centerSiteIndex, :3]
             neighborElementIndexList[centerSiteIndex] = neighborSiteQuantumIndexList[iNeighborSiteIndexList, 4]
             numNeighbors = np.append(numNeighbors, iNumNeighbors)
             displacementVectorList[centerSiteIndex] = np.asarray(iDisplacementVectors)
-            displacementList[centerSiteIndex] = iDisplacements
         '''
         # DEBUG: Quick test for number of neighbors: Switch ON End
             
@@ -364,7 +361,6 @@ class neighbors(object):
         numElements = len(centerSiteCoords)
         neighborSystemElementIndices = np.empty(numElements, dtype=object)
         numNeighbors = np.empty(numElements, dtype=int)
-        #displacementList = np.empty(numElements, dtype=object)
         cumulativeDisplacementList = np.empty((numElements, numElements))
         cumulativeDisplacementVectorList = np.empty((numElements, numElements, 3))
         
@@ -379,7 +375,6 @@ class neighbors(object):
                     unitcellTranslationalCoords[index] = np.dot(np.multiply(np.array([xOffset, yOffset, zOffset]), self.systemSize), self.material.latticeMatrix)
                     index += 1
         for centerSiteIndex, centerCoord in enumerate(centerSiteCoords):
-            #iDisplacements = np.array([])
             iNeighborSiteIndexList = []
             iNumNeighbors = 0
             for neighborSiteIndex, neighborCoord in enumerate(neighborSiteCoords):
@@ -391,18 +386,15 @@ class neighbors(object):
                 cumulativeDisplacementList[centerSiteIndex][neighborSiteIndex] = displacement
                 if cutoffDistLimits[0] < displacement <= cutoffDistLimits[1]:
                     iNeighborSiteIndexList.append(neighborSiteIndex)
-                    #iDisplacements = np.append(iDisplacements, displacement)
                     iNumNeighbors += 1
             neighborSystemElementIndices[centerSiteIndex] = np.array(neighborSiteSystemElementIndexList[iNeighborSiteIndexList])
             numNeighbors[centerSiteIndex] = iNumNeighbors
-            #displacementList[centerSiteIndex] = iDisplacements
             
         returnNeighbors = returnValues()
         returnNeighbors.neighborSystemElementIndices = neighborSystemElementIndices
         returnNeighbors.numNeighbors = numNeighbors
         returnNeighbors.cumulativeDisplacementVectorList = cumulativeDisplacementVectorList
         returnNeighbors.cumulativeDisplacementList = cumulativeDisplacementList
-        #returnNeighbors.displacementList = displacementList
         return returnNeighbors
 
     def extractElectrostaticNeighborSites(self, parentElecNeighborList, cutE):
@@ -411,19 +403,16 @@ class neighbors(object):
         numSystemElements = len(parentElecNeighborList.numNeighbors)
         neighborSystemElementIndices = np.empty(numSystemElements, dtype=object)
         numNeighbors = np.empty(numSystemElements, dtype=int)
-        #displacementList = np.empty(numSystemElements, dtype=object)
         for centerSiteIndex in range(numSystemElements):
             iNeighborSiteIndexList = np.where((0 < parentElecNeighborList.cumulativeDisplacementList[centerSiteIndex]) & (parentElecNeighborList.cumulativeDisplacementList[centerSiteIndex] <= cutE * self.material.ANG2BOHR))[0]
             neighborSystemElementIndices[centerSiteIndex] = np.where((0 < parentElecNeighborList.cumulativeDisplacementList[centerSiteIndex]) & (parentElecNeighborList.cumulativeDisplacementList[centerSiteIndex] <= cutE * self.material.ANG2BOHR))[0]
             numNeighbors[centerSiteIndex] = len(neighborSystemElementIndices[centerSiteIndex])
-            #displacementList[centerSiteIndex] = np.asarray(parentElecNeighborList.cumulativeDisplacementList[centerSiteIndex][iNeighborSiteIndexList])
             
         returnNeighbors = returnValues()
         returnNeighbors.cumulativeDisplacementVectorList = parentElecNeighborList.cumulativeDisplacementVectorList
         returnNeighbors.cumulativeDisplacementList = parentElecNeighborList.cumulativeDisplacementList
         returnNeighbors.neighborSystemElementIndices = neighborSystemElementIndices
         returnNeighbors.numNeighbors = numNeighbors
-        #returnNeighbors.displacementList = displacementList
         return returnNeighbors
     #@profile
     def generateNeighborList(self, parent, extract=0, cutE=None, replaceExistingNeighborList=0, outdir=None, report=1, localSystemSize=np.array([3, 3, 3]), 
