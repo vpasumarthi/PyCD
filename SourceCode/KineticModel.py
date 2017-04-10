@@ -223,7 +223,7 @@ class neighbors(object):
             pickle.dump(materialNeighbors, file_Neighbors)
             file_Neighbors.close()
         pass
-    #@profile
+    @profile
     def generateSystemElementIndex(self, systemSize, quantumIndices):
         """Returns the systemElementIndex of the element"""
         #assert type(systemSize) is np.ndarray, 'Please input systemSize as a numpy array'
@@ -242,7 +242,7 @@ class neighbors(object):
             else:
                 systemElementIndex += self.material.totalElementsPerUnitCell * unitCellIndex[nDim-1-index] * systemSize[-index:].prod()
         return systemElementIndex
-    #@profile
+    @profile
     def generateQuantumIndices(self, systemSize, systemElementIndex):
         """Returns the quantum indices of the element"""
         #assert systemElementIndex >= 0, 'System Element Index cannot be negative'
@@ -284,7 +284,7 @@ class neighbors(object):
         neighborImageDisplacements = np.linalg.norm(neighborImageDisplacementVectors, axis=1)
         displacement = np.min(neighborImageDisplacements)
         return displacement
-    #@profile
+    @profile
     def hopNeighborSites(self, bulkSites, centerSiteIndices, neighborSiteIndices, cutoffDistLimits, cutoffDistKey):
         """Returns systemElementIndexMap and distances between center sites and its neighbor sites within cutoff 
         distance"""
@@ -414,7 +414,7 @@ class neighbors(object):
         returnNeighbors.neighborSystemElementIndices = neighborSystemElementIndices
         returnNeighbors.numNeighbors = numNeighbors
         return returnNeighbors
-    #@profile
+    @profile
     def generateNeighborList(self, parent, extract=0, cutE=None, replaceExistingNeighborList=0, outdir=None, report=1, localSystemSize=np.array([3, 3, 3]), 
                                  centerUnitCellIndex=np.array([1, 1, 1])):
         """Adds the neighbor list to the system object and returns the neighbor list"""
@@ -663,7 +663,7 @@ class run(object):
         # total number of species
         self.totalSpecies = self.system.speciesCount.sum()
 
-    #@profile
+    @profile
     def doKMCSteps(self, outdir=None, report=1, randomSeed=1):
         """Subroutine to run the KMC simulation by specified number of steps"""
         rnd.seed(randomSeed)
@@ -706,7 +706,7 @@ class run(object):
                             delGs = ((lambdaValue + delG0) ** 2 / (4 * lambdaValue)) - VAB
                             kList[iProc] = self.vn * np.exp(-delGs / self.T)
                             iProc += 1
-                kTotal = np.sum(kList)
+                kTotal = sum(kList)
                 kCumSum = (kList / kTotal).cumsum()
                 rand1 = rnd.random()
                 procIndex = np.where(kCumSum > rand1)[0][0]
