@@ -556,9 +556,6 @@ class system(object):
         # inverse of cumulative Distance
         self.inverseCoeffDistanceList = 1 / (self.material.dielectricConstant * self.neighborList['E'][0].cumulativeDisplacementList)
         
-        # Electrostatic interaction neighborlist:
-        self.elecNeighborListNeighborSEIndices = self.neighborList['E'][0].neighborSystemElementIndices
-        
     def generateRandomOccupancy(self, speciesCount):
         """generates initial occupancy list based on species count"""
         occupancy = []
@@ -604,7 +601,7 @@ class system(object):
         ESPConfig = np.zeros(numSystemElements)
         for elementIndex in range(numSystemElements):
             neighborIndices = self.neighborList['E'][0].neighborSystemElementIndices[elementIndex]            
-            ESPConfig[elementIndex] = np.sum(self.inverseCoeffDistanceList[elementIndex][neighborIndices] * currentStateChargeConfig[self.elecNeighborListNeighborSEIndices[elementIndex]])
+            ESPConfig[elementIndex] = np.sum(self.inverseCoeffDistanceList[elementIndex][neighborIndices] * currentStateChargeConfig[neighborIndices])
         return ESPConfig
 
     def config(self, occupancy):
