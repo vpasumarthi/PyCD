@@ -702,10 +702,13 @@ class run(object):
                     for hopDistType in range(self.lenHopDistTypeList[speciesIndex]):
                         localNeighborSiteSystemElementIndexList = self.system.neighborList[hopElementType][hopDistType].systemElementIndexMap[1][rowIndex]
                         for neighborIndex, neighborSiteSystemElementIndex in enumerate(localNeighborSiteSystemElementIndexList):
+                            # TODO: Introduce If condition
+                            # if neighborSystemElementIndex not in currentStateOccupancy: commit 898baa8
                             neighborSiteSystemElementIndexList[iProc] = neighborSiteSystemElementIndex
                             rowIndexList[iProc] = rowIndex
                             neighborIndexList[iProc] = neighborIndex
-                            delCharge = (currentStateChargeConfig[neighborSiteSystemElementIndex] - currentStateChargeConfig[speciesSiteSystemElementIndex]) 
+                            delCharge = (currentStateChargeConfig[neighborSiteSystemElementIndex] - currentStateChargeConfig[speciesSiteSystemElementIndex])
+                            # TODO: Using species charge to compute change in energy 
                             delG0 = (self.speciesChargeList[speciesIndex] * ((delCharge * self.system.inverseCoeffDistanceList[speciesSiteSystemElementIndex][neighborSiteSystemElementIndex]) + 
                                                                              currentStateESPConfig[neighborSiteSystemElementIndex] - currentStateESPConfig[speciesSiteSystemElementIndex]))
                             lambdaValue = self.nProcLambdaValueList[iProc]
