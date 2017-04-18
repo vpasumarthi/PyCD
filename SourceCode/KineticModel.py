@@ -582,14 +582,6 @@ class system(object):
             ESPConfig[elementIndex] = np.sum(self.inverseCoeffDistanceList[elementIndex][neighborIndices] * currentStateChargeConfig[neighborIndices])
         return ESPConfig
 
-    def nullESPConfig(self, currentStateChargeConfig):
-        numSystemElements = self.numCells * self.material.totalElementsPerUnitCell
-        nullESPConfig = np.zeros(numSystemElements)
-        for elementIndex in range(numSystemElements):
-            neighborIndices = self.neighborList['E'][0].neighborSystemElementIndices[elementIndex]
-            nullESPConfig[elementIndex] = np.sum(self.inverseCoeffDistanceList[elementIndex][neighborIndices] * currentStateChargeConfig[elementIndex])
-        return nullESPConfig
-
     def config(self, occupancy):
         """Generates the configuration array for the system"""
         elementTypeIndices = range(len(self.material.elementTypes))
@@ -675,7 +667,6 @@ class run(object):
         pathIndex = 0
         currentStateChargeConfig = self.system.chargeConfig(currentStateOccupancy)
         currentStateESPConfig = self.system.ESPConfig(currentStateChargeConfig)
-        currentStateNullESPConfig = self.system.nullESPConfig(currentStateChargeConfig)
         kList = np.zeros(self.nProc)
         neighborSiteSystemElementIndexList = np.zeros(self.nProc, dtype=int)
         rowIndexList = np.zeros(self.nProc, dtype=int)
@@ -704,6 +695,7 @@ class run(object):
                             # TODO: Print out a prompt about the assumption; detailed comment here. <Using species charge to compute change in energy>
                             delG0 = (self.speciesChargeList[speciesIndex] * ((currentStateESPConfig[neighborSiteSystemElementIndex] - currentStateESPConfig[speciesSiteSystemElementIndex]
                                                                               - self.speciesChargeList[speciesIndex] * self.system.inverseCoeffDistanceList[speciesSiteSystemElementIndex][neighborSiteSystemElementIndex])))
+                            print hopDistType, 1 / (self.system.inverseCoeffDistanceList[speciesSiteSystemElementIndex][neighborSiteSystemElementIndex] * self.material.ANG2BOHR * self.material.dielectricConstant)
                             lambdaValue = self.nProcLambdaValueList[iProc]
                             VAB = self.nProcVABList[iProc]
                             delGs = ((lambdaValue + delG0) ** 2 / (4 * lambdaValue)) - VAB
