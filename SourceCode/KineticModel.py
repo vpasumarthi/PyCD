@@ -695,7 +695,7 @@ class run(object):
                             # TODO: Print out a prompt about the assumption; detailed comment here. <Using species charge to compute change in energy>
                             delG0 = (self.speciesChargeList[speciesIndex] * ((currentStateESPConfig[neighborSiteSystemElementIndex] - currentStateESPConfig[speciesSiteSystemElementIndex]
                                                                               - self.speciesChargeList[speciesIndex] * self.system.inverseCoeffDistanceList[speciesSiteSystemElementIndex][neighborSiteSystemElementIndex])))
-                            print hopDistType, 1 / (self.system.inverseCoeffDistanceList[speciesSiteSystemElementIndex][neighborSiteSystemElementIndex] * self.material.ANG2BOHR * self.material.dielectricConstant)
+                            #print hopDistType, 1 / (self.system.inverseCoeffDistanceList[speciesSiteSystemElementIndex][neighborSiteSystemElementIndex] * self.material.ANG2BOHR * self.material.dielectricConstant)
                             lambdaValue = self.nProcLambdaValueList[iProc]
                             VAB = self.nProcVABList[iProc]
                             delGs = ((lambdaValue + delG0) ** 2 / (4 * lambdaValue)) - VAB
@@ -891,6 +891,21 @@ class analysis(object):
             figurePath = outdir + directorySeparator + figureName
             plt.savefig(figurePath)
     '''
+    
+    def meanDistance(self, combType, outdir=None, report=1):
+        """
+        combType = 0: like-like; 1: like-unlike; 2: both
+        """
+        if combType == 0:
+            numComb = sum([self.speciesCount[index] * (self.speciesCount[index] - 1) for index in len(self.speciesCount)])
+        elif combType == 1:
+            numComb = np.prod(self.speciesCount)
+        elif combType == 2:
+            numComb = np.prod(self.speciesCount) + sum([self.speciesCount[index] * (self.speciesCount[index] - 1) for index in len(self.speciesCount)])
+        
+        meanDistance = np.zeros(())
+        pass
+    
     def displayWrappedTrajectories(self):
         """ """
         pass
