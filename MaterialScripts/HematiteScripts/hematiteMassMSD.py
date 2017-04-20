@@ -41,4 +41,4 @@ def hematiteMassMSD(pbc, systemSize, nTrajList, cutE_List, nSpeciesList, TempLis
                         nStepsMSD = nStepsMSDList[speciesIndex]
                         nDispMSD = nDispMSDList[speciesIndex]
                         hematiteMSD(trajectoryDataFileName, shellCharges, cutE, systemDirectoryPath, speciesCount, 
-                                    nTraj, kmcSteps, stepInterval, nStepsMSD, nDispMSD, binsize, reprTime, reprDist, outdir)
+                                    nTraj, kmcSteps, stepInterval, systemSize, nStepsMSD, nDispMSD, binsize, reprTime, reprDist, outdir)

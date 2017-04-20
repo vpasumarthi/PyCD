@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 def hematiteMSD(trajectoryDataFileName, shellCharges, cutE, dirPath, speciesCount, nTraj, kmcSteps, 
-                stepInterval, nStepsMSD, nDispMSD, binsize, reprTime, reprDist, outdir):
+                stepInterval, systemSize, nStepsMSD, nDispMSD, binsize, reprTime, reprDist, outdir):
 
     from KineticModel import analysis
     import numpy as np
@@ -21,7 +21,7 @@ def hematiteMSD(trajectoryDataFileName, shellCharges, cutE, dirPath, speciesCoun
     
     trajectoryData = np.load(trajectoryDataFileName)[()]
     hematiteAnalysis = analysis(hematite, trajectoryData, speciesCount, nTraj, kmcSteps, stepInterval, 
-                                nStepsMSD, nDispMSD, binsize, reprTime, reprDist)
+                                systemSize, nStepsMSD, nDispMSD, binsize, reprTime, reprDist)
     
     msdAnalysisData = hematiteAnalysis.computeMSD(outdir, report=1)
     msdData = msdAnalysisData.msdData
