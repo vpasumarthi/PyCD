@@ -539,6 +539,7 @@ class system(object):
         occupancy = []
         for speciesTypeIndex, numSpecies in enumerate(speciesCount):
             siteElementTypesIndices = np.in1d(self.material.elementTypes, self.material.speciesToElementTypeMap[self.material.speciesTypes[speciesTypeIndex]]).nonzero()[0]
+            import pdb; pdb.set_trace()
             iSpeciesSystemElementIndices = []
             for iSpecies in range(numSpecies):
                 siteElementTypeIndex = rnd.choice(siteElementTypesIndices)
@@ -664,7 +665,9 @@ class run(object):
         numPathStepsPerTraj = int(kmcSteps / stepInterval) + 1
         timeArray = np.zeros(nTraj * numPathStepsPerTraj)
         unwrappedPositionArray = np.zeros(( nTraj * numPathStepsPerTraj, self.totalSpecies, 3))
+        wrappedPositionArray = np.zeros(( nTraj * numPathStepsPerTraj, self.totalSpecies, 3))
         pathIndex = 0
+        currentStateConfig = self.system.config(currentStateOccupancy)
         currentStateChargeConfig = self.system.chargeConfig(currentStateOccupancy)
         currentStateESPConfig = self.system.ESPConfig(currentStateChargeConfig)
         kList = np.zeros(self.nProc)
@@ -673,6 +676,8 @@ class run(object):
         neighborIndexList = np.zeros(self.nProc, dtype=int)
         assert 'E' in self.material.neighborCutoffDist.keys(), 'Please specify the cutoff distance for electrostatic interactions'
         for dummy in range(nTraj):
+            import pdb; pdb.set_trace()
+            wrappedPositionArray[pathIndex] = np.copy(currentStateConfig.positions[currentStateOccupancy])
             pathIndex += 1
             kmcTime = 0
             speciesDisplacementVectorList = np.zeros((self.totalSpecies, 3))
@@ -727,12 +732,14 @@ class run(object):
                 if step % stepInterval == 0:
                     timeArray[pathIndex] = kmcTime
                     unwrappedPositionArray[pathIndex] = unwrappedPositionArray[pathIndex - 1] + speciesDisplacementVectorList
+                    wrappedPositionArray[pathIndex] = np.copy(currentStateConfig.positions[currentStateOccupancy])
                     speciesDisplacementVectorList = np.zeros((self.totalSpecies, 3))
                     pathIndex += 1
         
         trajectoryData = returnValues()
         trajectoryData.timeArray = timeArray
         trajectoryData.unwrappedPositionArray = unwrappedPositionArray
+        trajectoryData.wrappedPositionArray = wrappedPositionArray
         if outdir:
             trajectoryDataFileName = 'TrajectoryData.npy'
             trajectoryDataFilePath = outdir + directorySeparator + trajectoryDataFileName
@@ -757,7 +764,7 @@ class run(object):
 class analysis(object):
     """Post-simulation analysis methods"""
     def __init__(self, material, trajectoryData, speciesCount, nTraj, kmcSteps, stepInterval, 
-                 nStepsMSD, nDispMSD, binsize, reprTime = 'ns', reprDist = 'Angstrom'):
+                 systemSize, nStepsMSD, nDispMSD, binsize, reprTime = 'ns', reprDist = 'Angstrom'):
         """"""
         self.startTime = datetime.now()
         self.material = material
@@ -766,6 +773,7 @@ class analysis(object):
         self.nTraj = int(nTraj)
         self.kmcSteps = kmcSteps
         self.stepInterval = stepInterval
+        self.systemSize = systemSize
         self.nStepsMSD = int(nStepsMSD)
         self.nDispMSD = int(nDispMSD)
         self.binsize = binsize
@@ -892,7 +900,7 @@ class analysis(object):
             plt.savefig(figurePath)
     '''
     
-    def meanDistance(self, outdir=None, report=1):
+    def meanDistance(self, outdir=None, fileName=None, plot=1, report=1):
         """
         Add combType as one of the inputs 
         combType = 0: like-like; 1: like-unlike; 2: both
@@ -903,21 +911,80 @@ class analysis(object):
         elif combType == 2:
             numComb = np.prod(self.speciesCount) + sum([self.speciesCount[index] * (self.speciesCount[index] - 1) for index in len(self.speciesCount)])
         """
-        positionArray = self.trajectoryData.unwrappedPositionArray * self.distConversion
+        positionArray = self.trajectoryData.wrappedPositionArray * self.distConversion
         numPathStepsPerTraj = int(self.kmcSteps / self.stepInterval) + 1
-        meanDistance = np.zeros((numPathStepsPerTraj, self.nTraj))
+        meanDistance = np.zeros((self.nTraj, numPathStepsPerTraj))
         # TODO: Currently assuming only electrons exist and coding accordingly.
         # Need to change according to combType
+        pbc = [1, 1, 1] # change to generic
+        nElectrons = self.speciesCount[0] # change to generic
+        xRange = range(-1, 2) if pbc[0] == 1 else [0]
+        yRange = range(-1, 2) if pbc[1] == 1 else [0]
+        zRange = range(-1, 2) if pbc[2] == 1 else [0]
+        unitcellTranslationalCoords = np.zeros((3**sum(pbc), 3)) # Initialization
+        index = 0
+        for xOffset in xRange:
+            for yOffset in yRange:
+                for zOffset in zRange:
+                    unitcellTranslationalCoords[index] = np.dot(np.multiply(np.array([xOffset, yOffset, zOffset]), self.systemSize), (self.material.latticeMatrix * self.distConversion))
+                    index += 1
+        interDistanceList = np.zeros(nElectrons * (nElectrons - 1) / 2)
         for trajIndex in range(self.nTraj):
             headStart = trajIndex * numPathStepsPerTraj
             for step in range(numPathStepsPerTraj):
-                print step
-                dist = 0
-                for i in range(self.speciesCount[0]):
-                    import pdb; pdb.set_trace()
-                    dist += np.linalg.norm(positionArray[headStart + step] - positionArray[headStart + step, i])
-                    
+                index = 0
+                for i in range(nElectrons):
+                    for j in range(i + 1, nElectrons):
+                        neighborImageCoords = unitcellTranslationalCoords + positionArray[headStart + step, j]
+                        neighborImageDisplacementVectors = neighborImageCoords - positionArray[headStart + step, i]
+                        neighborImageDisplacements = np.linalg.norm(neighborImageDisplacementVectors, axis=1)
+                        displacement = np.min(neighborImageDisplacements)
+                        interDistanceList[index] = displacement
+                        index += 1
+                print trajIndex, step, i, j, interDistanceList
+                import pdb; pdb.set_trace()
+                meanDistance[trajIndex, step] = np.mean(interDistanceList)
+        meanDistanceOverTraj = np.mean(meanDistance, axis=0)
+        kmcSteps = range(0, numPathStepsPerTraj * int(self.stepInterval), int(self.stepInterval))
+        meanDistanceArray = np.zeros((numPathStepsPerTraj, 2))
+        meanDistanceArray[:, 0] = kmcSteps
+        meanDistanceArray[:, 1] = meanDistanceOverTraj 
+        if outdir:
+            meanDistanceFileName = 'MeanDistanceData.npy'
+            meanDistanceFilePath = outdir + directorySeparator + meanDistanceFileName
+            np.save(meanDistanceFilePath, meanDistanceArray)
         
+        if plot:
+            import matplotlib
+            matplotlib.use('Agg')
+            import matplotlib.pyplot as plt
+            from textwrap import wrap
+            plt.figure()
+            plt.plot(meanDistanceArray[:, 0], meanDistanceArray[:, 1])
+            plt.title('Mean Distance between species along simulation length')
+            plt.xlabel('KMC Step')
+            plt.ylabel('Distance (' + self.reprDist + ')')
+            if outdir:
+                figureName = 'MeanDistanceOverTraj.jpg'
+                figurePath = outdir + directorySeparator + figureName
+                plt.savefig(figurePath)
+        if report:
+            self.generateMeanDisplacementAnalysisLogReport(outdir)
+
+
+    def generateMeanDisplacementAnalysisLogReport(self, outdir):
+        """Generates an log report of the MSD Analysis and outputs to the working directory"""
+        meanDisplacementAnalysisLogFileName = 'MeanDisplacement_Analysis.log'
+        meanDisplacementAnalysisLogFilePath = outdir + directorySeparator + meanDisplacementAnalysisLogFileName
+        report = open(meanDisplacementAnalysisLogFilePath, 'w')
+        endTime = datetime.now()
+        timeElapsed = endTime - self.startTime
+        report.write('Time elapsed: ' + ('%2d days, ' % timeElapsed.days if timeElapsed.days else '') +
+                     ('%2d hours' % ((timeElapsed.seconds // 3600) % 24)) + 
+                     (', %2d minutes' % ((timeElapsed.seconds // 60) % 60)) + 
+                     (', %2d seconds' % (timeElapsed.seconds % 60)))
+        report.close()
+
     def displayWrappedTrajectories(self):
         """ """
         pass
