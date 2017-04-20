@@ -538,8 +538,13 @@ class system(object):
         """generates initial occupancy list based on species count"""
         occupancy = []
         for speciesTypeIndex, numSpecies in enumerate(speciesCount):
-            siteElementTypesIndices = np.in1d(self.material.elementTypes, self.material.speciesToElementTypeMap[self.material.speciesTypes[speciesTypeIndex]]).nonzero()[0]
-            import pdb; pdb.set_trace()
+            centerSiteElementTypeIndex = np.in1d(self.material.elementTypes, self.material.speciesToElementTypeMap[self.material.speciesTypes[speciesTypeIndex]]).nonzero()[0][0]
+            systemElementIndexOffsetArray = (np.repeat(np.arange(0, self.material.totalElementsPerUnitCell * self.numCells, self.material.totalElementsPerUnitCell), 
+                                                       self.material.nElementsPerUnitCell[centerSiteElementTypeIndex]))
+            siteIndices = (np.tile(self.material.nElementsPerUnitCell[:centerSiteElementTypeIndex].sum() + 
+                                                               np.arange(0, self.material.nElementsPerUnitCell[centerSiteElementTypeIndex]), self.numCells) + systemElementIndexOffsetArray)
+            occupancy.extend(rnd.sample(siteIndices, numSpecies)[:])
+            '''
             iSpeciesSystemElementIndices = []
             for iSpecies in range(numSpecies):
                 siteElementTypeIndex = rnd.choice(siteElementTypesIndices)
@@ -555,6 +560,7 @@ class system(object):
                 else:
                     iSpeciesSystemElementIndices.append(iSpeciesSystemElementIndex)
             occupancy.extend(iSpeciesSystemElementIndices[:])
+            '''
         return occupancy
     
     def chargeConfig(self, occupancy):
