@@ -793,7 +793,7 @@ class analysis(object):
                     timeNdisp2[workingRow, 1:] = np.linalg.norm(positionArray[headStart + step + timestep] - 
                                                                 positionArray[headStart + step], axis=1)**2
         timeArrayMSD = timeNdisp2[:, 0]
-        minEndTime = np.min(timeArrayMSD[np.arange(self.nStepsMSD * self.nDispMSD - 1, self.nTraj * (self.nStepsMSD * self.nDispMSD), self.nStepsMSD * self.nDispMSD)])  
+        minEndTime = np.min(timeArrayMSD[np.arange(self.nStepsMSD * self.nDispMSD - 1, self.nTraj * (self.nStepsMSD * self.nDispMSD), self.nStepsMSD * self.nDispMSD)])
         bins = np.arange(0, minEndTime, self.binsize)
         nBins = len(bins) - 1
         speciesMSDData = np.zeros((nBins, nSpecies))
@@ -892,20 +892,32 @@ class analysis(object):
             plt.savefig(figurePath)
     '''
     
-    def meanDistance(self, combType, outdir=None, report=1):
+    def meanDistance(self, outdir=None, report=1):
         """
+        Add combType as one of the inputs 
         combType = 0: like-like; 1: like-unlike; 2: both
-        """
         if combType == 0:
             numComb = sum([self.speciesCount[index] * (self.speciesCount[index] - 1) for index in len(self.speciesCount)])
         elif combType == 1:
             numComb = np.prod(self.speciesCount)
         elif combType == 2:
             numComb = np.prod(self.speciesCount) + sum([self.speciesCount[index] * (self.speciesCount[index] - 1) for index in len(self.speciesCount)])
+        """
+        positionArray = self.trajectoryData.unwrappedPositionArray * self.distConversion
+        numPathStepsPerTraj = int(self.kmcSteps / self.stepInterval) + 1
+        meanDistance = np.zeros((numPathStepsPerTraj, self.nTraj))
+        # TODO: Currently assuming only electrons exist and coding accordingly.
+        # Need to change according to combType
+        for trajIndex in range(self.nTraj):
+            headStart = trajIndex * numPathStepsPerTraj
+            for step in range(numPathStepsPerTraj):
+                print step
+                dist = 0
+                for i in range(self.speciesCount[0]):
+                    import pdb; pdb.set_trace()
+                    dist += np.linalg.norm(positionArray[headStart + step] - positionArray[headStart + step, i])
+                    
         
-        meanDistance = np.zeros(())
-        pass
-    
     def displayWrappedTrajectories(self):
         """ """
         pass
