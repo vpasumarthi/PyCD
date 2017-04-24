@@ -589,21 +589,6 @@ class system(object):
             ESPConfig[elementIndex] = np.sum(self.inverseCoeffDistanceList[elementIndex][neighborIndices] * currentStateChargeConfig[neighborIndices])
         return ESPConfig
 
-    def config(self, occupancy):
-        """Generates the configuration array for the system"""
-        elementTypeIndices = range(len(self.material.elementTypes))
-        systemSites = self.material.generateSites(elementTypeIndices, self.systemSize)
-        positions = systemSites.cellCoordinates
-        systemElementIndexList = systemSites.systemElementIndexList
-        chargeList = self.chargeConfig(occupancy)
-        
-        returnConfig = returnValues()
-        returnConfig.positions = positions
-        returnConfig.chargeList = chargeList
-        returnConfig.systemElementIndexList = systemElementIndexList
-        returnConfig.occupancy = occupancy
-        return returnConfig
-
 class run(object):
     """defines the subroutines for running Kinetic Monte Carlo and computing electrostatic 
     interaction energies"""
@@ -655,7 +640,10 @@ class run(object):
                         self.nProcSiteElementTypeIndexList.extend([centerSiteElementTypeIndex] * numNeighbors[0])
                         self.nProcLambdaValueList.extend([self.material.lambdaValues[hopElementType][hopDistTypeIndex]] * numNeighbors[0])
                         self.nProcVABList.extend([self.material.VAB[hopElementType][hopDistTypeIndex]] * numNeighbors[0])
-                        
+        
+        # system coordinates
+        self.systemCoordinates = self.neighbors.bulkSites.cellCoordinates
+        
         # total number of species
         self.totalSpecies = self.system.speciesCount.sum()
 
@@ -673,7 +661,6 @@ class run(object):
         unwrappedPositionArray = np.zeros(( nTraj * numPathStepsPerTraj, self.totalSpecies, 3))
         wrappedPositionArray = np.zeros(( nTraj * numPathStepsPerTraj, self.totalSpecies, 3))
         pathIndex = 0
-        currentStateConfig = self.system.config(currentStateOccupancy)
         currentStateChargeConfig = self.system.chargeConfig(currentStateOccupancy)
         currentStateESPConfig = self.system.ESPConfig(currentStateChargeConfig)
         kList = np.zeros(self.nProc)
@@ -682,7 +669,7 @@ class run(object):
         neighborIndexList = np.zeros(self.nProc, dtype=int)
         assert 'E' in self.material.neighborCutoffDist.keys(), 'Please specify the cutoff distance for electrostatic interactions'
         for dummy in range(nTraj):
-            wrappedPositionArray[pathIndex] = np.copy(currentStateConfig.positions[currentStateOccupancy])
+            wrappedPositionArray[pathIndex] = self.systemCoordinates[currentStateOccupancy]
             pathIndex += 1
             kmcTime = 0
             speciesDisplacementVectorList = np.zeros((self.totalSpecies, 3))
@@ -705,7 +692,6 @@ class run(object):
                             # TODO: Print out a prompt about the assumption; detailed comment here. <Using species charge to compute change in energy>
                             delG0 = (self.speciesChargeList[speciesIndex] * ((currentStateESPConfig[neighborSiteSystemElementIndex] - currentStateESPConfig[speciesSiteSystemElementIndex]
                                                                               - self.speciesChargeList[speciesIndex] * self.system.inverseCoeffDistanceList[speciesSiteSystemElementIndex][neighborSiteSystemElementIndex])))
-                            #print hopDistType, 1 / (self.system.inverseCoeffDistanceList[speciesSiteSystemElementIndex][neighborSiteSystemElementIndex] * self.material.ANG2BOHR * self.material.dielectricConstant)
                             lambdaValue = self.nProcLambdaValueList[iProc]
                             VAB = self.nProcVABList[iProc]
                             delGs = ((lambdaValue + delG0) ** 2 / (4 * lambdaValue)) - VAB
@@ -737,7 +723,7 @@ class run(object):
                 if step % stepInterval == 0:
                     timeArray[pathIndex] = kmcTime
                     unwrappedPositionArray[pathIndex] = unwrappedPositionArray[pathIndex - 1] + speciesDisplacementVectorList
-                    wrappedPositionArray[pathIndex] = np.copy(currentStateConfig.positions[currentStateOccupancy])
+                    wrappedPositionArray[pathIndex] = self.systemCoordinates[currentStateOccupancy]
                     speciesDisplacementVectorList = np.zeros((self.totalSpecies, 3))
                     pathIndex += 1
         
