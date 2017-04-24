@@ -544,23 +544,6 @@ class system(object):
             siteIndices = (np.tile(self.material.nElementsPerUnitCell[:centerSiteElementTypeIndex].sum() + 
                                                                np.arange(0, self.material.nElementsPerUnitCell[centerSiteElementTypeIndex]), self.numCells) + systemElementIndexOffsetArray)
             occupancy.extend(rnd.sample(siteIndices, numSpecies)[:])
-            '''
-            iSpeciesSystemElementIndices = []
-            for iSpecies in range(numSpecies):
-                siteElementTypeIndex = rnd.choice(siteElementTypesIndices)
-                # Enlist all electron eligible sites, hole eligible sites depending on speciesCount, choose randomly from the list. No need for generateSystemElementIndex
-                iSpeciesSiteIndices = np.array([rnd.randint(0, self.systemSize[0]-1), 
-                                                rnd.randint(0, self.systemSize[1]-1), 
-                                                rnd.randint(0, self.systemSize[2]-1), 
-                                                siteElementTypeIndex, 
-                                                rnd.randint(0, self.material.nElementsPerUnitCell[siteElementTypeIndex]-1)])
-                iSpeciesSystemElementIndex = self.neighbors.generateSystemElementIndex(self.systemSize, iSpeciesSiteIndices)
-                if iSpeciesSystemElementIndex in iSpeciesSystemElementIndices:
-                    iSpecies -= 1
-                else:
-                    iSpeciesSystemElementIndices.append(iSpeciesSystemElementIndex)
-            occupancy.extend(iSpeciesSystemElementIndices[:])
-            '''
         return occupancy
     
     def chargeConfig(self, occupancy):
