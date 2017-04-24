@@ -682,7 +682,6 @@ class run(object):
         neighborIndexList = np.zeros(self.nProc, dtype=int)
         assert 'E' in self.material.neighborCutoffDist.keys(), 'Please specify the cutoff distance for electrostatic interactions'
         for dummy in range(nTraj):
-            import pdb; pdb.set_trace()
             wrappedPositionArray[pathIndex] = np.copy(currentStateConfig.positions[currentStateOccupancy])
             pathIndex += 1
             kmcTime = 0
@@ -906,7 +905,7 @@ class analysis(object):
             plt.savefig(figurePath)
     '''
     
-    def meanDistance(self, outdir=None, fileName=None, plot=1, report=1):
+    def meanDistance(self, outdir=None, plot=1, report=1):
         """
         Add combType as one of the inputs 
         combType = 0: like-like; 1: like-unlike; 2: both
@@ -947,8 +946,8 @@ class analysis(object):
                         displacement = np.min(neighborImageDisplacements)
                         interDistanceList[index] = displacement
                         index += 1
-                print trajIndex, step, i, j, interDistanceList
-                import pdb; pdb.set_trace()
+                #print trajIndex, step, i, j, interDistanceList
+                #import pdb; pdb.set_trace()
                 meanDistance[trajIndex, step] = np.mean(interDistanceList)
         meanDistanceOverTraj = np.mean(meanDistance, axis=0)
         kmcSteps = range(0, numPathStepsPerTraj * int(self.stepInterval), int(self.stepInterval))
@@ -976,7 +975,7 @@ class analysis(object):
                 plt.savefig(figurePath)
         if report:
             self.generateMeanDisplacementAnalysisLogReport(outdir)
-
+        return meanDistanceArray
 
     def generateMeanDisplacementAnalysisLogReport(self, outdir):
         """Generates an log report of the MSD Analysis and outputs to the working directory"""
