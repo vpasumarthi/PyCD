@@ -643,6 +643,9 @@ class run(object):
         timeArray = np.zeros(nTraj * numPathStepsPerTraj)
         unwrappedPositionArray = np.zeros(( nTraj * numPathStepsPerTraj, self.totalSpecies, 3))
         wrappedPositionArray = np.zeros(( nTraj * numPathStepsPerTraj, self.totalSpecies, 3))
+        energyArray = np.zeros(( nTraj * numPathStepsPerTraj ))
+        delG0Array = np.zeros(( nTraj * self.kmcSteps))
+        potentialArray = np.zeros(( nTraj * numPathStepsPerTraj, self.totalSpecies))
         pathIndex = 0
         currentStateChargeConfig = self.system.chargeConfig(currentStateOccupancy)
         currentStateESPConfig = self.system.ESPConfig(currentStateChargeConfig)
@@ -651,13 +654,16 @@ class run(object):
         rowIndexList = np.zeros(self.nProc, dtype=int)
         neighborIndexList = np.zeros(self.nProc, dtype=int)
         assert 'E' in self.material.neighborCutoffDist.keys(), 'Please specify the cutoff distance for electrostatic interactions'
-        for dummy in range(nTraj):
+        for trajIndex in range(nTraj):
             wrappedPositionArray[pathIndex] = self.systemCoordinates[currentStateOccupancy]
+            energyArray[pathIndex] = np.sum(currentStateChargeConfig * currentStateESPConfig) / 2
+            potentialArray[pathIndex] = currentStateESPConfig[currentStateOccupancy]
             pathIndex += 1
             kmcTime = 0
             speciesDisplacementVectorList = np.zeros((self.totalSpecies, 3))
             for step in range(kmcSteps):
                 iProc = 0
+                delG0List = []
                 for speciesIndex, speciesSiteSystemElementIndex in enumerate(currentStateOccupancy):
                     speciesIndex = self.nProcSpeciesIndexList[iProc]
                     hopElementType = self.nProcHopElementTypeList[iProc]
@@ -675,6 +681,7 @@ class run(object):
                             # TODO: Print out a prompt about the assumption; detailed comment here. <Using species charge to compute change in energy>
                             delG0 = (self.speciesChargeList[speciesIndex] * ((currentStateESPConfig[neighborSiteSystemElementIndex] - currentStateESPConfig[speciesSiteSystemElementIndex]
                                                                               - self.speciesChargeList[speciesIndex] * self.system.inverseCoeffDistanceList[speciesSiteSystemElementIndex][neighborSiteSystemElementIndex])))
+                            delG0List.append(delG0)
                             lambdaValue = self.nProcLambdaValueList[iProc]
                             VAB = self.nProcVABList[iProc]
                             delGs = ((lambdaValue + delG0) ** 2 / (4 * lambdaValue)) - VAB
@@ -687,6 +694,7 @@ class run(object):
                 rand2 = rnd.random()
                 kmcTime -= np.log(rand2) / kTotal
                 
+                delG0Array[trajIndex * self.kmcSteps + step] = delG0List[procIndex]
                 speciesIndex = self.nProcSpeciesIndexList[procIndex]
                 hopElementType = self.nProcHopElementTypeList[procIndex]
                 hopDistType = self.nProcHopDistTypeList[procIndex]
@@ -708,12 +716,17 @@ class run(object):
                     unwrappedPositionArray[pathIndex] = unwrappedPositionArray[pathIndex - 1] + speciesDisplacementVectorList
                     wrappedPositionArray[pathIndex] = self.systemCoordinates[currentStateOccupancy]
                     speciesDisplacementVectorList = np.zeros((self.totalSpecies, 3))
+                    energyArray[pathIndex] = energyArray[pathIndex - 1] + sum(delG0Array[trajIndex * self.kmcSteps + step - stepInterval: trajIndex * self.kmcSteps + step + 1])
+                    potentialArray[pathIndex] = currentStateESPConfig[currentStateOccupancy]
                     pathIndex += 1
         
         trajectoryData = returnValues()
         trajectoryData.timeArray = timeArray
         trajectoryData.unwrappedPositionArray = unwrappedPositionArray
         trajectoryData.wrappedPositionArray = wrappedPositionArray
+        trajectoryData.energyArray = energyArray
+        trajectoryData.delG0Array = delG0Array
+        trajectoryData.potentialArray = potentialArray
         if outdir:
             trajectoryDataFileName = 'TrajectoryData.npy'
             trajectoryDataFilePath = outdir + directorySeparator + trajectoryDataFileName
