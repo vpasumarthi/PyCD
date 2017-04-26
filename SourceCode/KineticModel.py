@@ -303,9 +303,11 @@ class neighbors(object):
                 iDisplacementVectors = []
                 iNeighborSiteIndexList = []
                 iNumNeighbors = 0
+                displacementList = np.zeros(len(neighborSiteCoords))
                 for neighborSiteIndex, neighborCoord in enumerate(neighborSiteCoords):
                     neighborImageDisplacementVectors = np.array([neighborCoord - centerCoord])
                     displacement = np.linalg.norm(neighborImageDisplacementVectors)
+                    displacementList[neighborSiteIndex] = displacement
                     if cutoffDistLimits[0] < displacement <= cutoffDistLimits[1]:
                         iNeighborSiteIndexList.append(neighborSiteIndex)
                         iDisplacementVectors.append(neighborImageDisplacementVectors[0])
@@ -313,6 +315,8 @@ class neighbors(object):
                 neighborSystemElementIndices[centerSiteIndex] = neighborSiteSystemElementIndexList[iNeighborSiteIndexList]
                 numNeighbors = np.append(numNeighbors, iNumNeighbors)
                 displacementVectorList[centerSiteIndex] = np.asarray(iDisplacementVectors)
+                print np.sort(displacementList) / self.material.ANG2BOHR
+                import pdb; pdb.set_trace()
         else:
             xRange = range(-1, 2) if self.pbc[0] == 1 else [0]
             yRange = range(-1, 2) if self.pbc[1] == 1 else [0]

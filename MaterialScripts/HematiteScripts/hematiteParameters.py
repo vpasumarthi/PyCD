@@ -8,9 +8,6 @@ inputCoordinatesDirectoryName= 'InputCoordinates'
 inputCoorType = 0 # 0:Experimental; 1: Relaxed
 inputCoordinateFileName = 'Fe2O3_index_coord_' + ('Experimental' if inputCoorType is 0 else 'relaxed') + '.txt'
 
-#inputCoordinateFileName = 'Fe2O3_index_coord_Experimental.txt'
-#inputCoordinateFileName = 'Fe2O3_index_coord_relaxed.txt'
-
 class hematiteParameters(object):
     
     def __init__(self):
