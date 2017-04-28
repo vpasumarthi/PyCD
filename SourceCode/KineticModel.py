@@ -638,6 +638,19 @@ class run(object):
     def doKMCSteps(self, outdir, report=1, randomSeed=1):
         """Subroutine to run the KMC simulation by specified number of steps"""
         assert outdir, 'Please provide the destination path where simulation output files needs to be saved'
+        timeDataFileName = outdir + directorySeparator + 'Time.dat'
+        unwrappedTrajFileName = outdir + directorySeparator + 'unwrappedTraj.dat'
+        wrappedTrajFileName = outdir + directorySeparator + 'wrappedTraj.dat'
+        energyTrajFileName = outdir + directorySeparator + 'energyTraj.dat'
+        delG0TrajFileName = outdir + directorySeparator + 'delG0Traj.dat'
+        potentialTrajFileName = outdir + directorySeparator + 'potentialTraj.dat'
+        open(timeDataFileName, 'w').close()
+        open(unwrappedTrajFileName, 'w').close()
+        open(wrappedTrajFileName, 'w').close()
+        open(energyTrajFileName, 'w').close()
+        open(delG0TrajFileName, 'w').close()
+        open(potentialTrajFileName, 'w').close()
+        
         rnd.seed(randomSeed)
         nTraj = self.nTraj
         kmcSteps = self.kmcSteps
@@ -645,12 +658,6 @@ class run(object):
         self.initialOccupancy = self.system.generateRandomOccupancy(self.system.speciesCount)
         currentStateOccupancy = self.initialOccupancy[:]
         numPathStepsPerTraj = int(kmcSteps / stepInterval) + 1
-        timeDataFile = open(outdir + directorySeparator + 'Time.dat', 'w')
-        unwrappedTrajFile = open(outdir + directorySeparator + 'unwrappedTraj.dat', 'w')
-        wrappedTrajFile = open(outdir + directorySeparator + 'wrappedTraj.dat', 'w')
-        energyTrajFile = open(outdir + directorySeparator + 'energyTraj.dat', 'w')
-        delG0TrajFile = open(outdir + directorySeparator + 'delG0Traj.dat', 'w')
-        potentialTrajFile = open(outdir + directorySeparator + 'potentialTraj.dat', 'w')
         timeArray = np.zeros(numPathStepsPerTraj)
         unwrappedPositionArray = np.zeros(( numPathStepsPerTraj, self.totalSpecies * 3))
         wrappedPositionArray = np.zeros(( numPathStepsPerTraj, self.totalSpecies * 3))
@@ -732,12 +739,19 @@ class run(object):
                     energyArray[pathIndex] = energyArray[pathIndex - 1] + sum(delG0Array[trajIndex * self.kmcSteps + step + 1 - stepInterval: trajIndex * self.kmcSteps + step + 1])
                     potentialArray[pathIndex] = currentStateESPConfig[currentStateOccupancy]
                     pathIndex += 1
-            np.savetxt(timeDataFile, timeArray)
-            np.savetxt(unwrappedTrajFile, unwrappedPositionArray)
-            np.savetxt(wrappedTrajFile, wrappedPositionArray)
-            np.savetxt(energyTrajFile, energyArray)
-            np.savetxt(delG0TrajFile, delG0Array)
-            np.savetxt(potentialTrajFile, potentialArray)
+
+            with open(timeDataFileName, 'a') as timeDataFile:
+                np.savetxt(timeDataFile, timeArray)
+            with open(unwrappedTrajFileName, 'a') as unwrappedTrajFile:
+                np.savetxt(unwrappedTrajFile, unwrappedPositionArray)
+            with open(wrappedTrajFileName, 'a') as wrappedTrajFile:
+                np.savetxt(wrappedTrajFile, wrappedPositionArray)
+            with open(energyTrajFileName, 'a') as energyTrajFile:
+                np.savetxt(energyTrajFile, energyArray)
+            with open(delG0TrajFileName, 'a') as delG0TrajFile:
+                np.savetxt(delG0TrajFile, delG0Array)
+            with open(potentialTrajFileName, 'a') as potentialTrajFile:
+                np.savetxt(potentialTrajFile, potentialArray)
         if report:
             self.generateSimulationLogReport(outdir)
         return
