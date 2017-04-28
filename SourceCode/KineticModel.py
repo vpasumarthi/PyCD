@@ -672,7 +672,7 @@ class run(object):
             potentialArray[pathIndex] = currentStateESPConfig[currentStateOccupancy]
             pathIndex += 1
             kmcTime = 0
-            speciesDisplacementVectorList = np.zeros((self.totalSpecies * 3))
+            speciesDisplacementVectorList = np.zeros((1, self.totalSpecies * 3))
             for step in range(kmcSteps):
                 iProc = 0
                 delG0List = []
@@ -715,7 +715,11 @@ class run(object):
                 oldSiteSystemElementIndex = currentStateOccupancy[speciesIndex]
                 newSiteSystemElementIndex = neighborSiteSystemElementIndexList[procIndex]
                 currentStateOccupancy[speciesIndex] = newSiteSystemElementIndex
-                speciesDisplacementVectorList[speciesIndex * 3:(speciesIndex + 1) * 3] += self.system.neighborList[hopElementType][hopDistType].displacementVectorList[rowIndex][neighborIndex]
+                #print trajIndex, step
+                #print self.system.neighborList[hopElementType][hopDistType].displacementVectorList[rowIndex][neighborIndex], self.system.neighborList[hopElementType][hopDistType].displacementVectorList[rowIndex][neighborIndex].shape
+                #print speciesDisplacementVectorList[0, speciesIndex * 3:(speciesIndex + 1) * 3], speciesDisplacementVectorList[0, speciesIndex * 3:(speciesIndex + 1) * 3].shape
+                #print
+                speciesDisplacementVectorList[0, speciesIndex * 3:(speciesIndex + 1) * 3] += self.system.neighborList[hopElementType][hopDistType].displacementVectorList[rowIndex][neighborIndex]
 
                 oldSiteNeighbors = self.system.neighborList['E'][0].neighborSystemElementIndices[oldSiteSystemElementIndex]
                 newSiteNeighbors = self.system.neighborList['E'][0].neighborSystemElementIndices[newSiteSystemElementIndex]
@@ -728,7 +732,7 @@ class run(object):
                     unwrappedPositionArray[pathIndex] = unwrappedPositionArray[pathIndex - 1] + speciesDisplacementVectorList
                     # TODO: Avoid using flatten
                     wrappedPositionArray[pathIndex] = self.systemCoordinates[currentStateOccupancy].flatten()
-                    speciesDisplacementVectorList = np.zeros((self.totalSpecies, 3))
+                    speciesDisplacementVectorList = np.zeros((1, self.totalSpecies * 3))
                     energyArray[pathIndex] = energyArray[pathIndex - 1] + sum(delG0Array[trajIndex * self.kmcSteps + step + 1 - stepInterval: trajIndex * self.kmcSteps + step + 1])
                     potentialArray[pathIndex] = currentStateESPConfig[currentStateOccupancy]
                     pathIndex += 1
@@ -769,13 +773,13 @@ class run(object):
 
 class analysis(object):
     """Post-simulation analysis methods"""
-    def __init__(self, material, trajectoryData, speciesCount, nTraj, kmcSteps, stepInterval, 
+    def __init__(self, material, speciesCount, nTraj, kmcSteps, stepInterval, 
                  systemSize, nStepsMSD, nDispMSD, binsize, reprTime = 'ns', reprDist = 'Angstrom'):
         """"""
         self.startTime = datetime.now()
         self.material = material
-        self.trajectoryData = trajectoryData
         self.speciesCount = speciesCount
+        self.totalSpecies = self.speciesCount.sum()
         self.nTraj = int(nTraj)
         self.kmcSteps = kmcSteps
         self.stepInterval = stepInterval
@@ -791,13 +795,13 @@ class analysis(object):
         
     def computeMSD(self, outdir=None, report=1):
         """Returns the squared displacement of the trajectories"""
-        time = self.trajectoryData.timeArray * self.timeConversion
-        positionArray = self.trajectoryData.unwrappedPositionArray * self.distConversion
+        numPathStepsPerTraj = int(self.kmcSteps / self.stepInterval) + 1
+        time = np.loadtxt(outdir + directorySeparator + 'Time.dat') * self.timeConversion
+        positionArray = np.loadtxt(outdir + directorySeparator + 'unwrappedTraj.dat').reshape((self.nTraj * numPathStepsPerTraj, self.totalSpecies, 3)) * self.distConversion
         speciesCount = self.speciesCount
         nSpecies = sum(speciesCount)
         nSpeciesTypes = len(self.material.speciesTypes)
         timeNdisp2 = np.zeros((self.nTraj * (self.nStepsMSD * self.nDispMSD), nSpecies + 1))
-        numPathStepsPerTraj = int(self.kmcSteps / self.stepInterval) + 1
         for trajIndex in range(self.nTraj):
             headStart = trajIndex * numPathStepsPerTraj
             for timestep in range(1, self.nStepsMSD + 1):

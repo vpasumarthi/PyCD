@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-def hematiteMSD(trajectoryDataFileName, shellCharges, cutE, dirPath, speciesCount, nTraj, kmcSteps, 
+def hematiteMSD(shellCharges, cutE, dirPath, speciesCount, nTraj, kmcSteps, 
                 stepInterval, systemSize, nStepsMSD, nDispMSD, binsize, reprTime, reprDist, outdir):
 
     from KineticModel import analysis
@@ -19,8 +19,7 @@ def hematiteMSD(trajectoryDataFileName, shellCharges, cutE, dirPath, speciesCoun
     hematite = pickle.load(file_hematite)
     file_hematite.close()
     
-    trajectoryData = np.load(trajectoryDataFileName)[()]
-    hematiteAnalysis = analysis(hematite, trajectoryData, speciesCount, nTraj, kmcSteps, stepInterval, 
+    hematiteAnalysis = analysis(hematite, speciesCount, nTraj, kmcSteps, stepInterval, 
                                 systemSize, nStepsMSD, nDispMSD, binsize, reprTime, reprDist)
     
     msdAnalysisData = hematiteAnalysis.computeMSD(outdir, report=1)

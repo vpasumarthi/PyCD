@@ -32,7 +32,6 @@ def hematiteMassMSD(pbc, systemSize, nTrajList, cutE_List, nSpeciesList, TempLis
                     workDir = workDir.replace('+','')
                     outdir = parentDirPath + directorySeparator + workDir
                     os.chdir(outdir)
-                    trajectoryDataFileName = ('TrajectoryData.npy')
                     fileExists = 0
                     for fname in os.listdir('.'):
                         if fname.endswith('.jpg'):
@@ -40,5 +39,5 @@ def hematiteMassMSD(pbc, systemSize, nTrajList, cutE_List, nSpeciesList, TempLis
                     if not fileExists or overWrite:
                         nStepsMSD = nStepsMSDList[speciesIndex]
                         nDispMSD = nDispMSDList[speciesIndex]
-                        hematiteMSD(trajectoryDataFileName, shellCharges, cutE, systemDirectoryPath, speciesCount, 
+                        hematiteMSD(shellCharges, cutE, systemDirectoryPath, speciesCount, 
                                     nTraj, kmcSteps, stepInterval, systemSize, nStepsMSD, nDispMSD, binsize, reprTime, reprDist, outdir)
