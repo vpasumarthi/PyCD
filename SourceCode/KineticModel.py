@@ -414,7 +414,7 @@ class neighbors(object):
         returnNeighbors.numNeighbors = numNeighbors
         return returnNeighbors
     #@profile
-    def generateNeighborList(self, parent, extract=0, cutE=None, replaceExistingNeighborList=0, outdir=None, report=1, localSystemSize=np.array([3, 3, 3]), 
+    def generateNeighborList(self, parent, extract=0, cutE=None, replaceExistingNeighborList=0, outdir, report=1, localSystemSize=np.array([3, 3, 3]), 
                                  centerUnitCellIndex=np.array([1, 1, 1])):
         """Adds the neighbor list to the system object and returns the neighbor list"""
         if parent == 1:
@@ -635,8 +635,9 @@ class run(object):
         self.totalSpecies = self.system.speciesCount.sum()
 
     #@profile
-    def doKMCSteps(self, outdir=None, report=1, randomSeed=1):
+    def doKMCSteps(self, outdir, report=1, randomSeed=1):
         """Subroutine to run the KMC simulation by specified number of steps"""
+        assert outdir, 'Please provide the destination path where simulation output files needs to be saved'
         rnd.seed(randomSeed)
         nTraj = self.nTraj
         kmcSteps = self.kmcSteps
@@ -644,13 +645,12 @@ class run(object):
         self.initialOccupancy = self.system.generateRandomOccupancy(self.system.speciesCount)
         currentStateOccupancy = self.initialOccupancy[:]
         numPathStepsPerTraj = int(kmcSteps / stepInterval) + 1
-        if outdir:            
-            timeDataFile = open(outdir + directorySeparator + 'Time.dat', 'w')
-            unwrappedTrajFile = open(outdir + directorySeparator + 'unwrappedTraj.dat', 'w')
-            wrappedTrajFile = open(outdir + directorySeparator + 'wrappedTraj.dat', 'w')
-            energyTrajFile = open(outdir + directorySeparator + 'energyTraj.dat', 'w')
-            delG0TrajFile = open(outdir + directorySeparator + 'delG0Traj.dat', 'w')
-            potentialTrajFile = open(outdir + directorySeparator + 'potentialTraj.dat', 'w')
+        timeDataFile = open(outdir + directorySeparator + 'Time.dat', 'w')
+        unwrappedTrajFile = open(outdir + directorySeparator + 'unwrappedTraj.dat', 'w')
+        wrappedTrajFile = open(outdir + directorySeparator + 'wrappedTraj.dat', 'w')
+        energyTrajFile = open(outdir + directorySeparator + 'energyTraj.dat', 'w')
+        delG0TrajFile = open(outdir + directorySeparator + 'delG0Traj.dat', 'w')
+        potentialTrajFile = open(outdir + directorySeparator + 'potentialTraj.dat', 'w')
         timeArray = np.zeros(numPathStepsPerTraj)
         unwrappedPositionArray = np.zeros(( numPathStepsPerTraj, self.totalSpecies * 3))
         wrappedPositionArray = np.zeros(( numPathStepsPerTraj, self.totalSpecies * 3))
@@ -690,7 +690,7 @@ class run(object):
                             neighborSiteSystemElementIndexList[iProc] = neighborSiteSystemElementIndex
                             rowIndexList[iProc] = rowIndex
                             neighborIndexList[iProc] = neighborIndex
-                            # TODO: Print out a prompt about the assumption; detailed comment here. <Using species charge to compute change in energy>
+                            # TODO: Print out a prompt about the assumption; detailed comment here. <Using species charge to compute change in energy> May be print log report
                             delG0 = (self.speciesChargeList[speciesIndex] * ((currentStateESPConfig[neighborSiteSystemElementIndex] - currentStateESPConfig[speciesSiteSystemElementIndex]
                                                                               - self.speciesChargeList[speciesIndex] * self.system.inverseCoeffDistanceList[speciesSiteSystemElementIndex][neighborSiteSystemElementIndex])))
                             delG0List.append(delG0)
@@ -715,10 +715,6 @@ class run(object):
                 oldSiteSystemElementIndex = currentStateOccupancy[speciesIndex]
                 newSiteSystemElementIndex = neighborSiteSystemElementIndexList[procIndex]
                 currentStateOccupancy[speciesIndex] = newSiteSystemElementIndex
-                #print trajIndex, step
-                #print self.system.neighborList[hopElementType][hopDistType].displacementVectorList[rowIndex][neighborIndex], self.system.neighborList[hopElementType][hopDistType].displacementVectorList[rowIndex][neighborIndex].shape
-                #print speciesDisplacementVectorList[0, speciesIndex * 3:(speciesIndex + 1) * 3], speciesDisplacementVectorList[0, speciesIndex * 3:(speciesIndex + 1) * 3].shape
-                #print
                 speciesDisplacementVectorList[0, speciesIndex * 3:(speciesIndex + 1) * 3] += self.system.neighborList[hopElementType][hopDistType].displacementVectorList[rowIndex][neighborIndex]
 
                 oldSiteNeighbors = self.system.neighborList['E'][0].neighborSystemElementIndices[oldSiteSystemElementIndex]
@@ -736,24 +732,12 @@ class run(object):
                     energyArray[pathIndex] = energyArray[pathIndex - 1] + sum(delG0Array[trajIndex * self.kmcSteps + step + 1 - stepInterval: trajIndex * self.kmcSteps + step + 1])
                     potentialArray[pathIndex] = currentStateESPConfig[currentStateOccupancy]
                     pathIndex += 1
-            if outdir:
-                np.savetxt(timeDataFile, timeArray)
-                np.savetxt(unwrappedTrajFile, unwrappedPositionArray)
-                np.savetxt(wrappedTrajFile, wrappedPositionArray)
-                np.savetxt(energyTrajFile, energyArray)
-                np.savetxt(delG0TrajFile, delG0Array)
-                np.savetxt(potentialTrajFile, potentialArray)
-        #trajectoryData = returnValues()
-        #trajectoryData.timeArray = timeArray
-        #trajectoryData.unwrappedPositionArray = unwrappedPositionArray
-        #trajectoryData.wrappedPositionArray = wrappedPositionArray
-        #trajectoryData.energyArray = energyArray
-        #trajectoryData.delG0Array = delG0Array
-        #trajectoryData.potentialArray = potentialArray
-        #if outdir:
-        #    trajectoryDataFileName = 'TrajectoryData.npy'
-        #    trajectoryDataFilePath = outdir + directorySeparator + trajectoryDataFileName
-        #    np.save(trajectoryDataFilePath, trajectoryData)
+            np.savetxt(timeDataFile, timeArray)
+            np.savetxt(unwrappedTrajFile, unwrappedPositionArray)
+            np.savetxt(wrappedTrajFile, wrappedPositionArray)
+            np.savetxt(energyTrajFile, energyArray)
+            np.savetxt(delG0TrajFile, delG0Array)
+            np.savetxt(potentialTrajFile, potentialArray)
         if report:
             self.generateSimulationLogReport(outdir)
         return
@@ -793,8 +777,9 @@ class analysis(object):
         self.timeConversion = (1E+09 if reprTime is 'ns' else 1E+00) / self.material.SEC2AUTIME 
         self.distConversion = (1E-10 if reprDist is 'm' else 1E+00) / self.material.ANG2BOHR        
         
-    def computeMSD(self, outdir=None, report=1):
+    def computeMSD(self, outdir, report=1):
         """Returns the squared displacement of the trajectories"""
+        assert outdir, 'Please provide the destination path where MSD output files needs to be saved'
         numPathStepsPerTraj = int(self.kmcSteps / self.stepInterval) + 1
         time = np.loadtxt(outdir + directorySeparator + 'Time.dat') * self.timeConversion
         positionArray = np.loadtxt(outdir + directorySeparator + 'unwrappedTraj.dat').reshape((self.nTraj * numPathStepsPerTraj, self.totalSpecies, 3)) * self.distConversion
@@ -833,13 +818,11 @@ class analysis(object):
                 numNonExistentSpecies += 1
                 nonExistentSpeciesIndices.append(speciesTypeIndex)
         
-        if outdir:
-            fileName = (('%1.2E' % self.nStepsMSD) + 'nStepsMSD,' + 
-                        ('%1.2E' % self.nDispMSD) + 'nDispMSD')
-
-            msdFileName = 'MSD_Data_' + fileName + '.npy'
-            msdFilePath = outdir + directorySeparator + msdFileName
-            np.save(msdFilePath, msdData)
+        fileName = (('%1.2E' % self.nStepsMSD) + 'nStepsMSD,' + 
+                    ('%1.2E' % self.nDispMSD) + 'nDispMSD')
+        msdFileName = 'MSD_Data_' + fileName + '.npy'
+        msdFilePath = outdir + directorySeparator + msdFileName
+        np.save(msdFilePath, msdData)
         if report:
             self.generateMSDAnalysisLogReport(outdir, fileName)
         returnMSDData = returnValues()
@@ -861,8 +844,9 @@ class analysis(object):
                      (', %2d seconds' % (timeElapsed.seconds % 60)))
         report.close()
 
-    def displayMSDPlot(self, msdData, speciesTypes, fileName, outdir=None):
+    def displayMSDPlot(self, msdData, speciesTypes, fileName, outdir):
         """Returns a line plot of the MSD data"""
+        assert outdir, 'Please provide the destination path where MSD Plot files needs to be saved'
         import matplotlib
         matplotlib.use('Agg')
         import matplotlib.pyplot as plt
@@ -877,10 +861,9 @@ class analysis(object):
         plt.title('\n'.join(wrap(figureTitle,60)))
         plt.legend()
         plt.show() # Temp change
-        if outdir:
-            figureName = 'MSD_Plot_' + fileName + '.jpg'
-            figurePath = outdir + directorySeparator + figureName
-            plt.savefig(figurePath)
+        figureName = 'MSD_Plot_' + fileName + '.jpg'
+        figurePath = outdir + directorySeparator + figureName
+        plt.savefig(figurePath)
     '''
     # TODO: Finish writing the method soon.
     def displayCollectiveMSDPlot(self, msdData, speciesTypes, fileName, outdir=None):
@@ -910,7 +893,7 @@ class analysis(object):
             plt.savefig(figurePath)
     '''
     
-    def meanDistance(self, mean=1, outdir=None, plot=1, report=1):
+    def meanDistance(self, mean=1, outdir, plot=1, report=1):
         """
         Add combType as one of the inputs 
         combType = 0: like-like; 1: like-unlike; 2: both
@@ -970,15 +953,14 @@ class analysis(object):
             interSpeciesDistanceArray = np.zeros((numPathStepsPerTraj, nElectrons * (nElectrons - 1) / 2 + 1))
             interSpeciesDistanceArray[:, 0] = kmcSteps
             interSpeciesDistanceArray[:, 1:] = interDistanceArrayOverTraj
-        if outdir:
-            if mean:
-                meanDistanceFileName = 'MeanDistanceData.npy'
-                meanDistanceFilePath = outdir + directorySeparator + meanDistanceFileName
-                np.save(meanDistanceFilePath, meanDistanceArray)
-            else:
-                interSpeciesDistanceFileName = 'InterSpeciesDistance.npy'
-                interSpeciesDistanceFilePath = outdir + directorySeparator + interSpeciesDistanceFileName
-                np.save(interSpeciesDistanceFilePath, interSpeciesDistanceArray)
+        if mean:
+            meanDistanceFileName = 'MeanDistanceData.npy'
+            meanDistanceFilePath = outdir + directorySeparator + meanDistanceFileName
+            np.save(meanDistanceFilePath, meanDistanceArray)
+        else:
+            interSpeciesDistanceFileName = 'InterSpeciesDistance.npy'
+            interSpeciesDistanceFilePath = outdir + directorySeparator + interSpeciesDistanceFileName
+            np.save(interSpeciesDistanceFilePath, interSpeciesDistanceArray)
         
         if plot:
             import matplotlib
@@ -991,10 +973,9 @@ class analysis(object):
                 plt.title('Mean Distance between species along simulation length')
                 plt.xlabel('KMC Step')
                 plt.ylabel('Distance (' + self.reprDist + ')')
-                if outdir:
-                    figureName = 'MeanDistanceOverTraj.jpg'
-                    figurePath = outdir + directorySeparator + figureName
-                    plt.savefig(figurePath)
+                figureName = 'MeanDistanceOverTraj.jpg'
+                figurePath = outdir + directorySeparator + figureName
+                plt.savefig(figurePath)
             else:
                 legendList = []
                 for i in range(nElectrons):
@@ -1005,10 +986,9 @@ class analysis(object):
                 plt.xlabel('KMC Step')
                 plt.ylabel('Distance (' + self.reprDist + ')')
                 lgd = plt.legend(lineObjects, legendList, loc='center left', bbox_to_anchor=(1, 0.5))
-                if outdir:
-                    figureName = 'Inter-SpeciesDistance.jpg'
-                    figurePath = outdir + directorySeparator + figureName
-                    plt.savefig(figurePath, bbox_extra_artists=(lgd,), bbox_inches='tight')
+                figureName = 'Inter-SpeciesDistance.jpg'
+                figurePath = outdir + directorySeparator + figureName
+                plt.savefig(figurePath, bbox_extra_artists=(lgd,), bbox_inches='tight')
         if report:
             self.generateMeanDisplacementAnalysisLogReport(outdir)
         output = meanDistanceArray if mean else interSpeciesDistanceArray
