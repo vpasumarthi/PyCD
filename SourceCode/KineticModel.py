@@ -715,12 +715,12 @@ class run(object):
                 currentStateESPConfig[newSiteNeighbors] += self.speciesChargeList[speciesIndex] * self.system.inverseCoeffDistanceList[newSiteSystemElementIndex][newSiteNeighbors]
                 currentStateChargeConfig[oldSiteSystemElementIndex] -= self.speciesChargeList[speciesIndex]
                 currentStateChargeConfig[newSiteSystemElementIndex] += self.speciesChargeList[speciesIndex]
-                if step % stepInterval == 0:
+                if (step + 1) % stepInterval == 0:
                     timeArray[pathIndex] = kmcTime
                     unwrappedPositionArray[pathIndex] = unwrappedPositionArray[pathIndex - 1] + speciesDisplacementVectorList
                     wrappedPositionArray[pathIndex] = self.systemCoordinates[currentStateOccupancy]
                     speciesDisplacementVectorList = np.zeros((self.totalSpecies, 3))
-                    energyArray[pathIndex] = energyArray[pathIndex - 1] + sum(delG0Array[trajIndex * self.kmcSteps + step - stepInterval: trajIndex * self.kmcSteps + step + 1])
+                    energyArray[pathIndex] = energyArray[pathIndex - 1] + sum(delG0Array[trajIndex * self.kmcSteps + step + 1 - stepInterval: trajIndex * self.kmcSteps + step + 1])
                     potentialArray[pathIndex] = currentStateESPConfig[currentStateOccupancy]
                     pathIndex += 1
         
