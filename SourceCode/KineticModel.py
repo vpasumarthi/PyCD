@@ -414,7 +414,7 @@ class neighbors(object):
         returnNeighbors.numNeighbors = numNeighbors
         return returnNeighbors
     #@profile
-    def generateNeighborList(self, parent, extract=0, cutE=None, replaceExistingNeighborList=0, outdir, report=1, localSystemSize=np.array([3, 3, 3]), 
+    def generateNeighborList(self, parent, outdir, extract=0, cutE=None, replaceExistingNeighborList=0, report=1, localSystemSize=np.array([3, 3, 3]), 
                                  centerUnitCellIndex=np.array([1, 1, 1])):
         """Adds the neighbor list to the system object and returns the neighbor list"""
         if parent == 1:
@@ -893,7 +893,7 @@ class analysis(object):
             plt.savefig(figurePath)
     '''
     
-    def meanDistance(self, mean=1, outdir, plot=1, report=1):
+    def meanDistance(self, outdir, mean=1, plot=1, report=1):
         """
         Add combType as one of the inputs 
         combType = 0: like-like; 1: like-unlike; 2: both

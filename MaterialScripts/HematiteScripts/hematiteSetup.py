@@ -34,4 +34,4 @@ def hematiteSetup(chargeTypes, cutE, systemSize, pbc, replaceExistingObjectFiles
         hematiteNeighbors = neighbors(hematite, systemSize, pbc)
         neighborsFileName = objectFileOutDir + directorySeparator + materialName + 'Neighbors' + tailName
         hematiteNeighbors.generateNeighborsFile(hematiteNeighbors, neighborsFileName, replaceExistingObjectFiles)
-    hematiteNeighbors.generateNeighborList(parent, extract, cutE if extract else cutE[0], replaceExistingNeighborList, neighborListOutDir)
+    hematiteNeighbors.generateNeighborList(parent, neighborListOutDir, extract, cutE if extract else cutE[0], replaceExistingNeighborList)
