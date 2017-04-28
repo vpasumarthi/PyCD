@@ -644,13 +644,19 @@ class run(object):
         self.initialOccupancy = self.system.generateRandomOccupancy(self.system.speciesCount)
         currentStateOccupancy = self.initialOccupancy[:]
         numPathStepsPerTraj = int(kmcSteps / stepInterval) + 1
-        timeArray = np.zeros(nTraj * numPathStepsPerTraj)
-        unwrappedPositionArray = np.zeros(( nTraj * numPathStepsPerTraj, self.totalSpecies, 3))
-        wrappedPositionArray = np.zeros(( nTraj * numPathStepsPerTraj, self.totalSpecies, 3))
-        energyArray = np.zeros(( nTraj * numPathStepsPerTraj ))
-        delG0Array = np.zeros(( nTraj * self.kmcSteps))
-        potentialArray = np.zeros(( nTraj * numPathStepsPerTraj, self.totalSpecies))
-        pathIndex = 0
+        if outdir:            
+            timeDataFile = open(outdir + directorySeparator + 'Time.dat', 'w')
+            unwrappedTrajFile = open(outdir + directorySeparator + 'unwrappedTraj.dat', 'w')
+            wrappedTrajFile = open(outdir + directorySeparator + 'wrappedTraj.dat', 'w')
+            energyTrajFile = open(outdir + directorySeparator + 'energyTraj.dat', 'w')
+            delG0TrajFile = open(outdir + directorySeparator + 'delG0Traj.dat', 'w')
+            potentialTrajFile = open(outdir + directorySeparator + 'potentialTraj.dat', 'w')
+        timeArray = np.zeros(numPathStepsPerTraj)
+        unwrappedPositionArray = np.zeros(( numPathStepsPerTraj, self.totalSpecies * 3))
+        wrappedPositionArray = np.zeros(( numPathStepsPerTraj, self.totalSpecies * 3))
+        energyArray = np.zeros(( numPathStepsPerTraj ))
+        delG0Array = np.zeros(( self.kmcSteps ))
+        potentialArray = np.zeros(( numPathStepsPerTraj, self.totalSpecies))
         currentStateChargeConfig = self.system.chargeConfig(currentStateOccupancy)
         currentStateESPConfig = self.system.ESPConfig(currentStateChargeConfig)
         kList = np.zeros(self.nProc)
@@ -659,12 +665,14 @@ class run(object):
         neighborIndexList = np.zeros(self.nProc, dtype=int)
         assert 'E' in self.material.neighborCutoffDist.keys(), 'Please specify the cutoff distance for electrostatic interactions'
         for trajIndex in range(nTraj):
-            wrappedPositionArray[pathIndex] = self.systemCoordinates[currentStateOccupancy]
+            pathIndex = 0
+            # TODO: Avoid using flatten
+            wrappedPositionArray[pathIndex] = self.systemCoordinates[currentStateOccupancy].flatten()
             energyArray[pathIndex] = np.sum(currentStateChargeConfig * currentStateESPConfig) / 2
             potentialArray[pathIndex] = currentStateESPConfig[currentStateOccupancy]
             pathIndex += 1
             kmcTime = 0
-            speciesDisplacementVectorList = np.zeros((self.totalSpecies, 3))
+            speciesDisplacementVectorList = np.zeros((self.totalSpecies * 3))
             for step in range(kmcSteps):
                 iProc = 0
                 delG0List = []
@@ -698,7 +706,7 @@ class run(object):
                 rand2 = rnd.random()
                 kmcTime -= np.log(rand2) / kTotal
                 
-                delG0Array[trajIndex * self.kmcSteps + step] = delG0List[procIndex]
+                delG0Array[step] = delG0List[procIndex]
                 speciesIndex = self.nProcSpeciesIndexList[procIndex]
                 hopElementType = self.nProcHopElementTypeList[procIndex]
                 hopDistType = self.nProcHopDistTypeList[procIndex]
@@ -707,7 +715,7 @@ class run(object):
                 oldSiteSystemElementIndex = currentStateOccupancy[speciesIndex]
                 newSiteSystemElementIndex = neighborSiteSystemElementIndexList[procIndex]
                 currentStateOccupancy[speciesIndex] = newSiteSystemElementIndex
-                speciesDisplacementVectorList[speciesIndex] += self.system.neighborList[hopElementType][hopDistType].displacementVectorList[rowIndex][neighborIndex]
+                speciesDisplacementVectorList[speciesIndex * 3:(speciesIndex + 1) * 3] += self.system.neighborList[hopElementType][hopDistType].displacementVectorList[rowIndex][neighborIndex]
 
                 oldSiteNeighbors = self.system.neighborList['E'][0].neighborSystemElementIndices[oldSiteSystemElementIndex]
                 newSiteNeighbors = self.system.neighborList['E'][0].neighborSystemElementIndices[newSiteSystemElementIndex]
@@ -718,26 +726,33 @@ class run(object):
                 if (step + 1) % stepInterval == 0:
                     timeArray[pathIndex] = kmcTime
                     unwrappedPositionArray[pathIndex] = unwrappedPositionArray[pathIndex - 1] + speciesDisplacementVectorList
-                    wrappedPositionArray[pathIndex] = self.systemCoordinates[currentStateOccupancy]
+                    # TODO: Avoid using flatten
+                    wrappedPositionArray[pathIndex] = self.systemCoordinates[currentStateOccupancy].flatten()
                     speciesDisplacementVectorList = np.zeros((self.totalSpecies, 3))
                     energyArray[pathIndex] = energyArray[pathIndex - 1] + sum(delG0Array[trajIndex * self.kmcSteps + step + 1 - stepInterval: trajIndex * self.kmcSteps + step + 1])
                     potentialArray[pathIndex] = currentStateESPConfig[currentStateOccupancy]
                     pathIndex += 1
-        
-        trajectoryData = returnValues()
-        trajectoryData.timeArray = timeArray
-        trajectoryData.unwrappedPositionArray = unwrappedPositionArray
-        trajectoryData.wrappedPositionArray = wrappedPositionArray
-        trajectoryData.energyArray = energyArray
-        trajectoryData.delG0Array = delG0Array
-        trajectoryData.potentialArray = potentialArray
-        if outdir:
-            trajectoryDataFileName = 'TrajectoryData.npy'
-            trajectoryDataFilePath = outdir + directorySeparator + trajectoryDataFileName
-            np.save(trajectoryDataFilePath, trajectoryData)
+            if outdir:
+                np.savetxt(timeDataFile, timeArray)
+                np.savetxt(unwrappedTrajFile, unwrappedPositionArray)
+                np.savetxt(wrappedTrajFile, wrappedPositionArray)
+                np.savetxt(energyTrajFile, energyArray)
+                np.savetxt(delG0TrajFile, delG0Array)
+                np.savetxt(potentialTrajFile, potentialArray)
+        #trajectoryData = returnValues()
+        #trajectoryData.timeArray = timeArray
+        #trajectoryData.unwrappedPositionArray = unwrappedPositionArray
+        #trajectoryData.wrappedPositionArray = wrappedPositionArray
+        #trajectoryData.energyArray = energyArray
+        #trajectoryData.delG0Array = delG0Array
+        #trajectoryData.potentialArray = potentialArray
+        #if outdir:
+        #    trajectoryDataFileName = 'TrajectoryData.npy'
+        #    trajectoryDataFilePath = outdir + directorySeparator + trajectoryDataFileName
+        #    np.save(trajectoryDataFilePath, trajectoryData)
         if report:
             self.generateSimulationLogReport(outdir)
-        return trajectoryData
+        return
 
     def generateSimulationLogReport(self, outdir):
         """Generates an log report of the simulation and outputs to the working directory"""
