@@ -796,12 +796,13 @@ class analysis(object):
         assert outdir, 'Please provide the destination path where MSD output files needs to be saved'
         numPathStepsPerTraj = int(self.kmcSteps / self.stepInterval) + 1
         time = np.loadtxt(outdir + directorySeparator + 'Time.dat') * self.timeConversion
-        positionArray = np.loadtxt(outdir + directorySeparator + 'unwrappedTraj.dat').reshape((self.nTraj * numPathStepsPerTraj, self.totalSpecies, 3)) * self.distConversion
+        numTrajRecorded = int(len(time) / numPathStepsPerTraj)
+        positionArray = np.loadtxt(outdir + directorySeparator + 'unwrappedTraj.dat')[:numTrajRecorded * numPathStepsPerTraj + 1].reshape((numTrajRecorded * numPathStepsPerTraj, self.totalSpecies, 3)) * self.distConversion
         speciesCount = self.speciesCount
         nSpecies = sum(speciesCount)
         nSpeciesTypes = len(self.material.speciesTypes)
-        timeNdisp2 = np.zeros((self.nTraj * (self.nStepsMSD * self.nDispMSD), nSpecies + 1))
-        for trajIndex in range(self.nTraj):
+        timeNdisp2 = np.zeros((numTrajRecorded * (self.nStepsMSD * self.nDispMSD), nSpecies + 1))
+        for trajIndex in range(numTrajRecorded):
             headStart = trajIndex * numPathStepsPerTraj
             for timestep in range(1, self.nStepsMSD + 1):
                 for step in range(self.nDispMSD):
@@ -810,7 +811,7 @@ class analysis(object):
                     timeNdisp2[workingRow, 1:] = np.linalg.norm(positionArray[headStart + step + timestep] - 
                                                                 positionArray[headStart + step], axis=1)**2
         timeArrayMSD = timeNdisp2[:, 0]
-        minEndTime = np.min(timeArrayMSD[np.arange(self.nStepsMSD * self.nDispMSD - 1, self.nTraj * (self.nStepsMSD * self.nDispMSD), self.nStepsMSD * self.nDispMSD)])
+        minEndTime = np.min(timeArrayMSD[np.arange(self.nStepsMSD * self.nDispMSD - 1, numTrajRecorded * (self.nStepsMSD * self.nDispMSD), self.nStepsMSD * self.nDispMSD)])
         bins = np.arange(0, minEndTime, self.binsize)
         nBins = len(bins) - 1
         speciesMSDData = np.zeros((nBins, nSpecies))
@@ -833,7 +834,8 @@ class analysis(object):
                 nonExistentSpeciesIndices.append(speciesTypeIndex)
         
         fileName = (('%1.2E' % self.nStepsMSD) + 'nStepsMSD,' + 
-                    ('%1.2E' % self.nDispMSD) + 'nDispMSD')
+                    ('%1.2E' % self.nDispMSD) + 'nDispMSD' + 
+                    ('nTraj: %1.2E' % numTrajRecorded if numTrajRecorded != self.nTraj else ''))
         msdFileName = 'MSD_Data_' + fileName + '.npy'
         msdFilePath = outdir + directorySeparator + msdFileName
         np.save(msdFilePath, msdData)
