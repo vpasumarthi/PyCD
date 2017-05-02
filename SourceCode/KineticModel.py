@@ -640,17 +640,18 @@ class run(object):
         assert outdir, 'Please provide the destination path where simulation output files needs to be saved'
         timeDataFileName = outdir + directorySeparator + 'Time.dat'
         unwrappedTrajFileName = outdir + directorySeparator + 'unwrappedTraj.dat'
-        wrappedTrajFileName = outdir + directorySeparator + 'wrappedTraj.dat'
-        energyTrajFileName = outdir + directorySeparator + 'energyTraj.dat'
-        delG0TrajFileName = outdir + directorySeparator + 'delG0Traj.dat'
-        potentialTrajFileName = outdir + directorySeparator + 'potentialTraj.dat'
         open(timeDataFileName, 'w').close()
         open(unwrappedTrajFileName, 'w').close()
-        open(wrappedTrajFileName, 'w').close()
-        open(energyTrajFileName, 'w').close()
-        open(delG0TrajFileName, 'w').close()
-        open(potentialTrajFileName, 'w').close()
-        
+        excess = 0
+        if excess:
+            wrappedTrajFileName = outdir + directorySeparator + 'wrappedTraj.dat'
+            energyTrajFileName = outdir + directorySeparator + 'energyTraj.dat'
+            delG0TrajFileName = outdir + directorySeparator + 'delG0Traj.dat'
+            potentialTrajFileName = outdir + directorySeparator + 'potentialTraj.dat'
+            open(wrappedTrajFileName, 'w').close()
+            open(energyTrajFileName, 'w').close()
+            open(delG0TrajFileName, 'w').close()
+            open(potentialTrajFileName, 'w').close()
         rnd.seed(randomSeed)
         nTraj = self.nTraj
         kmcSteps = self.kmcSteps
@@ -660,10 +661,11 @@ class run(object):
         numPathStepsPerTraj = int(kmcSteps / stepInterval) + 1
         timeArray = np.zeros(numPathStepsPerTraj)
         unwrappedPositionArray = np.zeros(( numPathStepsPerTraj, self.totalSpecies * 3))
-        wrappedPositionArray = np.zeros(( numPathStepsPerTraj, self.totalSpecies * 3))
-        energyArray = np.zeros(( numPathStepsPerTraj ))
-        delG0Array = np.zeros(( self.kmcSteps ))
-        potentialArray = np.zeros(( numPathStepsPerTraj, self.totalSpecies))
+        if excess:
+            wrappedPositionArray = np.zeros(( numPathStepsPerTraj, self.totalSpecies * 3))
+            energyArray = np.zeros(( numPathStepsPerTraj ))
+            delG0Array = np.zeros(( self.kmcSteps ))
+            potentialArray = np.zeros(( numPathStepsPerTraj, self.totalSpecies))
         currentStateChargeConfig = self.system.chargeConfig(currentStateOccupancy)
         currentStateESPConfig = self.system.ESPConfig(currentStateChargeConfig)
         kList = np.zeros(self.nProc)
@@ -673,16 +675,18 @@ class run(object):
         assert 'E' in self.material.neighborCutoffDist.keys(), 'Please specify the cutoff distance for electrostatic interactions'
         for trajIndex in range(nTraj):
             pathIndex = 0
-            # TODO: Avoid using flatten
-            wrappedPositionArray[pathIndex] = self.systemCoordinates[currentStateOccupancy].flatten()
-            energyArray[pathIndex] = np.sum(currentStateChargeConfig * currentStateESPConfig) / 2
-            potentialArray[pathIndex] = currentStateESPConfig[currentStateOccupancy]
+            if excess:
+                # TODO: Avoid using flatten
+                wrappedPositionArray[pathIndex] = self.systemCoordinates[currentStateOccupancy].flatten()
+                energyArray[pathIndex] = np.sum(currentStateChargeConfig * currentStateESPConfig) / 2
+                potentialArray[pathIndex] = currentStateESPConfig[currentStateOccupancy]
             pathIndex += 1
             kmcTime = 0
             speciesDisplacementVectorList = np.zeros((1, self.totalSpecies * 3))
             for step in range(kmcSteps):
                 iProc = 0
-                delG0List = []
+                if excess:
+                    delG0List = []
                 for speciesIndex, speciesSiteSystemElementIndex in enumerate(currentStateOccupancy):
                     speciesIndex = self.nProcSpeciesIndexList[iProc]
                     hopElementType = self.nProcHopElementTypeList[iProc]
@@ -700,7 +704,8 @@ class run(object):
                             # TODO: Print out a prompt about the assumption; detailed comment here. <Using species charge to compute change in energy> May be print log report
                             delG0 = (self.speciesChargeList[speciesIndex] * ((currentStateESPConfig[neighborSiteSystemElementIndex] - currentStateESPConfig[speciesSiteSystemElementIndex]
                                                                               - self.speciesChargeList[speciesIndex] * self.system.inverseCoeffDistanceList[speciesSiteSystemElementIndex][neighborSiteSystemElementIndex])))
-                            delG0List.append(delG0)
+                            if excess:
+                                delG0List.append(delG0)
                             lambdaValue = self.nProcLambdaValueList[iProc]
                             VAB = self.nProcVABList[iProc]
                             delGs = ((lambdaValue + delG0) ** 2 / (4 * lambdaValue)) - VAB
@@ -713,7 +718,8 @@ class run(object):
                 rand2 = rnd.random()
                 kmcTime -= np.log(rand2) / kTotal
                 
-                delG0Array[step] = delG0List[procIndex]
+                if excess:
+                    delG0Array[step] = delG0List[procIndex]
                 speciesIndex = self.nProcSpeciesIndexList[procIndex]
                 hopElementType = self.nProcHopElementTypeList[procIndex]
                 hopDistType = self.nProcHopDistTypeList[procIndex]
@@ -733,25 +739,27 @@ class run(object):
                 if (step + 1) % stepInterval == 0:
                     timeArray[pathIndex] = kmcTime
                     unwrappedPositionArray[pathIndex] = unwrappedPositionArray[pathIndex - 1] + speciesDisplacementVectorList
-                    # TODO: Avoid using flatten
-                    wrappedPositionArray[pathIndex] = self.systemCoordinates[currentStateOccupancy].flatten()
                     speciesDisplacementVectorList = np.zeros((1, self.totalSpecies * 3))
-                    energyArray[pathIndex] = energyArray[pathIndex - 1] + sum(delG0Array[trajIndex * self.kmcSteps + step + 1 - stepInterval: trajIndex * self.kmcSteps + step + 1])
-                    potentialArray[pathIndex] = currentStateESPConfig[currentStateOccupancy]
+                    if excess:
+                        # TODO: Avoid using flatten
+                        wrappedPositionArray[pathIndex] = self.systemCoordinates[currentStateOccupancy].flatten()
+                        energyArray[pathIndex] = energyArray[pathIndex - 1] + sum(delG0Array[trajIndex * self.kmcSteps + step + 1 - stepInterval: trajIndex * self.kmcSteps + step + 1])
+                        potentialArray[pathIndex] = currentStateESPConfig[currentStateOccupancy]
                     pathIndex += 1
 
             with open(timeDataFileName, 'a') as timeDataFile:
                 np.savetxt(timeDataFile, timeArray)
             with open(unwrappedTrajFileName, 'a') as unwrappedTrajFile:
                 np.savetxt(unwrappedTrajFile, unwrappedPositionArray)
-            with open(wrappedTrajFileName, 'a') as wrappedTrajFile:
-                np.savetxt(wrappedTrajFile, wrappedPositionArray)
-            with open(energyTrajFileName, 'a') as energyTrajFile:
-                np.savetxt(energyTrajFile, energyArray)
-            with open(delG0TrajFileName, 'a') as delG0TrajFile:
-                np.savetxt(delG0TrajFile, delG0Array)
-            with open(potentialTrajFileName, 'a') as potentialTrajFile:
-                np.savetxt(potentialTrajFile, potentialArray)
+            if excess:
+                with open(wrappedTrajFileName, 'a') as wrappedTrajFile:
+                    np.savetxt(wrappedTrajFile, wrappedPositionArray)
+                with open(energyTrajFileName, 'a') as energyTrajFile:
+                    np.savetxt(energyTrajFile, energyArray)
+                with open(delG0TrajFileName, 'a') as delG0TrajFile:
+                    np.savetxt(delG0TrajFile, delG0Array)
+                with open(potentialTrajFileName, 'a') as potentialTrajFile:
+                    np.savetxt(potentialTrajFile, potentialArray)
         if report:
             self.generateSimulationLogReport(outdir)
         return
