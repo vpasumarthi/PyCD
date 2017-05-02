@@ -834,8 +834,8 @@ class analysis(object):
                 nonExistentSpeciesIndices.append(speciesTypeIndex)
         
         fileName = (('%1.2E' % self.nStepsMSD) + 'nStepsMSD,' + 
-                    ('%1.2E' % self.nDispMSD) + 'nDispMSD,' + 
-                    ('nTraj: %1.2E' % numTrajRecorded if numTrajRecorded != self.nTraj else ''))
+                    ('%1.2E' % self.nDispMSD) + 'nDispMSD' + 
+                    (',nTraj: %1.2E' % numTrajRecorded if numTrajRecorded != self.nTraj else ''))
         msdFileName = 'MSD_Data_' + fileName + '.npy'
         msdFilePath = outdir + directorySeparator + msdFileName
         np.save(msdFilePath, msdData)
