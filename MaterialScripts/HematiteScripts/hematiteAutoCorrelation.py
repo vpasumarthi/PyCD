@@ -21,7 +21,7 @@ for i in range(n_traj):
     pos_data = np.loadtxt('unwrappedTraj.dat')[i*101:(i+1)*101, :] / ANG2BOHR * ANG2uM
     vel_data = np.diff(pos_data, axis=0) / np.diff(time_data)[:, None]
     n_steps = len(vel_data)
-    n_compute = 30 #n_steps - 1; 50 ns  = ~20 steps for 1 electron
+    n_compute = n_steps - 1 # 30; 50 ns  = ~20 steps for 1 electron
     mean = []
     for step_size in range(n_compute):
         vel_sum = 0
