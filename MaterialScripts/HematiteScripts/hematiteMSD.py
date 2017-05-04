@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-def newHematiteMSD(systemSize, pbc, Temp, cutE, speciesCount, tFinal, nTraj, stepInterval, kmcStepCountPrecision, 
+def hematiteMSD(systemSize, pbc, Temp, cutE, speciesCount, tFinal, nTraj, stepInterval, kmcStepCountPrecision, 
                    msdStepCountPrecision, msdTFinal, nDispMin, binsize, reprTime, reprDist, report, overWrite):
 
     from KineticModel import analysis

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-def newHematiteRun(systemSize, pbc, Temp, cutE, speciesCount, tFinal, nTraj, stepInterval, 
+def hematiteRun(systemSize, pbc, Temp, cutE, speciesCount, tFinal, nTraj, stepInterval, 
                    kmcStepCountPrecision, randomSeed, report, overWrite, gui):
     from KineticModel import system, run
     import os
