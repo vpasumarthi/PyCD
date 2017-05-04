@@ -656,8 +656,6 @@ class run(object):
         nTraj = self.nTraj
         kmcSteps = self.kmcSteps
         stepInterval = self.stepInterval
-        self.initialOccupancy = self.system.generateRandomOccupancy(self.system.speciesCount)
-        currentStateOccupancy = self.initialOccupancy[:]
         numPathStepsPerTraj = int(kmcSteps / stepInterval) + 1
         timeArray = np.zeros(numPathStepsPerTraj)
         unwrappedPositionArray = np.zeros(( numPathStepsPerTraj, self.totalSpecies * 3))
@@ -666,14 +664,15 @@ class run(object):
             energyArray = np.zeros(( numPathStepsPerTraj ))
             delG0Array = np.zeros(( self.kmcSteps ))
             potentialArray = np.zeros(( numPathStepsPerTraj, self.totalSpecies))
-        currentStateChargeConfig = self.system.chargeConfig(currentStateOccupancy)
-        currentStateESPConfig = self.system.ESPConfig(currentStateChargeConfig)
         kList = np.zeros(self.nProc)
         neighborSiteSystemElementIndexList = np.zeros(self.nProc, dtype=int)
         rowIndexList = np.zeros(self.nProc, dtype=int)
         neighborIndexList = np.zeros(self.nProc, dtype=int)
         assert 'E' in self.material.neighborCutoffDist.keys(), 'Please specify the cutoff distance for electrostatic interactions'
         for trajIndex in range(nTraj):
+            currentStateOccupancy = self.system.generateRandomOccupancy(self.system.speciesCount)
+            currentStateChargeConfig = self.system.chargeConfig(currentStateOccupancy)
+            currentStateESPConfig = self.system.ESPConfig(currentStateChargeConfig)
             pathIndex = 0
             if excess:
                 # TODO: Avoid using flatten
