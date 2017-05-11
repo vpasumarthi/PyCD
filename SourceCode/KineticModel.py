@@ -577,7 +577,22 @@ class system(object):
             ESPConfig[elementIndex] = np.sum(self.inverseCoeffDistanceList[elementIndex][neighborIndices] * currentStateChargeConfig[neighborIndices])
         return ESPConfig
     
-    def ewaldSum(self):
+    def config(self, occupancy):
+        """Generates the configuration array for the system"""
+        elementTypeIndices = range(len(self.material.elementTypes))
+        systemSites = self.material.generateSites(elementTypeIndices, self.systemSize)
+        positions = systemSites.cellCoordinates
+        systemElementIndexList = systemSites.systemElementIndexList
+        chargeList = self.chargeConfig(occupancy)
+        
+        returnConfig = returnValues()
+        returnConfig.positions = positions
+        returnConfig.chargeList = chargeList
+        returnConfig.systemElementIndexList = systemElementIndexList
+        returnConfig.occupancy = occupancy
+        return returnConfig
+
+    def ewaldSum(self, occupancy, kmax):
         from scipy.special import erfc
         
         translationalMatrix = np.multiply(self.systemSize, self.material.latticeMatrix) 
@@ -591,7 +606,6 @@ class system(object):
 
         gcut = 6.0
         ebsl = 1.00E-16
-        kmax = 4
         
         tpi = 2 * np.pi
         con = cellVolume / (4 * np.pi)
@@ -603,10 +617,12 @@ class system(object):
         
         cccc = np.sqrt(eta / np.pi)
         
-        chargeConfig = np.array([4, 4, -2, -2, -2, -2])
-        tau = np.array([[0, 0, 0], [0.5, 0.5, 0.5], [0.31, 0.31, 0], [-0.31, -0.31, 0], [-0.19, 0.19, 0.5], [0.19, -0.19, -0.5]])
+        chargeConfig = self.chargeConfig(occupancy)
+        config = self.config(occupancy)
+        tau = np.dot(config.positions, np.linalg.inv(np.multiply(self.systemSize, self.material.latticeMatrix)))  
         
         x = np.sum(chargeConfig**2)
+        # TODO: Can compute total charge based on speciesCount and their individual charges. Use dot product
         totalCharge = np.sum(chargeConfig)
         print 'Total charge = %4.10E' % totalCharge
         
@@ -622,7 +638,7 @@ class system(object):
         numSystemElements = len(chargeConfig)
         for a in range(numSystemElements):
             for b in range(numSystemElements):
-                v = (tau[a, 0] - tau[b, 0]) * translationalMatrix[0] + (tau[a, 1] - tau[b, 1]) * translationalMatrix[1] + (tau[a, 2] - tau[b, 2]) * translationalMatrix[2]
+                v = np.dot(tau[a, :] - tau[b, :], translationalMatrix)
                 prod = chargeConfig[a] * chargeConfig[b]
                 for i in range(-mmm1, mmm1+1):
                     for j in range(-mmm2, mmm2+1):
@@ -716,9 +732,10 @@ class run(object):
     def doKMCSteps(self, outdir, report=1, randomSeed=1):
         """Subroutine to run the KMC simulation by specified number of steps"""
         assert outdir, 'Please provide the destination path where simulation output files needs to be saved'
-
-        self.system.ewaldSum()
-        import pdb; pdb.set_trace()
+        
+        currentStateOccupancy = [10, 40]
+        kmax = 4
+        self.system.ewaldSum(currentStateOccupancy, kmax)
         
         timeDataFileName = outdir + directorySeparator + 'Time.dat'
         unwrappedTrajFileName = outdir + directorySeparator + 'unwrappedTraj.dat'
