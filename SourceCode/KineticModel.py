@@ -12,7 +12,6 @@ import pickle
 import os.path
 from copy import deepcopy
 import platform
-from nose.tools import assert_not_regexp_matches
 
 directorySeparator = '\\' if platform.uname()[0]=='Windows' else '/'
 
@@ -523,6 +522,7 @@ class system(object):
         
         self.pbc = self.neighbors.pbc
         self.speciesCount = speciesCount
+        self.systemCharge = np.dot(speciesCount, self.material.speciesChargeList)
         self.speciesCountCumSum = speciesCount.cumsum()
         
         # total number of unit cells
@@ -543,6 +543,14 @@ class system(object):
         self.systemCartesianCoordinates = self.neighbors.bulkSites.cellCoordinates
         self.systemFractionalCoordinates = np.dot(self.systemCartesianCoordinates, np.linalg.inv(np.multiply(self.systemSize, self.material.latticeMatrix)))
         
+        # variables for ewald sum
+        self.translationalMatrix = np.multiply(self.systemSize, self.material.latticeMatrix) 
+        self.systemVolume = abs(np.dot(self.translationalMatrix[0], np.cross(self.translationalMatrix[1], self.translationalMatrix[2])))
+        self.reciprocalLatticeMatrix = 2 * np.pi / self.systemVolume * np.array([np.cross(self.translationalMatrix[1], self.translationalMatrix[2]), 
+                                                                                 np.cross(self.translationalMatrix[2], self.translationalMatrix[0]),
+                                                                                 np.cross(self.translationalMatrix[0], self.translationalMatrix[1])])
+        self.translationalVectorLength = np.linalg.norm(self.translationalMatrix, axis=1)
+        self.reciprocalLatticeVectorLength = np.linalg.norm(self.reciprocalLatticeMatrix, axis=1)        
     
     def generateRandomOccupancy(self, speciesCount):
         """generates initial occupancy list based on species count"""
@@ -581,24 +589,15 @@ class system(object):
             ESPConfig[elementIndex] = np.sum(self.inverseCoeffDistanceList[elementIndex][neighborIndices] * currentStateChargeConfig[neighborIndices])
         return ESPConfig
     
-    def ewaldSum(self, occupancy, kmax):
+    def ewaldSum(self, chargeConfig, kmax):
         from scipy.special import erfc
         
-        translationalMatrix = np.multiply(self.systemSize, self.material.latticeMatrix) 
-        cellVolume = abs(np.dot(translationalMatrix[0], np.cross(translationalMatrix[1], translationalMatrix[2])))
-        reciprocalLatticeMatrix = 2 * np.pi / cellVolume * np.array([np.cross(translationalMatrix[1], translationalMatrix[2]), 
-                                                                     np.cross(translationalMatrix[2], translationalMatrix[0]),
-                                                                     np.cross(translationalMatrix[0], translationalMatrix[1])])
-        
-        translationalVectorLength = np.linalg.norm(translationalMatrix, axis=1)
-        reciprocalLatticeVectorLength = np.linalg.norm(reciprocalLatticeMatrix, axis=1)
-
         gcut = 6.0
         ebsl = 1.00E-16
         
         tpi = 2 * np.pi
-        con = cellVolume / (4 * np.pi)
-        con2 = (4 * np.pi) / cellVolume
+        con = self.systemVolume / (4 * np.pi)
+        con2 = (4 * np.pi) / self.systemVolume
         glast2 = gcut * gcut
         gexp = - np.log(ebsl)
         eta = glast2 / gexp
@@ -606,31 +605,28 @@ class system(object):
         
         cccc = np.sqrt(eta / np.pi)
         
-        chargeConfig = self.chargeConfig(occupancy)
-        
         x = np.sum(chargeConfig**2)
         # TODO: Can compute total charge based on speciesCount and their individual charges. Use dot product
-        totalCharge = np.sum(chargeConfig)
-        print 'Total charge = %4.10E' % totalCharge
+        print 'Total charge = %4.10E' % self.systemCharge
         
-        ewald = -cccc * x - 4 * np.pi * (totalCharge**2) / (cellVolume * eta)
+        ewald = -cccc * x - 4 * np.pi * (self.systemCharge**2) / (self.systemVolume * eta)
         tmax = np.sqrt(2 * gexp / eta)
         seta = np.sqrt(eta) / 2
         
-        mmm1 = int(tmax / translationalVectorLength[0] + 1.5)
-        mmm2 = int(tmax / translationalVectorLength[1] + 1.5)
-        mmm3 = int(tmax / translationalVectorLength[2] + 1.5)
+        mmm1 = int(tmax / self.translationalVectorLength[0] + 1.5)
+        mmm2 = int(tmax / self.translationalVectorLength[1] + 1.5)
+        mmm3 = int(tmax / self.translationalVectorLength[2] + 1.5)
         print 'lattice summation indices -- %d %d %d' % (mmm1, mmm2, mmm3)
         
         for a in range(self.neighbors.numSystemElements):
             for b in range(self.neighbors.numSystemElements):
-                v = np.dot(self.systemFractionalCoordinates[a, :] - self.systemFractionalCoordinates[b, :], translationalMatrix)
+                v = np.dot(self.systemFractionalCoordinates[a, :] - self.systemFractionalCoordinates[b, :], self.translationalMatrix)
                 prod = chargeConfig[a] * chargeConfig[b]
                 for i in range(-mmm1, mmm1+1):
                     for j in range(-mmm2, mmm2+1):
                         for k in range(-mmm3, mmm3+1):
                             if a != b or not np.all(np.array([i, j, k])==0):
-                                w = v + np.dot(np.array([i, j, k]), translationalMatrix)
+                                w = v + np.dot(np.array([i, j, k]), self.translationalMatrix)
                                 rmag2 = np.linalg.norm(w)
                                 arg = rmag2 * seta
                                 ewald += prod * erfc(arg) / rmag2
@@ -645,7 +641,7 @@ class system(object):
             for j in range(-mmm2, mmm2+1):
                 for k in range(-mmm3, mmm3+1):
                     if not np.all(np.array([i, j, k])==0):
-                        w = np.dot(np.array([i, j, k]), reciprocalLatticeMatrix)
+                        w = np.dot(np.array([i, j, k]), self.reciprocalLatticeMatrix)
                         rmag2 = np.dot(w, w)
                         x = con2 * np.exp(-rmag2 / eta) / rmag2
                         for a in range(self.neighbors.numSystemElements):
@@ -720,8 +716,9 @@ class run(object):
         assert outdir, 'Please provide the destination path where simulation output files needs to be saved'
         
         currentStateOccupancy = [10, 40]
+        currentStateChargeConfig = self.system.chargeConfig(currentStateOccupancy)
         kmax = 4
-        self.system.ewaldSum(currentStateOccupancy, kmax)
+        self.system.ewaldSum(currentStateChargeConfig, kmax)
         
         timeDataFileName = outdir + directorySeparator + 'Time.dat'
         unwrappedTrajFileName = outdir + directorySeparator + 'unwrappedTraj.dat'
