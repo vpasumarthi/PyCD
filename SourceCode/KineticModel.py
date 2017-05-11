@@ -578,19 +578,20 @@ class system(object):
         return ESPConfig
     
     def ewaldSum(self):
-        from scipy.special import erf, erfc
+        from scipy.special import erfc
         
         translationalMatrix = np.multiply(self.systemSize, self.material.latticeMatrix) 
-        cellVolume = np.dot(translationalMatrix[0], np.cross(translationalMatrix[1], translationalMatrix[2]))
+        cellVolume = abs(np.dot(translationalMatrix[0], np.cross(translationalMatrix[1], translationalMatrix[2])))
         reciprocalLatticeMatrix = 2 * np.pi / cellVolume * np.array([np.cross(translationalMatrix[1], translationalMatrix[2]), 
                                                                      np.cross(translationalMatrix[2], translationalMatrix[0]),
                                                                      np.cross(translationalMatrix[0], translationalMatrix[1])])
         
         translationalVectorLength = np.linalg.norm(translationalMatrix, axis=1)
         reciprocalLatticeVectorLength = np.linalg.norm(reciprocalLatticeMatrix, axis=1)
-        
-        gcut = 6
+
+        gcut = 6.0
         ebsl = 1.00E-16
+        kmax = 4
         
         tpi = 2 * np.pi
         con = cellVolume / (4 * np.pi)
@@ -602,13 +603,14 @@ class system(object):
         
         cccc = np.sqrt(eta / np.pi)
         
-        chargeConfig = np.array([1, -1])
-        tau = np.array([[0, 0, 0], [0.5, 0, 0]])
+        chargeConfig = np.array([4, 4, -2, -2, -2, -2])
+        tau = np.array([[0, 0, 0], [0.5, 0.5, 0.5], [0.31, 0.31, 0], [-0.31, -0.31, 0], [-0.19, 0.19, 0.5], [0.19, -0.19, -0.5]])
+        
         x = np.sum(chargeConfig**2)
         totalCharge = np.sum(chargeConfig)
-        print 'Total charge = %2.10E' % totalCharge
-        ewald = -cccc * x - 4 * np.pi * (totalCharge**2) / (cellVolume * eta)
+        print 'Total charge = %4.10E' % totalCharge
         
+        ewald = -cccc * x - 4 * np.pi * (totalCharge**2) / (cellVolume * eta)
         tmax = np.sqrt(2 * gexp / eta)
         seta = np.sqrt(eta) / 2
         
@@ -617,41 +619,40 @@ class system(object):
         mmm3 = int(tmax / translationalVectorLength[2] + 1.5)
         print 'lattice summation indices -- %d %d %d' % (mmm1, mmm2, mmm3)
         
-        for a in range(len(chargeConfig)):
-            for b in range(len(chargeConfig)):
+        numSystemElements = len(chargeConfig)
+        for a in range(numSystemElements):
+            for b in range(numSystemElements):
                 v = (tau[a, 0] - tau[b, 0]) * translationalMatrix[0] + (tau[a, 1] - tau[b, 1]) * translationalMatrix[1] + (tau[a, 2] - tau[b, 2]) * translationalMatrix[2]
                 prod = chargeConfig[a] * chargeConfig[b]
                 for i in range(-mmm1, mmm1+1):
                     for j in range(-mmm2, mmm2+1):
                         for k in range(-mmm3, mmm3+1):
-                            if a != b or np.all(np.array([i, j, k])) != 0:
+                            if a != b or not np.all(np.array([i, j, k])==0):
                                 w = v + np.dot(np.array([i, j, k]), translationalMatrix)
                                 rmag2 = np.linalg.norm(w)
                                 arg = rmag2 * seta
                                 ewald += prod * erfc(arg) / rmag2
+        print 'Real space part of the ewald energy in Rydbergs: %2.8f' % ewald
         
-        print 'Real space part of the ewald energy in Rydbergs: %2.10f' % ewald
-        
-        mmm1 = int(gcut / reciprocalLatticeVectorLength[0] + 1.5)
-        mmm2 = int(gcut / reciprocalLatticeVectorLength[1] + 1.5)
-        mmm3 = int(gcut / reciprocalLatticeVectorLength[2] + 1.5)
+        mmm1 = kmax
+        mmm2 = kmax
+        mmm3 = kmax
         print 'Reciprocal lattice summation indices -- %d %d %d' % (mmm1, mmm2, mmm3)
         
         for i in range(-mmm1, mmm1+1):
             for j in range(-mmm2, mmm2+1):
                 for k in range(-mmm3, mmm3+1):
-                    if np.all(np.array([i, j, k])) != 0:
+                    if not np.all(np.array([i, j, k])==0):
                         w = np.dot(np.array([i, j, k]), reciprocalLatticeMatrix)
                         rmag2 = np.dot(w, w)
                         x = con2 * np.exp(-rmag2 / eta) / rmag2
-                        for a in range(len(chargeConfig)):
-                            for b in range(len(chargeConfig)):
+                        for a in range(numSystemElements):
+                            for b in range(numSystemElements):
                                 v = tau[a, :] - tau[b, :]
                                 prod = chargeConfig[a] * chargeConfig[b]
                                 arg = tpi * np.dot(np.array([i, j, k]), v)
                                 ewald += x * prod * np.cos(arg)
-        
-        print 'Ewald energy in Rydbergs: %2.10f' % ewald
+        print 'Ewald energy in Rydbergs: %2.8f' % ewald        
     
 class run(object):
     """defines the subroutines for running Kinetic Monte Carlo and computing electrostatic 
