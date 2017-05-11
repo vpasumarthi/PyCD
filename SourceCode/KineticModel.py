@@ -214,8 +214,8 @@ class neighbors(object):
         self.numCells = self.systemSize.prod()
         
         # generate all sites in the system
-        elementTypeIndices = range(len(self.material.elementTypes))
-        self.bulkSites = self.material.generateSites(elementTypeIndices, self.systemSize)
+        self.elementTypeIndices = range(self.material.nElementTypes)
+        self.bulkSites = self.material.generateSites(self.elementTypeIndices, self.systemSize)
 
     def generateNeighborsFile(self, materialNeighbors, neighborsFileName, replaceExistingObjectFiles):
         """ """
@@ -470,7 +470,7 @@ class neighbors(object):
                     centerSiteElementTypeIndex = elementTypes.index(centerElementType) 
                     neighborSiteElementTypeIndex = elementTypes.index(neighborElementType)
                     if quickTest:
-                        localBulkSites = self.material.generateSites(range(len(self.material.elementTypes)), 
+                        localBulkSites = self.material.generateSites(self.elementTypeIndices, 
                                                                      localSystemSize)
                         centerSiteIndices = [self.generateSystemElementIndex(localSystemSize, np.concatenate((centerUnitCellIndex, np.array([centerSiteElementTypeIndex]), np.array([elementIndex])))) 
                                              for elementIndex in range(self.material.nElementsPerUnitCell[centerSiteElementTypeIndex])]
@@ -479,7 +479,7 @@ class neighbors(object):
                                                for zSize in range(localSystemSize[2]) 
                                                for elementIndex in range(self.material.nElementsPerUnitCell[neighborSiteElementTypeIndex])]
                     else:
-                        localBulkSites = self.material.generateSites(range(len(self.material.elementTypes)), 
+                        localBulkSites = self.material.generateSites(self.elementTypeIndices, 
                                                                      self.systemSize)
                         systemElementIndexOffsetArray = (np.repeat(np.arange(0, self.material.totalElementsPerUnitCell * self.numCells, self.material.totalElementsPerUnitCell), 
                                                                    self.material.nElementsPerUnitCell[centerSiteElementTypeIndex]))
@@ -538,6 +538,10 @@ class system(object):
         np.seterr(divide='ignore')
         self.inverseCoeffDistanceList = 1 / (self.material.dielectricConstant * self.neighborList['E'][0].cumulativeDisplacementList)
         np.seterr(divide='warn')
+        
+        # positions of all system elements
+        self.systemCoordinates = self.neighbors.bulkSites.cellCoordinates
+        
     
     def generateRandomOccupancy(self, speciesCount):
         """generates initial occupancy list based on species count"""
@@ -577,21 +581,6 @@ class system(object):
             ESPConfig[elementIndex] = np.sum(self.inverseCoeffDistanceList[elementIndex][neighborIndices] * currentStateChargeConfig[neighborIndices])
         return ESPConfig
     
-    def config(self, occupancy):
-        """Generates the configuration array for the system"""
-        elementTypeIndices = range(len(self.material.elementTypes))
-        systemSites = self.material.generateSites(elementTypeIndices, self.systemSize)
-        positions = systemSites.cellCoordinates
-        systemElementIndexList = systemSites.systemElementIndexList
-        chargeList = self.chargeConfig(occupancy)
-        
-        returnConfig = returnValues()
-        returnConfig.positions = positions
-        returnConfig.chargeList = chargeList
-        returnConfig.systemElementIndexList = systemElementIndexList
-        returnConfig.occupancy = occupancy
-        return returnConfig
-
     def ewaldSum(self, occupancy, kmax):
         from scipy.special import erfc
         
@@ -618,8 +607,7 @@ class system(object):
         cccc = np.sqrt(eta / np.pi)
         
         chargeConfig = self.chargeConfig(occupancy)
-        config = self.config(occupancy)
-        tau = np.dot(config.positions, np.linalg.inv(np.multiply(self.systemSize, self.material.latticeMatrix)))  
+        fractionalCoordinates = np.dot(self.systemCoordinates, np.linalg.inv(np.multiply(self.systemSize, self.material.latticeMatrix)))  
         
         x = np.sum(chargeConfig**2)
         # TODO: Can compute total charge based on speciesCount and their individual charges. Use dot product
@@ -638,7 +626,7 @@ class system(object):
         numSystemElements = len(chargeConfig)
         for a in range(numSystemElements):
             for b in range(numSystemElements):
-                v = np.dot(tau[a, :] - tau[b, :], translationalMatrix)
+                v = np.dot(fractionalCoordinates[a, :] - fractionalCoordinates[b, :], translationalMatrix)
                 prod = chargeConfig[a] * chargeConfig[b]
                 for i in range(-mmm1, mmm1+1):
                     for j in range(-mmm2, mmm2+1):
@@ -664,7 +652,7 @@ class system(object):
                         x = con2 * np.exp(-rmag2 / eta) / rmag2
                         for a in range(numSystemElements):
                             for b in range(numSystemElements):
-                                v = tau[a, :] - tau[b, :]
+                                v = fractionalCoordinates[a, :] - fractionalCoordinates[b, :]
                                 prod = chargeConfig[a] * chargeConfig[b]
                                 arg = tpi * np.dot(np.array([i, j, k]), v)
                                 ewald += x * prod * np.cos(arg)
@@ -689,7 +677,7 @@ class run(object):
         self.systemSize = self.system.systemSize
 
         # nElementsPerUnitCell
-        self.headStart_nElementsPerUnitCellCumSum = [self.material.nElementsPerUnitCell[:siteElementTypeIndex].sum() for siteElementTypeIndex in range(self.material.nElementTypes)]
+        self.headStart_nElementsPerUnitCellCumSum = [self.material.nElementsPerUnitCell[:siteElementTypeIndex].sum() for siteElementTypeIndex in self.neighbors.elementTypeIndices]
         
         # speciesTypeList
         self.speciesTypeList = [self.material.speciesTypes[index] for index, value in enumerate(self.system.speciesCount) for i in range(value)]
