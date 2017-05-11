@@ -212,6 +212,7 @@ class neighbors(object):
         
         # total number of unit cells
         self.numCells = self.systemSize.prod()
+        self.numSystemElements = self.numCells * self.material.totalElementsPerUnitCell
         
         # generate all sites in the system
         self.elementTypeIndices = range(self.material.nElementTypes)
@@ -401,10 +402,9 @@ class neighbors(object):
     def extractElectrostaticNeighborSites(self, parentElecNeighborList, cutE):
         """Returns systemElementIndexMap and distances between center sites and its 
         neighbor sites within cutoff distance"""
-        numSystemElements = len(parentElecNeighborList.numNeighbors)
-        neighborSystemElementIndices = np.empty(numSystemElements, dtype=object)
-        numNeighbors = np.empty(numSystemElements, dtype=int)
-        for centerSiteIndex in range(numSystemElements):
+        neighborSystemElementIndices = np.empty(self.numSystemElements, dtype=object)
+        numNeighbors = np.empty(self.numSystemElements, dtype=int)
+        for centerSiteIndex in range(self.numSystemElements):
             iNeighborSiteIndexList = np.where((0 < parentElecNeighborList.cumulativeDisplacementList[centerSiteIndex]) & (parentElecNeighborList.cumulativeDisplacementList[centerSiteIndex] <= cutE * self.material.ANG2BOHR))[0]
             neighborSystemElementIndices[centerSiteIndex] = np.where((0 < parentElecNeighborList.cumulativeDisplacementList[centerSiteIndex]) & (parentElecNeighborList.cumulativeDisplacementList[centerSiteIndex] <= cutE * self.material.ANG2BOHR))[0]
             numNeighbors[centerSiteIndex] = len(neighborSystemElementIndices[centerSiteIndex])
@@ -540,7 +540,8 @@ class system(object):
         np.seterr(divide='warn')
         
         # positions of all system elements
-        self.systemCoordinates = self.neighbors.bulkSites.cellCoordinates
+        self.systemCartesianCoordinates = self.neighbors.bulkSites.cellCoordinates
+        self.systemFractionalCoordinates = np.dot(self.systemCartesianCoordinates, np.linalg.inv(np.multiply(self.systemSize, self.material.latticeMatrix)))
         
     
     def generateRandomOccupancy(self, speciesCount):
@@ -574,9 +575,8 @@ class system(object):
         return chargeList
 
     def ESPConfig(self, currentStateChargeConfig):
-        numSystemElements = self.numCells * self.material.totalElementsPerUnitCell
-        ESPConfig = np.zeros(numSystemElements)
-        for elementIndex in range(numSystemElements):
+        ESPConfig = np.zeros(self.neighbors.numSystemElements)
+        for elementIndex in range(self.neighbors.numSystemElements):
             neighborIndices = self.neighborList['E'][0].neighborSystemElementIndices[elementIndex]
             ESPConfig[elementIndex] = np.sum(self.inverseCoeffDistanceList[elementIndex][neighborIndices] * currentStateChargeConfig[neighborIndices])
         return ESPConfig
@@ -607,7 +607,6 @@ class system(object):
         cccc = np.sqrt(eta / np.pi)
         
         chargeConfig = self.chargeConfig(occupancy)
-        fractionalCoordinates = np.dot(self.systemCoordinates, np.linalg.inv(np.multiply(self.systemSize, self.material.latticeMatrix)))  
         
         x = np.sum(chargeConfig**2)
         # TODO: Can compute total charge based on speciesCount and their individual charges. Use dot product
@@ -623,10 +622,9 @@ class system(object):
         mmm3 = int(tmax / translationalVectorLength[2] + 1.5)
         print 'lattice summation indices -- %d %d %d' % (mmm1, mmm2, mmm3)
         
-        numSystemElements = len(chargeConfig)
-        for a in range(numSystemElements):
-            for b in range(numSystemElements):
-                v = np.dot(fractionalCoordinates[a, :] - fractionalCoordinates[b, :], translationalMatrix)
+        for a in range(self.neighbors.numSystemElements):
+            for b in range(self.neighbors.numSystemElements):
+                v = np.dot(self.systemFractionalCoordinates[a, :] - self.systemFractionalCoordinates[b, :], translationalMatrix)
                 prod = chargeConfig[a] * chargeConfig[b]
                 for i in range(-mmm1, mmm1+1):
                     for j in range(-mmm2, mmm2+1):
@@ -650,9 +648,9 @@ class system(object):
                         w = np.dot(np.array([i, j, k]), reciprocalLatticeMatrix)
                         rmag2 = np.dot(w, w)
                         x = con2 * np.exp(-rmag2 / eta) / rmag2
-                        for a in range(numSystemElements):
-                            for b in range(numSystemElements):
-                                v = fractionalCoordinates[a, :] - fractionalCoordinates[b, :]
+                        for a in range(self.neighbors.numSystemElements):
+                            for b in range(self.neighbors.numSystemElements):
+                                v = self.systemFractionalCoordinates[a, :] - self.systemFractionalCoordinates[b, :]
                                 prod = chargeConfig[a] * chargeConfig[b]
                                 arg = tpi * np.dot(np.array([i, j, k]), v)
                                 ewald += x * prod * np.cos(arg)
