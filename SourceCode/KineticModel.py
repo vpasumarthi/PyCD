@@ -716,10 +716,12 @@ class run(object):
         """Subroutine to run the KMC simulation by specified number of steps"""
         assert outdir, 'Please provide the destination path where simulation output files needs to be saved'
         
-        currentStateOccupancy = [10, 40]
-        currentStateChargeConfig = self.system.chargeConfig(currentStateOccupancy)
-        kmax = 4
-        self.system.ewaldSum(currentStateChargeConfig, kmax)
+        testEwald = 0
+        if testEwald:
+            currentStateOccupancy = [10, 40]
+            currentStateChargeConfig = self.system.chargeConfig(currentStateOccupancy)
+            kmax = 4
+            self.system.ewaldSum(currentStateChargeConfig, kmax)
         
         timeDataFileName = outdir + directorySeparator + 'Time.dat'
         unwrappedTrajFileName = outdir + directorySeparator + 'unwrappedTraj.dat'
