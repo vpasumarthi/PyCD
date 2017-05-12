@@ -600,7 +600,8 @@ class system(object):
         con2 = (4 * np.pi) / self.systemVolume
         glast2 = gcut * gcut
         gexp = - np.log(ebsl)
-        eta = glast2 / gexp
+        #eta = glast2 / gexp
+        eta = (2 * 0.18 / self.material.ANG2BOHR)**2
         print 'eta value for this calculation: %4.10f' % eta
         
         cccc = np.sqrt(eta / np.pi)
@@ -627,9 +628,9 @@ class system(object):
                         for k in range(-mmm3, mmm3+1):
                             if a != b or not np.all(np.array([i, j, k])==0):
                                 w = v + np.dot(np.array([i, j, k]), self.translationalMatrix)
-                                rmag2 = np.linalg.norm(w)
-                                arg = rmag2 * seta
-                                ewald += prod * erfc(arg) / rmag2
+                                rmag = np.linalg.norm(w)
+                                arg = rmag * seta
+                                ewald += prod * erfc(arg) / rmag
         print 'Real space part of the ewald energy in Rydbergs: %2.8f' % ewald
         
         mmm1 = kmax
