@@ -592,16 +592,17 @@ class system(object):
     def ewaldSum(self, chargeConfig, kmax):
         from scipy.special import erfc
         
-        gcut = 6.0
+        #gcut = 6.0
         ebsl = 1.00E-16
         
         tpi = 2 * np.pi
         con = self.systemVolume / (4 * np.pi)
         con2 = (4 * np.pi) / self.systemVolume
-        glast2 = gcut * gcut
+        #glast2 = gcut * gcut
         gexp = - np.log(ebsl)
         #eta = glast2 / gexp
-        eta = (2 * 0.18 / self.material.ANG2BOHR)**2
+        #eta = 4 * 0.18 * self.material.ANG2BOHR
+        eta = 0.11
         print 'eta value for this calculation: %4.10f' % eta
         
         cccc = np.sqrt(eta / np.pi)
@@ -617,8 +618,9 @@ class system(object):
         mmm1 = int(tmax / self.translationalVectorLength[0] + 1.5)
         mmm2 = int(tmax / self.translationalVectorLength[1] + 1.5)
         mmm3 = int(tmax / self.translationalVectorLength[2] + 1.5)
+        mmm1 = mmm2 = mmm3 = 0
         print 'lattice summation indices -- %d %d %d' % (mmm1, mmm2, mmm3)
-        
+        ewaldReal = 0
         for a in range(self.neighbors.numSystemElements):
             for b in range(self.neighbors.numSystemElements):
                 v = np.dot(self.systemFractionalCoordinates[a, :] - self.systemFractionalCoordinates[b, :], self.translationalMatrix)
@@ -630,9 +632,10 @@ class system(object):
                                 w = v + np.dot(np.array([i, j, k]), self.translationalMatrix)
                                 rmag = np.linalg.norm(w)
                                 arg = rmag * seta
-                                ewald += prod * erfc(arg) / rmag
-        print 'Real space part of the ewald energy in Rydbergs: %2.8f' % ewald
-        
+                                ewaldReal += prod * erfc(arg) / rmag / self.material.dielectricConstant
+        print 'Real space part of the ewald energy in a.u.: %2.8f eV' % (ewaldReal / 2 / self.material.EV2J / self.material.J2HARTREE)
+        print 'Electrostatic energy computed from ESPConfig: %2.8f eV' % (np.sum(chargeConfig * self.ESPConfig(chargeConfig)) / 2 / self.material.EV2J / self.material.J2HARTREE)
+        ewald += ewaldReal
         mmm1 = kmax
         mmm2 = kmax
         mmm3 = kmax
@@ -650,8 +653,8 @@ class system(object):
                                 v = self.systemFractionalCoordinates[a, :] - self.systemFractionalCoordinates[b, :]
                                 prod = chargeConfig[a] * chargeConfig[b]
                                 arg = tpi * np.dot(np.array([i, j, k]), v)
-                                ewald += x * prod * np.cos(arg)
-        print 'Ewald energy in Rydbergs: %2.8f' % ewald        
+                                ewald += x * prod * np.cos(arg) / self.material.dielectricConstant
+        print 'Ewald energy in Rydbergs: %2.8f' % ewald
     
 class run(object):
     """defines the subroutines for running Kinetic Monte Carlo and computing electrostatic 
@@ -716,9 +719,9 @@ class run(object):
         """Subroutine to run the KMC simulation by specified number of steps"""
         assert outdir, 'Please provide the destination path where simulation output files needs to be saved'
         
-        testEwald = 0
+        testEwald = 1
         if testEwald:
-            currentStateOccupancy = [10, 40]
+            currentStateOccupancy = [0, 660]
             currentStateChargeConfig = self.system.chargeConfig(currentStateOccupancy)
             kmax = 4
             self.system.ewaldSum(currentStateChargeConfig, kmax)
