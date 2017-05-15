@@ -346,11 +346,8 @@ class neighbors(object):
                 displacementVectorList[centerSiteIndex] = np.asarray(iDisplacementVectors)
                 numNeighbors = np.append(numNeighbors, iNumNeighbors)
             
-        systemElementIndexMap = np.empty(2, dtype=object)
-        systemElementIndexMap[:] = [centerSiteSystemElementIndexList, neighborSystemElementIndices]
-        
         returnNeighbors = returnValues()
-        returnNeighbors.systemElementIndexMap = systemElementIndexMap
+        returnNeighbors.neighborSystemElementIndices = neighborSystemElementIndices
         returnNeighbors.displacementVectorList = displacementVectorList
         returnNeighbors.numNeighbors = numNeighbors
         return returnNeighbors
@@ -394,8 +391,8 @@ class neighbors(object):
             
         returnNeighbors = returnValues()
         returnNeighbors.neighborSystemElementIndices = neighborSystemElementIndices
-        returnNeighbors.numNeighbors = numNeighbors
         returnNeighbors.cumulativeDisplacementList = cumulativeDisplacementList
+        returnNeighbors.numNeighbors = numNeighbors
         return returnNeighbors
 
     def extractElectrostaticNeighborSites(self, parentElecNeighborList, cutE):
@@ -719,7 +716,7 @@ class run(object):
         """Subroutine to run the KMC simulation by specified number of steps"""
         assert outdir, 'Please provide the destination path where simulation output files needs to be saved'
         
-        testEwald = 1
+        testEwald = 0
         if testEwald:
             currentStateOccupancy = [0, 660]
             currentStateChargeConfig = self.system.chargeConfig(currentStateOccupancy)
@@ -781,7 +778,7 @@ class run(object):
                     rowIndex = (speciesSiteSystemElementIndex / self.material.totalElementsPerUnitCell * self.material.nElementsPerUnitCell[siteElementTypeIndex] + 
                                 speciesSiteSystemElementIndex % self.material.totalElementsPerUnitCell - self.headStart_nElementsPerUnitCellCumSum[siteElementTypeIndex])
                     for hopDistType in range(self.lenHopDistTypeList[speciesIndex]):
-                        localNeighborSiteSystemElementIndexList = self.system.neighborList[hopElementType][hopDistType].systemElementIndexMap[1][rowIndex]
+                        localNeighborSiteSystemElementIndexList = self.system.neighborList[hopElementType][hopDistType].neighborSystemElementIndices[rowIndex]
                         for neighborIndex, neighborSiteSystemElementIndex in enumerate(localNeighborSiteSystemElementIndexList):
                             # TODO: Introduce If condition
                             # if neighborSystemElementIndex not in currentStateOccupancy: commit 898baa8
