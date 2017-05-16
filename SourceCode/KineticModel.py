@@ -360,7 +360,6 @@ class neighbors(object):
         centerSiteCoords = bulkSites.cellCoordinates[centerSiteIndices]
         
         numElements = len(centerSiteCoords)
-        neighborSystemElementIndices = np.empty(numElements, dtype=object)
         neighborSystemElementIndexMap = np.empty(numElements, dtype=object)
         displacementList = np.empty(numElements, dtype=object)
         numNeighbors = np.empty(numElements, dtype=int)
@@ -388,13 +387,11 @@ class neighbors(object):
                     iNeighborSiteIndexList.append(neighborSiteIndex)
                     iDisplacementList.append(displacement)
                     iNumNeighbors += 1
-            neighborSystemElementIndices[centerSiteIndex] = np.array(neighborSiteSystemElementIndexList[iNeighborSiteIndexList])
-            neighborSystemElementIndexMap[centerSiteIndex] = dict(zip(neighborSystemElementIndices[centerSiteIndex], range(iNumNeighbors)))
+            neighborSystemElementIndexMap[centerSiteIndex] = dict(zip(neighborSiteSystemElementIndexList[iNeighborSiteIndexList], range(iNumNeighbors)))
             displacementList[centerSiteIndex] = np.array(iDisplacementList)
             numNeighbors[centerSiteIndex] = iNumNeighbors
             
         returnNeighbors = returnValues()
-        returnNeighbors.neighborSystemElementIndices = neighborSystemElementIndices
         returnNeighbors.neighborSystemElementIndexMap = neighborSystemElementIndexMap
         returnNeighbors.displacementList = displacementList
         returnNeighbors.numNeighbors = numNeighbors
@@ -403,19 +400,17 @@ class neighbors(object):
     def extractElectrostaticNeighborSites(self, parentElecNeighborList, cutE):
         """Returns systemElementIndexMap and distances between center sites and its 
         neighbor sites within cutoff distance"""
-        neighborSystemElementIndices = np.empty(self.numSystemElements, dtype=object)
+        from operator import itemgetter
         neighborSystemElementIndexMap = np.empty(self.numSystemElements, dtype=object)
         displacementList = np.empty(self.numSystemElements, dtype=object)
         numNeighbors = np.empty(self.numSystemElements, dtype=int)
         for centerSiteIndex in range(self.numSystemElements):
             columnIndices = np.where((0 < parentElecNeighborList.displacementList[centerSiteIndex]) & (parentElecNeighborList.displacementList[centerSiteIndex] <= cutE * self.material.ANG2BOHR))[0]
-            neighborSystemElementIndices[centerSiteIndex] = parentElecNeighborList.neighborSystemElementIndices[centerSiteIndex][columnIndices]
+            numNeighbors[centerSiteIndex] = len(columnIndices)
+            neighborSystemElementIndexMap[centerSiteIndex] = dict(zip(itemgetter(*columnIndices)(parentElecNeighborList.neighborSystemElementIndexMap[centerSiteIndex].keys()), range(numNeighbors[centerSiteIndex])))
             displacementList[centerSiteIndex] = parentElecNeighborList.displacementList[centerSiteIndex][columnIndices]
-            numNeighbors[centerSiteIndex] = len(neighborSystemElementIndices[centerSiteIndex])
-            neighborSystemElementIndexMap[centerSiteIndex] = dict(zip(neighborSystemElementIndices[centerSiteIndex], range(numNeighbors[centerSiteIndex])))
             
         returnNeighbors = returnValues()
-        returnNeighbors.neighborSystemElementIndices = neighborSystemElementIndices
         returnNeighbors.neighborSystemElementIndexMap = neighborSystemElementIndexMap
         returnNeighbors.displacementList = displacementList
         returnNeighbors.numNeighbors = numNeighbors
@@ -592,7 +587,7 @@ class system(object):
     def ESPConfig(self, currentStateChargeConfig):
         ESPConfig = np.zeros(self.neighbors.numSystemElements)
         for elementIndex in range(self.neighbors.numSystemElements):
-            neighborIndices = self.neighborList['E'][0].neighborSystemElementIndices[elementIndex]
+            neighborIndices = self.neighborList['E'][0].neighborSystemElementIndexMap[elementIndex].keys()
             ESPConfig[elementIndex] = np.sum(self.inverseCoeffDistanceList[elementIndex] * currentStateChargeConfig[neighborIndices])
         return ESPConfig
     
@@ -821,8 +816,8 @@ class run(object):
                 currentStateOccupancy[speciesIndex] = newSiteSystemElementIndex
                 speciesDisplacementVectorList[0, speciesIndex * 3:(speciesIndex + 1) * 3] += self.system.neighborList[hopElementType][hopDistType].displacementVectorList[rowIndex][neighborIndex]
 
-                oldSiteNeighbors = self.system.neighborList['E'][0].neighborSystemElementIndices[oldSiteSystemElementIndex]
-                newSiteNeighbors = self.system.neighborList['E'][0].neighborSystemElementIndices[newSiteSystemElementIndex]
+                oldSiteNeighbors = self.system.neighborList['E'][0].neighborSystemElementIndexMap[oldSiteSystemElementIndex].keys()
+                newSiteNeighbors = self.system.neighborList['E'][0].neighborSystemElementIndexMap[newSiteSystemElementIndex].keys()
                 currentStateESPConfig[oldSiteNeighbors] -= self.speciesChargeList[speciesIndex] * self.system.inverseCoeffDistanceList[oldSiteSystemElementIndex]
                 currentStateESPConfig[newSiteNeighbors] += self.speciesChargeList[speciesIndex] * self.system.inverseCoeffDistanceList[newSiteSystemElementIndex]
                 currentStateChargeConfig[oldSiteSystemElementIndex] -= self.speciesChargeList[speciesIndex]
