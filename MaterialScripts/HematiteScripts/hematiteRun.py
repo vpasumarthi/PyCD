@@ -63,14 +63,16 @@ def hematiteRun(systemSize, pbc, Temp, cutE, speciesCount, tFinal, nTraj, stepIn
         
         # Determine path for neighbor list directories
         neighborListDirectoryName = 'NeighborListFiles'
-        neighborListDirectoryPath = systemDirectoryPath + directorySeparator + neighborListDirectoryName
+        neighborListDirectoryPath = systemDirectoryPath + directorySeparator + neighborListDirectoryName + directorySeparator + 'E_' + str(cutE)
 
         # Load Neighbor List
         os.chdir(neighborListDirectoryPath)
-        neighborListFileName = (neighborListDirectoryPath + directorySeparator + 'NeighborList' + '_E' + str(cutE) + '.npy')
-        neighborList = np.load(neighborListFileName)[()]
+        hopNeighborListFileName = neighborListDirectoryPath + directorySeparator + 'hopNeighborList.npy'
+        elecNeighborListFileName =  neighborListDirectoryPath + directorySeparator + 'elecNeighborList.npy'
+        hopNeighborList = np.load(hopNeighborListFileName)[()]
+        elecNeighborList = np.load(elecNeighborListFileName)[()]
     
-        hematiteSystem = system(hematite, hematiteNeighbors, neighborList, speciesCount)
+        hematiteSystem = system(hematite, hematiteNeighbors, hopNeighborList, elecNeighborList, speciesCount)
         hematiteRun = run(hematiteSystem, Temp, nTraj, kmcSteps, stepInterval, gui)
         
         hematiteRun.doKMCSteps(workDirPath, report, randomSeed)

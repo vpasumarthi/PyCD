@@ -41,6 +41,7 @@ class hematiteParameters(object):
         self.vn = 1.85E+13 # typical frequency for nuclear motion in (1/sec)
         self.lambdaValues = {'Fe:Fe': [1.74533, 1.88683]} # reorganization energy in eV for basal plane, c-direction
         self.VAB = {'Fe:Fe': [0.184, 0.028]} # electronic coupling matrix element in eV for basal plane, c-direction
+        self.electrostaticCutoffDistKey = 'E'
         self.elementTypeDelimiter = ':' 
         self.emptySpeciesType = 'empty'
         self.siteIdentifier = '0'

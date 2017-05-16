@@ -113,6 +113,7 @@ class material(object):
         self.neighborCutoffDistTol = deepcopy(materialParameters.neighborCutoffDistTol)
         self.neighborCutoffDistTol.update((x, [(y[index] * self.ANG2BOHR) if y[index] else None for index in range(len(y))]) for x, y in self.neighborCutoffDistTol.items())
         
+        self.electrostaticCutoffDistKey = materialParameters.electrostaticCutoffDistKey
         self.elementTypeDelimiter = materialParameters.elementTypeDelimiter
         self.emptySpeciesType = materialParameters.emptySpeciesType
         self.siteIdentifier = materialParameters.siteIdentifier
@@ -426,46 +427,20 @@ class neighbors(object):
         quickTest = 0 # commit reference: 1472bb4
         if quickTest:
             del self.material.neighborCutoffDist['E']
-        if extractCutoff is not None:
-            parentNeighborListFileName = 'NeighborList_' + ('E%2.1f' % parentCutoff) + '.npy'
-            parentNeighborListFilePath = neighborListDirPath + directorySeparator + 'E_' + str(parentCutoff) + directorySeparator + parentNeighborListFileName
-            parentNeighborList = np.load(parentNeighborListFilePath)[()]
-            childFileName = 'E' + ('%2.1f' % extractCutoff)
-            childNeighborListFileName = 'NeighborList_' + childFileName + '.npy'
-            dstPath = neighborListDirPath + directorySeparator + 'E_' + str(extractCutoff)
-            if not os.path.exists(dstPath):
-                os.makedirs(dstPath)
-            childNeighborListFilePath = dstPath + directorySeparator + childNeighborListFileName
-            assert (not os.path.isfile(childNeighborListFilePath) or replaceExistingNeighborList), 'Requested neighbor list file already exists in the destination folder.'
-            childNeighborList = {}
-            for cutoffDistKey in parentNeighborList.keys():
-                if cutoffDistKey is 'E':
-                    childNeighborList[cutoffDistKey] = [self.extractElectrostaticNeighborSites(parentNeighborList['E'][0], extractCutoff)]
-                else:
-                    childNeighborList[cutoffDistKey] = deepcopy(parentNeighborList[cutoffDistKey])
-            np.save(childNeighborListFilePath, childNeighborList)
-            if report:
-                self.generateNeighborListReport(dstPath, childFileName)
-        else:
-            parentFileName = 'E%2.1f' % parentCutoff
-            parentNeighborListFileName = 'NeighborList_' + parentFileName + '.npy'
+        if extractCutoff is None:
             dstPath = neighborListDirPath + directorySeparator + 'E_' + str(parentCutoff)
             if not os.path.exists(dstPath):
                 os.makedirs(dstPath)
-            parentNeighborListFilePath = dstPath + directorySeparator + parentNeighborListFileName
-            assert (not os.path.isfile(parentNeighborListFilePath) or replaceExistingNeighborList), 'Requested neighbor list file already exists in the destination folder.'
-            parentNeighborList = {}
+            hopNeighborListFilePath = dstPath + directorySeparator + 'hopNeighborList.npy'
+            assert (not os.path.isfile(hopNeighborListFilePath) or replaceExistingNeighborList), 'Requested neighbor list file already exists in the destination folder.'
+            hopNeighborList = {}
             tolDist = self.material.neighborCutoffDistTol
             elementTypes = self.material.elementTypes[:]
+            
             for cutoffDistKey in self.material.neighborCutoffDist.keys():
                 cutoffDistList = self.material.neighborCutoffDist[cutoffDistKey][:]
                 neighborListCutoffDistKey = []
-                if cutoffDistKey is 'E':
-                    centerSiteIndices = neighborSiteIndices = np.arange(self.numCells * self.material.totalElementsPerUnitCell)
-                    cutoffDistLimits = [0, parentCutoff]
-                    neighborListCutoffDistKey.append(self.electrostaticNeighborSites(self.systemSize, self.bulkSites, centerSiteIndices, 
-                                                                                     neighborSiteIndices, cutoffDistLimits, cutoffDistKey))
-                else:
+                if cutoffDistKey is not self.material.electrostaticCutoffDistKey:
                     [centerElementType, neighborElementType] = cutoffDistKey.split(self.material.elementTypeDelimiter)
                     centerSiteElementTypeIndex = elementTypes.index(centerElementType) 
                     neighborSiteElementTypeIndex = elementTypes.index(neighborElementType)
@@ -491,14 +466,40 @@ class neighbors(object):
                         
                         neighborListCutoffDistKey.append(self.hopNeighborSites(localBulkSites, centerSiteIndices, 
                                                                                neighborSiteIndices, cutoffDistLimits, cutoffDistKey))
-                parentNeighborList[cutoffDistKey] = neighborListCutoffDistKey[:]
-            np.save(parentNeighborListFilePath, parentNeighborList)
-            if report:
-                self.generateNeighborListReport(dstPath, parentFileName)
+                hopNeighborList[cutoffDistKey] = neighborListCutoffDistKey[:]
+            np.save(hopNeighborListFilePath, hopNeighborList)
 
-    def generateNeighborListReport(self, dstPath, fileName):
+            if self.material.electrostaticCutoffDistKey in self.material.neighborCutoffDist.keys():
+                elecNeighborListFilePath = dstPath + directorySeparator + 'elecNeighborList.npy'
+                assert (not os.path.isfile(elecNeighborListFilePath) or replaceExistingNeighborList), 'Requested neighbor list file already exists in the destination folder.'
+                centerSiteIndices = neighborSiteIndices = np.arange(self.numCells * self.material.totalElementsPerUnitCell)
+                cutoffDistLimits = [0, parentCutoff]
+                elecNeighborList = self.electrostaticNeighborSites(self.systemSize, self.bulkSites, centerSiteIndices, 
+                                                                   neighborSiteIndices, cutoffDistLimits, cutoffDistKey)
+                np.save(elecNeighborListFilePath, elecNeighborList)
+            if report:
+                self.generateNeighborListReport(dstPath)
+        else:
+            from shutil import copy
+            dstPath = neighborListDirPath + directorySeparator + 'E_' + str(extractCutoff)
+            parentNeighborListDirPath = neighborListDirPath + directorySeparator + 'E_' + str(parentCutoff)
+            hopNeighborListFilePath = parentNeighborListDirPath + directorySeparator + 'hopNeighborList.npy'
+            if not os.path.exists(dstPath):
+                os.makedirs(dstPath)
+            copy(hopNeighborListFilePath, dstPath)
+            
+            parentElecNeighborListFilePath = parentNeighborListDirPath + directorySeparator + 'elecNeighborList.npy'
+            parentElecNeighborList = np.load(parentElecNeighborListFilePath)[()]
+            childNeighborListFilePath = dstPath + directorySeparator + 'elecNeighborList.npy'
+            assert (not os.path.isfile(childNeighborListFilePath) or replaceExistingNeighborList), 'Requested neighbor list file already exists in the destination folder.'
+            childNeighborList = self.extractElectrostaticNeighborSites(parentElecNeighborList, extractCutoff)
+            np.save(childNeighborListFilePath, childNeighborList)
+            if report:
+                self.generateNeighborListReport(dstPath)
+
+    def generateNeighborListReport(self, dstPath):
         """Generates a neighbor list and prints out a report to the output directory"""
-        neighborListLogName = 'NeighborList_' + fileName + '.log' 
+        neighborListLogName = 'NeighborList.log' 
         neighborListLogPath = dstPath + directorySeparator + neighborListLogName
         report = open(neighborListLogPath, 'w')
         endTime = datetime.now()
@@ -515,11 +516,12 @@ class system(object):
     Attributes:
     size: An array (3 x 1) defining the system size in multiple of unit cells
     """
-    def __init__(self, material, neighbors, neighborList, speciesCount):
+    def __init__(self, material, neighbors, hopNeighborList, elecNeighborList, speciesCount):
         """Return a system object whose size is *size*"""
         self.material = material
         self.neighbors = neighbors
-        self.neighborList = neighborList
+        self.hopNeighborList = hopNeighborList
+        self.elecNeighborList = elecNeighborList
         
         self.pbc = self.neighbors.pbc
         self.speciesCount = speciesCount
@@ -538,7 +540,7 @@ class system(object):
         # inverse of cumulative Distance
         self.inverseCoeffDistanceList = np.empty(self.neighbors.numSystemElements, dtype=object)
         for elementIndex in range(self.neighbors.numSystemElements):
-            self.inverseCoeffDistanceList[elementIndex] = 1 / (self.material.dielectricConstant * self.neighborList['E'][0].displacementList[elementIndex])
+            self.inverseCoeffDistanceList[elementIndex] = 1 / (self.material.dielectricConstant * self.elecNeighborList.displacementList[elementIndex])
         
         # positions of all system elements
         self.systemCartesianCoordinates = self.neighbors.bulkSites.cellCoordinates
@@ -586,7 +588,7 @@ class system(object):
     def ESPConfig(self, currentStateChargeConfig):
         ESPConfig = np.zeros(self.neighbors.numSystemElements)
         for elementIndex in range(self.neighbors.numSystemElements):
-            neighborIndices = self.neighborList['E'][0].neighborSystemElementIndexMap[elementIndex].keys()
+            neighborIndices = self.elecNeighborList.neighborSystemElementIndexMap[elementIndex].keys()
             ESPConfig[elementIndex] = np.sum(self.inverseCoeffDistanceList[elementIndex] * currentStateChargeConfig[neighborIndices])
         return ESPConfig
     
@@ -694,7 +696,7 @@ class run(object):
             centerSiteElementTypeIndex = self.material.elementTypes.index(centerElementType)
             for hopDistTypeIndex in range(self.lenHopDistTypeList[hopElementTypeIndex]):
                 if self.system.speciesCount[speciesTypeIndex] != 0:
-                    numNeighbors = np.unique(self.system.neighborList[hopElementType][hopDistTypeIndex].numNeighbors)
+                    numNeighbors = np.unique(self.system.hopNeighborList[hopElementType][hopDistTypeIndex].numNeighbors)
                     # TODO: What if it is not equal to 1
                     if len(numNeighbors) == 1:
                         self.nProc += numNeighbors[0] * self.system.speciesCount[speciesTypeIndex]
@@ -778,7 +780,7 @@ class run(object):
                     rowIndex = (speciesSiteSystemElementIndex / self.material.totalElementsPerUnitCell * self.material.nElementsPerUnitCell[siteElementTypeIndex] + 
                                 speciesSiteSystemElementIndex % self.material.totalElementsPerUnitCell - self.headStart_nElementsPerUnitCellCumSum[siteElementTypeIndex])
                     for hopDistType in range(self.lenHopDistTypeList[speciesIndex]):
-                        localNeighborSiteSystemElementIndexList = self.system.neighborList[hopElementType][hopDistType].neighborSystemElementIndices[rowIndex]
+                        localNeighborSiteSystemElementIndexList = self.system.hopNeighborList[hopElementType][hopDistType].neighborSystemElementIndices[rowIndex]
                         for neighborIndex, neighborSiteSystemElementIndex in enumerate(localNeighborSiteSystemElementIndexList):
                             # TODO: Introduce If condition
                             # if neighborSystemElementIndex not in currentStateOccupancy: commit 898baa8
@@ -786,7 +788,7 @@ class run(object):
                             rowIndexList[iProc] = rowIndex
                             neighborIndexList[iProc] = neighborIndex
                             # TODO: Print out a prompt about the assumption; detailed comment here. <Using species charge to compute change in energy> May be print log report
-                            columnIndex = self.system.neighborList['E'][0].neighborSystemElementIndexMap[speciesSiteSystemElementIndex][neighborSiteSystemElementIndex]
+                            columnIndex = self.system.elecNeighborList.neighborSystemElementIndexMap[speciesSiteSystemElementIndex][neighborSiteSystemElementIndex]
                             delG0 = (self.speciesChargeList[speciesIndex] * ((currentStateESPConfig[neighborSiteSystemElementIndex] - currentStateESPConfig[speciesSiteSystemElementIndex]
                                                                               - self.speciesChargeList[speciesIndex] * self.system.inverseCoeffDistanceList[speciesSiteSystemElementIndex][columnIndex])))
                             if excess:
@@ -813,10 +815,10 @@ class run(object):
                 oldSiteSystemElementIndex = currentStateOccupancy[speciesIndex]
                 newSiteSystemElementIndex = neighborSiteSystemElementIndexList[procIndex]
                 currentStateOccupancy[speciesIndex] = newSiteSystemElementIndex
-                speciesDisplacementVectorList[0, speciesIndex * 3:(speciesIndex + 1) * 3] += self.system.neighborList[hopElementType][hopDistType].displacementVectorList[rowIndex][neighborIndex]
+                speciesDisplacementVectorList[0, speciesIndex * 3:(speciesIndex + 1) * 3] += self.system.hopNeighborList[hopElementType][hopDistType].displacementVectorList[rowIndex][neighborIndex]
 
-                oldSiteNeighbors = self.system.neighborList['E'][0].neighborSystemElementIndexMap[oldSiteSystemElementIndex].keys()
-                newSiteNeighbors = self.system.neighborList['E'][0].neighborSystemElementIndexMap[newSiteSystemElementIndex].keys()
+                oldSiteNeighbors = self.system.elecNeighborList.neighborSystemElementIndexMap[oldSiteSystemElementIndex].keys()
+                newSiteNeighbors = self.system.elecNeighborList.neighborSystemElementIndexMap[newSiteSystemElementIndex].keys()
                 currentStateESPConfig[oldSiteNeighbors] -= self.speciesChargeList[speciesIndex] * self.system.inverseCoeffDistanceList[oldSiteSystemElementIndex]
                 currentStateESPConfig[newSiteNeighbors] += self.speciesChargeList[speciesIndex] * self.system.inverseCoeffDistanceList[newSiteSystemElementIndex]
                 currentStateChargeConfig[oldSiteSystemElementIndex] -= self.speciesChargeList[speciesIndex]

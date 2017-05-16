@@ -32,9 +32,11 @@ def hematiteSetup(systemSize, pbc, parentCutoff, extractCutoff, replaceExistingO
     hematiteParameters = hematiteParameters()
     hematiteParameters.neighborCutoffDist['E'] = [cutE]
     
+    # Build material object files
     hematite = material(hematiteParameters)
     hematite.generateMaterialFile(hematite, materialFileName, replaceExistingObjectFiles)
     
+    # Build neighbors object files
     hematiteNeighbors = neighbors(hematite, systemSize, pbc)
     hematiteNeighbors.generateNeighborsFile(hematiteNeighbors, neighborsFileName, replaceExistingObjectFiles)
     hematiteNeighbors.generateNeighborList(parentCutoff, extractCutoff, neighborListDirPath, replaceExistingNeighborList)
