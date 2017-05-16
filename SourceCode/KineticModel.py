@@ -416,46 +416,45 @@ class neighbors(object):
         returnNeighbors.numNeighbors = numNeighbors
         return returnNeighbors
     #@profile
-    def generateNeighborList(self, parent, outdir, extract=0, cutE=None, replaceExistingNeighborList=0, report=1, localSystemSize=np.array([3, 3, 3]), 
-                                 centerUnitCellIndex=np.array([1, 1, 1])):
+    def generateNeighborList(self, parentCutoff, extractCutoff, neighborListDirPath, replaceExistingNeighborList=0, report=1, 
+                             localSystemSize=np.array([3, 3, 3]), centerUnitCellIndex=np.array([1, 1, 1])):
         """Adds the neighbor list to the system object and returns the neighbor list"""
-        if parent == 1:
-            assert not extract, 'Use extract flag only to generate child neighbor list'
-            assert not cutE, 'Do not provide a cutoff while generating parent neighbor list'
-        else:
-            assert cutE, 'Provide a desired cutoff distance in angstroms to generate child neighbor list'
-        
-        assert outdir, 'Please provide the destination path where neighbor list needs to be saved'
+        assert parentCutoff >= extractCutoff, 'Cutoff for child neighbor list should be smaller than that of parent neighbor list.'
+        assert neighborListDirPath, 'Please provide the path to the parent directory of neighbor list files'
         assert all(size >= 3 for size in localSystemSize), 'Local system size in all dimensions should always be greater than or equal to 3'
         
         quickTest = 0 # commit reference: 1472bb4
         if quickTest:
             del self.material.neighborCutoffDist['E']
-        
-        if extract:
-            parentNeighborListFileName = 'ParentNeighborList_SystemSize=' + str(self.systemSize).replace(' ', ',') + '.npy'
-            parentNeighborListFilePath = outdir + directorySeparator + parentNeighborListFileName
+        if extractCutoff is not None:
+            parentNeighborListFileName = 'NeighborList_' + ('E%2.1f' % parentCutoff) + '.npy'
+            parentNeighborListFilePath = neighborListDirPath + directorySeparator + 'E_' + str(parentCutoff) + directorySeparator + parentNeighborListFileName
             parentNeighborList = np.load(parentNeighborListFilePath)[()]
-            for iCutE in cutE:
-                fileName = 'E' + ('%2.1f' % iCutE)
-                ChildNeighborListFileName = 'NeighborList_' + fileName + '.npy'
-                ChildNeighborListFilePath = outdir + directorySeparator + ChildNeighborListFileName
-                assert (not os.path.isfile(ChildNeighborListFilePath) or replaceExistingNeighborList), 'Requested neighbor list file already exists in the destination folder.'
-                neighborList = {}
-                for cutoffDistKey in parentNeighborList.keys():
-                    if cutoffDistKey is 'E':
-                        neighborList[cutoffDistKey] = [self.extractElectrostaticNeighborSites(parentNeighborList['E'][0], iCutE)]
-                    else:
-                        neighborList[cutoffDistKey] = deepcopy(parentNeighborList[cutoffDistKey])
-                np.save(ChildNeighborListFilePath, neighborList)
-                if report:
-                    self.generateNeighborListReport(parent, outdir, fileName)
+            childFileName = 'E' + ('%2.1f' % extractCutoff)
+            childNeighborListFileName = 'NeighborList_' + childFileName + '.npy'
+            dstPath = neighborListDirPath + directorySeparator + 'E_' + str(extractCutoff)
+            if not os.path.exists(dstPath):
+                os.makedirs(dstPath)
+            childNeighborListFilePath = dstPath + directorySeparator + childNeighborListFileName
+            assert (not os.path.isfile(childNeighborListFilePath) or replaceExistingNeighborList), 'Requested neighbor list file already exists in the destination folder.'
+            childNeighborList = {}
+            for cutoffDistKey in parentNeighborList.keys():
+                if cutoffDistKey is 'E':
+                    childNeighborList[cutoffDistKey] = [self.extractElectrostaticNeighborSites(parentNeighborList['E'][0], extractCutoff)]
+                else:
+                    childNeighborList[cutoffDistKey] = deepcopy(parentNeighborList[cutoffDistKey])
+            np.save(childNeighborListFilePath, childNeighborList)
+            if report:
+                self.generateNeighborListReport(dstPath, childFileName)
         else:
-            fileName = 'SystemSize=' + str(self.systemSize).replace(' ', ',') if parent else ('E' + ('' if extract else ('%2.1f' % cutE)))
-            neighborListFileName = ('Parent' if parent else '') + 'NeighborList_' + fileName + '.npy'
-            neighborListFilePath = outdir + directorySeparator + neighborListFileName
-            assert (not os.path.isfile(neighborListFilePath) or replaceExistingNeighborList), 'Requested neighbor list file already exists in the destination folder.'
-            neighborList = {}
+            parentFileName = 'E%2.1f' % parentCutoff
+            parentNeighborListFileName = 'NeighborList_' + parentFileName + '.npy'
+            dstPath = neighborListDirPath + directorySeparator + 'E_' + str(parentCutoff)
+            if not os.path.exists(dstPath):
+                os.makedirs(dstPath)
+            parentNeighborListFilePath = dstPath + directorySeparator + parentNeighborListFileName
+            assert (not os.path.isfile(parentNeighborListFilePath) or replaceExistingNeighborList), 'Requested neighbor list file already exists in the destination folder.'
+            parentNeighborList = {}
             tolDist = self.material.neighborCutoffDistTol
             elementTypes = self.material.elementTypes[:]
             for cutoffDistKey in self.material.neighborCutoffDist.keys():
@@ -463,7 +462,7 @@ class neighbors(object):
                 neighborListCutoffDistKey = []
                 if cutoffDistKey is 'E':
                     centerSiteIndices = neighborSiteIndices = np.arange(self.numCells * self.material.totalElementsPerUnitCell)
-                    cutoffDistLimits = [0, np.inf if parent else cutoffDistList[0]]
+                    cutoffDistLimits = [0, parentCutoff]
                     neighborListCutoffDistKey.append(self.electrostaticNeighborSites(self.systemSize, self.bulkSites, centerSiteIndices, 
                                                                                      neighborSiteIndices, cutoffDistLimits, cutoffDistKey))
                 else:
@@ -492,15 +491,15 @@ class neighbors(object):
                         
                         neighborListCutoffDistKey.append(self.hopNeighborSites(localBulkSites, centerSiteIndices, 
                                                                                neighborSiteIndices, cutoffDistLimits, cutoffDistKey))
-                neighborList[cutoffDistKey] = neighborListCutoffDistKey[:]
-            np.save(neighborListFilePath, neighborList)
+                parentNeighborList[cutoffDistKey] = neighborListCutoffDistKey[:]
+            np.save(parentNeighborListFilePath, parentNeighborList)
             if report:
-                self.generateNeighborListReport(parent, outdir, fileName)
+                self.generateNeighborListReport(dstPath, parentFileName)
 
-    def generateNeighborListReport(self, parent, outdir, fileName):
+    def generateNeighborListReport(self, dstPath, fileName):
         """Generates a neighbor list and prints out a report to the output directory"""
-        neighborListLogName = ('Parent' if parent else '') + 'NeighborList_' + fileName + '.log' 
-        neighborListLogPath = outdir + directorySeparator + neighborListLogName
+        neighborListLogName = 'NeighborList_' + fileName + '.log' 
+        neighborListLogPath = dstPath + directorySeparator + neighborListLogName
         report = open(neighborListLogPath, 'w')
         endTime = datetime.now()
         timeElapsed = endTime - self.startTime
