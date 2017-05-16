@@ -70,9 +70,31 @@ def hematiteRun(systemSize, pbc, Temp, cutE, speciesCount, tFinal, nTraj, stepIn
         hopNeighborListFileName = neighborListDirectoryPath + directorySeparator + 'hopNeighborList.npy'
         elecNeighborListFileName =  neighborListDirectoryPath + directorySeparator + 'elecNeighborList.npy'
         hopNeighborList = np.load(hopNeighborListFileName)[()]
-        elecNeighborList = np.load(elecNeighborListFileName)[()]
-    
-        hematiteSystem = system(hematite, hematiteNeighbors, hopNeighborList, elecNeighborList, speciesCount)
+        
+        # Open electrostatic neighbor list files
+        neighborSystemElementIndexMapFileName = neighborListDirectoryPath + directorySeparator + 'neighborSystemElementIndexMap.dat'
+        displacementListFileName = neighborListDirectoryPath + directorySeparator + 'displacementList.dat'
+        numNeighborsFileName = neighborListDirectoryPath + directorySeparator + 'numNeighbors.dat'
+        neighborSystemElementIndexMapFile = open(neighborSystemElementIndexMapFileName, 'r')
+        displacementListFile = open(displacementListFileName, 'r')
+        
+        # Build components of electrostatic neighbor list
+        numNeighbors = np.loadtxt(numNeighborsFileName, dtype=int)
+        numSystemElements = len(numNeighbors)
+        neighborSystemElementIndexMap = np.empty(numSystemElements, dtype=object)
+        displacementList = np.empty(numSystemElements, dtype=object)
+        for centerSiteIndex in range(numSystemElements):
+            iNeighborSystemElementIndexList = []
+            iDisplacementList = []
+            for index in range(numNeighbors[centerSiteIndex]):
+                iNeighborSystemElementIndexList.append(int(neighborSystemElementIndexMapFile.readline().split(':')[0]))
+                iDisplacementList.append(float(displacementListFile.readline().split('\n')[0]))
+            neighborSystemElementIndexMap[centerSiteIndex] = dict(zip(iNeighborSystemElementIndexList, range(numNeighbors[centerSiteIndex])))
+            displacementList[centerSiteIndex] = np.asarray(iDisplacementList)
+        neighborSystemElementIndexMapFile.close()
+        displacementListFile.close()
+        
+        hematiteSystem = system(hematite, hematiteNeighbors, hopNeighborList, neighborSystemElementIndexMap, displacementList, speciesCount)
         hematiteRun = run(hematiteSystem, Temp, nTraj, kmcSteps, stepInterval, gui)
         
         hematiteRun.doKMCSteps(workDirPath, report, randomSeed)
