@@ -543,7 +543,7 @@ class system(object):
     Attributes:
     size: An array (3 x 1) defining the system size in multiple of unit cells
     """
-    def __init__(self, material, neighbors, hopNeighborList, neighborSystemElementIndexMap, displacementList, speciesCount):
+    def __init__(self, material, neighbors, hopNeighborList, neighborSystemElementIndexMap, displacementList, numNeighbors, speciesCount):
         """Return a system object whose size is *size*"""
         self.material = material
         self.neighbors = neighbors
@@ -566,10 +566,12 @@ class system(object):
         self.neighborSystemElementIndexMap = neighborSystemElementIndexMap
         
         # inverse of cumulative Distance
+        self.displacementList = displacementList
+        self.numNeighbors = numNeighbors
         inverseDielectricConstant = 1 / self.material.dielectricConstant
         self.inverseCoeffDistanceList = np.empty(self.neighbors.numSystemElements, dtype=object)
         for elementIndex in range(self.neighbors.numSystemElements):
-            self.inverseCoeffDistanceList[elementIndex] = inverseDielectricConstant / displacementList[elementIndex]
+            self.inverseCoeffDistanceList[elementIndex] = inverseDielectricConstant / self.displacementList[elementIndex]
         
         # positions of all system elements
         self.systemCartesianCoordinates = self.neighbors.bulkSites.cellCoordinates
@@ -748,137 +750,204 @@ class run(object):
         assert outdir, 'Please provide the destination path where simulation output files needs to be saved'
         
         testEwald = 0
+        interactionPotential = 0
+        runSimulation = 1
+        
         if testEwald:
             currentStateOccupancy = [0, 660]
             currentStateChargeConfig = self.system.chargeConfig(currentStateOccupancy)
             kmax = 4
             self.system.ewaldSum(currentStateChargeConfig, kmax)
         
-        timeDataFileName = outdir + directorySeparator + 'Time.dat'
-        unwrappedTrajFileName = outdir + directorySeparator + 'unwrappedTraj.dat'
-        open(timeDataFileName, 'w').close()
-        open(unwrappedTrajFileName, 'w').close()
-        excess = 0
-        if excess:
-            wrappedTrajFileName = outdir + directorySeparator + 'wrappedTraj.dat'
-            energyTrajFileName = outdir + directorySeparator + 'energyTraj.dat'
-            delG0TrajFileName = outdir + directorySeparator + 'delG0Traj.dat'
-            potentialTrajFileName = outdir + directorySeparator + 'potentialTraj.dat'
-            open(wrappedTrajFileName, 'w').close()
-            open(energyTrajFileName, 'w').close()
-            open(delG0TrajFileName, 'w').close()
-            open(potentialTrajFileName, 'w').close()
-        rnd.seed(randomSeed)
-        nTraj = self.nTraj
-        kmcSteps = self.kmcSteps
-        stepInterval = self.stepInterval
-        numPathStepsPerTraj = int(kmcSteps / stepInterval) + 1
-        timeArray = np.zeros(numPathStepsPerTraj)
-        unwrappedPositionArray = np.zeros(( numPathStepsPerTraj, self.totalSpecies * 3))
-        if excess:
-            wrappedPositionArray = np.zeros(( numPathStepsPerTraj, self.totalSpecies * 3))
-            energyArray = np.zeros(( numPathStepsPerTraj ))
-            delG0Array = np.zeros(( self.kmcSteps ))
-            potentialArray = np.zeros(( numPathStepsPerTraj, self.totalSpecies))
-        kList = np.zeros(self.nProc)
-        neighborSiteSystemElementIndexList = np.zeros(self.nProc, dtype=int)
-        rowIndexList = np.zeros(self.nProc, dtype=int)
-        neighborIndexList = np.zeros(self.nProc, dtype=int)
-        assert 'E' in self.material.neighborCutoffDist.keys(), 'Please specify the cutoff distance for electrostatic interactions'
-        for trajIndex in range(nTraj):
-            currentStateOccupancy = self.system.generateRandomOccupancy(self.system.speciesCount)
-            currentStateChargeConfig = self.system.chargeConfig(currentStateOccupancy)
-            currentStateESPConfig = self.system.ESPConfig(currentStateChargeConfig)
-            pathIndex = 0
+        if interactionPotential:
+            interactionPotentialDataFileName01 = outdir + directorySeparator + 'interactionPotential_Int01.dat'
+            interactionPotentialDataFileName02 = outdir + directorySeparator + 'interactionPotential_Int02.dat'
+            interactionPotentialDataFileName05 = outdir + directorySeparator + 'interactionPotential_Int05.dat'
+            open(interactionPotentialDataFileName01, 'w').close()
+            open(interactionPotentialDataFileName02, 'w').close()
+            open(interactionPotentialDataFileName05, 'w').close()
+            
+            centerSiteIndex = 0
+            noElectronOccupancy = []
+            noElectronChargeConfig = self.system.chargeConfig(noElectronOccupancy)
+            noElectronESPConfig = self.system.ESPConfig(noElectronChargeConfig)
+            
+            centerSiteElementTypeIndex = 0
+            systemElementIndexOffsetArray = (np.repeat(np.arange(0, self.material.totalElementsPerUnitCell * self.system.numCells, self.material.totalElementsPerUnitCell), 
+                                                       self.material.nElementsPerUnitCell[centerSiteElementTypeIndex]))
+            neighborSiteIndices = (np.tile(self.material.nElementsPerUnitCell[:centerSiteElementTypeIndex].sum() + 
+                                           np.arange(0, self.material.nElementsPerUnitCell[centerSiteElementTypeIndex]), self.system.numCells) + systemElementIndexOffsetArray)
+            columnIndices = np.asarray([self.system.neighborSystemElementIndexMap[centerSiteIndex][neighborSiteIndex] 
+                                        for neighborSiteIndex in neighborSiteIndices 
+                                        if neighborSiteIndex in self.system.neighborSystemElementIndexMap[centerSiteIndex].keys()])
+            
+            interSiteDisplacementList = np.asarray([self.system.displacementList[centerSiteIndex][columnIndex] for columnIndex in columnIndices])
+            centerNeighborSiteIndices = np.asarray([self.system.neighborSystemElementIndexMap[centerSiteIndex].keys()[columnIndex] for columnIndex in columnIndices])
+            sortedIndices = np.argsort(interSiteDisplacementList)
+            sortedDisplacementArray = interSiteDisplacementList[sortedIndices]
+            sortedCenterNeighborSiteIndices = centerNeighborSiteIndices[sortedIndices]
+            oldDisplacement = 0
+            index = 0
+            neighborIndex = 0
+            defectCharge01 = -1
+            defectCharge02 = -1
+            
+            displacementList = []
+            interactionPotentialEnergy01 = []
+            interactionPotentialEnergy02 = []
+            interactionPotentialEnergy05 = []
+            
+            for neighborIndex, displacement in enumerate(sortedDisplacementArray):
+                if displacement > oldDisplacement + 0.01 * self.material.ANG2BOHR:
+                    currentStateOccupancy = [centerSiteIndex, sortedCenterNeighborSiteIndices[neighborIndex]]
+                    term01 = defectCharge01  * noElectronESPConfig[currentStateOccupancy[0]]
+                    term02 = defectCharge02  * noElectronESPConfig[currentStateOccupancy[1]]
+                    columnIndex = self.system.neighborSystemElementIndexMap[currentStateOccupancy[0]][currentStateOccupancy[1]]
+                    term03 = defectCharge01  * defectCharge02 * self.system.inverseCoeffDistanceList[currentStateOccupancy[0]][columnIndex] #/ (self.material.dielectricConstant * displacement)
+                    
+                    displacementList.append(displacement)
+                    interactionPotentialEnergy01.append(term01 + term02 + term03)
+                    interactionPotentialEnergy02.append(term02 + term03)
+                    interactionPotentialEnergy05.append(term03)
+                    
+                    oldDisplacement = displacement
+    
+            interactionPotentialArray01 = np.column_stack(([np.asarray(displacementList) / self.material.ANG2BOHR, np.asarray(interactionPotentialEnergy01) / self.material.J2HARTREE / self.material.EV2J]))
+            interactionPotentialArray02 = np.column_stack(([np.asarray(displacementList) / self.material.ANG2BOHR, np.asarray(interactionPotentialEnergy02) / self.material.J2HARTREE / self.material.EV2J]))
+            interactionPotentialArray05 = np.column_stack(([np.asarray(displacementList) / self.material.ANG2BOHR, np.asarray(interactionPotentialEnergy05) / self.material.J2HARTREE / self.material.EV2J]))
+            
+            with open(interactionPotentialDataFileName01, 'a') as interactionPotentialDataFile01:
+                np.savetxt(interactionPotentialDataFile01, interactionPotentialArray01)
+            with open(interactionPotentialDataFileName02, 'a') as interactionPotentialDataFile02:
+                np.savetxt(interactionPotentialDataFile02, interactionPotentialArray02)
+            with open(interactionPotentialDataFileName05, 'a') as interactionPotentialDataFile05:
+                np.savetxt(interactionPotentialDataFile05, interactionPotentialArray05)
+        
+        if runSimulation:
+            timeDataFileName = outdir + directorySeparator + 'Time.dat'
+            unwrappedTrajFileName = outdir + directorySeparator + 'unwrappedTraj.dat'
+            open(timeDataFileName, 'w').close()
+            open(unwrappedTrajFileName, 'w').close()
+            excess = 0
             if excess:
-                # TODO: Avoid using flatten
-                wrappedPositionArray[pathIndex] = self.systemCoordinates[currentStateOccupancy].flatten()
-                energyArray[pathIndex] = np.sum(currentStateChargeConfig * currentStateESPConfig) / 2
-                potentialArray[pathIndex] = currentStateESPConfig[currentStateOccupancy]
-            pathIndex += 1
-            kmcTime = 0
-            speciesDisplacementVectorList = np.zeros((1, self.totalSpecies * 3))
-            for step in range(kmcSteps):
-                iProc = 0
+                wrappedTrajFileName = outdir + directorySeparator + 'wrappedTraj.dat'
+                energyTrajFileName = outdir + directorySeparator + 'energyTraj.dat'
+                delG0TrajFileName = outdir + directorySeparator + 'delG0Traj.dat'
+                potentialTrajFileName = outdir + directorySeparator + 'potentialTraj.dat'
+                open(wrappedTrajFileName, 'w').close()
+                open(energyTrajFileName, 'w').close()
+                open(delG0TrajFileName, 'w').close()
+                open(potentialTrajFileName, 'w').close()
+            rnd.seed(randomSeed)
+            nTraj = self.nTraj
+            kmcSteps = self.kmcSteps
+            stepInterval = self.stepInterval
+            numPathStepsPerTraj = int(kmcSteps / stepInterval) + 1
+            timeArray = np.zeros(numPathStepsPerTraj)
+            unwrappedPositionArray = np.zeros(( numPathStepsPerTraj, self.totalSpecies * 3))
+            if excess:
+                wrappedPositionArray = np.zeros(( numPathStepsPerTraj, self.totalSpecies * 3))
+                energyArray = np.zeros(( numPathStepsPerTraj ))
+                delG0Array = np.zeros(( self.kmcSteps ))
+                potentialArray = np.zeros(( numPathStepsPerTraj, self.totalSpecies))
+            kList = np.zeros(self.nProc)
+            neighborSiteSystemElementIndexList = np.zeros(self.nProc, dtype=int)
+            rowIndexList = np.zeros(self.nProc, dtype=int)
+            neighborIndexList = np.zeros(self.nProc, dtype=int)
+            assert 'E' in self.material.neighborCutoffDist.keys(), 'Please specify the cutoff distance for electrostatic interactions'
+            for trajIndex in range(nTraj):
+                currentStateOccupancy = self.system.generateRandomOccupancy(self.system.speciesCount)
+                currentStateChargeConfig = self.system.chargeConfig(currentStateOccupancy)
+                currentStateESPConfig = self.system.ESPConfig(currentStateChargeConfig)
+                pathIndex = 0
                 if excess:
-                    delG0List = []
-                for speciesIndex, speciesSiteSystemElementIndex in enumerate(currentStateOccupancy):
-                    speciesIndex = self.nProcSpeciesIndexList[iProc]
-                    hopElementType = self.nProcHopElementTypeList[iProc]
-                    siteElementTypeIndex = self.nProcSiteElementTypeIndexList[iProc]
-                    rowIndex = (speciesSiteSystemElementIndex / self.material.totalElementsPerUnitCell * self.material.nElementsPerUnitCell[siteElementTypeIndex] + 
-                                speciesSiteSystemElementIndex % self.material.totalElementsPerUnitCell - self.headStart_nElementsPerUnitCellCumSum[siteElementTypeIndex])
-                    for hopDistType in range(self.lenHopDistTypeList[speciesIndex]):
-                        localNeighborSiteSystemElementIndexList = self.system.hopNeighborList[hopElementType][hopDistType].neighborSystemElementIndices[rowIndex]
-                        for neighborIndex, neighborSiteSystemElementIndex in enumerate(localNeighborSiteSystemElementIndexList):
-                            # TODO: Introduce If condition
-                            # if neighborSystemElementIndex not in currentStateOccupancy: commit 898baa8
-                            neighborSiteSystemElementIndexList[iProc] = neighborSiteSystemElementIndex
-                            rowIndexList[iProc] = rowIndex
-                            neighborIndexList[iProc] = neighborIndex
-                            # TODO: Print out a prompt about the assumption; detailed comment here. <Using species charge to compute change in energy> May be print log report
-                            columnIndex = self.system.neighborSystemElementIndexMap[speciesSiteSystemElementIndex][neighborSiteSystemElementIndex]
-                            delG0 = (self.speciesChargeList[speciesIndex] * ((currentStateESPConfig[neighborSiteSystemElementIndex] - currentStateESPConfig[speciesSiteSystemElementIndex]
-                                                                              - self.speciesChargeList[speciesIndex] * self.system.inverseCoeffDistanceList[speciesSiteSystemElementIndex][columnIndex])))
-                            if excess:
-                                delG0List.append(delG0)
-                            lambdaValue = self.nProcLambdaValueList[iProc]
-                            VAB = self.nProcVABList[iProc]
-                            delGs = ((lambdaValue + delG0) ** 2 / (4 * lambdaValue)) - VAB
-                            kList[iProc] = self.material.vn * np.exp(-delGs / self.T)
-                            iProc += 1
-                kTotal = sum(kList)
-                kCumSum = (kList / kTotal).cumsum()
-                rand1 = rnd.random()
-                procIndex = np.where(kCumSum > rand1)[0][0]
-                rand2 = rnd.random()
-                kmcTime -= np.log(rand2) / kTotal
-                
-                if excess:
-                    delG0Array[step] = delG0List[procIndex]
-                speciesIndex = self.nProcSpeciesIndexList[procIndex]
-                hopElementType = self.nProcHopElementTypeList[procIndex]
-                hopDistType = self.nProcHopDistTypeList[procIndex]
-                rowIndex = rowIndexList[procIndex]
-                neighborIndex = neighborIndexList[procIndex]
-                oldSiteSystemElementIndex = currentStateOccupancy[speciesIndex]
-                newSiteSystemElementIndex = neighborSiteSystemElementIndexList[procIndex]
-                currentStateOccupancy[speciesIndex] = newSiteSystemElementIndex
-                speciesDisplacementVectorList[0, speciesIndex * 3:(speciesIndex + 1) * 3] += self.system.hopNeighborList[hopElementType][hopDistType].displacementVectorList[rowIndex][neighborIndex]
-
-                oldSiteNeighbors = self.system.neighborSystemElementIndexMap[oldSiteSystemElementIndex].keys()
-                newSiteNeighbors = self.system.neighborSystemElementIndexMap[newSiteSystemElementIndex].keys()
-                currentStateESPConfig[oldSiteNeighbors] -= self.speciesChargeList[speciesIndex] * self.system.inverseCoeffDistanceList[oldSiteSystemElementIndex]
-                currentStateESPConfig[newSiteNeighbors] += self.speciesChargeList[speciesIndex] * self.system.inverseCoeffDistanceList[newSiteSystemElementIndex]
-                currentStateChargeConfig[oldSiteSystemElementIndex] -= self.speciesChargeList[speciesIndex]
-                currentStateChargeConfig[newSiteSystemElementIndex] += self.speciesChargeList[speciesIndex]
-                if (step + 1) % stepInterval == 0:
-                    timeArray[pathIndex] = kmcTime
-                    unwrappedPositionArray[pathIndex] = unwrappedPositionArray[pathIndex - 1] + speciesDisplacementVectorList
-                    speciesDisplacementVectorList = np.zeros((1, self.totalSpecies * 3))
+                    # TODO: Avoid using flatten
+                    wrappedPositionArray[pathIndex] = self.systemCoordinates[currentStateOccupancy].flatten()
+                    energyArray[pathIndex] = np.sum(currentStateChargeConfig * currentStateESPConfig) / 2
+                    potentialArray[pathIndex] = currentStateESPConfig[currentStateOccupancy]
+                pathIndex += 1
+                kmcTime = 0
+                speciesDisplacementVectorList = np.zeros((1, self.totalSpecies * 3))
+                for step in range(kmcSteps):
+                    iProc = 0
                     if excess:
-                        # TODO: Avoid using flatten
-                        wrappedPositionArray[pathIndex] = self.systemCoordinates[currentStateOccupancy].flatten()
-                        energyArray[pathIndex] = energyArray[pathIndex - 1] + sum(delG0Array[trajIndex * self.kmcSteps + step + 1 - stepInterval: trajIndex * self.kmcSteps + step + 1])
-                        potentialArray[pathIndex] = currentStateESPConfig[currentStateOccupancy]
-                    pathIndex += 1
-
-            with open(timeDataFileName, 'a') as timeDataFile:
-                np.savetxt(timeDataFile, timeArray)
-            with open(unwrappedTrajFileName, 'a') as unwrappedTrajFile:
-                np.savetxt(unwrappedTrajFile, unwrappedPositionArray)
-            if excess:
-                with open(wrappedTrajFileName, 'a') as wrappedTrajFile:
-                    np.savetxt(wrappedTrajFile, wrappedPositionArray)
-                with open(energyTrajFileName, 'a') as energyTrajFile:
-                    np.savetxt(energyTrajFile, energyArray)
-                with open(delG0TrajFileName, 'a') as delG0TrajFile:
-                    np.savetxt(delG0TrajFile, delG0Array)
-                with open(potentialTrajFileName, 'a') as potentialTrajFile:
-                    np.savetxt(potentialTrajFile, potentialArray)
-        if report:
-            self.generateSimulationLogReport(outdir)
-        return
+                        delG0List = []
+                    for speciesIndex, speciesSiteSystemElementIndex in enumerate(currentStateOccupancy):
+                        speciesIndex = self.nProcSpeciesIndexList[iProc]
+                        hopElementType = self.nProcHopElementTypeList[iProc]
+                        siteElementTypeIndex = self.nProcSiteElementTypeIndexList[iProc]
+                        rowIndex = (speciesSiteSystemElementIndex / self.material.totalElementsPerUnitCell * self.material.nElementsPerUnitCell[siteElementTypeIndex] + 
+                                    speciesSiteSystemElementIndex % self.material.totalElementsPerUnitCell - self.headStart_nElementsPerUnitCellCumSum[siteElementTypeIndex])
+                        for hopDistType in range(self.lenHopDistTypeList[speciesIndex]):
+                            localNeighborSiteSystemElementIndexList = self.system.hopNeighborList[hopElementType][hopDistType].neighborSystemElementIndices[rowIndex]
+                            for neighborIndex, neighborSiteSystemElementIndex in enumerate(localNeighborSiteSystemElementIndexList):
+                                # TODO: Introduce If condition
+                                # if neighborSystemElementIndex not in currentStateOccupancy: commit 898baa8
+                                neighborSiteSystemElementIndexList[iProc] = neighborSiteSystemElementIndex
+                                rowIndexList[iProc] = rowIndex
+                                neighborIndexList[iProc] = neighborIndex
+                                # TODO: Print out a prompt about the assumption; detailed comment here. <Using species charge to compute change in energy> May be print log report
+                                columnIndex = self.system.neighborSystemElementIndexMap[speciesSiteSystemElementIndex][neighborSiteSystemElementIndex]
+                                delG0 = (self.speciesChargeList[speciesIndex] * ((currentStateESPConfig[neighborSiteSystemElementIndex] - currentStateESPConfig[speciesSiteSystemElementIndex]
+                                                                                  - self.speciesChargeList[speciesIndex] * self.system.inverseCoeffDistanceList[speciesSiteSystemElementIndex][columnIndex])))
+                                if excess:
+                                    delG0List.append(delG0)
+                                lambdaValue = self.nProcLambdaValueList[iProc]
+                                VAB = self.nProcVABList[iProc]
+                                delGs = ((lambdaValue + delG0) ** 2 / (4 * lambdaValue)) - VAB
+                                kList[iProc] = self.material.vn * np.exp(-delGs / self.T)
+                                iProc += 1
+                    kTotal = sum(kList)
+                    kCumSum = (kList / kTotal).cumsum()
+                    rand1 = rnd.random()
+                    procIndex = np.where(kCumSum > rand1)[0][0]
+                    rand2 = rnd.random()
+                    kmcTime -= np.log(rand2) / kTotal
+                    
+                    if excess:
+                        delG0Array[step] = delG0List[procIndex]
+                    speciesIndex = self.nProcSpeciesIndexList[procIndex]
+                    hopElementType = self.nProcHopElementTypeList[procIndex]
+                    hopDistType = self.nProcHopDistTypeList[procIndex]
+                    rowIndex = rowIndexList[procIndex]
+                    neighborIndex = neighborIndexList[procIndex]
+                    oldSiteSystemElementIndex = currentStateOccupancy[speciesIndex]
+                    newSiteSystemElementIndex = neighborSiteSystemElementIndexList[procIndex]
+                    currentStateOccupancy[speciesIndex] = newSiteSystemElementIndex
+                    speciesDisplacementVectorList[0, speciesIndex * 3:(speciesIndex + 1) * 3] += self.system.hopNeighborList[hopElementType][hopDistType].displacementVectorList[rowIndex][neighborIndex]
+    
+                    oldSiteNeighbors = self.system.neighborSystemElementIndexMap[oldSiteSystemElementIndex].keys()
+                    newSiteNeighbors = self.system.neighborSystemElementIndexMap[newSiteSystemElementIndex].keys()
+                    currentStateESPConfig[oldSiteNeighbors] -= self.speciesChargeList[speciesIndex] * self.system.inverseCoeffDistanceList[oldSiteSystemElementIndex]
+                    currentStateESPConfig[newSiteNeighbors] += self.speciesChargeList[speciesIndex] * self.system.inverseCoeffDistanceList[newSiteSystemElementIndex]
+                    currentStateChargeConfig[oldSiteSystemElementIndex] -= self.speciesChargeList[speciesIndex]
+                    currentStateChargeConfig[newSiteSystemElementIndex] += self.speciesChargeList[speciesIndex]
+                    if (step + 1) % stepInterval == 0:
+                        timeArray[pathIndex] = kmcTime
+                        unwrappedPositionArray[pathIndex] = unwrappedPositionArray[pathIndex - 1] + speciesDisplacementVectorList
+                        speciesDisplacementVectorList = np.zeros((1, self.totalSpecies * 3))
+                        if excess:
+                            # TODO: Avoid using flatten
+                            wrappedPositionArray[pathIndex] = self.systemCoordinates[currentStateOccupancy].flatten()
+                            energyArray[pathIndex] = energyArray[pathIndex - 1] + sum(delG0Array[trajIndex * self.kmcSteps + step + 1 - stepInterval: trajIndex * self.kmcSteps + step + 1])
+                            potentialArray[pathIndex] = currentStateESPConfig[currentStateOccupancy]
+                        pathIndex += 1
+    
+                with open(timeDataFileName, 'a') as timeDataFile:
+                    np.savetxt(timeDataFile, timeArray)
+                with open(unwrappedTrajFileName, 'a') as unwrappedTrajFile:
+                    np.savetxt(unwrappedTrajFile, unwrappedPositionArray)
+                if excess:
+                    with open(wrappedTrajFileName, 'a') as wrappedTrajFile:
+                        np.savetxt(wrappedTrajFile, wrappedPositionArray)
+                    with open(energyTrajFileName, 'a') as energyTrajFile:
+                        np.savetxt(energyTrajFile, energyArray)
+                    with open(delG0TrajFileName, 'a') as delG0TrajFile:
+                        np.savetxt(delG0TrajFile, delG0Array)
+                    with open(potentialTrajFileName, 'a') as potentialTrajFile:
+                        np.savetxt(potentialTrajFile, potentialArray)
+            if report:
+                self.generateSimulationLogReport(outdir)
 
     def generateSimulationLogReport(self, outdir):
         """Generates an log report of the simulation and outputs to the working directory"""
