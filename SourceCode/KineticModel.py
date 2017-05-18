@@ -353,19 +353,19 @@ class neighbors(object):
         returnNeighbors.numNeighbors = numNeighbors
         return returnNeighbors
     
-    def electrostaticNeighborSites(self, systemSize, bulkSites, centerSiteIndices, neighborSiteIndices, cutoffDistLimits, dstPath,replaceExistingNeighborList):
+    def electrostaticNeighborSites(self, systemSize, bulkSites, centerSiteIndices, neighborSiteIndices, cutoffDistLimits, dstPath, replaceExistingNeighborList):
         """Returns systemElementIndexMap and distances between center sites and its 
         neighbor sites within cutoff distance"""
         neighborSiteCoords = bulkSites.cellCoordinates[neighborSiteIndices]
         neighborSiteSystemElementIndexList = bulkSites.systemElementIndexList[neighborSiteIndices]
         centerSiteCoords = bulkSites.cellCoordinates[centerSiteIndices]
         
-        neighborSystemElementIndexMapFileName = dstPath + directorySeparator + 'neighborSystemElementIndexMap.dat'
+        neighborSystemElementIndicesFileName = dstPath + directorySeparator + 'neighborSystemElementIndices.dat'
         displacementListFileName = dstPath + directorySeparator + 'displacementList.dat'
         numNeighborsFileName = dstPath + directorySeparator + 'numNeighbors.dat'
         assert (not os.path.isfile(numNeighborsFileName) or replaceExistingNeighborList), 'Requested neighbor list file already exists in the destination folder.'
         
-        open(neighborSystemElementIndexMapFileName, 'w').close()
+        open(neighborSystemElementIndicesFileName, 'w').close()
         open(displacementListFileName, 'w').close()
         open(numNeighborsFileName, 'w').close()
         
@@ -396,9 +396,8 @@ class neighbors(object):
                     iDisplacementList.append(displacement)
                     iNumNeighbors += 1
             numNeighbors[centerSiteIndex] = iNumNeighbors
-            with open(neighborSystemElementIndexMapFileName, 'a') as neighborSystemElementIndexMapFile:
-                for value, key in enumerate(neighborSiteSystemElementIndexList[iNeighborSiteIndexList]):
-                     neighborSystemElementIndexMapFile.write('%s:%s\n' % (key, value))
+            with open(neighborSystemElementIndicesFileName, 'a') as neighborSystemElementIndicesFile:
+                np.savetxt(neighborSystemElementIndicesFile, neighborSiteSystemElementIndexList[iNeighborSiteIndexList], fmt='%i')
             with open(displacementListFileName, 'a') as displacementListFile:
                 np.savetxt(displacementListFile, iDisplacementList)
         with open(numNeighborsFileName, 'a') as numNeighborsFile:
@@ -414,19 +413,19 @@ class neighbors(object):
         parentNeighborListDirPath = neighborListDirPath + directorySeparator + 'E_' + str(parentCutoff)
         childNeighborListDirPath = neighborListDirPath + directorySeparator + 'E_' + str(extractCutoff)
         
-        parentNeighborSystemElementIndexMapFileName = parentNeighborListDirPath + directorySeparator + 'neighborSystemElementIndexMap.dat'
+        parentNeighborSystemElementIndicesFileName = parentNeighborListDirPath + directorySeparator + 'neighborSystemElementIndices.dat'
         parentdisplacementListFileName = parentNeighborListDirPath + directorySeparator + 'displacementList.dat'
         parentNumNeighborsFileName = parentNeighborListDirPath + directorySeparator + 'numNeighbors.dat'
-        parentNeighborSystemElementIndexMapFile = open(parentNeighborSystemElementIndexMapFileName, 'r')
+        parentNeighborSystemElementIndicesFile = open(parentNeighborSystemElementIndicesFileName, 'r')
         parentdisplacementListFile = open(parentdisplacementListFileName, 'r')
         parentNumNeighborsFile = open(parentNumNeighborsFileName, 'r')
         
-        neighborSystemElementIndexMapFileName = childNeighborListDirPath + directorySeparator + 'neighborSystemElementIndexMap.dat'
+        neighborSystemElementIndicesFileName = childNeighborListDirPath + directorySeparator + 'neighborSystemElementIndices.dat'
         displacementListFileName = childNeighborListDirPath + directorySeparator + 'displacementList.dat'
         numNeighborsFileName = childNeighborListDirPath + directorySeparator + 'numNeighbors.dat'
         assert (not os.path.isfile(numNeighborsFileName) or replaceExistingNeighborList), 'Requested neighbor list file already exists in the destination folder.'
         
-        open(neighborSystemElementIndexMapFileName, 'w').close()
+        open(neighborSystemElementIndicesFileName, 'w').close()
         open(displacementListFileName, 'w').close()
         open(numNeighborsFileName, 'w').close()
         
@@ -435,20 +434,19 @@ class neighbors(object):
             neighborSystemElementIndexList = []
             displacementList = []
             for index in range(int(parentNumNeighborsFile.readline())):
-                neighborSystemElementIndex = parentNeighborSystemElementIndexMapFile.readline()
+                neighborSystemElementIndex = parentNeighborSystemElementIndicesFile.readline()
                 displacement = float(parentdisplacementListFile.readline().split('\n')[0])
                 if 0 < displacement <= extractCutoffBohr:
-                    neighborSystemElementIndexList.append(neighborSystemElementIndex.split(':')[0])
+                    neighborSystemElementIndexList.append(int(neighborSystemElementIndex.split('\n')[0]))
                     displacementList.append(displacement)
                     numNeighbors[centerSiteIndex] += 1
-            with open(neighborSystemElementIndexMapFileName, 'a') as neighborSystemElementIndexMapFile:
-                for value, key in enumerate(neighborSystemElementIndexList):
-                     neighborSystemElementIndexMapFile.write('%s:%s\n' % (key, value))
+            with open(neighborSystemElementIndicesFileName, 'a') as neighborSystemElementIndicesFile:
+                np.savetxt(neighborSystemElementIndicesFile, neighborSystemElementIndexList, fmt='%i')
             with open(displacementListFileName, 'a') as displacementListFile:
                 np.savetxt(displacementListFile, displacementList)
         with open(numNeighborsFileName, 'a') as numNeighborsFile:
             np.savetxt(numNeighborsFile, numNeighbors, '%i')
-        parentNeighborSystemElementIndexMapFile.close()
+        parentNeighborSystemElementIndicesFile.close()
         parentdisplacementListFile.close()
         parentNumNeighborsFile.close()
 
@@ -543,7 +541,7 @@ class system(object):
     Attributes:
     size: An array (3 x 1) defining the system size in multiple of unit cells
     """
-    def __init__(self, material, neighbors, hopNeighborList, neighborSystemElementIndexMap, displacementList, numNeighbors, speciesCount):
+    def __init__(self, material, neighbors, hopNeighborList, neighborSystemElementIndices, displacementList, numNeighbors, speciesCount):
         """Return a system object whose size is *size*"""
         self.material = material
         self.neighbors = neighbors
@@ -563,11 +561,14 @@ class system(object):
                                        for elementTypeIndex in self.material.elementTypeIndexList])
         self.latticeChargeList = np.tile(unitcellChargeList, self.numCells)
         
-        self.neighborSystemElementIndexMap = neighborSystemElementIndexMap
-        
-        # inverse of cumulative Distance
         self.displacementList = displacementList
         self.numNeighbors = numNeighbors
+        self.neighborSystemElementIndices = neighborSystemElementIndices
+        self.neighborSystemElementIndexMap = np.empty(self.neighbors.numSystemElements, dtype=object)
+        for elementIndex in range(self.neighbors.numSystemElements):
+            self.neighborSystemElementIndexMap[elementIndex] = OrderedDict(zip(self.neighborSystemElementIndices[elementIndex], range(self.numNeighbors[elementIndex])))
+        
+        # inverse of cumulative Distance
         inverseDielectricConstant = 1 / self.material.dielectricConstant
         self.inverseCoeffDistanceList = np.empty(self.neighbors.numSystemElements, dtype=object)
         for elementIndex in range(self.neighbors.numSystemElements):

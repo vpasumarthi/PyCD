@@ -72,16 +72,16 @@ def hematiteRun(systemSize, pbc, Temp, cutE, speciesCount, tFinal, nTraj, stepIn
         hopNeighborList = np.load(hopNeighborListFileName)[()]
         
         # Determine paths for electrostatic neighbor list component files
-        neighborSystemElementIndexMapFileName = neighborListDirectoryPath + directorySeparator + 'neighborSystemElementIndexMap.npy'
+        neighborSystemElementIndicesFileName = neighborListDirectoryPath + directorySeparator + 'neighborSystemElementIndices.npy'
         displacementListFileName = neighborListDirectoryPath + directorySeparator + 'displacementList.npy'
         numNeighborsFileName = neighborListDirectoryPath + directorySeparator + 'numNeighbors.npy'
         
         # Load electrostatic neighbor list component files
-        neighborSystemElementIndexMap = np.load(neighborSystemElementIndexMapFileName)
+        neighborSystemElementIndices = np.load(neighborSystemElementIndicesFileName)
         displacementList = np.load(displacementListFileName)
         numNeighbors = np.load(numNeighborsFileName)
         
-        hematiteSystem = system(hematite, hematiteNeighbors, hopNeighborList, neighborSystemElementIndexMap, displacementList, numNeighbors, speciesCount)
+        hematiteSystem = system(hematite, hematiteNeighbors, hopNeighborList, neighborSystemElementIndices, displacementList, numNeighbors, speciesCount)
         hematiteRun = run(hematiteSystem, Temp, nTraj, kmcSteps, stepInterval, gui)
         
         hematiteRun.doKMCSteps(workDirPath, report, randomSeed)
