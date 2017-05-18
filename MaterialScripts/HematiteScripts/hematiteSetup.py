@@ -13,8 +13,7 @@ def hematiteSetup(systemSize, pbc, parentCutoff, extractCutoff, replaceExistingO
     nLevelUp = 3 if platform.uname()[0]=='Linux' else 4
     systemDirectoryPath = directorySeparator.join(cwd.split(directorySeparator)[:-nLevelUp] + 
                                                   ['KineticModelSimulations', 'Hematite', ('PBC' if np.all(pbc) else 'NoPBC'), 
-                                                   ('SystemSize' + str(systemSize).replace(' ', ','))])
-
+                                                   ('SystemSize[' + ','.join(['%i' % systemSize[i] for i in range(len(systemSize))]) + ']')])
     # Build path for material and neighbors object files
     materialName = 'hematite'
     cutE = extractCutoff if extractCutoff else parentCutoff
