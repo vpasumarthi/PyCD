@@ -751,8 +751,9 @@ class run(object):
         assert outdir, 'Please provide the destination path where simulation output files needs to be saved'
         
         testEwald = 0
-        interactionPotential = 0
-        runSimulation = 1
+        interactionPotential = 1
+        absoluteInteractionPotential = 1
+        runSimulation = 0
         
         if testEwald:
             currentStateOccupancy = [0, 660]
@@ -772,18 +773,32 @@ class run(object):
             noElectronOccupancy = []
             noElectronChargeConfig = self.system.chargeConfig(noElectronOccupancy)
             noElectronESPConfig = self.system.ESPConfig(noElectronChargeConfig)
+            noElectronStateEnergy = np.sum(noElectronChargeConfig * noElectronESPConfig) / 2
             
+            oneElectronOccupancy = [0]
+            oneElectronChargeConfig = self.system.chargeConfig(oneElectronOccupancy)
+            oneElectronESPConfig = self.system.ESPConfig(oneElectronChargeConfig)
+            oneElectronStateEnergy = np.sum(oneElectronChargeConfig * oneElectronESPConfig) / 2
+
             centerSiteElementTypeIndex = 0
             systemElementIndexOffsetArray = (np.repeat(np.arange(0, self.material.totalElementsPerUnitCell * self.system.numCells, self.material.totalElementsPerUnitCell), 
                                                        self.material.nElementsPerUnitCell[centerSiteElementTypeIndex]))
             neighborSiteIndices = (np.tile(self.material.nElementsPerUnitCell[:centerSiteElementTypeIndex].sum() + 
                                            np.arange(0, self.material.nElementsPerUnitCell[centerSiteElementTypeIndex]), self.system.numCells) + systemElementIndexOffsetArray)
-            columnIndices = np.asarray([self.system.neighborSystemElementIndexMap[centerSiteIndex][neighborSiteIndex] 
-                                        for neighborSiteIndex in neighborSiteIndices 
-                                        if neighborSiteIndex in self.system.neighborSystemElementIndexMap[centerSiteIndex].keys()])
             
-            interSiteDisplacementList = np.asarray([self.system.displacementList[centerSiteIndex][columnIndex] for columnIndex in columnIndices])
-            centerNeighborSiteIndices = np.asarray([self.system.neighborSystemElementIndexMap[centerSiteIndex].keys()[columnIndex] for columnIndex in columnIndices])
+            if absoluteInteractionPotential:
+                centerNeighborSiteIndices = np.copy(neighborSiteIndices)
+                centerNeighborSiteIndices = np.delete(centerNeighborSiteIndices, centerSiteIndex)
+                interSiteDisplacementList = np.zeros(len(centerNeighborSiteIndices))
+                for index, neighborSiteIndex in enumerate(centerNeighborSiteIndices):
+                    interSiteDisplacementList[index] = self.neighbors.computeDistance(self.system.systemSize, centerSiteIndex, neighborSiteIndex)
+            else:
+                columnIndices = np.asarray([self.system.neighborSystemElementIndexMap[centerSiteIndex][neighborSiteIndex] 
+                                            for neighborSiteIndex in neighborSiteIndices 
+                                            if neighborSiteIndex in self.system.neighborSystemElementIndexMap[centerSiteIndex].keys()])
+                
+                interSiteDisplacementList = np.asarray([self.system.displacementList[centerSiteIndex][columnIndex] for columnIndex in columnIndices])
+                centerNeighborSiteIndices = np.asarray([self.system.neighborSystemElementIndexMap[centerSiteIndex].keys()[columnIndex] for columnIndex in columnIndices])
             sortedIndices = np.argsort(interSiteDisplacementList)
             sortedDisplacementArray = interSiteDisplacementList[sortedIndices]
             sortedCenterNeighborSiteIndices = centerNeighborSiteIndices[sortedIndices]
@@ -798,21 +813,30 @@ class run(object):
             interactionPotentialEnergy02 = []
             interactionPotentialEnergy05 = []
             
+                
+            
             for neighborIndex, displacement in enumerate(sortedDisplacementArray):
                 if displacement > oldDisplacement + 0.01 * self.material.ANG2BOHR:
                     currentStateOccupancy = [centerSiteIndex, sortedCenterNeighborSiteIndices[neighborIndex]]
-                    term01 = defectCharge01  * noElectronESPConfig[currentStateOccupancy[0]]
-                    term02 = defectCharge02  * noElectronESPConfig[currentStateOccupancy[1]]
-                    columnIndex = self.system.neighborSystemElementIndexMap[currentStateOccupancy[0]][currentStateOccupancy[1]]
-                    term03 = defectCharge01  * defectCharge02 * self.system.inverseCoeffDistanceList[currentStateOccupancy[0]][columnIndex] #/ (self.material.dielectricConstant * displacement)
+                    if absoluteInteractionPotential:
+                        currentStateChargeConfig = self.system.chargeConfig(currentStateOccupancy)
+                        currentStateESPConfig = self.system.ESPConfig(currentStateChargeConfig)
+                        currentStateEnergy = np.sum(currentStateChargeConfig * currentStateESPConfig) / 2
+                        interactionPotentialEnergy01.append(currentStateEnergy - noElectronStateEnergy)
+                        interactionPotentialEnergy02.append(currentStateEnergy - oneElectronStateEnergy)
+                        interactionPotentialEnergy05.append(currentStateEnergy)
+                    else:
+                        term01 = defectCharge01  * noElectronESPConfig[currentStateOccupancy[0]]
+                        term02 = defectCharge02  * noElectronESPConfig[currentStateOccupancy[1]]
+                        columnIndex = self.system.neighborSystemElementIndexMap[currentStateOccupancy[0]][currentStateOccupancy[1]]
+                        term03 = defectCharge01  * defectCharge02 * self.system.inverseCoeffDistanceList[currentStateOccupancy[0]][columnIndex] #/ (self.material.dielectricConstant * displacement)
+                        interactionPotentialEnergy01.append(term01 + term02 + term03)
+                        interactionPotentialEnergy02.append(term02 + term03)
+                        interactionPotentialEnergy05.append(term03)
                     
                     displacementList.append(displacement)
-                    interactionPotentialEnergy01.append(term01 + term02 + term03)
-                    interactionPotentialEnergy02.append(term02 + term03)
-                    interactionPotentialEnergy05.append(term03)
-                    
                     oldDisplacement = displacement
-    
+            
             interactionPotentialArray01 = np.column_stack(([np.asarray(displacementList) / self.material.ANG2BOHR, np.asarray(interactionPotentialEnergy01) / self.material.J2HARTREE / self.material.EV2J]))
             interactionPotentialArray02 = np.column_stack(([np.asarray(displacementList) / self.material.ANG2BOHR, np.asarray(interactionPotentialEnergy02) / self.material.J2HARTREE / self.material.EV2J]))
             interactionPotentialArray05 = np.column_stack(([np.asarray(displacementList) / self.material.ANG2BOHR, np.asarray(interactionPotentialEnergy05) / self.material.J2HARTREE / self.material.EV2J]))
