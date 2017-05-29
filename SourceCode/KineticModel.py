@@ -769,7 +769,6 @@ class run(object):
             open(interactionPotentialDataFileName02, 'w').close()
             open(interactionPotentialDataFileName05, 'w').close()
             
-            centerSiteIndex = 0
             noElectronOccupancy = []
             noElectronChargeConfig = self.system.chargeConfig(noElectronOccupancy)
             noElectronESPConfig = self.system.ESPConfig(noElectronChargeConfig)
@@ -785,7 +784,7 @@ class run(object):
                                                        self.material.nElementsPerUnitCell[centerSiteElementTypeIndex]))
             neighborSiteIndices = (np.tile(self.material.nElementsPerUnitCell[:centerSiteElementTypeIndex].sum() + 
                                            np.arange(0, self.material.nElementsPerUnitCell[centerSiteElementTypeIndex]), self.system.numCells) + systemElementIndexOffsetArray)
-            
+            centerSiteIndex = 0
             if absoluteInteractionPotential:
                 centerNeighborSiteIndices = np.copy(neighborSiteIndices)
                 centerNeighborSiteIndices = np.delete(centerNeighborSiteIndices, centerSiteIndex)
@@ -813,10 +812,10 @@ class run(object):
             interactionPotentialEnergy02 = []
             interactionPotentialEnergy05 = []
             
-                
-            
             for neighborIndex, displacement in enumerate(sortedDisplacementArray):
                 if displacement > oldDisplacement + 0.01 * self.material.ANG2BOHR:
+                    displacementList.append(displacement)
+                    oldDisplacement = displacement
                     currentStateOccupancy = [centerSiteIndex, sortedCenterNeighborSiteIndices[neighborIndex]]
                     if absoluteInteractionPotential:
                         currentStateChargeConfig = self.system.chargeConfig(currentStateOccupancy)
@@ -834,9 +833,6 @@ class run(object):
                         interactionPotentialEnergy02.append(term02 + term03)
                         interactionPotentialEnergy05.append(term03)
                     
-                    displacementList.append(displacement)
-                    oldDisplacement = displacement
-            
             interactionPotentialArray01 = np.column_stack(([np.asarray(displacementList) / self.material.ANG2BOHR, np.asarray(interactionPotentialEnergy01) / self.material.J2HARTREE / self.material.EV2J]))
             interactionPotentialArray02 = np.column_stack(([np.asarray(displacementList) / self.material.ANG2BOHR, np.asarray(interactionPotentialEnergy02) / self.material.J2HARTREE / self.material.EV2J]))
             interactionPotentialArray05 = np.column_stack(([np.asarray(displacementList) / self.material.ANG2BOHR, np.asarray(interactionPotentialEnergy05) / self.material.J2HARTREE / self.material.EV2J]))
