@@ -634,13 +634,13 @@ class system(object):
         con2 = (4 * np.pi) / self.systemVolume
         gexp = - np.log(ebsl)
         eta = 0.11
-        print 'eta value for this calculation: %4.10f' % eta
+        #print 'eta value for this calculation: %4.10f' % eta
         
         cccc = np.sqrt(eta / np.pi)
         
         x = np.sum(chargeConfig**2)
         # TODO: Can compute total charge based on speciesCount and their individual charges. Use dot product
-        print 'Total charge = %4.10E' % self.systemCharge
+        #print 'Total charge = %4.10E' % self.systemCharge
         
         ewald = -cccc * x - 4 * np.pi * (self.systemCharge**2) / (self.systemVolume * eta)
         tmax = np.sqrt(2 * gexp / eta)
@@ -650,7 +650,7 @@ class system(object):
         mmm2 = int(tmax / self.translationalVectorLength[1] + 1.5)
         mmm3 = int(tmax / self.translationalVectorLength[2] + 1.5)
         mmm1 = mmm2 = mmm3 = 0
-        print 'lattice summation indices -- %d %d %d' % (mmm1, mmm2, mmm3)
+        #print 'lattice summation indices -- %d %d %d' % (mmm1, mmm2, mmm3)
         ewaldReal = 0
         for a in range(self.neighbors.numSystemElements):
             for b in range(self.neighbors.numSystemElements):
@@ -664,13 +664,13 @@ class system(object):
                                 rmag = np.linalg.norm(w)
                                 arg = rmag * seta
                                 ewaldReal += prod * erfc(arg) / rmag / self.material.dielectricConstant
-        print 'Real space part of the ewald energy in a.u.: %2.8f eV' % (ewaldReal / 2 / self.material.EV2J / self.material.J2HARTREE)
-        print 'Electrostatic energy computed from ESPConfig: %2.8f eV' % (np.sum(chargeConfig * self.ESPConfig(chargeConfig)) / 2 / self.material.EV2J / self.material.J2HARTREE)
+        #print 'Real space part of the ewald energy in a.u.: %2.8f eV' % (ewaldReal / 2 / self.material.EV2J / self.material.J2HARTREE)
+        #print 'Electrostatic energy computed from ESPConfig: %2.8f eV' % (np.sum(chargeConfig * self.ESPConfig(chargeConfig)) / 2 / self.material.EV2J / self.material.J2HARTREE)
         ewald += ewaldReal
         mmm1 = kmax
         mmm2 = kmax
         mmm3 = kmax
-        print 'Reciprocal lattice summation indices -- %d %d %d' % (mmm1, mmm2, mmm3)
+        #print 'Reciprocal lattice summation indices -- %d %d %d' % (mmm1, mmm2, mmm3)
         
         for i in range(-mmm1, mmm1+1):
             for j in range(-mmm2, mmm2+1):
@@ -685,7 +685,8 @@ class system(object):
                                 prod = chargeConfig[a] * chargeConfig[b]
                                 arg = tpi * np.dot(np.array([i, j, k]), v)
                                 ewald += x * prod * np.cos(arg) / self.material.dielectricConstant
-        print 'Ewald energy in Rydbergs: %2.8f' % ewald
+        #print 'Ewald energy in Rydbergs: %2.8f' % ewald
+        return ewald
     
 class run(object):
     """defines the subroutines for running Kinetic Monte Carlo and computing electrostatic 
@@ -752,6 +753,8 @@ class run(object):
         
         testEwald = 0
         interactionPotential = 1
+        ewaldInteractionPotential = 1
+        kmax = 0
         absoluteInteractionPotential = 1
         runSimulation = 0
         
@@ -771,13 +774,20 @@ class run(object):
             
             noElectronOccupancy = []
             noElectronChargeConfig = self.system.chargeConfig(noElectronOccupancy)
-            noElectronESPConfig = self.system.ESPConfig(noElectronChargeConfig)
-            noElectronStateEnergy = np.sum(noElectronChargeConfig * noElectronESPConfig) / 2
+            if ewaldInteractionPotential:
+                noElectronStateEnergy = self.system.ewaldSum(noElectronChargeConfig, kmax)
+            else:
+                noElectronESPConfig = self.system.ESPConfig(noElectronChargeConfig)
+                noElectronStateEnergy = np.sum(noElectronChargeConfig * noElectronESPConfig) / 2
             
             oneElectronOccupancy = [0]
             oneElectronChargeConfig = self.system.chargeConfig(oneElectronOccupancy)
-            oneElectronESPConfig = self.system.ESPConfig(oneElectronChargeConfig)
-            oneElectronStateEnergy = np.sum(oneElectronChargeConfig * oneElectronESPConfig) / 2
+            if ewaldInteractionPotential:
+                kmax = 4
+                oneElectronStateEnergy = self.system.ewaldSum(oneElectronChargeConfig, kmax)
+            else:
+                oneElectronESPConfig = self.system.ESPConfig(oneElectronChargeConfig)
+                oneElectronStateEnergy = np.sum(oneElectronChargeConfig * oneElectronESPConfig) / 2
 
             centerSiteElementTypeIndex = 0
             systemElementIndexOffsetArray = (np.repeat(np.arange(0, self.material.totalElementsPerUnitCell * self.system.numCells, self.material.totalElementsPerUnitCell), 
@@ -819,8 +829,12 @@ class run(object):
                     currentStateOccupancy = [centerSiteIndex, sortedCenterNeighborSiteIndices[neighborIndex]]
                     if absoluteInteractionPotential:
                         currentStateChargeConfig = self.system.chargeConfig(currentStateOccupancy)
-                        currentStateESPConfig = self.system.ESPConfig(currentStateChargeConfig)
-                        currentStateEnergy = np.sum(currentStateChargeConfig * currentStateESPConfig) / 2
+                        if ewaldInteractionPotential:
+                            kmax = 4
+                            currentStateEnergy = self.system.ewaldSum(currentStateChargeConfig, kmax)
+                        else:
+                            currentStateESPConfig = self.system.ESPConfig(currentStateChargeConfig)
+                            currentStateEnergy = np.sum(currentStateChargeConfig * currentStateESPConfig) / 2
                         interactionPotentialEnergy01.append(currentStateEnergy - noElectronStateEnergy)
                         interactionPotentialEnergy02.append(currentStateEnergy - oneElectronStateEnergy)
                         interactionPotentialEnergy05.append(currentStateEnergy)
