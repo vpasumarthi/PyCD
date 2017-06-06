@@ -45,4 +45,7 @@ class hematiteParameters(object):
         self.elementTypeDelimiter = ':' 
         self.emptySpeciesType = 'empty'
         self.siteIdentifier = '0'
-        self.dielectricConstant = 25.0 # Rosso, K. M., et al. (2003). The Journal of Chemical Physics 118(14): 6455-6466.
+        self.dielectricConstant = 9.355 # Direction-averaged value of the static dielectric constant of the potential 
+                                        # model used in KMC paper. Dielectric constant tensor obtained from METADISE.
+                                        # KMC paper: Kerisit et al., The Journal of Chemical Physics 127, 124706 (2007); 
+                                        # DOI: 10.1063/1.2768522
