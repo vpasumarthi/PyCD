@@ -627,8 +627,8 @@ class system(object):
             neighborIndices = self.neighborSystemElementIndexMap[elementIndex].keys()
             ESPConfig[elementIndex] = np.sum(self.inverseCoeffDistanceList[elementIndex] * currentStateChargeConfig[neighborIndices])
         return ESPConfig
-    #@profile
-    def ewaldSum(self, chargeConfig, kmax, precomputedArray01, precomputedArray02, precomputedArray03):
+    @profile
+    def ewaldSum(self, chargeConfigProd, kmax, precomputedArray01, precomputedArray02, precomputedArray03):
 
         tpi = 2 * np.pi
         con = self.systemVolume / (4 * np.pi)
@@ -638,8 +638,7 @@ class system(object):
         
         cccc = np.sqrt(eta / np.pi)
         
-        x = np.sum(chargeConfig**2)
-        chargeConfigProd = np.dot(chargeConfig[np.newaxis, :].transpose(), chargeConfig[np.newaxis, :])
+        x = np.sum(np.diag(chargeConfigProd))
         # TODO: Can compute total charge based on speciesCount and their individual charges. Use dot product
         #print 'Total charge = %4.10E' % self.systemCharge
         
@@ -734,8 +733,8 @@ class run(object):
         
         # total number of species
         self.totalSpecies = self.system.speciesCount.sum()
-
-    #@profile
+    
+    @profile
     def doKMCSteps(self, outdir, report=1, randomSeed=1):
         """Subroutine to run the KMC simulation by specified number of steps"""
         assert outdir, 'Please provide the destination path where simulation output files needs to be saved'
@@ -918,7 +917,11 @@ class run(object):
                 currentStateChargeConfig = self.system.chargeConfig(currentStateOccupancy)
                 if ewaldDelG0:
                     print currentStateOccupancy
-                    currentStateEnergy = self.system.ewaldSum(currentStateChargeConfig, kmax, precomputedArray01, precomputedArray02, precomputedArray03)
+                    currentStateChargeConfigProd = np.zeros((self.neighbors.numSystemElements, self.neighbors.numSystemElements))
+                    for i in range(self.neighbors.numSystemElements):
+                        for j in range(self.neighbors.numSystemElements):
+                            currentStateChargeConfigProd[i][j] = currentStateChargeConfig[i] * currentStateChargeConfig[j]
+                    currentStateEnergy = self.system.ewaldSum(currentStateChargeConfigProd, kmax, precomputedArray01, precomputedArray02, precomputedArray03)
                     print currentStateEnergy
                 else:
                     print currentStateOccupancy
