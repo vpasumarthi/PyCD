@@ -577,7 +577,10 @@ class system(object):
         # positions of all system elements
         self.systemCartesianCoordinates = self.neighbors.bulkSites.cellCoordinates
         self.systemFractionalCoordinates = np.dot(self.systemCartesianCoordinates, np.linalg.inv(np.multiply(self.systemSize, self.material.latticeMatrix)))
-        self.systemFractionalDistance = np.tile(np.arange(self.neighbors.numSystemElements), (self.neighbors.numSystemElements, 1)).transpose() - np.tile(np.arange(self.neighbors.numSystemElements), (self.neighbors.numSystemElements, 1))
+        self.systemFractionalDistance = np.zeros((self.neighbors.numSystemElements, self.neighbors.numSystemElements, 3))
+        for i in range(self.neighbors.numSystemElements):
+            for j in range(self.neighbors.numSystemElements):
+                self.systemFractionalDistance[i][j] = self.systemFractionalCoordinates[i] - self.systemFractionalCoordinates[j]
         
         # variables for ewald sum
         self.translationalMatrix = np.multiply(self.systemSize, self.material.latticeMatrix) 
@@ -624,68 +627,53 @@ class system(object):
             neighborIndices = self.neighborSystemElementIndexMap[elementIndex].keys()
             ESPConfig[elementIndex] = np.sum(self.inverseCoeffDistanceList[elementIndex] * currentStateChargeConfig[neighborIndices])
         return ESPConfig
-    @profile
-    def ewaldSum(self, chargeConfig, kmax):
-        from scipy.special import erfc
-        
-        ebsl = 1.00E-16
-        
+    #@profile
+    def ewaldSum(self, chargeConfig, kmax, precomputedArray01, precomputedArray02, precomputedArray03):
+
         tpi = 2 * np.pi
         con = self.systemVolume / (4 * np.pi)
         con2 = (4 * np.pi) / self.systemVolume
-        gexp = - np.log(ebsl)
         eta = 0.11
         #print 'eta value for this calculation: %4.10f' % eta
         
         cccc = np.sqrt(eta / np.pi)
         
         x = np.sum(chargeConfig**2)
+        chargeConfigProd = np.dot(chargeConfig[np.newaxis, :].transpose(), chargeConfig[np.newaxis, :])
         # TODO: Can compute total charge based on speciesCount and their individual charges. Use dot product
         #print 'Total charge = %4.10E' % self.systemCharge
         
         ewald = -cccc * x - 4 * np.pi * (self.systemCharge**2) / (self.systemVolume * eta)
-        tmax = np.sqrt(2 * gexp / eta)
-        seta = np.sqrt(eta) / 2
         
-        mmm1 = int(tmax / self.translationalVectorLength[0] + 1.5)
-        mmm2 = int(tmax / self.translationalVectorLength[1] + 1.5)
-        mmm3 = int(tmax / self.translationalVectorLength[2] + 1.5)
+        #tmax = np.sqrt(2 * gexp / eta)
+        #mmm1 = int(tmax / self.translationalVectorLength[0] + 1.5)
+        #mmm2 = int(tmax / self.translationalVectorLength[1] + 1.5)
+        #mmm3 = int(tmax / self.translationalVectorLength[2] + 1.5)
         mmm1 = mmm2 = mmm3 = 0
         #print 'lattice summation indices -- %d %d %d' % (mmm1, mmm2, mmm3)
         ewaldReal = 0
         for a in range(self.neighbors.numSystemElements):
             for b in range(self.neighbors.numSystemElements):
-                v = np.dot(self.systemFractionalCoordinates[a, :] - self.systemFractionalCoordinates[b, :], self.translationalMatrix)
-                prod = chargeConfig[a] * chargeConfig[b]
+                index = -1
                 for i in range(-mmm1, mmm1+1):
                     for j in range(-mmm2, mmm2+1):
                         for k in range(-mmm3, mmm3+1):
+                            index += 1
                             if a != b or not np.all(np.array([i, j, k])==0):
-                                w = v + np.dot(np.array([i, j, k]), self.translationalMatrix)
-                                rmag = np.linalg.norm(w)
-                                arg = rmag * seta
-                                ewaldReal += prod * erfc(arg) / rmag / self.material.dielectricConstant
+                                ewaldReal += chargeConfigProd[a][b] * precomputedArray03[a][index*self.neighbors.numSystemElements+b]
         #print 'Real space part of the ewald energy in a.u.: %2.8f eV' % (ewaldReal / 2 / self.material.EV2J / self.material.J2HARTREE)
         #print 'Electrostatic energy computed from ESPConfig: %2.8f eV' % (np.sum(chargeConfig * self.ESPConfig(chargeConfig)) / 2 / self.material.EV2J / self.material.J2HARTREE)
         ewald += ewaldReal
-        mmm1 = kmax
-        mmm2 = kmax
-        mmm3 = kmax
         #print 'Reciprocal lattice summation indices -- %d %d %d' % (mmm1, mmm2, mmm3)
-        
-        for i in range(-mmm1, mmm1+1):
-            for j in range(-mmm2, mmm2+1):
-                for k in range(-mmm3, mmm3+1):
+        index = -1
+        for i in range(-kmax, kmax+1):
+            for j in range(-kmax, kmax+1):
+                for k in range(-kmax, kmax+1):
+                    index += 1
                     if not np.all(np.array([i, j, k])==0):
-                        w = np.dot(np.array([i, j, k]), self.reciprocalLatticeMatrix)
-                        rmag2 = np.dot(w, w)
-                        x = con2 * np.exp(-rmag2 / eta) / rmag2
                         for a in range(self.neighbors.numSystemElements):
                             for b in range(self.neighbors.numSystemElements):
-                                v = self.systemFractionalCoordinates[a, :] - self.systemFractionalCoordinates[b, :]
-                                prod = chargeConfig[a] * chargeConfig[b]
-                                arg = tpi * np.dot(np.array([i, j, k]), v)
-                                ewald += x * prod * np.cos(arg) / self.material.dielectricConstant
+                                ewald += precomputedArray02[i][j][k] * chargeConfigProd[a][b] * precomputedArray01[a][index*self.neighbors.numSystemElements+b]
         #print 'Ewald energy in Rydbergs: %2.8f' % ewald
         return ewald
     
@@ -755,7 +743,7 @@ class run(object):
         testEwald = 0
         interactionPotential = 0
         ewaldInteractionPotential = 0
-        kmax = 2
+        kmax = 4
         absoluteInteractionPotential = 0
         runSimulation = 1
         ewaldDelG0 = 1
@@ -878,12 +866,59 @@ class run(object):
             rowIndexList = np.zeros(self.nProc, dtype=int)
             neighborIndexList = np.zeros(self.nProc, dtype=int)
             assert 'E' in self.material.neighborCutoffDist.keys(), 'Please specify the cutoff distance for electrostatic interactions'
+            
+            if ewaldDelG0:
+                from scipy.special import erfc
+                tpi = 2 * np.pi
+                eta = 0.11
+                seta = np.sqrt(eta) / 2
+                con2 = (4 * np.pi) / self.system.systemVolume
+                precomputedArray01 = np.zeros((self.neighbors.numSystemElements, self.neighbors.numSystemElements * (2 * kmax + 1)**3))
+                precomputedArray02 = np.zeros((2 * kmax + 1, 2 * kmax + 1, 2 * kmax + 1))
+                
+                ebsl = 1.00E-16
+                gexp = - np.log(ebsl)
+                tmax = np.sqrt(2 * gexp / eta)
+                mmm1 = int(tmax / self.system.translationalVectorLength[0] + 1.5)
+                mmm2 = int(tmax / self.system.translationalVectorLength[1] + 1.5)
+                mmm3 = int(tmax / self.system.translationalVectorLength[2] + 1.5)
+                mmm1 = mmm2 = mmm3 = 0
+                tempArray = np.zeros((self.neighbors.numSystemElements, self.neighbors.numSystemElements, 3))
+                precomputedArray03 = np.zeros((self.neighbors.numSystemElements, self.neighbors.numSystemElements * (2 * mmm1 + 1) * (2 * mmm2 + 1) * (2 * mmm3 + 1)))
+                for a in range(self.neighbors.numSystemElements):
+                    for b in range(self.neighbors.numSystemElements):
+                        tempArray[a][b] = np.dot(self.system.systemFractionalDistance[a][b], self.system.translationalMatrix)
+                index = -1
+                np.seterr(divide='ignore')
+                for i in range(-mmm1, mmm1+1):
+                    for j in range(-mmm2, mmm2+1):
+                        for k in range(-mmm3, mmm3+1):
+                            index += 1
+                            temp01 = np.dot(np.array([i, j, k]), self.system.translationalMatrix)
+                            for a in range(self.neighbors.numSystemElements):
+                                for b in range(self.neighbors.numSystemElements):
+                                    temp02 = np.linalg.norm(tempArray[a][b] + temp01)
+                                    precomputedArray03[a][index*self.neighbors.numSystemElements+b] = erfc(temp02 * seta) / temp02 / self.material.dielectricConstant
+                
+                index = -1
+                for i in range(-kmax, kmax+1):
+                    for j in range(-kmax, kmax+1):
+                        for k in range(-kmax, kmax+1):
+                            index += 1
+                            w = np.dot(np.array([i, j, k]), self.system.reciprocalLatticeMatrix)
+                            rmag2 = np.dot(w, w)
+                            precomputedArray02[i][j][k] = con2 * np.exp(-rmag2 / eta) / rmag2
+                            for a in range(self.neighbors.numSystemElements):
+                                for b in range(self.neighbors.numSystemElements):
+                                    precomputedArray01[a][index*self.neighbors.numSystemElements+b] = np.cos(tpi * np.dot(np.array([i, j, k]), self.system.systemFractionalDistance[a][b])) / self.material.dielectricConstant        
+                np.seterr(divide='warn')
+                
             for trajIndex in range(nTraj):
                 currentStateOccupancy = self.system.generateRandomOccupancy(self.system.speciesCount)
                 currentStateChargeConfig = self.system.chargeConfig(currentStateOccupancy)
                 if ewaldDelG0:
                     print currentStateOccupancy
-                    currentStateEnergy = self.system.ewaldSum(currentStateChargeConfig, kmax)
+                    currentStateEnergy = self.system.ewaldSum(currentStateChargeConfig, kmax, precomputedArray01, precomputedArray02, precomputedArray03)
                     print currentStateEnergy
                 else:
                     print currentStateOccupancy
@@ -924,7 +959,7 @@ class run(object):
                                     newStateOccupancy = currentStateOccupancy[:]
                                     newStateOccupancy[speciesIndex] = neighborSiteSystemElementIndex
                                     newStateChargeConfig = self.system.chargeConfig(newStateOccupancy)
-                                    newStateEnergy = self.system.ewaldSum(newStateChargeConfig, kmax)
+                                    newStateEnergy = self.system.ewaldSum(newStateChargeConfig, kmax, precomputedArray01, precomputedArray02, precomputedArray03)
                                     delG0 = newStateEnergy - currentStateEnergy
                                     delG0List.append(delG0)
                                 else:
