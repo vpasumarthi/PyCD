@@ -650,17 +650,18 @@ class system(object):
         #mmm3 = int(tmax / self.translationalVectorLength[2] + 1.5)
         mmm1 = mmm2 = mmm3 = 0
         #print 'lattice summation indices -- %d %d %d' % (mmm1, mmm2, mmm3)
-        ewaldReal = 0
+        ewaldPart = 0
+        ewaldRealPart = 0
         index = -1
         for i in range(-mmm1, mmm1+1):
             for j in range(-mmm2, mmm2+1):
                 for k in range(-mmm3, mmm3+1):
                     index += 1
-                    ewaldReal += np.sum(np.sum(np.multiply(chargeConfigProd, precomputedArray02[:, index*self.neighbors.numSystemElements:(index+1)*self.neighbors.numSystemElements])))
+                    ewaldRealPart += precomputedArray02[:, index*self.neighbors.numSystemElements:(index+1)*self.neighbors.numSystemElements]
 
         #print 'Real space part of the ewald energy in a.u.: %2.8f eV' % (ewaldReal / 2 / self.material.EV2J / self.material.J2HARTREE)
         #print 'Electrostatic energy computed from ESPConfig: %2.8f eV' % (np.sum(chargeConfig * self.ESPConfig(chargeConfig)) / 2 / self.material.EV2J / self.material.J2HARTREE)
-        ewald += ewaldReal
+        ewaldPart += ewaldRealPart
         #print 'Reciprocal lattice summation indices -- %d %d %d' % (mmm1, mmm2, mmm3)
         index = -1
         for i in range(-kmax, kmax+1):
@@ -668,7 +669,8 @@ class system(object):
                 for k in range(-kmax, kmax+1):
                     index += 1
                     if not np.all(np.array([i, j, k])==0):
-                        ewald += np.sum(np.sum(np.multiply(chargeConfigProd, precomputedArray01[:, index*self.neighbors.numSystemElements:(index+1)*self.neighbors.numSystemElements])))
+                        ewaldPart += precomputedArray01[:, index*self.neighbors.numSystemElements:(index+1)*self.neighbors.numSystemElements]
+        ewald += np.sum(np.sum(np.multiply(chargeConfigProd, ewaldPart)))
         #print 'Ewald energy in Rydbergs: %2.8f' % ewald
         return ewald
     
