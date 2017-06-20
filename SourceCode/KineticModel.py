@@ -627,8 +627,8 @@ class system(object):
             neighborIndices = self.neighborSystemElementIndexMap[elementIndex].keys()
             ESPConfig[elementIndex] = np.sum(self.inverseCoeffDistanceList[elementIndex] * currentStateChargeConfig[neighborIndices])
         return ESPConfig
-    @profile
-    def ewaldSum(self, chargeConfigProd, kmax, precomputedArray01, precomputedArray02, precomputedArray03):
+    #@profile
+    def ewaldSum(self, chargeConfigProd, kmax, precomputedArray01, precomputedArray02):
 
         tpi = 2 * np.pi
         con = self.systemVolume / (4 * np.pi)
@@ -659,7 +659,7 @@ class system(object):
                         for k in range(-mmm3, mmm3+1):
                             index += 1
                             if a != b or not np.all(np.array([i, j, k])==0):
-                                ewaldReal += chargeConfigProd[a][b] * precomputedArray03[a][index*self.neighbors.numSystemElements+b]
+                                ewaldReal += chargeConfigProd[a][b] * precomputedArray02[a][index*self.neighbors.numSystemElements+b]
         #print 'Real space part of the ewald energy in a.u.: %2.8f eV' % (ewaldReal / 2 / self.material.EV2J / self.material.J2HARTREE)
         #print 'Electrostatic energy computed from ESPConfig: %2.8f eV' % (np.sum(chargeConfig * self.ESPConfig(chargeConfig)) / 2 / self.material.EV2J / self.material.J2HARTREE)
         ewald += ewaldReal
@@ -672,7 +672,7 @@ class system(object):
                     if not np.all(np.array([i, j, k])==0):
                         for a in range(self.neighbors.numSystemElements):
                             for b in range(self.neighbors.numSystemElements):
-                                ewald += precomputedArray02[i][j][k] * chargeConfigProd[a][b] * precomputedArray01[a][index*self.neighbors.numSystemElements+b]
+                                ewald += chargeConfigProd[a][b] * precomputedArray01[a][index*self.neighbors.numSystemElements+b]
         #print 'Ewald energy in Rydbergs: %2.8f' % ewald
         return ewald
     
@@ -734,7 +734,7 @@ class run(object):
         # total number of species
         self.totalSpecies = self.system.speciesCount.sum()
     
-    @profile
+    #@profile
     def doKMCSteps(self, outdir, report=1, randomSeed=1):
         """Subroutine to run the KMC simulation by specified number of steps"""
         assert outdir, 'Please provide the destination path where simulation output files needs to be saved'
@@ -742,7 +742,7 @@ class run(object):
         testEwald = 0
         interactionPotential = 0
         ewaldInteractionPotential = 0
-        kmax = 4
+        kmax = 2
         absoluteInteractionPotential = 0
         runSimulation = 1
         ewaldDelG0 = 1
@@ -873,7 +873,6 @@ class run(object):
                 seta = np.sqrt(eta) / 2
                 con2 = (4 * np.pi) / self.system.systemVolume
                 precomputedArray01 = np.zeros((self.neighbors.numSystemElements, self.neighbors.numSystemElements * (2 * kmax + 1)**3))
-                precomputedArray02 = np.zeros((2 * kmax + 1, 2 * kmax + 1, 2 * kmax + 1))
                 
                 ebsl = 1.00E-16
                 gexp = - np.log(ebsl)
@@ -882,11 +881,11 @@ class run(object):
                 mmm2 = int(tmax / self.system.translationalVectorLength[1] + 1.5)
                 mmm3 = int(tmax / self.system.translationalVectorLength[2] + 1.5)
                 mmm1 = mmm2 = mmm3 = 0
-                tempArray = np.zeros((self.neighbors.numSystemElements, self.neighbors.numSystemElements, 3))
-                precomputedArray03 = np.zeros((self.neighbors.numSystemElements, self.neighbors.numSystemElements * (2 * mmm1 + 1) * (2 * mmm2 + 1) * (2 * mmm3 + 1)))
+                tempArray01 = np.zeros((self.neighbors.numSystemElements, self.neighbors.numSystemElements, 3))
+                precomputedArray02 = np.zeros((self.neighbors.numSystemElements, self.neighbors.numSystemElements * (2 * mmm1 + 1) * (2 * mmm2 + 1) * (2 * mmm3 + 1)))
                 for a in range(self.neighbors.numSystemElements):
                     for b in range(self.neighbors.numSystemElements):
-                        tempArray[a][b] = np.dot(self.system.systemFractionalDistance[a][b], self.system.translationalMatrix)
+                        tempArray01[a][b] = np.dot(self.system.systemFractionalDistance[a][b], self.system.translationalMatrix)
                 index = -1
                 np.seterr(divide='ignore')
                 for i in range(-mmm1, mmm1+1):
@@ -896,9 +895,10 @@ class run(object):
                             temp01 = np.dot(np.array([i, j, k]), self.system.translationalMatrix)
                             for a in range(self.neighbors.numSystemElements):
                                 for b in range(self.neighbors.numSystemElements):
-                                    temp02 = np.linalg.norm(tempArray[a][b] + temp01)
-                                    precomputedArray03[a][index*self.neighbors.numSystemElements+b] = erfc(temp02 * seta) / temp02 / self.material.dielectricConstant
+                                    temp02 = np.linalg.norm(tempArray01[a][b] + temp01)
+                                    precomputedArray02[a][index*self.neighbors.numSystemElements+b] = erfc(temp02 * seta) / temp02 / self.material.dielectricConstant
                 
+                tempArray02 = np.zeros((2 * kmax + 1, 2 * kmax + 1, 2 * kmax + 1))
                 index = -1
                 for i in range(-kmax, kmax+1):
                     for j in range(-kmax, kmax+1):
@@ -906,10 +906,10 @@ class run(object):
                             index += 1
                             w = np.dot(np.array([i, j, k]), self.system.reciprocalLatticeMatrix)
                             rmag2 = np.dot(w, w)
-                            precomputedArray02[i][j][k] = con2 * np.exp(-rmag2 / eta) / rmag2
+                            tempArray02[i][j][k] = con2 * np.exp(-rmag2 / eta) / rmag2
                             for a in range(self.neighbors.numSystemElements):
                                 for b in range(self.neighbors.numSystemElements):
-                                    precomputedArray01[a][index*self.neighbors.numSystemElements+b] = np.cos(tpi * np.dot(np.array([i, j, k]), self.system.systemFractionalDistance[a][b])) / self.material.dielectricConstant        
+                                    precomputedArray01[a][index*self.neighbors.numSystemElements+b] = tempArray02[i][j][k] * np.cos(tpi * np.dot(np.array([i, j, k]), self.system.systemFractionalDistance[a][b])) / self.material.dielectricConstant        
                 np.seterr(divide='warn')
                 
             for trajIndex in range(nTraj):
@@ -921,7 +921,7 @@ class run(object):
                     for i in range(self.neighbors.numSystemElements):
                         for j in range(self.neighbors.numSystemElements):
                             currentStateChargeConfigProd[i][j] = currentStateChargeConfig[i] * currentStateChargeConfig[j]
-                    currentStateEnergy = self.system.ewaldSum(currentStateChargeConfigProd, kmax, precomputedArray01, precomputedArray02, precomputedArray03)
+                    currentStateEnergy = self.system.ewaldSum(currentStateChargeConfigProd, kmax, precomputedArray01, precomputedArray02)
                     print currentStateEnergy
                 else:
                     print currentStateOccupancy
@@ -962,7 +962,7 @@ class run(object):
                                     newStateOccupancy = currentStateOccupancy[:]
                                     newStateOccupancy[speciesIndex] = neighborSiteSystemElementIndex
                                     newStateChargeConfig = self.system.chargeConfig(newStateOccupancy)
-                                    newStateEnergy = self.system.ewaldSum(newStateChargeConfig, kmax, precomputedArray01, precomputedArray02, precomputedArray03)
+                                    newStateEnergy = self.system.ewaldSum(newStateChargeConfig, kmax, precomputedArray01, precomputedArray02)
                                     delG0 = newStateEnergy - currentStateEnergy
                                     delG0List.append(delG0)
                                 else:
