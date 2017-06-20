@@ -648,20 +648,12 @@ class system(object):
         #mmm1 = int(tmax / self.translationalVectorLength[0] + 1.5)
         #mmm2 = int(tmax / self.translationalVectorLength[1] + 1.5)
         #mmm3 = int(tmax / self.translationalVectorLength[2] + 1.5)
-        mmm1 = mmm2 = mmm3 = 0
+        #mmm1 = mmm2 = mmm3 = 0
         #print 'lattice summation indices -- %d %d %d' % (mmm1, mmm2, mmm3)
-        ewaldPart = 0
-        ewaldRealPart = 0
-        index = -1
-        for i in range(-mmm1, mmm1+1):
-            for j in range(-mmm2, mmm2+1):
-                for k in range(-mmm3, mmm3+1):
-                    index += 1
-                    ewaldRealPart += precomputedArray02[:, index*self.neighbors.numSystemElements:(index+1)*self.neighbors.numSystemElements]
+        ewaldPart = precomputedArray02
 
         #print 'Real space part of the ewald energy in a.u.: %2.8f eV' % (ewaldReal / 2 / self.material.EV2J / self.material.J2HARTREE)
         #print 'Electrostatic energy computed from ESPConfig: %2.8f eV' % (np.sum(chargeConfig * self.ESPConfig(chargeConfig)) / 2 / self.material.EV2J / self.material.J2HARTREE)
-        ewaldPart += ewaldRealPart
         #print 'Reciprocal lattice summation indices -- %d %d %d' % (mmm1, mmm2, mmm3)
         index = -1
         for i in range(-kmax, kmax+1):
@@ -880,7 +872,8 @@ class run(object):
                 mmm3 = int(tmax / self.system.translationalVectorLength[2] + 1.5)
                 mmm1 = mmm2 = mmm3 = 0
                 tempArray01 = np.zeros((self.neighbors.numSystemElements, self.neighbors.numSystemElements, 3))
-                precomputedArray02 = np.zeros((self.neighbors.numSystemElements, self.neighbors.numSystemElements * (2 * mmm1 + 1) * (2 * mmm2 + 1) * (2 * mmm3 + 1)))
+                #precomputedArray02 = np.zeros((self.neighbors.numSystemElements, self.neighbors.numSystemElements * (2 * mmm1 + 1) * (2 * mmm2 + 1) * (2 * mmm3 + 1)))
+                precomputedArray02 = np.zeros((self.neighbors.numSystemElements, self.neighbors.numSystemElements))
                 for a in range(self.neighbors.numSystemElements):
                     for b in range(self.neighbors.numSystemElements):
                         tempArray01[a][b] = np.dot(self.system.systemFractionalDistance[a][b], self.system.translationalMatrix)
@@ -895,9 +888,7 @@ class run(object):
                                 for b in range(self.neighbors.numSystemElements):
                                     if a != b or not np.all(np.array([i, j, k])==0):
                                         temp02 = np.linalg.norm(tempArray01[a][b] + temp01)
-                                        precomputedArray02[a][index*self.neighbors.numSystemElements+b] = erfc(temp02 * seta) / temp02 / self.material.dielectricConstant
-                                    else:
-                                        precomputedArray02[a][index*self.neighbors.numSystemElements+b] = 0
+                                        precomputedArray02[a][b] += erfc(temp02 * seta) / temp02 / self.material.dielectricConstant
                 
                 tempArray02 = np.zeros((2 * kmax + 1, 2 * kmax + 1, 2 * kmax + 1))
                 index = -1
