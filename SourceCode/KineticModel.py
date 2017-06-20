@@ -668,9 +668,7 @@ class system(object):
                 for k in range(-kmax, kmax+1):
                     index += 1
                     if not np.all(np.array([i, j, k])==0):
-                        for a in range(self.neighbors.numSystemElements):
-                            for b in range(self.neighbors.numSystemElements):
-                                ewald += chargeConfigProd[a][b] * precomputedArray01[a][index*self.neighbors.numSystemElements+b]
+                        ewald += np.sum(np.sum(np.multiply(chargeConfigProd, precomputedArray01[:, index*self.neighbors.numSystemElements:(index+1)*self.neighbors.numSystemElements])))
         #print 'Ewald energy in Rydbergs: %2.8f' % ewald
         return ewald
     
