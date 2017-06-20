@@ -640,11 +640,8 @@ class system(object):
         mmm2 = int(tmax / self.translationalVectorLength[1] + 1.5)
         mmm3 = int(tmax / self.translationalVectorLength[2] + 1.5)
         mmm1 = mmm2 = mmm3 = 0
-        tempArray01 = np.zeros((self.neighbors.numSystemElements, self.neighbors.numSystemElements, 3))
         
-        for a in range(self.neighbors.numSystemElements):
-            for b in range(self.neighbors.numSystemElements):
-                tempArray01[a][b] = np.dot(self.systemFractionalDistance[a][b], self.translationalMatrix)
+        tempArray01 = np.tensordot(self.systemFractionalDistance, self.translationalMatrix, axes=([2], [0]))
         np.seterr(divide='ignore')
         for i in range(-mmm1, mmm1+1):
             for j in range(-mmm2, mmm2+1):
@@ -664,9 +661,10 @@ class system(object):
                         w = np.dot(np.array([i, j, k]), self.reciprocalLatticeMatrix)
                         rmag2 = np.dot(w, w)
                         tempArray02[i][j][k] = con2 * np.exp(-rmag2 / eta) / rmag2
-                        for a in range(self.neighbors.numSystemElements):
-                            for b in range(self.neighbors.numSystemElements):
-                                precomputedArray[a][b] += tempArray02[i][j][k] * np.cos(tpi * np.dot(np.array([i, j, k]), self.systemFractionalDistance[a][b])) / self.material.dielectricConstant        
+                        precomputedArray += tempArray02[i][j][k] * np.cos(tpi * np.tensordot(self.systemFractionalDistance, np.array([i, j, k]), axes=([2], [0]))) / self.material.dielectricConstant
+                        #for a in range(self.neighbors.numSystemElements):
+                        #    for b in range(self.neighbors.numSystemElements):
+                        #        precomputedArray[a][b] += tempArray02[i][j][k] * np.cos(tpi * np.dot(np.array([i, j, k]), self.systemFractionalDistance[a][b])) / self.material.dielectricConstant        
         np.seterr(divide='warn')
         return precomputedArray
     
