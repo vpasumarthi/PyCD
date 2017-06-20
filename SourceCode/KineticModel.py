@@ -627,7 +627,8 @@ class system(object):
             neighborIndices = self.neighborSystemElementIndexMap[elementIndex].keys()
             ESPConfig[elementIndex] = np.sum(self.inverseCoeffDistanceList[elementIndex] * currentStateChargeConfig[neighborIndices])
         return ESPConfig
-
+    
+    @profile
     def ewaldSumSetup(self, eta, ebsl, kmax):
         from scipy.special import erfc
         tpi = 2 * np.pi
@@ -664,10 +665,10 @@ class system(object):
         np.seterr(divide='warn')
         return precomputedArray
     
-    #@profile
+    @profile
     def ewaldSum(self, chargeConfigProd, ewaldNeut, ewald0Part, precomputedArray):
-        ewald = ewald0Part * np.sum(np.diag(chargeConfigProd)) + ewaldNeut
-        ewald += np.sum(np.sum(np.multiply(chargeConfigProd, precomputedArray)))
+        ewald = ewald0Part * np.trace(chargeConfigProd) + ewaldNeut
+        ewald += np.sum(np.multiply(chargeConfigProd, precomputedArray))
         return ewald
     
 class run(object):
