@@ -646,32 +646,27 @@ class system(object):
         for i in range(-mmm1, mmm1+1):
             for j in range(-mmm2, mmm2+1):
                 for k in range(-mmm3, mmm3+1):
-                    temp01 = np.dot(np.array([i, j, k]), self.translationalMatrix)
+                    tempArray02 = tempArray01 + np.dot(np.array([i, j, k]), self.translationalMatrix)
                     for a in range(self.neighbors.numSystemElements):
+                        tempArray03 = np.linalg.norm(tempArray02[a], axis=1)
                         for b in range(self.neighbors.numSystemElements):
                             if a != b or not np.all(np.array([i, j, k])==0):
-                                temp02 = np.linalg.norm(tempArray01[a][b] + temp01)
-                                precomputedArray[a][b] += erfc(temp02 * seta) / temp02 / self.material.dielectricConstant
+                                precomputedArray[a][b] += erfc(tempArray03[b] * seta) / tempArray03[b] / self.material.dielectricConstant
         
-        tempArray02 = np.zeros((2 * kmax + 1, 2 * kmax + 1, 2 * kmax + 1))
         for i in range(-kmax, kmax+1):
             for j in range(-kmax, kmax+1):
                 for k in range(-kmax, kmax+1):
                     if not np.all(np.array([i, j, k])==0):
                         w = np.dot(np.array([i, j, k]), self.reciprocalLatticeMatrix)
                         rmag2 = np.dot(w, w)
-                        tempArray02[i][j][k] = con2 * np.exp(-rmag2 / eta) / rmag2
-                        precomputedArray += tempArray02[i][j][k] * np.cos(tpi * np.tensordot(self.systemFractionalDistance, np.array([i, j, k]), axes=([2], [0]))) / self.material.dielectricConstant
-                        #for a in range(self.neighbors.numSystemElements):
-                        #    for b in range(self.neighbors.numSystemElements):
-                        #        precomputedArray[a][b] += tempArray02[i][j][k] * np.cos(tpi * np.dot(np.array([i, j, k]), self.systemFractionalDistance[a][b])) / self.material.dielectricConstant        
+                        temp03 = con2 * np.exp(-rmag2 / eta) / (rmag2 * self.material.dielectricConstant)
+                        precomputedArray += temp03 * np.cos(tpi * np.tensordot(self.systemFractionalDistance, np.array([i, j, k]), axes=([2], [0])))
         np.seterr(divide='warn')
         return precomputedArray
     
     #@profile
     def ewaldSum(self, chargeConfigProd, ewaldNeut, ewald0Part, precomputedArray):
-        x = np.sum(np.diag(chargeConfigProd))
-        ewald = ewald0Part * x + ewaldNeut
+        ewald = ewald0Part * np.sum(np.diag(chargeConfigProd)) + ewaldNeut
         ewald += np.sum(np.sum(np.multiply(chargeConfigProd, precomputedArray)))
         return ewald
     
