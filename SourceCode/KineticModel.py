@@ -651,15 +651,13 @@ class system(object):
         mmm1 = mmm2 = mmm3 = 0
         #print 'lattice summation indices -- %d %d %d' % (mmm1, mmm2, mmm3)
         ewaldReal = 0
-        for a in range(self.neighbors.numSystemElements):
-            for b in range(self.neighbors.numSystemElements):
-                index = -1
-                for i in range(-mmm1, mmm1+1):
-                    for j in range(-mmm2, mmm2+1):
-                        for k in range(-mmm3, mmm3+1):
-                            index += 1
-                            if a != b or not np.all(np.array([i, j, k])==0):
-                                ewaldReal += chargeConfigProd[a][b] * precomputedArray02[a][index*self.neighbors.numSystemElements+b]
+        index = -1
+        for i in range(-mmm1, mmm1+1):
+            for j in range(-mmm2, mmm2+1):
+                for k in range(-mmm3, mmm3+1):
+                    index += 1
+                    ewaldReal += np.sum(np.sum(np.multiply(chargeConfigProd, precomputedArray02[:, index*self.neighbors.numSystemElements:(index+1)*self.neighbors.numSystemElements])))
+
         #print 'Real space part of the ewald energy in a.u.: %2.8f eV' % (ewaldReal / 2 / self.material.EV2J / self.material.J2HARTREE)
         #print 'Electrostatic energy computed from ESPConfig: %2.8f eV' % (np.sum(chargeConfig * self.ESPConfig(chargeConfig)) / 2 / self.material.EV2J / self.material.J2HARTREE)
         ewald += ewaldReal
@@ -895,8 +893,11 @@ class run(object):
                             temp01 = np.dot(np.array([i, j, k]), self.system.translationalMatrix)
                             for a in range(self.neighbors.numSystemElements):
                                 for b in range(self.neighbors.numSystemElements):
-                                    temp02 = np.linalg.norm(tempArray01[a][b] + temp01)
-                                    precomputedArray02[a][index*self.neighbors.numSystemElements+b] = erfc(temp02 * seta) / temp02 / self.material.dielectricConstant
+                                    if a != b or not np.all(np.array([i, j, k])==0):
+                                        temp02 = np.linalg.norm(tempArray01[a][b] + temp01)
+                                        precomputedArray02[a][index*self.neighbors.numSystemElements+b] = erfc(temp02 * seta) / temp02 / self.material.dielectricConstant
+                                    else:
+                                        precomputedArray02[a][index*self.neighbors.numSystemElements+b] = 0
                 
                 tempArray02 = np.zeros((2 * kmax + 1, 2 * kmax + 1, 2 * kmax + 1))
                 index = -1
