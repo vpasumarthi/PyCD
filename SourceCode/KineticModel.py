@@ -225,7 +225,7 @@ class neighbors(object):
             pickle.dump(materialNeighbors, file_Neighbors)
             file_Neighbors.close()
         pass
-    #@profile
+    
     def generateSystemElementIndex(self, systemSize, quantumIndices):
         """Returns the systemElementIndex of the element"""
         #assert type(systemSize) is np.ndarray, 'Please input systemSize as a numpy array'
@@ -244,7 +244,7 @@ class neighbors(object):
             else:
                 systemElementIndex += self.material.totalElementsPerUnitCell * unitCellIndex[nDim-1-index] * systemSize[-index:].prod()
         return systemElementIndex
-    #@profile
+    
     def generateQuantumIndices(self, systemSize, systemElementIndex):
         """Returns the quantum indices of the element"""
         #assert systemElementIndex >= 0, 'System Element Index cannot be negative'
@@ -286,7 +286,7 @@ class neighbors(object):
         neighborImageDisplacements = np.linalg.norm(neighborImageDisplacementVectors, axis=1)
         displacement = np.min(neighborImageDisplacements)
         return displacement
-    #@profile
+    
     def hopNeighborSites(self, bulkSites, centerSiteIndices, neighborSiteIndices, cutoffDistLimits, cutoffDistKey):
         """Returns systemElementIndexMap and distances between center sites and its neighbor sites within cutoff 
         distance"""
@@ -450,7 +450,7 @@ class neighbors(object):
         parentdisplacementListFile.close()
         parentNumNeighborsFile.close()
 
-    #@profile
+    
     def generateNeighborList(self, parentCutoff, extractCutoff, neighborListDirPath, replaceExistingNeighborList=0, report=1, 
                              localSystemSize=np.array([3, 3, 3]), centerUnitCellIndex=np.array([1, 1, 1])):
         """Adds the neighbor list to the system object and returns the neighbor list"""
@@ -606,6 +606,7 @@ class system(object):
     def chargeConfig(self, occupancy):
         """Returns charge distribution of the current configuration"""
         chargeList = np.copy(self.latticeChargeList)
+        chargeList = chargeList[:, np.newaxis]
         chargeTypeKeys = self.material.chargeTypes.keys()
         
         siteChargeTypeKeys = [key for key in chargeTypeKeys if key not in self.material.siteList if self.material.siteIdentifier in key]
@@ -628,7 +629,7 @@ class system(object):
             ESPConfig[elementIndex] = np.sum(self.inverseCoeffDistanceList[elementIndex] * currentStateChargeConfig[neighborIndices])
         return ESPConfig
     
-    @profile
+    #@profile
     def ewaldSumSetup(self, eta, ebsl, kmax):
         from scipy.special import erfc
         tpi = 2 * np.pi
@@ -643,7 +644,6 @@ class system(object):
         mmm1 = mmm2 = mmm3 = 0
         
         tempArray01 = np.tensordot(self.systemFractionalDistance, self.translationalMatrix, axes=([2], [0]))
-        np.seterr(divide='ignore')
         for i in range(-mmm1, mmm1+1):
             for j in range(-mmm2, mmm2+1):
                 for k in range(-mmm3, mmm3+1):
@@ -652,7 +652,7 @@ class system(object):
                         tempArray03 = np.linalg.norm(tempArray02[a], axis=1)
                         for b in range(self.neighbors.numSystemElements):
                             if a != b or not np.all(np.array([i, j, k])==0):
-                                precomputedArray[a][b] += erfc(tempArray03[b] * seta) / tempArray03[b] / self.material.dielectricConstant
+                                precomputedArray[a][b] += erfc(tempArray03[b] * seta) / tempArray03[b]
         
         for i in range(-kmax, kmax+1):
             for j in range(-kmax, kmax+1):
@@ -660,12 +660,13 @@ class system(object):
                     if not np.all(np.array([i, j, k])==0):
                         w = np.dot(np.array([i, j, k]), self.reciprocalLatticeMatrix)
                         rmag2 = np.dot(w, w)
-                        temp03 = con2 * np.exp(-rmag2 / eta) / (rmag2 * self.material.dielectricConstant)
+                        temp03 = con2 * np.exp(-rmag2 / eta) / rmag2
                         precomputedArray += temp03 * np.cos(tpi * np.tensordot(self.systemFractionalDistance, np.array([i, j, k]), axes=([2], [0])))
-        np.seterr(divide='warn')
+        
+        precomputedArray /= self.material.dielectricConstant
         return precomputedArray
     
-    @profile
+    #@profile
     def ewaldSum(self, chargeConfigProd, ewaldNeut, ewald0Part, precomputedArray):
         ewald = ewald0Part * np.trace(chargeConfigProd) + ewaldNeut
         ewald += np.sum(np.multiply(chargeConfigProd, precomputedArray))
@@ -877,10 +878,7 @@ class run(object):
                 currentStateChargeConfig = self.system.chargeConfig(currentStateOccupancy)
                 if ewaldDelG0:
                     print currentStateOccupancy
-                    currentStateChargeConfigProd = np.zeros((self.neighbors.numSystemElements, self.neighbors.numSystemElements))
-                    for i in range(self.neighbors.numSystemElements):
-                        for j in range(self.neighbors.numSystemElements):
-                            currentStateChargeConfigProd[i][j] = currentStateChargeConfig[i] * currentStateChargeConfig[j]
+                    currentStateChargeConfigProd = np.multiply(currentStateChargeConfig.transpose(), currentStateChargeConfig)
                     currentStateEnergy = self.system.ewaldSum(currentStateChargeConfigProd, ewaldNeut, ewald0Part, precomputedArray)
                     print currentStateEnergy
                 else:
