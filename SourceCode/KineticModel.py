@@ -623,7 +623,7 @@ class system(object):
         return chargeList
 
     def ESPConfig(self, currentStateChargeConfig):
-        ESPConfig = np.zeros(self.neighbors.numSystemElements)
+        ESPConfig = np.zeros((self.neighbors.numSystemElements, 1))
         for elementIndex in range(self.neighbors.numSystemElements):
             neighborIndices = self.neighborSystemElementIndexMap[elementIndex].keys()
             ESPConfig[elementIndex] = np.sum(self.inverseCoeffDistanceList[elementIndex] * currentStateChargeConfig[neighborIndices])
@@ -735,7 +735,7 @@ class run(object):
         """Subroutine to run the KMC simulation by specified number of steps"""
         assert outdir, 'Please provide the destination path where simulation output files needs to be saved'
         
-        ewald = 1
+        ewald = 0
         excess = 0
         
         timeDataFileName = outdir + directorySeparator + 'Time.dat'
@@ -833,9 +833,10 @@ class run(object):
                                 delG0List.append(delG0)
                             else:
                                 columnIndex = self.system.neighborSystemElementIndexMap[speciesSiteSystemElementIndex][neighborSiteSystemElementIndex]
-                                delG0 = 0
-                                #delG0 = (self.speciesChargeList[speciesIndex] * ((currentStateESPConfig[neighborSiteSystemElementIndex] - currentStateESPConfig[speciesSiteSystemElementIndex]
-                                #                                                  - self.speciesChargeList[speciesIndex] * self.system.inverseCoeffDistanceList[speciesSiteSystemElementIndex][columnIndex])))
+                                #delG0 = 0
+                                delG0 = (self.speciesChargeList[speciesIndex] * ((currentStateESPConfig[neighborSiteSystemElementIndex][0] - currentStateESPConfig[speciesSiteSystemElementIndex][0]
+                                                                                  - self.speciesChargeList[speciesIndex] * self.system.inverseCoeffDistanceList[speciesSiteSystemElementIndex][columnIndex])))
+                                import pdb; pdb.set_trace()
                             if excess:
                                 delG0List.append(delG0)
                             lambdaValue = self.nProcLambdaValueList[iProc]
