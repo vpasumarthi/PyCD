@@ -716,7 +716,7 @@ class run(object):
                     numNeighbors = np.unique(self.system.hopNeighborList[hopElementType][hopDistTypeIndex].numNeighbors)
                     # TODO: What if it is not equal to 1
                     if len(numNeighbors) == 1:
-                        self.nProc += numNeighbors[0] * self.system.speciesCount[speciesTypeIndex]
+                        self.nProc += numNeighbors[0]# * self.system.speciesCount[speciesTypeIndex]
                         self.nProcHopElementTypeList.extend([hopElementType] * numNeighbors[0])
                         self.nProcHopDistTypeList.extend([hopDistTypeIndex] * numNeighbors[0])
                         self.nProcSpeciesIndexList.extend([hopElementTypeIndex] * numNeighbors[0])
@@ -738,10 +738,9 @@ class run(object):
         testEwald = 0
         interactionPotential = 0
         ewaldInteractionPotential = 0
-        kmax = 2
         absoluteInteractionPotential = 0
         runSimulation = 1
-        ewaldDelG0 = 1
+        ewaldDelG0 = 0
         
         if testEwald:
             currentStateOccupancy = [0, 660]
@@ -865,6 +864,7 @@ class run(object):
             if ewaldDelG0:
                 eta = 0.11
                 ebsl = 1.00E-16
+                kmax = 4
                 precomputedArray = self.system.ewaldSumSetup(eta, ebsl, kmax)
                 
                 tpi = 2 * np.pi
@@ -877,10 +877,10 @@ class run(object):
                 currentStateOccupancy = self.system.generateRandomOccupancy(self.system.speciesCount)
                 currentStateChargeConfig = self.system.chargeConfig(currentStateOccupancy)
                 if ewaldDelG0:
-                    print currentStateOccupancy
+                    #print currentStateOccupancy
                     currentStateChargeConfigProd = np.multiply(currentStateChargeConfig.transpose(), currentStateChargeConfig)
                     currentStateEnergy = self.system.ewaldSum(currentStateChargeConfigProd, ewaldNeut, ewald0Part, precomputedArray)
-                    print currentStateEnergy
+                    #print currentStateEnergy
                 else:
                     print currentStateOccupancy
                     currentStateESPConfig = self.system.ESPConfig(currentStateChargeConfig)
@@ -920,7 +920,8 @@ class run(object):
                                     newStateOccupancy = currentStateOccupancy[:]
                                     newStateOccupancy[speciesIndex] = neighborSiteSystemElementIndex
                                     newStateChargeConfig = self.system.chargeConfig(newStateOccupancy)
-                                    newStateEnergy = self.system.ewaldSum(newStateChargeConfig, kmax, precomputedArray01, precomputedArray02)
+                                    currentStateChargeConfigProd = np.multiply(currentStateChargeConfig.transpose(), currentStateChargeConfig)
+                                    newStateEnergy = self.system.ewaldSum(currentStateChargeConfigProd, ewaldNeut, ewald0Part, precomputedArray)
                                     delG0 = newStateEnergy - currentStateEnergy
                                     delG0List.append(delG0)
                                 else:
@@ -955,7 +956,7 @@ class run(object):
                     
                     if ewaldDelG0:
                         currentStateEnergy += delG0List[procIndex]
-                        print currentStateEnergy
+                        #print currentStateEnergy
 		    else:
                     	currentStateESPConfig[oldSiteNeighbors] -= self.speciesChargeList[speciesIndex] * self.system.inverseCoeffDistanceList[oldSiteSystemElementIndex]
                     	currentStateESPConfig[newSiteNeighbors] += self.speciesChargeList[speciesIndex] * self.system.inverseCoeffDistanceList[newSiteSystemElementIndex]
