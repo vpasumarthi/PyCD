@@ -642,7 +642,7 @@ class system(object):
         mmm2 = int(tmax / self.translationalVectorLength[1] + 1.5)
         mmm3 = int(tmax / self.translationalVectorLength[2] + 1.5)
         mmm1 = mmm2 = mmm3 = 0
-        
+
         tempArray01 = np.tensordot(self.systemFractionalDistance, self.translationalMatrix, axes=([2], [0]))
         for i in range(-mmm1, mmm1+1):
             for j in range(-mmm2, mmm2+1):
@@ -653,7 +653,7 @@ class system(object):
                         for b in range(self.neighbors.numSystemElements):
                             if a != b or not np.all(np.array([i, j, k])==0):
                                 precomputedArray[a][b] += erfc(tempArray03[b] * seta) / tempArray03[b]
-        
+        #import pdb; pdb.set_trace()
         for i in range(-kmax, kmax+1):
             for j in range(-kmax, kmax+1):
                 for k in range(-kmax, kmax+1):
@@ -668,8 +668,8 @@ class system(object):
     
     #@profile
     def ewaldSum(self, chargeConfigProd, ewaldNeut, ewald0Part, precomputedArray):
-        ewald = ewald0Part * np.trace(chargeConfigProd) + ewaldNeut
-        ewald += np.sum(np.multiply(chargeConfigProd, precomputedArray))
+        ewald = ewald0Part * np.einsum('ii', chargeConfigProd) + ewaldNeut
+        ewald += np.einsum('ij,ij', chargeConfigProd, precomputedArray)
         return ewald
     
 class run(object):
@@ -735,7 +735,7 @@ class run(object):
         """Subroutine to run the KMC simulation by specified number of steps"""
         assert outdir, 'Please provide the destination path where simulation output files needs to be saved'
         
-        ewald = 0
+        ewald = 1
         excess = 0
         
         timeDataFileName = outdir + directorySeparator + 'Time.dat'
@@ -772,7 +772,7 @@ class run(object):
         if ewald:
             eta = 0.11
             ebsl = 1.00E-16
-            kmax = 4
+            kmax = 2
             precomputedArray = self.system.ewaldSumSetup(eta, ebsl, kmax)
             
             tpi = 2 * np.pi
@@ -782,13 +782,15 @@ class run(object):
             ewald0Part = - np.sqrt(eta / np.pi)
 
         for trajIndex in range(nTraj):
-            currentStateOccupancy = self.system.generateRandomOccupancy(self.system.speciesCount)
+            #currentStateOccupancy = self.system.generateRandomOccupancy(self.system.speciesCount)
+            currentStateOccupancy = [99, 2]
             currentStateChargeConfig = self.system.chargeConfig(currentStateOccupancy)
             if ewald:
-                #print currentStateOccupancy
+                print currentStateOccupancy
                 currentStateChargeConfigProd = np.multiply(currentStateChargeConfig.transpose(), currentStateChargeConfig)
                 currentStateEnergy = self.system.ewaldSum(currentStateChargeConfigProd, ewaldNeut, ewald0Part, precomputedArray)
-                #print currentStateEnergy
+                print currentStateEnergy
+                newStateOccupancy = currentStateOccupancy[:]
             else:
                 currentStateESPConfig = self.system.ESPConfig(currentStateChargeConfig)
                 currentStateEnergy = np.sum(currentStateChargeConfig * currentStateESPConfig)
@@ -823,13 +825,15 @@ class run(object):
                             neighborIndexList[iProc] = neighborIndex
                             # TODO: Print out a prompt about the assumption; detailed comment here. <Using species charge to compute change in energy> May be print log report
                             if ewald:
-                                newStateOccupancy = currentStateOccupancy[:]
                                 newStateOccupancy[speciesIndex] = neighborSiteSystemElementIndex
-                                newStateChargeConfig = self.system.chargeConfig(newStateOccupancy)
-                                currentStateChargeConfigProd = np.multiply(currentStateChargeConfig.transpose(), currentStateChargeConfig)
-                                newStateEnergy = self.system.ewaldSum(currentStateChargeConfigProd, ewaldNeut, ewald0Part, precomputedArray)
-                                #delG0 = newStateEnergy - currentStateEnergy
-                                delG0 = 0
+                                
+                                newStateChargeConfig = np.copy(currentStateChargeConfig)
+                                newStateChargeConfig[speciesSiteSystemElementIndex] -= self.speciesChargeList[speciesIndex]
+                                newStateChargeConfig[neighborSiteSystemElementIndex] += self.speciesChargeList[speciesIndex]
+                                
+                                newStateChargeConfigProd = np.multiply(newStateChargeConfig.transpose(), newStateChargeConfig)
+                                newStateEnergy = self.system.ewaldSum(newStateChargeConfigProd, ewaldNeut, ewald0Part, precomputedArray)
+                                delG0 = newStateEnergy - currentStateEnergy
                                 delG0List.append(delG0)
                             else:
                                 columnIndex = self.system.neighborSystemElementIndexMap[speciesSiteSystemElementIndex][neighborSiteSystemElementIndex]
@@ -859,6 +863,7 @@ class run(object):
                 oldSiteSystemElementIndex = currentStateOccupancy[speciesIndex]
                 newSiteSystemElementIndex = neighborSiteSystemElementIndexList[procIndex]
                 currentStateOccupancy[speciesIndex] = newSiteSystemElementIndex
+                newStateOccupancy[speciesIndex] = newSiteSystemElementIndex
                 speciesDisplacementVectorList[0, speciesIndex * 3:(speciesIndex + 1) * 3] += self.system.hopNeighborList[hopElementType][hopDistType].displacementVectorList[rowIndex][neighborIndex]
                 
                 if ewald:
