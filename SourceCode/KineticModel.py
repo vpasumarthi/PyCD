@@ -629,7 +629,7 @@ class system(object):
             ESPConfig[elementIndex] = np.dot(self.inverseCoeffDistanceList[elementIndex], currentStateChargeConfig[neighborIndices])
         return ESPConfig
     
-    #@profile
+    @profile
     def ewaldSumSetup(self, eta, ebsl, kmax):
         from scipy.special import erfc
         tpi = 2 * np.pi
@@ -666,7 +666,7 @@ class system(object):
         precomputedArray /= self.material.dielectricConstant
         return precomputedArray
     
-    #@profile
+    @profile
     def ewaldSum(self, chargeConfigProd, ewaldNeut, ewald0Part, precomputedArray):
         ewald = ewald0Part * np.einsum('ii', chargeConfigProd) + ewaldNeut
         ewald += np.einsum('ij,ij', chargeConfigProd, precomputedArray)
@@ -730,7 +730,7 @@ class run(object):
         # total number of species
         self.totalSpecies = self.system.speciesCount.sum()
     
-    #@profile
+    @profile
     def doKMCSteps(self, outdir, report=1, randomSeed=1):
         """Subroutine to run the KMC simulation by specified number of steps"""
         assert outdir, 'Please provide the destination path where simulation output files needs to be saved'
@@ -772,7 +772,7 @@ class run(object):
         if ewald:
             eta = 0.11
             ebsl = 1.00E-16
-            kmax = 2
+            kmax = 4
             precomputedArray = self.system.ewaldSumSetup(eta, ebsl, kmax)
             
             tpi = 2 * np.pi
@@ -782,15 +782,13 @@ class run(object):
             ewald0Part = - np.sqrt(eta / np.pi)
 
         for trajIndex in range(nTraj):
-            #currentStateOccupancy = self.system.generateRandomOccupancy(self.system.speciesCount)
-            currentStateOccupancy = [99, 2]
+            currentStateOccupancy = self.system.generateRandomOccupancy(self.system.speciesCount)
             currentStateChargeConfig = self.system.chargeConfig(currentStateOccupancy)
             if ewald:
-                print currentStateOccupancy
+                #print currentStateOccupancy
                 currentStateChargeConfigProd = np.multiply(currentStateChargeConfig.transpose(), currentStateChargeConfig)
                 currentStateEnergy = self.system.ewaldSum(currentStateChargeConfigProd, ewaldNeut, ewald0Part, precomputedArray)
-                print currentStateEnergy
-                newStateOccupancy = currentStateOccupancy[:]
+                #print currentStateEnergy
             else:
                 currentStateESPConfig = self.system.ESPConfig(currentStateChargeConfig)
                 currentStateEnergy = np.sum(currentStateChargeConfig * currentStateESPConfig)
@@ -815,6 +813,10 @@ class run(object):
                     siteElementTypeIndex = self.nProcSiteElementTypeIndexList[iProc]
                     rowIndex = (speciesSiteSystemElementIndex / self.material.totalElementsPerUnitCell * self.material.nElementsPerUnitCell[siteElementTypeIndex] + 
                                 speciesSiteSystemElementIndex % self.material.totalElementsPerUnitCell - self.headStart_nElementsPerUnitCellCumSum[siteElementTypeIndex])
+                    if ewald:
+                        speciesSiteMultFactor = (currentStateChargeConfig[speciesSiteSystemElementIndex] - self.speciesChargeList[speciesIndex]) / currentStateChargeConfig[speciesSiteSystemElementIndex]
+                        currentStateChargeConfigProd[speciesSiteSystemElementIndex, :] *= speciesSiteMultFactor
+                        currentStateChargeConfigProd[:, speciesSiteSystemElementIndex] *= speciesSiteMultFactor
                     for hopDistType in range(self.lenHopDistTypeList[speciesIndex]):
                         localNeighborSiteSystemElementIndexList = self.system.hopNeighborList[hopElementType][hopDistType].neighborSystemElementIndices[rowIndex]
                         for neighborIndex, neighborSiteSystemElementIndex in enumerate(localNeighborSiteSystemElementIndexList):
@@ -825,14 +827,15 @@ class run(object):
                             neighborIndexList[iProc] = neighborIndex
                             # TODO: Print out a prompt about the assumption; detailed comment here. <Using species charge to compute change in energy> May be print log report
                             if ewald:
-                                newStateOccupancy[speciesIndex] = neighborSiteSystemElementIndex
+                                neighborSiteMultFactor = (currentStateChargeConfig[neighborSiteSystemElementIndex] + self.speciesChargeList[speciesIndex]) / currentStateChargeConfig[neighborSiteSystemElementIndex]
+                                currentStateChargeConfigProd[neighborSiteSystemElementIndex, :] *= neighborSiteMultFactor
+                                currentStateChargeConfigProd[:, neighborSiteSystemElementIndex] *= neighborSiteMultFactor
                                 
-                                newStateChargeConfig = np.copy(currentStateChargeConfig)
-                                newStateChargeConfig[speciesSiteSystemElementIndex] -= self.speciesChargeList[speciesIndex]
-                                newStateChargeConfig[neighborSiteSystemElementIndex] += self.speciesChargeList[speciesIndex]
+                                newStateEnergy = self.system.ewaldSum(currentStateChargeConfigProd, ewaldNeut, ewald0Part, precomputedArray)
                                 
-                                newStateChargeConfigProd = np.multiply(newStateChargeConfig.transpose(), newStateChargeConfig)
-                                newStateEnergy = self.system.ewaldSum(newStateChargeConfigProd, ewaldNeut, ewald0Part, precomputedArray)
+                                currentStateChargeConfigProd[neighborSiteSystemElementIndex, :] /= neighborSiteMultFactor
+                                currentStateChargeConfigProd[:, neighborSiteSystemElementIndex] /= neighborSiteMultFactor
+
                                 delG0 = newStateEnergy - currentStateEnergy
                                 delG0List.append(delG0)
                             else:
@@ -846,6 +849,10 @@ class run(object):
                             delGs = ((lambdaValue + delG0) ** 2 / (4 * lambdaValue)) - VAB
                             kList[iProc] = self.material.vn * np.exp(-delGs / self.T)
                             iProc += 1
+                    if ewald:
+                        currentStateChargeConfigProd[speciesSiteSystemElementIndex, :] /= speciesSiteMultFactor
+                        currentStateChargeConfigProd[:, speciesSiteSystemElementIndex] /= speciesSiteMultFactor
+                            
                 kTotal = sum(kList)
                 kCumSum = (kList / kTotal).cumsum()
                 rand1 = rnd.random()
@@ -863,11 +870,16 @@ class run(object):
                 oldSiteSystemElementIndex = currentStateOccupancy[speciesIndex]
                 newSiteSystemElementIndex = neighborSiteSystemElementIndexList[procIndex]
                 currentStateOccupancy[speciesIndex] = newSiteSystemElementIndex
-                newStateOccupancy[speciesIndex] = newSiteSystemElementIndex
                 speciesDisplacementVectorList[0, speciesIndex * 3:(speciesIndex + 1) * 3] += self.system.hopNeighborList[hopElementType][hopDistType].displacementVectorList[rowIndex][neighborIndex]
                 
                 if ewald:
                     currentStateEnergy += delG0List[procIndex]
+                    oldSiteMultFactor = (currentStateChargeConfig[oldSiteSystemElementIndex] - self.speciesChargeList[speciesIndex]) / currentStateChargeConfig[oldSiteSystemElementIndex]
+                    currentStateChargeConfigProd[oldSiteSystemElementIndex, :] *= oldSiteMultFactor
+                    currentStateChargeConfigProd[:, oldSiteSystemElementIndex] *= oldSiteMultFactor
+                    newSiteMultFactor = (currentStateChargeConfig[newSiteSystemElementIndex] + self.speciesChargeList[speciesIndex]) / currentStateChargeConfig[newSiteSystemElementIndex]
+                    currentStateChargeConfigProd[newSiteSystemElementIndex, :] *= newSiteMultFactor
+                    currentStateChargeConfigProd[:, newSiteSystemElementIndex] *= newSiteMultFactor
                     currentStateChargeConfig[oldSiteSystemElementIndex] -= self.speciesChargeList[speciesIndex]
                     currentStateChargeConfig[newSiteSystemElementIndex] += self.speciesChargeList[speciesIndex]
                 else:

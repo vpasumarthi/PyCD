@@ -21,7 +21,7 @@ class hematiteParameters(object):
         index_pos = np.loadtxt(inputFileLocation)
         self.unitcellCoords = index_pos[:, 1:] 
         self.elementTypeIndexList = index_pos[:,0]
-        self.chargeTypes = {'Fe': +3, 'O': -2, 'Fe0': +2} # multiples of elementary charge
+        self.chargeTypes = {'Fe': +3.0, 'O': -2.0, 'Fe0': +2.0} # multiples of elementary charge
         if inputCoorType:
             a = 5.0180397814313995 # lattice constant along x-axis # RelaxCell_Trial08
             b = 5.0180397814313995 # lattice constant along y-axis # RelaxCell_Trial08
