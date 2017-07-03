@@ -629,7 +629,7 @@ class system(object):
             ESPConfig[elementIndex] = np.dot(self.inverseCoeffDistanceList[elementIndex], currentStateChargeConfig[neighborIndices])
         return ESPConfig
     
-    @profile
+    #@profile
     def ewaldSumSetup(self, eta, ebsl, kmax):
         from scipy.special import erfc
         tpi = 2 * np.pi
@@ -665,12 +665,6 @@ class system(object):
         
         precomputedArray /= self.material.dielectricConstant
         return precomputedArray
-    
-    @profile
-    def ewaldSum(self, chargeConfigProd, ewaldNeut, ewald0Part, precomputedArray):
-        ewald = ewald0Part * np.einsum('ii', chargeConfigProd) + ewaldNeut
-        ewald += np.einsum('ij,ij', chargeConfigProd, precomputedArray)
-        return ewald
     
 class run(object):
     """defines the subroutines for running Kinetic Monte Carlo and computing electrostatic 
@@ -730,7 +724,7 @@ class run(object):
         # total number of species
         self.totalSpecies = self.system.speciesCount.sum()
     
-    @profile
+    #@profile
     def doKMCSteps(self, outdir, report=1, randomSeed=1):
         """Subroutine to run the KMC simulation by specified number of steps"""
         assert outdir, 'Please provide the destination path where simulation output files needs to be saved'
@@ -772,7 +766,7 @@ class run(object):
         if ewald:
             eta = 0.11
             ebsl = 1.00E-16
-            kmax = 4
+            kmax = 2
             precomputedArray = self.system.ewaldSumSetup(eta, ebsl, kmax)
             
             tpi = 2 * np.pi
@@ -787,8 +781,10 @@ class run(object):
             if ewald:
                 #print currentStateOccupancy
                 currentStateChargeConfigProd = np.multiply(currentStateChargeConfig.transpose(), currentStateChargeConfig)
-                currentStateEnergy = self.system.ewaldSum(currentStateChargeConfigProd, ewaldNeut, ewald0Part, precomputedArray)
-                #print currentStateEnergy
+                ewald0 = ewald0Part * np.einsum('ii', currentStateChargeConfigProd) + ewaldNeut
+                currentStateEnergy = ewald0 + np.einsum('ij,ij', currentStateChargeConfigProd, precomputedArray)
+                #currentStateEnergy = self.system.ewaldSum(currentStateChargeConfigProd, ewaldNeut, ewald0Part, precomputedArray)
+                print currentStateEnergy
             else:
                 currentStateESPConfig = self.system.ESPConfig(currentStateChargeConfig)
                 currentStateEnergy = np.sum(currentStateChargeConfig * currentStateESPConfig)
@@ -831,7 +827,8 @@ class run(object):
                                 currentStateChargeConfigProd[neighborSiteSystemElementIndex, :] *= neighborSiteMultFactor
                                 currentStateChargeConfigProd[:, neighborSiteSystemElementIndex] *= neighborSiteMultFactor
                                 
-                                newStateEnergy = self.system.ewaldSum(currentStateChargeConfigProd, ewaldNeut, ewald0Part, precomputedArray)
+                                #newStateEnergy = self.system.ewaldSum(currentStateChargeConfigProd, ewaldNeut, ewald0Part, precomputedArray)
+                                newStateEnergy = ewald0 + np.einsum('ij,ij', currentStateChargeConfigProd, precomputedArray)
                                 
                                 currentStateChargeConfigProd[neighborSiteSystemElementIndex, :] /= neighborSiteMultFactor
                                 currentStateChargeConfigProd[:, neighborSiteSystemElementIndex] /= neighborSiteMultFactor
