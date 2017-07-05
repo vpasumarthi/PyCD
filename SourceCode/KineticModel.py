@@ -629,7 +629,7 @@ class system(object):
             ESPConfig[elementIndex] = np.dot(self.inverseCoeffDistanceList[elementIndex], currentStateChargeConfig[neighborIndices])
         return ESPConfig
     
-    #@profile
+    @profile
     def ewaldSumSetup(self, eta, ebsl, kmax):
         from scipy.special import erfc
         tpi = 2 * np.pi
@@ -724,7 +724,7 @@ class run(object):
         # total number of species
         self.totalSpecies = self.system.speciesCount.sum()
     
-    #@profile
+    @profile
     def doKMCSteps(self, outdir, report=1, randomSeed=1):
         """Subroutine to run the KMC simulation by specified number of steps"""
         assert outdir, 'Please provide the destination path where simulation output files needs to be saved'
@@ -766,7 +766,7 @@ class run(object):
         if ewald:
             eta = 0.11
             ebsl = 1.00E-16
-            kmax = 2
+            kmax = 4
             precomputedArray = self.system.ewaldSumSetup(eta, ebsl, kmax)
             
             tpi = 2 * np.pi
@@ -782,9 +782,11 @@ class run(object):
                 #print currentStateOccupancy
                 currentStateChargeConfigProd = np.multiply(currentStateChargeConfig.transpose(), currentStateChargeConfig)
                 ewald0 = ewald0Part * np.einsum('ii', currentStateChargeConfigProd) + ewaldNeut
-                currentStateEnergy = ewald0 + np.einsum('ij,ij', currentStateChargeConfigProd, precomputedArray)
+                ewaldProduct = np.multiply(currentStateChargeConfigProd, precomputedArray)
+                #ewaldMain = np.einsum('ij,ij', currentStateChargeConfigProd, precomputedArray)
+                currentStateEnergy = ewald0 + np.sum(ewaldProduct)
                 #currentStateEnergy = self.system.ewaldSum(currentStateChargeConfigProd, ewaldNeut, ewald0Part, precomputedArray)
-                print currentStateEnergy
+                #print currentStateEnergy
             else:
                 currentStateESPConfig = self.system.ESPConfig(currentStateChargeConfig)
                 currentStateEnergy = np.sum(currentStateChargeConfig * currentStateESPConfig)
@@ -811,8 +813,10 @@ class run(object):
                                 speciesSiteSystemElementIndex % self.material.totalElementsPerUnitCell - self.headStart_nElementsPerUnitCellCumSum[siteElementTypeIndex])
                     if ewald:
                         speciesSiteMultFactor = (currentStateChargeConfig[speciesSiteSystemElementIndex] - self.speciesChargeList[speciesIndex]) / currentStateChargeConfig[speciesSiteSystemElementIndex]
-                        currentStateChargeConfigProd[speciesSiteSystemElementIndex, :] *= speciesSiteMultFactor
-                        currentStateChargeConfigProd[:, speciesSiteSystemElementIndex] *= speciesSiteMultFactor
+                        #currentStateChargeConfigProd[speciesSiteSystemElementIndex, :] *= speciesSiteMultFactor
+                        #currentStateChargeConfigProd[:, speciesSiteSystemElementIndex] *= speciesSiteMultFactor
+                        ewaldProduct[speciesSiteSystemElementIndex, :] *= speciesSiteMultFactor
+                        ewaldProduct[:, speciesSiteSystemElementIndex] *= speciesSiteMultFactor
                     for hopDistType in range(self.lenHopDistTypeList[speciesIndex]):
                         localNeighborSiteSystemElementIndexList = self.system.hopNeighborList[hopElementType][hopDistType].neighborSystemElementIndices[rowIndex]
                         for neighborIndex, neighborSiteSystemElementIndex in enumerate(localNeighborSiteSystemElementIndexList):
@@ -824,14 +828,19 @@ class run(object):
                             # TODO: Print out a prompt about the assumption; detailed comment here. <Using species charge to compute change in energy> May be print log report
                             if ewald:
                                 neighborSiteMultFactor = (currentStateChargeConfig[neighborSiteSystemElementIndex] + self.speciesChargeList[speciesIndex]) / currentStateChargeConfig[neighborSiteSystemElementIndex]
-                                currentStateChargeConfigProd[neighborSiteSystemElementIndex, :] *= neighborSiteMultFactor
-                                currentStateChargeConfigProd[:, neighborSiteSystemElementIndex] *= neighborSiteMultFactor
+                                #currentStateChargeConfigProd[neighborSiteSystemElementIndex, :] *= neighborSiteMultFactor
+                                #currentStateChargeConfigProd[:, neighborSiteSystemElementIndex] *= neighborSiteMultFactor
+                                ewaldProduct[neighborSiteSystemElementIndex, :] *= neighborSiteMultFactor
+                                ewaldProduct[:, neighborSiteSystemElementIndex] *= neighborSiteMultFactor
                                 
                                 #newStateEnergy = self.system.ewaldSum(currentStateChargeConfigProd, ewaldNeut, ewald0Part, precomputedArray)
-                                newStateEnergy = ewald0 + np.einsum('ij,ij', currentStateChargeConfigProd, precomputedArray)
+                                #ewaldMain = np.einsum('ij,ij', currentStateChargeConfigProd, precomputedArray)
+                                newStateEnergy = ewald0 + np.sum(ewaldProduct)
                                 
-                                currentStateChargeConfigProd[neighborSiteSystemElementIndex, :] /= neighborSiteMultFactor
-                                currentStateChargeConfigProd[:, neighborSiteSystemElementIndex] /= neighborSiteMultFactor
+                                #currentStateChargeConfigProd[neighborSiteSystemElementIndex, :] /= neighborSiteMultFactor
+                                #currentStateChargeConfigProd[:, neighborSiteSystemElementIndex] /= neighborSiteMultFactor
+                                ewaldProduct[neighborSiteSystemElementIndex, :] /= neighborSiteMultFactor
+                                ewaldProduct[:, neighborSiteSystemElementIndex] /= neighborSiteMultFactor
 
                                 delG0 = newStateEnergy - currentStateEnergy
                                 delG0List.append(delG0)
@@ -847,8 +856,10 @@ class run(object):
                             kList[iProc] = self.material.vn * np.exp(-delGs / self.T)
                             iProc += 1
                     if ewald:
-                        currentStateChargeConfigProd[speciesSiteSystemElementIndex, :] /= speciesSiteMultFactor
-                        currentStateChargeConfigProd[:, speciesSiteSystemElementIndex] /= speciesSiteMultFactor
+                        #currentStateChargeConfigProd[speciesSiteSystemElementIndex, :] /= speciesSiteMultFactor
+                        #currentStateChargeConfigProd[:, speciesSiteSystemElementIndex] /= speciesSiteMultFactor
+                        ewaldProduct[speciesSiteSystemElementIndex, :] /= speciesSiteMultFactor
+                        ewaldProduct[:, speciesSiteSystemElementIndex] /= speciesSiteMultFactor
                             
                 kTotal = sum(kList)
                 kCumSum = (kList / kTotal).cumsum()
@@ -872,11 +883,15 @@ class run(object):
                 if ewald:
                     currentStateEnergy += delG0List[procIndex]
                     oldSiteMultFactor = (currentStateChargeConfig[oldSiteSystemElementIndex] - self.speciesChargeList[speciesIndex]) / currentStateChargeConfig[oldSiteSystemElementIndex]
-                    currentStateChargeConfigProd[oldSiteSystemElementIndex, :] *= oldSiteMultFactor
-                    currentStateChargeConfigProd[:, oldSiteSystemElementIndex] *= oldSiteMultFactor
+                    #currentStateChargeConfigProd[oldSiteSystemElementIndex, :] *= oldSiteMultFactor
+                    #currentStateChargeConfigProd[:, oldSiteSystemElementIndex] *= oldSiteMultFactor
+                    ewaldProduct[oldSiteSystemElementIndex, :] *= oldSiteMultFactor
+                    ewaldProduct[:, oldSiteSystemElementIndex] *= oldSiteMultFactor
                     newSiteMultFactor = (currentStateChargeConfig[newSiteSystemElementIndex] + self.speciesChargeList[speciesIndex]) / currentStateChargeConfig[newSiteSystemElementIndex]
-                    currentStateChargeConfigProd[newSiteSystemElementIndex, :] *= newSiteMultFactor
-                    currentStateChargeConfigProd[:, newSiteSystemElementIndex] *= newSiteMultFactor
+                    #currentStateChargeConfigProd[newSiteSystemElementIndex, :] *= newSiteMultFactor
+                    #currentStateChargeConfigProd[:, newSiteSystemElementIndex] *= newSiteMultFactor
+                    ewaldProduct[newSiteSystemElementIndex, :] *= newSiteMultFactor
+                    ewaldProduct[:, newSiteSystemElementIndex] *= newSiteMultFactor
                     currentStateChargeConfig[oldSiteSystemElementIndex] -= self.speciesChargeList[speciesIndex]
                     currentStateChargeConfig[newSiteSystemElementIndex] += self.speciesChargeList[speciesIndex]
                 else:
