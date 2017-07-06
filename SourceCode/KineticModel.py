@@ -541,7 +541,7 @@ class system(object):
     Attributes:
     size: An array (3 x 1) defining the system size in multiple of unit cells
     """
-    def __init__(self, material, neighbors, hopNeighborList, neighborSystemElementIndices, displacementList, numNeighbors, speciesCount):
+    def __init__(self, material, neighbors, ewald, hopNeighborList, neighborSystemElementIndices, displacementList, numNeighbors, speciesCount):
         """Return a system object whose size is *size*"""
         self.material = material
         self.neighbors = neighbors
@@ -561,18 +561,18 @@ class system(object):
                                        for elementTypeIndex in self.material.elementTypeIndexList])
         self.latticeChargeList = np.tile(unitcellChargeList, self.numCells)
         
-        self.displacementList = displacementList
         self.numNeighbors = numNeighbors
-        self.neighborSystemElementIndices = neighborSystemElementIndices
-        self.neighborSystemElementIndexMap = np.empty(self.neighbors.numSystemElements, dtype=object)
-        for elementIndex in range(self.neighbors.numSystemElements):
-            self.neighborSystemElementIndexMap[elementIndex] = OrderedDict(zip(self.neighborSystemElementIndices[elementIndex], range(self.numNeighbors[elementIndex])))
-        
-        # inverse of cumulative Distance
-        inverseDielectricConstant = 1 / self.material.dielectricConstant
-        self.inverseCoeffDistanceList = np.empty(self.neighbors.numSystemElements, dtype=object)
-        for elementIndex in range(self.neighbors.numSystemElements):
-            self.inverseCoeffDistanceList[elementIndex] = inverseDielectricConstant / self.displacementList[elementIndex]
+        if not ewald:
+            self.neighborSystemElementIndices = neighborSystemElementIndices
+            self.neighborSystemElementIndexMap = np.empty(self.neighbors.numSystemElements, dtype=object)
+            for elementIndex in range(self.neighbors.numSystemElements):
+                self.neighborSystemElementIndexMap[elementIndex] = OrderedDict(zip(self.neighborSystemElementIndices[elementIndex], range(self.numNeighbors[elementIndex])))
+            self.displacementList = displacementList
+            # inverse of cumulative Distance
+            inverseDielectricConstant = 1 / self.material.dielectricConstant
+            self.inverseCoeffDistanceList = np.empty(self.neighbors.numSystemElements, dtype=object)
+            for elementIndex in range(self.neighbors.numSystemElements):
+                self.inverseCoeffDistanceList[elementIndex] = inverseDielectricConstant / self.displacementList[elementIndex]
 
         # variables for ewald sum
         self.translationalMatrix = np.multiply(self.systemSize, self.material.latticeMatrix) 
@@ -732,11 +732,10 @@ class run(object):
         self.totalSpecies = self.system.speciesCount.sum()
     
     #@profile
-    def doKMCSteps(self, outdir, report=1, randomSeed=1):
+    def doKMCSteps(self, outdir, ewald=1, report=1, randomSeed=1):
         """Subroutine to run the KMC simulation by specified number of steps"""
         assert outdir, 'Please provide the destination path where simulation output files needs to be saved'
         
-        ewald = 1
         excess = 0
         
         timeDataFileName = outdir + directorySeparator + 'Time.dat'
