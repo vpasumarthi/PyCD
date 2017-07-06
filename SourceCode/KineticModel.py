@@ -573,14 +573,7 @@ class system(object):
         self.inverseCoeffDistanceList = np.empty(self.neighbors.numSystemElements, dtype=object)
         for elementIndex in range(self.neighbors.numSystemElements):
             self.inverseCoeffDistanceList[elementIndex] = inverseDielectricConstant / self.displacementList[elementIndex]
-        
-        # positions of all system elements
-        self.systemCartesianCoordinates = self.neighbors.bulkSites.cellCoordinates
-        self.systemCartesianDistance = np.zeros((self.neighbors.numSystemElements, self.neighbors.numSystemElements, 3))
-        for i in range(self.neighbors.numSystemElements):
-            for j in range(self.neighbors.numSystemElements):
-                self.systemCartesianDistance[i][j] = self.systemCartesianCoordinates[i] - self.systemCartesianCoordinates[j]
-        
+
         # variables for ewald sum
         self.translationalMatrix = np.multiply(self.systemSize, self.material.latticeMatrix) 
         self.systemVolume = abs(np.dot(self.translationalMatrix[0], np.cross(self.translationalMatrix[1], self.translationalMatrix[2])))
@@ -590,6 +583,25 @@ class system(object):
         self.translationalVectorLength = np.linalg.norm(self.translationalMatrix, axis=1)
         self.reciprocalLatticeVectorLength = np.linalg.norm(self.reciprocalLatticeMatrix, axis=1)        
     
+        xRange = range(-1, 2) if self.neighbors.pbc[0] == 1 else [0]
+        yRange = range(-1, 2) if self.neighbors.pbc[1] == 1 else [0]
+        zRange = range(-1, 2) if self.neighbors.pbc[2] == 1 else [0]
+        unitcellTranslationalCoords = np.zeros((3**sum(self.pbc), 3)) # Initialization
+        index = 0
+        for xOffset in xRange:
+            for yOffset in yRange:
+                for zOffset in zRange:
+                    unitcellTranslationalCoords[index] = np.dot(np.multiply(np.array([xOffset, yOffset, zOffset]), self.systemSize), self.material.latticeMatrix)
+                    index += 1
+        
+        self.systemCartesianDistance = np.zeros((self.neighbors.numSystemElements, self.neighbors.numSystemElements, 3))
+        for centerSiteIndex, centerCoord in enumerate(self.neighbors.bulkSites.cellCoordinates):
+            for neighborSiteIndex, neighborCoord in enumerate(self.neighbors.bulkSites.cellCoordinates):
+                neighborImageCoords = unitcellTranslationalCoords + neighborCoord
+                neighborImageDisplacementVectors = neighborImageCoords - centerCoord
+                neighborImageDisplacements = np.linalg.norm(neighborImageDisplacementVectors, axis=1)
+                self.systemCartesianDistance[centerSiteIndex][neighborSiteIndex] = np.min(neighborImageDisplacements)
+
     def generateRandomOccupancy(self, speciesCount):
         """generates initial occupancy list based on species count"""
         occupancy = []
@@ -630,37 +642,17 @@ class system(object):
     
     #@profile
     def ewaldSumSetup(self, alpha, nmax, kmax):
-        currentStateOccupancy = self.generateRandomOccupancy(self.speciesCount)
-        currentStateChargeConfig = self.chargeConfig(currentStateOccupancy)
-        speciesSiteSystemElementIndex = currentStateOccupancy[0]
-        neighborSiteSystemElementIndex = 10
-        print [speciesSiteSystemElementIndex, neighborSiteSystemElementIndex]
-        
         from scipy.special import erfc
-        tpi = 2 * np.pi
         sqrtalpha = np.sqrt(alpha)
         alpha4 = 4 * alpha
         fourierSumCoeff = (2 * np.pi) / self.systemVolume
         precomputedArray = np.zeros((self.neighbors.numSystemElements, self.neighbors.numSystemElements))
-        
-        for elementIndex in range(12):
-            print (np.dot(currentStateChargeConfig[:, 0], precomputedArray[elementIndex]) 
-                   - currentStateChargeConfig[speciesSiteSystemElementIndex][0] * precomputedArray[elementIndex][speciesSiteSystemElementIndex] 
-                   - currentStateChargeConfig[neighborSiteSystemElementIndex][0] * precomputedArray[elementIndex][neighborSiteSystemElementIndex])
-        print 
 
         for i in range(-nmax, nmax+1):
             for j in range(-nmax, nmax+1):
                 for k in range(-nmax, nmax+1):
                     tempArray = np.linalg.norm(self.systemCartesianDistance + np.dot(np.array([i, j, k]), self.translationalMatrix), axis=2)
                     precomputedArray += erfc(sqrtalpha * tempArray) / 2
-
-                    for elementIndex in range(12):
-                        print (np.dot(currentStateChargeConfig[:, 0], precomputedArray[elementIndex]) 
-                               - currentStateChargeConfig[speciesSiteSystemElementIndex][0] * precomputedArray[elementIndex][speciesSiteSystemElementIndex] 
-                               - currentStateChargeConfig[neighborSiteSystemElementIndex][0] * precomputedArray[elementIndex][neighborSiteSystemElementIndex])
-                    print
-                    #import pdb; pdb.set_trace()
 
                     if np.all(np.array([i, j, k])==0):
                         for a in range(self.neighbors.numSystemElements):
@@ -669,11 +661,6 @@ class system(object):
                                     precomputedArray[a][b] /= tempArray[a][b]
                     else:
                         precomputedArray /= tempArray
-        for elementIndex in range(12):
-            print (np.dot(currentStateChargeConfig[:, 0], precomputedArray[elementIndex]) 
-                   - currentStateChargeConfig[speciesSiteSystemElementIndex][0] * precomputedArray[elementIndex][speciesSiteSystemElementIndex] 
-                   - currentStateChargeConfig[neighborSiteSystemElementIndex][0] * precomputedArray[elementIndex][neighborSiteSystemElementIndex])
-        print 
         
         for i in range(-kmax, kmax+1):
             for j in range(-kmax, kmax+1):
@@ -684,12 +671,6 @@ class system(object):
                         precomputedArray += fourierSumCoeff * np.exp(-kVector2 / alpha4) * np.cos(np.tensordot(self.systemCartesianDistance, kVector, axes=([2], [0]))) / kVector2
         
         precomputedArray /= self.material.dielectricConstant
-        for elementIndex in range(12):
-            print (np.dot(currentStateChargeConfig[:, 0], precomputedArray[elementIndex]) 
-                   - currentStateChargeConfig[speciesSiteSystemElementIndex][0] * precomputedArray[elementIndex][speciesSiteSystemElementIndex] 
-                   - currentStateChargeConfig[neighborSiteSystemElementIndex][0] * precomputedArray[elementIndex][neighborSiteSystemElementIndex])
-        print 
-        #import pdb; pdb.set_trace()
         return precomputedArray
     
 class run(object):
@@ -832,7 +813,6 @@ class run(object):
                     for hopDistType in range(self.lenHopDistTypeList[speciesIndex]):
                         localNeighborSiteSystemElementIndexList = self.system.hopNeighborList[hopElementType][hopDistType].neighborSystemElementIndices[rowIndex]
                         for neighborIndex, neighborSiteSystemElementIndex in enumerate(localNeighborSiteSystemElementIndexList):
-                            print [speciesSiteSystemElementIndex, neighborSiteSystemElementIndex]
                             # TODO: Introduce If condition
                             # if neighborSystemElementIndex not in currentStateOccupancy: commit 898baa8
                             neighborSiteSystemElementIndexList[iProc] = neighborSiteSystemElementIndex
@@ -840,23 +820,13 @@ class run(object):
                             neighborIndexList[iProc] = neighborIndex
                             # TODO: Print out a prompt about the assumption; detailed comment here. <Using species charge to compute change in energy> May be print log report
                             if ewald:
-                                currentStateChargeConfig[speciesSiteSystemElementIndex] -= self.speciesChargeList[speciesIndex]
-                                currentStateChargeConfig[neighborSiteSystemElementIndex] += self.speciesChargeList[speciesIndex]
                                 delG0 = (self.speciesChargeList[speciesIndex] 
                                          * (2 * np.dot(currentStateChargeConfig[:, 0], precomputedArray[neighborSiteSystemElementIndex, :] - precomputedArray[speciesSiteSystemElementIndex, :]) 
                                             + self.speciesChargeList[speciesIndex] * (precomputedArray[speciesSiteSystemElementIndex, speciesSiteSystemElementIndex] 
                                                                                       + precomputedArray[neighborSiteSystemElementIndex, neighborSiteSystemElementIndex] 
                                                                                       - 2 * precomputedArray[speciesSiteSystemElementIndex, neighborSiteSystemElementIndex])))
-                                print delG0
-                                for elementIndex in range(12):
-                                    print (np.dot(currentStateChargeConfig[:, 0], precomputedArray[elementIndex]) 
-                                           - currentStateChargeConfig[speciesSiteSystemElementIndex][0] * precomputedArray[elementIndex][speciesSiteSystemElementIndex] 
-                                           - currentStateChargeConfig[neighborSiteSystemElementIndex][0] * precomputedArray[elementIndex][neighborSiteSystemElementIndex]) 
-                                import pdb; pdb.set_trace()
                                 delG0List.append(delG0)
                                 newStateEnergy = currentStateEnergy + delG0
-                                currentStateChargeConfig[speciesSiteSystemElementIndex] += self.speciesChargeList[speciesIndex]
-                                currentStateChargeConfig[neighborSiteSystemElementIndex] -= self.speciesChargeList[speciesIndex]
                             else:
                                 columnIndex = self.system.neighborSystemElementIndexMap[speciesSiteSystemElementIndex][neighborSiteSystemElementIndex]
                                 delG0 = (self.speciesChargeList[speciesIndex] * ((currentStateESPConfig[neighborSiteSystemElementIndex][0] - currentStateESPConfig[speciesSiteSystemElementIndex][0]
