@@ -541,6 +541,7 @@ class system(object):
     Attributes:
     size: An array (3 x 1) defining the system size in multiple of unit cells
     """
+    #@profile
     def __init__(self, material, neighbors, ewald, hopNeighborList, neighborSystemElementIndices, displacementList, numNeighbors, speciesCount):
         """Return a system object whose size is *size*"""
         self.material = material
@@ -593,14 +594,13 @@ class system(object):
                 for zOffset in zRange:
                     unitcellTranslationalCoords[index] = np.dot(np.multiply(np.array([xOffset, yOffset, zOffset]), self.systemSize), self.material.latticeMatrix)
                     index += 1
-        
         self.systemCartesianDistance = np.zeros((self.neighbors.numSystemElements, self.neighbors.numSystemElements, 3))
         for centerSiteIndex, centerCoord in enumerate(self.neighbors.bulkSites.cellCoordinates):
-            for neighborSiteIndex, neighborCoord in enumerate(self.neighbors.bulkSites.cellCoordinates):
-                neighborImageCoords = unitcellTranslationalCoords + neighborCoord
-                neighborImageDisplacementVectors = neighborImageCoords - centerCoord
-                neighborImageDisplacements = np.linalg.norm(neighborImageDisplacementVectors, axis=1)
-                self.systemCartesianDistance[centerSiteIndex][neighborSiteIndex] = np.min(neighborImageDisplacements)
+            cumulativeUnitCellTranslationalCoords = np.tile(unitcellTranslationalCoords, (self.neighbors.numSystemElements, 1, 1))
+            cumulativeNeighborImageCoords = cumulativeUnitCellTranslationalCoords + np.tile(self.neighbors.bulkSites.cellCoordinates[:, np.newaxis, :], (1, len(unitcellTranslationalCoords), 1))
+            cumulativeNeighborImageDisplacementVectors = cumulativeNeighborImageCoords - centerCoord
+            cumulativeNeighborImageDisplacements = np.linalg.norm(cumulativeNeighborImageDisplacementVectors, axis=2)
+            self.systemCartesianDistance[centerSiteIndex] = cumulativeNeighborImageDisplacementVectors[np.arange(self.neighbors.numSystemElements), np.argmin(cumulativeNeighborImageDisplacements, axis=1)]
 
     def generateRandomOccupancy(self, speciesCount):
         """generates initial occupancy list based on species count"""
