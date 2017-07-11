@@ -1,48 +1,70 @@
 #!/usr/bin/env python
+def hematiteAutoCorrelation(systemSize, pbc, Temp, cutE, speciesCount, tFinal, nTraj, stepInterval, kmcStepCountPrecision, 
+                            msdStepCountPrecision, msdTFinal, nDispMin, binsize, reprTime, reprDist, report, overWrite):
+    from KineticModel import analysis
+    import os
+    import platform
+    import numpy as np
+    import pickle
 
-import numpy as np
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-from numpy import genfromtxt
-from math import pow
+    # Compute number of estimated KMC steps to reach tFinal
+    totalSpecies = sum(speciesCount)
+    kBasal = 2.58E-08 # au
+    kC = 1.57E-11 # au
+    ANG2BOHR = 1.8897261264678997
+    SEC2NS = 1.00e+09
+    SEC2AUTIME = 4.134137336634339e+16
+    kTotalPerSpecies = 3 * kBasal + kC
+    kTotal = kTotalPerSpecies * totalSpecies
+    timeStep = 1 / (kTotal * SEC2AUTIME)
+    kmcSteps = int(np.ceil(tFinal / timeStep / kmcStepCountPrecision) * kmcStepCountPrecision)
 
-ANG2BOHR = 1.8897261264678997
-ANG2uM = 1.00e-04
-SEC2AUTIME = 4.134137336634339e+16
-SEC2NS = 1.00e+09
-d = 3
+    # Compute number of MSD steps and number of displacements    
+    trajTimeStep = timeStep * stepInterval
+    # TODO: Is it possible to get away with msdStepCountPrecision
+    nStepsMSD = int(np.ceil(msdTFinal * (1.00E-09 if reprTime is 'ns' else 1.00E+00) / trajTimeStep / msdStepCountPrecision) * msdStepCountPrecision)
+    nDispMSD = min([nDispMin, kmcSteps / stepInterval / 2])
 
-D = []
-n_traj = 100
-#n_compute = 100 # Since the function subsides early, it is not required to compute for the entire length
-for i in range(n_traj):
-    time_data = np.loadtxt('Time.dat')[i*101:(i+1)*101] / SEC2AUTIME
-    pos_data = np.loadtxt('unwrappedTraj.dat')[i*101:(i+1)*101, :] / ANG2BOHR * ANG2uM
-    vel_data = np.diff(pos_data, axis=0) / np.diff(time_data)[:, None]
-    n_steps = len(vel_data)
-    n_compute = n_steps - 1 # 30; 50 ns  = ~20 steps for 1 electron
-    mean = []
-    for step_size in range(n_compute):
-        vel_sum = 0
-        t0 = 0
-        n_pairs = n_steps-step_size
-        for pair in range(n_pairs):
-            t1 = t0 + step_size
-            vel_sum += np.sum(np.multiply(vel_data[t0], vel_data[t1]))
-            t0 += 1
-        mean.append(vel_sum / n_pairs)
-    D.append(np.trapz(mean, time_data[1:n_compute+1]) / d)
+    # Determine path for system directory    
+    cwd = os.path.dirname(os.path.realpath(__file__))
+    directorySeparator = '\\' if platform.uname()[0]=='Windows' else '/'
+    nLevelUp = 3 if platform.uname()[0]=='Linux' else 4
+    systemDirectoryPath = directorySeparator.join(cwd.split(directorySeparator)[:-nLevelUp] + 
+                                                  ['KineticModelSimulations', 'Hematite', ('PBC' if pbc else 'NoPBC'), 
+                                                   ('SystemSize' + str(systemSize).replace(' ', ''))])
+
+    # Change to working directory
+    parentDir1 = 'E_' + str(cutE)
+    nElectrons = speciesCount[0]
+    nHoles = speciesCount[1]
+    parentDir2 = str(nElectrons) + ('electron' if nElectrons==1 else 'electrons') + ', ' + str(nHoles) + ('hole' if nHoles==1 else 'holes')
+    parentDir3 = str(Temp) + 'K'
+    workDir = (('%1.2E' % kmcSteps) + 'Steps,' + ('%1.2E' % (kmcSteps/stepInterval)) + 'PathSteps,' + ('%1.2E' % nTraj) + 'Traj')
+    workDir = workDir.replace('+','')
+    workDirPath = systemDirectoryPath + directorySeparator + directorySeparator.join([parentDir1, parentDir2, parentDir3, workDir])
+    if not os.path.exists(workDirPath):
+        print 'Simulation files do not exist. Aborting.'
+    else:
+        os.chdir(workDirPath)
+
+        # Build path for material and neighbors object files
+        materialName = 'hematite'
+        tailName = '_E' + str(cutE) + '.obj'
+        directorySeparator = '\\' if platform.uname()[0]=='Windows' else '/'
+        objectFileDirectoryName = 'ObjectFiles'
+        objectFileDirPath = systemDirectoryPath + directorySeparator + objectFileDirectoryName
+        materialFileName = objectFileDirPath + directorySeparator + materialName + tailName
+        
+        # Load material object
+        file_hematite = open(materialFileName, 'r')
+        hematite = pickle.load(file_hematite)
+        file_hematite.close()
     
-print "Diffusivity obtained from velocity autocorrelation: %4.5f um2/s" % np.mean(D)
-
-'''
-plt.figure(1)
-plt.axhline(0, color='black')
-plt.plot(mean)
-plt.xlabel('del_t')
-plt.ylabel('<v(o).v(t)>')
-plt.title('Velocity Autocorrelation Function')
-plt.show()
-plt.savefig('Velocity Autocorrelation.jpg')
-'''
+        hematiteAnalysis = analysis(hematite, speciesCount, nTraj, kmcSteps, stepInterval, 
+                                    systemSize, nStepsMSD, nDispMSD, binsize, reprTime, reprDist)
+        
+        msdAnalysisData = hematiteAnalysis.computeAutoMSD(workDirPath, report)
+        speciesTypeMeanVelProd = msdAnalysisData.speciesTypeMeanVelProd
+        speciesTypes = msdAnalysisData.speciesTypes
+        fileName = msdAnalysisData.fileName
+        hematiteAnalysis.generateAutoMSDPlot(speciesTypeMeanVelProd, speciesTypes, fileName, workDirPath)

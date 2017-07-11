@@ -925,8 +925,17 @@ class analysis(object):
         self.reprTime = reprTime
         self.reprDist = reprDist
         
-        self.timeConversion = (1E+09 if reprTime is 'ns' else 1E+00) / self.material.SEC2AUTIME 
-        self.distConversion = (1E-10 if reprDist is 'm' else 1E+00) / self.material.ANG2BOHR        
+        if reprTime == 'ns':
+            self.timeConversion = 1E+09 / self.material.SEC2AUTIME
+        elif reprTime == 's':
+            self.timeConversion = 1E+00 / self.material.SEC2AUTIME
+        
+        if reprDist == 'm':
+            self.distConversion = 1E-10 / self.material.ANG2BOHR
+        elif reprDist == 'um':
+            self.distConversion = 1E-04 / self.material.ANG2BOHR
+        elif reprDist == 'angstrom':
+            self.distConversion = 1E+00 / self.material.ANG2BOHR
         
     def computeMSD(self, outdir, report=1):
         """Returns the squared displacement of the trajectories"""
@@ -984,9 +993,64 @@ class analysis(object):
         returnMSDData.fileName = fileName
         return returnMSDData
     
+    def computeAutoMSD(self, outdir, report=1):
+        nDim = 3 # number of dimensions
+        speciesCount = self.speciesCount
+        nSpecies = sum(speciesCount)
+        nSpeciesTypes = len(self.material.speciesTypes)
+        numPathStepsPerTraj = int(self.kmcSteps / self.stepInterval) + 1
+        time = np.loadtxt(outdir + directorySeparator + 'Time.dat') * self.timeConversion
+        numTrajRecorded = int(len(time) / numPathStepsPerTraj)
+        positionArray = np.loadtxt(outdir + directorySeparator + 'unwrappedTraj.dat')[:numTrajRecorded * numPathStepsPerTraj + 1].reshape((numTrajRecorded * numPathStepsPerTraj, self.totalSpecies, 3)) * self.distConversion
+        iDiff = np.zeros((numTrajRecorded, nSpecies))
+        #n_compute = 100 # Since the function subsides early, it is not required to compute for the entire length
+        nonExistentSpeciesIndices = []
+        for trajIndex in range(numTrajRecorded):
+            trajTimeData = time[trajIndex * numPathStepsPerTraj:(trajIndex + 1) * numPathStepsPerTraj]
+            trajPosData = positionArray[trajIndex * numPathStepsPerTraj:(trajIndex + 1) * numPathStepsPerTraj, :, :]
+            trajVelData = np.diff(trajPosData, axis=0) / np.diff(trajTimeData)[:, None, None]
+            numSteps = len(trajVelData)
+            nCompute = numSteps - 1 # 30; 50 ns  = ~20 steps for 1 electron
+            meanVelProd = np.zeros((nCompute, nSpecies))
+            for stepSize in range(nCompute):
+                velSum = np.zeros(nSpecies)
+                t0 = 0
+                numPairs = numSteps - stepSize
+                for pair in range(numPairs):
+                    t1 = t0 + stepSize
+                    velSum += np.einsum('ij,ij->i', trajVelData[t0], trajVelData[t1])
+                    t0 += 1
+                meanVelProd[stepSize, :] = velSum / numPairs
+            iDiff[trajIndex, :] = np.trapz(meanVelProd, trajTimeData[1:nCompute + 1], axis=0) / nDim
+        iSpeciesDiff = np.mean(iDiff, axis=0)
+        numNonExistentSpecies = 0
+        startIndex = 0
+        speciesTypeMeanVelProd = np.zeros((nCompute, nSpeciesTypes - list(speciesCount).count(0)))
+        for speciesTypeIndex in range(nSpeciesTypes):
+            if speciesCount[speciesTypeIndex] != 0:
+                endIndex = startIndex + speciesCount[speciesTypeIndex]
+                speciesTypeMeanVelProd[:, speciesTypeIndex - numNonExistentSpecies] = np.mean(meanVelProd[:, startIndex:endIndex], axis=1)
+            else:
+                numNonExistentSpecies += 1
+                nonExistentSpeciesIndices.append(speciesTypeIndex)
+        print "Species-wise diffusivity obtained from velocity autocorrelation in um2/s: " + " ".join('%4.5f'%element for element in iSpeciesDiff)
+        print "Diffusivity obtained from velocity autocorrelation: %4.5f um2/s" % np.mean(iSpeciesDiff)
+
+        fileName = ('nTraj: %1.2E' % numTrajRecorded if numTrajRecorded != self.nTraj else '')
+        msdFileName = 'MeanVelProdData' + ('_' if fileName else '') + fileName + '.npy'
+        msdFilePath = outdir + directorySeparator + msdFileName
+        np.save(msdFilePath, meanVelProd)
+        if report:
+            self.generateMSDAnalysisLogReport(outdir, fileName)
+        returnMSDData = returnValues()
+        returnMSDData.speciesTypeMeanVelProd = speciesTypeMeanVelProd
+        returnMSDData.speciesTypes = [speciesType for index, speciesType in enumerate(self.material.speciesTypes) if index not in nonExistentSpeciesIndices]
+        returnMSDData.fileName = fileName
+        return returnMSDData
+    
     def generateMSDAnalysisLogReport(self, outdir, fileName):
         """Generates an log report of the MSD Analysis and outputs to the working directory"""
-        msdAnalysisLogFileName = 'MSD_Analysis_' + fileName + '.log'
+        msdAnalysisLogFileName = 'MSD_Analysis' + ('_' if fileName else '') + fileName + '.log'
         msdLogFilePath = outdir + directorySeparator + msdAnalysisLogFileName
         report = open(msdLogFilePath, 'w')
         endTime = datetime.now()
@@ -1017,6 +1081,29 @@ class analysis(object):
         figureName = 'MSD_Plot_' + fileName + '.jpg'
         figurePath = outdir + directorySeparator + figureName
         plt.savefig(figurePath)
+
+    def generateAutoMSDPlot(self, speciesTypeMeanVelProd, speciesTypes, fileName, outdir):
+        """Returns a line plot of the MSD data"""
+        assert outdir, 'Please provide the destination path where MSD Plot files needs to be saved'
+        import matplotlib
+        matplotlib.use('Agg')
+        import matplotlib.pyplot as plt
+        from textwrap import wrap
+        plt.figure()
+        plt.axhline(0, color='black')
+        for speciesTypeIndex, speciesType in enumerate(speciesTypes):
+            plt.plot(speciesTypeMeanVelProd[:,speciesTypeIndex], label=speciesType)
+            
+        plt.xlabel('delT (' + self.reprTime + ')')
+        plt.ylabel('<v(0).v(t)>')
+        figureTitle = 'Velocity Autocorrelation Function' + fileName
+        plt.title('\n'.join(wrap(figureTitle,60)))
+        plt.legend()
+        plt.show() # Temp change
+        figureName = 'VelocityAutoCorrelationPlot' + fileName + '.jpg'
+        figurePath = outdir + directorySeparator + figureName
+        plt.savefig(figurePath)
+    
     '''
     # TODO: Finish writing the method soon.
     def displayCollectiveMSDPlot(self, msdData, speciesTypes, fileName, outdir=None):
