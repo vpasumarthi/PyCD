@@ -22,7 +22,7 @@ def hematiteAutoCorrelation(systemSize, pbc, Temp, cutE, speciesCount, tFinal, n
     # Compute number of MSD steps and number of displacements    
     trajTimeStep = timeStep * stepInterval
     # TODO: Is it possible to get away with msdStepCountPrecision
-    nStepsMSD = int(np.ceil(msdTFinal * (1.00E-09 if reprTime is 'ns' else 1.00E+00) / trajTimeStep / msdStepCountPrecision) * msdStepCountPrecision)
+    nStepsMSD = int(np.ceil(msdTFinal * 1.00E-09 / trajTimeStep / msdStepCountPrecision) * msdStepCountPrecision)
     nDispMSD = min([nDispMin, kmcSteps / stepInterval / 2])
 
     # Determine path for system directory    

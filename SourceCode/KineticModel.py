@@ -992,7 +992,7 @@ class analysis(object):
         returnMSDData.speciesTypes = [speciesType for index, speciesType in enumerate(self.material.speciesTypes) if index not in nonExistentSpeciesIndices]
         returnMSDData.fileName = fileName
         return returnMSDData
-    
+    #@profile
     def computeAutoMSD(self, outdir, report=1):
         nDim = 3 # number of dimensions
         speciesCount = self.speciesCount
@@ -1003,29 +1003,25 @@ class analysis(object):
         numTrajRecorded = int(len(time) / numPathStepsPerTraj)
         positionArray = np.loadtxt(outdir + directorySeparator + 'unwrappedTraj.dat')[:numTrajRecorded * numPathStepsPerTraj + 1].reshape((numTrajRecorded * numPathStepsPerTraj, self.totalSpecies, 3)) * self.distConversion
         iDiff = np.zeros((numTrajRecorded, nSpecies))
-        #n_compute = 100 # Since the function subsides early, it is not required to compute for the entire length
         nonExistentSpeciesIndices = []
         for trajIndex in range(numTrajRecorded):
             trajTimeData = time[trajIndex * numPathStepsPerTraj:(trajIndex + 1) * numPathStepsPerTraj]
             trajPosData = positionArray[trajIndex * numPathStepsPerTraj:(trajIndex + 1) * numPathStepsPerTraj, :, :]
             trajVelData = np.diff(trajPosData, axis=0) / np.diff(trajTimeData)[:, None, None]
-            numSteps = len(trajVelData)
-            nCompute = numSteps - 1 # 30; 50 ns  = ~20 steps for 1 electron
-            meanVelProd = np.zeros((nCompute, nSpecies))
-            for stepSize in range(nCompute):
+            meanVelProd = np.zeros((self.nStepsMSD, nSpecies))
+            for timestep in range(self.nStepsMSD):
                 velSum = np.zeros(nSpecies)
                 t0 = 0
-                numPairs = numSteps - stepSize
-                for pair in range(numPairs):
-                    t1 = t0 + stepSize
+                for pair in range(self.nDispMSD):
+                    t1 = t0 + timestep
                     velSum += np.einsum('ij,ij->i', trajVelData[t0], trajVelData[t1])
                     t0 += 1
-                meanVelProd[stepSize, :] = velSum / numPairs
-            iDiff[trajIndex, :] = np.trapz(meanVelProd, trajTimeData[1:nCompute + 1], axis=0) / nDim
+                meanVelProd[timestep, :] = velSum / self.nDispMSD
+            iDiff[trajIndex, :] = np.trapz(meanVelProd, trajTimeData[1:self.nStepsMSD + 1], axis=0) / nDim
         iSpeciesDiff = np.mean(iDiff, axis=0)
         numNonExistentSpecies = 0
         startIndex = 0
-        speciesTypeMeanVelProd = np.zeros((nCompute, nSpeciesTypes - list(speciesCount).count(0)))
+        speciesTypeMeanVelProd = np.zeros((self.nStepsMSD, nSpeciesTypes - list(speciesCount).count(0)))
         for speciesTypeIndex in range(nSpeciesTypes):
             if speciesCount[speciesTypeIndex] != 0:
                 endIndex = startIndex + speciesCount[speciesTypeIndex]
