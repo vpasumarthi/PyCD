@@ -946,7 +946,7 @@ class analysis(object):
         numTrajRecorded = int(len(time) / numPathStepsPerTraj)
         positionArray = np.loadtxt(outdir + directorySeparator + 'unwrappedTraj.dat')[:numTrajRecorded * numPathStepsPerTraj + 1].reshape((numTrajRecorded * numPathStepsPerTraj, self.totalSpecies, 3)) * self.distConversion
         msdTimeArray = np.zeros(numTrajRecorded * (self.nStepsMSD * self.nDispMSD))
-        msdDispArray = np.zeros((numTrajRecorded * (self.nStepsMSD * self.nDispMSD), self.totalSpecies))
+        msdDisp2Array = np.zeros((numTrajRecorded * (self.nStepsMSD * self.nDispMSD), self.totalSpecies))
         addOn = np.arange(self.nDispMSD)
         for trajIndex in range(numTrajRecorded):
             headStart = trajIndex * numPathStepsPerTraj
@@ -955,15 +955,15 @@ class analysis(object):
                 workingRows = workingRowHeadStart + (timestep-1) * self.nDispMSD + addOn
                 msdTimeArray[workingRows] = time[headStart + timestep + addOn] - time[headStart + addOn]
                 posDiff = positionArray[headStart + timestep + addOn] - positionArray[headStart + addOn]
-                msdDispArray[workingRows, :] = np.einsum('ijk,ijk->ij', posDiff, posDiff)
+                msdDisp2Array[workingRows, :] = np.einsum('ijk,ijk->ij', posDiff, posDiff)
         minEndTime = np.min(msdTimeArray[np.arange(self.nStepsMSD * self.nDispMSD - 1, numTrajRecorded * (self.nStepsMSD * self.nDispMSD), self.nStepsMSD * self.nDispMSD)])
         bins = np.arange(0, minEndTime, self.binsize)
         nBins = len(bins) - 1
         speciesMSDData = np.zeros((nBins, self.totalSpecies))
-        msdHistogram, dummy = np.histogram(msdTimeArray, bins)
+        msdTimeHistogram, dummy = np.histogram(msdTimeArray, bins)
         for iSpecies in range(self.totalSpecies):
-            iSpeciesHist, dummy = np.histogram(msdTimeArray, bins, weights=msdDispArray[:, iSpecies])
-            speciesMSDData[:, iSpecies] = iSpeciesHist / msdHistogram
+            iSpeciesHist, dummy = np.histogram(msdTimeArray, bins, weights=msdDisp2Array[:, iSpecies])
+            speciesMSDData[:, iSpecies] = iSpeciesHist / msdTimeHistogram
         msdData = np.zeros((nBins+1, self.material.numSpeciesTypes + 1 - list(self.speciesCount).count(0)))
         msdData[1:, 0] = bins[:-1] + 0.5 * self.binsize
         startIndex = 0
@@ -994,35 +994,28 @@ class analysis(object):
     #@profile
     def computeAutoMSD(self, outdir, report=1):
         nDim = 3 # number of dimensions
-        speciesCount = self.speciesCount
-        nSpecies = sum(speciesCount)
-        nSpeciesTypes = len(self.material.speciesTypes)
         numPathStepsPerTraj = int(self.kmcSteps / self.stepInterval) + 1
         time = np.loadtxt(outdir + directorySeparator + 'Time.dat') * self.timeConversion
         numTrajRecorded = int(len(time) / numPathStepsPerTraj)
         positionArray = np.loadtxt(outdir + directorySeparator + 'unwrappedTraj.dat')[:numTrajRecorded * numPathStepsPerTraj + 1].reshape((numTrajRecorded * numPathStepsPerTraj, self.totalSpecies, 3)) * self.distConversion
-        iDiff = np.zeros((numTrajRecorded, nSpecies))
+        iTrajDiff = np.zeros((numTrajRecorded, self.totalSpecies))
         nonExistentSpeciesIndices = []
+        addOn = np.arange(self.nDispMSD)
         for trajIndex in range(numTrajRecorded):
             trajTimeData = time[trajIndex * numPathStepsPerTraj:(trajIndex + 1) * numPathStepsPerTraj]
             trajPosData = positionArray[trajIndex * numPathStepsPerTraj:(trajIndex + 1) * numPathStepsPerTraj, :, :]
             trajVelData = np.diff(trajPosData, axis=0) / np.diff(trajTimeData)[:, None, None]
-            meanVelProd = np.zeros((self.nStepsMSD, nSpecies))
+            meanVelProd = np.zeros((self.nStepsMSD, self.totalSpecies))
             for timestep in range(self.nStepsMSD):
-                velSum = np.zeros(nSpecies)
-                t0 = 0
-                for pair in range(self.nDispMSD):
-                    velSum += np.einsum('ij,ij->i', trajVelData[t0], trajVelData[t0 + timestep])
-                    t0 += 1
-                meanVelProd[timestep, :] = velSum / self.nDispMSD
-            iDiff[trajIndex, :] = np.trapz(meanVelProd, trajTimeData[1:self.nStepsMSD + 1], axis=0) / nDim
-        iSpeciesDiff = np.mean(iDiff, axis=0)
+                meanVelProd[timestep, :] = np.sum(np.einsum('ijk,ijk->ij', trajVelData[addOn], trajVelData[timestep + addOn]), axis=0) / self.nDispMSD
+            iTrajDiff[trajIndex, :] = np.trapz(meanVelProd, trajTimeData[1:self.nStepsMSD + 1], axis=0) / nDim
+        iSpeciesDiff = np.mean(iTrajDiff, axis=0)
         numNonExistentSpecies = 0
         startIndex = 0
-        speciesTypeMeanVelProd = np.zeros((self.nStepsMSD, nSpeciesTypes - list(speciesCount).count(0)))
-        for speciesTypeIndex in range(nSpeciesTypes):
-            if speciesCount[speciesTypeIndex] != 0:
-                endIndex = startIndex + speciesCount[speciesTypeIndex]
+        speciesTypeMeanVelProd = np.zeros((self.nStepsMSD, self.totalSpecies - list(self.speciesCount).count(0)))
+        for speciesTypeIndex in range(self.totalSpecies):
+            if self.speciesCount[speciesTypeIndex] != 0:
+                endIndex = startIndex + self.speciesCount[speciesTypeIndex]
                 speciesTypeMeanVelProd[:, speciesTypeIndex - numNonExistentSpecies] = np.mean(meanVelProd[:, startIndex:endIndex], axis=1)
             else:
                 numNonExistentSpecies += 1
