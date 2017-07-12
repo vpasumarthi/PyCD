@@ -1013,8 +1013,7 @@ class analysis(object):
                 velSum = np.zeros(nSpecies)
                 t0 = 0
                 for pair in range(self.nDispMSD):
-                    t1 = t0 + timestep
-                    velSum += np.einsum('ij,ij->i', trajVelData[t0], trajVelData[t1])
+                    velSum += np.einsum('ij,ij->i', trajVelData[t0], trajVelData[t0 + timestep])
                     t0 += 1
                 meanVelProd[timestep, :] = velSum / self.nDispMSD
             iDiff[trajIndex, :] = np.trapz(meanVelProd, trajTimeData[1:self.nStepsMSD + 1], axis=0) / nDim
