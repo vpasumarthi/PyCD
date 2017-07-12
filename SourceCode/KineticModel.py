@@ -947,14 +947,14 @@ class analysis(object):
         positionArray = np.loadtxt(outdir + directorySeparator + 'unwrappedTraj.dat')[:numTrajRecorded * numPathStepsPerTraj + 1].reshape((numTrajRecorded * numPathStepsPerTraj, self.totalSpecies, 3)) * self.distConversion
         msdTimeArray = np.zeros(numTrajRecorded * (self.nStepsMSD * self.nDispMSD))
         msdDispArray = np.zeros((numTrajRecorded * (self.nStepsMSD * self.nDispMSD), self.totalSpecies))
+        addOn = np.arange(self.nDispMSD)
         for trajIndex in range(numTrajRecorded):
             headStart = trajIndex * numPathStepsPerTraj
             for timestep in range(1, self.nStepsMSD + 1):
-                for step in range(self.nDispMSD):
-                    workingRow = trajIndex * (self.nStepsMSD * self.nDispMSD) + (timestep-1) * self.nDispMSD + step
-                    msdTimeArray[workingRow] = time[headStart + step + timestep] - time[headStart + step]
-                    posDiff = positionArray[headStart + step + timestep] - positionArray[headStart + step]
-                    msdDispArray[workingRow, :] = np.einsum('ij,ij->i', posDiff, posDiff)
+                workingRows = trajIndex * (self.nStepsMSD * self.nDispMSD) + (timestep-1) * self.nDispMSD + addOn
+                msdTimeArray[workingRows] = time[headStart + timestep + addOn] - time[headStart + addOn]
+                posDiff = positionArray[headStart + timestep + addOn] - positionArray[headStart + addOn]
+                msdDispArray[workingRows, :] = np.einsum('ijk,ijk->ij', posDiff, posDiff)
         minEndTime = np.min(msdTimeArray[np.arange(self.nStepsMSD * self.nDispMSD - 1, numTrajRecorded * (self.nStepsMSD * self.nDispMSD), self.nStepsMSD * self.nDispMSD)])
         bins = np.arange(0, minEndTime, self.binsize)
         nBins = len(bins) - 1
