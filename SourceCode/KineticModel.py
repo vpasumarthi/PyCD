@@ -74,6 +74,7 @@ class material(object):
         self.name = materialParameters.name
         self.elementTypes = materialParameters.elementTypes[:]
         self.speciesTypes = materialParameters.speciesTypes[:]
+        self.numSpeciesTypes = len(self.speciesTypes)
         self.speciesChargeList = materialParameters.speciesChargeList[:]
         self.speciesToElementTypeMap = deepcopy(materialParameters.speciesToElementTypeMap)
         self.unitcellCoords = np.zeros((len(materialParameters.unitcellCoords), 3)) # Initialization
@@ -944,35 +945,32 @@ class analysis(object):
         time = np.loadtxt(outdir + directorySeparator + 'Time.dat') * self.timeConversion
         numTrajRecorded = int(len(time) / numPathStepsPerTraj)
         positionArray = np.loadtxt(outdir + directorySeparator + 'unwrappedTraj.dat')[:numTrajRecorded * numPathStepsPerTraj + 1].reshape((numTrajRecorded * numPathStepsPerTraj, self.totalSpecies, 3)) * self.distConversion
-        speciesCount = self.speciesCount
-        nSpecies = sum(speciesCount)
-        nSpeciesTypes = len(self.material.speciesTypes)
-        timeArray = np.zeros(numTrajRecorded * (self.nStepsMSD * self.nDispMSD))
-        dispArray = np.zeros((numTrajRecorded * (self.nStepsMSD * self.nDispMSD), nSpecies))
+        msdTimeArray = np.zeros(numTrajRecorded * (self.nStepsMSD * self.nDispMSD))
+        msdDispArray = np.zeros((numTrajRecorded * (self.nStepsMSD * self.nDispMSD), self.totalSpecies))
         for trajIndex in range(numTrajRecorded):
             headStart = trajIndex * numPathStepsPerTraj
             for timestep in range(1, self.nStepsMSD + 1):
                 for step in range(self.nDispMSD):
                     workingRow = trajIndex * (self.nStepsMSD * self.nDispMSD) + (timestep-1) * self.nDispMSD + step
-                    timeArray[workingRow] = time[headStart + step + timestep] - time[headStart + step]
-                    dispArray[workingRow, :] = np.linalg.norm(positionArray[headStart + step + timestep] - 
-                                                              positionArray[headStart + step], axis=1)**2
-        minEndTime = np.min(timeArray[np.arange(self.nStepsMSD * self.nDispMSD - 1, numTrajRecorded * (self.nStepsMSD * self.nDispMSD), self.nStepsMSD * self.nDispMSD)])
+                    msdTimeArray[workingRow] = time[headStart + step + timestep] - time[headStart + step]
+                    posDiff = positionArray[headStart + step + timestep] - positionArray[headStart + step]
+                    msdDispArray[workingRow, :] = np.einsum('ij,ij->i', posDiff, posDiff)
+        minEndTime = np.min(msdTimeArray[np.arange(self.nStepsMSD * self.nDispMSD - 1, numTrajRecorded * (self.nStepsMSD * self.nDispMSD), self.nStepsMSD * self.nDispMSD)])
         bins = np.arange(0, minEndTime, self.binsize)
         nBins = len(bins) - 1
-        speciesMSDData = np.zeros((nBins, nSpecies))
-        msdHistogram, dummy = np.histogram(timeArray, bins)
-        for iSpecies in range(nSpecies):
-            iSpeciesHist, dummy = np.histogram(timeArray, bins, weights=dispArray[:, iSpecies])
+        speciesMSDData = np.zeros((nBins, self.totalSpecies))
+        msdHistogram, dummy = np.histogram(msdTimeArray, bins)
+        for iSpecies in range(self.totalSpecies):
+            iSpeciesHist, dummy = np.histogram(msdTimeArray, bins, weights=msdDispArray[:, iSpecies])
             speciesMSDData[:, iSpecies] = iSpeciesHist / msdHistogram
-        msdData = np.zeros((nBins+1, nSpeciesTypes + 1 - list(speciesCount).count(0)))
+        msdData = np.zeros((nBins+1, self.material.numSpeciesTypes + 1 - list(self.speciesCount).count(0)))
         msdData[1:, 0] = bins[:-1] + 0.5 * self.binsize
         startIndex = 0
         numNonExistentSpecies = 0
         nonExistentSpeciesIndices = []
-        for speciesTypeIndex in range(nSpeciesTypes):
-            if speciesCount[speciesTypeIndex] != 0:
-                endIndex = startIndex + speciesCount[speciesTypeIndex]
+        for speciesTypeIndex in range(self.material.numSpeciesTypes):
+            if self.speciesCount[speciesTypeIndex] != 0:
+                endIndex = startIndex + self.speciesCount[speciesTypeIndex]
                 msdData[1:, speciesTypeIndex + 1 - numNonExistentSpecies] = np.mean(speciesMSDData[:, startIndex:endIndex], axis=1)
                 startIndex = endIndex
             else:
