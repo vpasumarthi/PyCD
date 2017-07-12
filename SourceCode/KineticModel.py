@@ -950,8 +950,9 @@ class analysis(object):
         addOn = np.arange(self.nDispMSD)
         for trajIndex in range(numTrajRecorded):
             headStart = trajIndex * numPathStepsPerTraj
+            workingRowHeadStart = trajIndex * (self.nStepsMSD * self.nDispMSD) 
             for timestep in range(1, self.nStepsMSD + 1):
-                workingRows = trajIndex * (self.nStepsMSD * self.nDispMSD) + (timestep-1) * self.nDispMSD + addOn
+                workingRows = workingRowHeadStart + (timestep-1) * self.nDispMSD + addOn
                 msdTimeArray[workingRows] = time[headStart + timestep + addOn] - time[headStart + addOn]
                 posDiff = positionArray[headStart + timestep + addOn] - positionArray[headStart + addOn]
                 msdDispArray[workingRows, :] = np.einsum('ijk,ijk->ij', posDiff, posDiff)
