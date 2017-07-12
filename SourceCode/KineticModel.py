@@ -1007,7 +1007,7 @@ class analysis(object):
             trajVelData = np.diff(trajPosData, axis=0) / np.diff(trajTimeData)[:, None, None]
             meanVelProd = np.zeros((self.nStepsMSD, self.totalSpecies))
             for timestep in range(self.nStepsMSD):
-                meanVelProd[timestep, :] = np.sum(np.einsum('ijk,ijk->ij', trajVelData[addOn], trajVelData[timestep + addOn]), axis=0) / self.nDispMSD
+                meanVelProd[timestep, :] = np.mean(np.einsum('ijk,ijk->ij', trajVelData[addOn], trajVelData[timestep + addOn]), axis=0)
             iTrajDiff[trajIndex, :] = np.trapz(meanVelProd, trajTimeData[1:self.nStepsMSD + 1], axis=0) / nDim
         iSpeciesDiff = np.mean(iTrajDiff, axis=0)
         numNonExistentSpecies = 0
