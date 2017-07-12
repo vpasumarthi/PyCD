@@ -947,23 +947,23 @@ class analysis(object):
         speciesCount = self.speciesCount
         nSpecies = sum(speciesCount)
         nSpeciesTypes = len(self.material.speciesTypes)
-        timeNdisp2 = np.zeros((numTrajRecorded * (self.nStepsMSD * self.nDispMSD), nSpecies + 1))
+        timeArray = np.zeros(numTrajRecorded * (self.nStepsMSD * self.nDispMSD))
+        dispArray = np.zeros((numTrajRecorded * (self.nStepsMSD * self.nDispMSD), nSpecies))
         for trajIndex in range(numTrajRecorded):
             headStart = trajIndex * numPathStepsPerTraj
             for timestep in range(1, self.nStepsMSD + 1):
                 for step in range(self.nDispMSD):
                     workingRow = trajIndex * (self.nStepsMSD * self.nDispMSD) + (timestep-1) * self.nDispMSD + step
-                    timeNdisp2[workingRow, 0] = time[headStart + step + timestep] - time[headStart + step]
-                    timeNdisp2[workingRow, 1:] = np.linalg.norm(positionArray[headStart + step + timestep] - 
-                                                                positionArray[headStart + step], axis=1)**2
-        timeArrayMSD = timeNdisp2[:, 0]
-        minEndTime = np.min(timeArrayMSD[np.arange(self.nStepsMSD * self.nDispMSD - 1, numTrajRecorded * (self.nStepsMSD * self.nDispMSD), self.nStepsMSD * self.nDispMSD)])
+                    timeArray[workingRow] = time[headStart + step + timestep] - time[headStart + step]
+                    dispArray[workingRow, :] = np.linalg.norm(positionArray[headStart + step + timestep] - 
+                                                              positionArray[headStart + step], axis=1)**2
+        minEndTime = np.min(timeArray[np.arange(self.nStepsMSD * self.nDispMSD - 1, numTrajRecorded * (self.nStepsMSD * self.nDispMSD), self.nStepsMSD * self.nDispMSD)])
         bins = np.arange(0, minEndTime, self.binsize)
         nBins = len(bins) - 1
         speciesMSDData = np.zeros((nBins, nSpecies))
-        msdHistogram, dummy = np.histogram(timeArrayMSD, bins)
+        msdHistogram, dummy = np.histogram(timeArray, bins)
         for iSpecies in range(nSpecies):
-            iSpeciesHist, dummy = np.histogram(timeArrayMSD, bins, weights=timeNdisp2[:, iSpecies + 1])
+            iSpeciesHist, dummy = np.histogram(timeArray, bins, weights=dispArray[:, iSpecies])
             speciesMSDData[:, iSpecies] = iSpeciesHist / msdHistogram
         msdData = np.zeros((nBins+1, nSpeciesTypes + 1 - list(speciesCount).count(0)))
         msdData[1:, 0] = bins[:-1] + 0.5 * self.binsize
