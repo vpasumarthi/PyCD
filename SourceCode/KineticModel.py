@@ -991,6 +991,92 @@ class analysis(object):
         returnMSDData.speciesTypes = [speciesType for index, speciesType in enumerate(self.material.speciesTypes) if index not in nonExistentSpeciesIndices]
         returnMSDData.fileName = fileName
         return returnMSDData
+
+    def computeSD(self, outdir, report=1):
+        """Returns the squared displacement of the trajectories"""
+        assert outdir, 'Please provide the destination path where MSD output files needs to be saved'
+        numPathStepsPerTraj = int(self.kmcSteps / self.stepInterval) + 1
+        time = np.loadtxt(outdir + directorySeparator + 'Time.dat') * self.timeConversion
+        numTrajRecorded = int(len(time) / numPathStepsPerTraj)
+        positionArray = np.loadtxt(outdir + directorySeparator + 'unwrappedTraj.dat')[:numTrajRecorded * numPathStepsPerTraj + 1].reshape((numTrajRecorded * numPathStepsPerTraj, self.totalSpecies, 3)) * self.distConversion
+        timeArray = np.zeros(numTrajRecorded * (self.nStepsMSD * self.nDispMSD))
+        sdArray = np.zeros((numTrajRecorded * (self.nStepsMSD * self.nDispMSD), self.totalSpecies))
+        addOn = np.arange(self.nDispMSD)
+        for trajIndex in range(numTrajRecorded):
+            headStart = trajIndex * numPathStepsPerTraj
+            workingRowHeadStart = trajIndex * (self.nStepsMSD * self.nDispMSD) 
+            for timestep in range(1, self.nStepsMSD + 1):
+                workingRows = workingRowHeadStart + (timestep-1) * self.nDispMSD + addOn
+                timeArray[workingRows] = time[headStart + timestep + addOn] - time[headStart + addOn]
+                posDiff = positionArray[headStart + timestep + addOn] - positionArray[headStart + addOn]
+                sdArray[workingRows, :] = np.einsum('ijk,ijk->ij', posDiff, posDiff)
+
+        bins = np.arange(0, max(timeArray), self.binsize)
+        nBins = len(bins) - 1
+        msdData[1:, 0] = bins[:-1] + 0.5 * self.binsize
+        startIndex = 0
+        numNonExistentSpecies = 0
+        nonExistentSpeciesIndices = []
+        for speciesTypeIndex in range(self.material.numSpeciesTypes):
+            if self.speciesCount[speciesTypeIndex] != 0:
+                endIndex = startIndex + self.speciesCount[speciesTypeIndex]
+                msdData[1:, speciesTypeIndex + 1 - numNonExistentSpecies] = np.mean(speciesMSDData[:, startIndex:endIndex], axis=1)
+                startIndex = endIndex
+            else:
+                numNonExistentSpecies += 1
+                nonExistentSpeciesIndices.append(speciesTypeIndex)
+                
+        fileName = (('%1.2E' % self.nStepsMSD) + 'nStepsMSD,' + 
+                    ('%1.2E' % self.nDispMSD) + 'nDispMSD' + 
+                    (',nTraj: %1.2E' % numTrajRecorded if numTrajRecorded != self.nTraj else ''))
+        sdFileName = 'SD_Data_' + fileName + '.npy'
+        sdFilePath = outdir + directorySeparator + sdFileName
+        np.save(sdFilePath, sdArray)
+        if report:
+            self.generateSDAnalysisLogReport(outdir, fileName)
+        returnSDData = returnValues()
+        sdData = np.hstack((timeArray[:, None], sdArray))
+        returnSDData.sdData = sdData
+        nonExistentSpeciesIndices = []
+        returnSDData.speciesTypes = [speciesType for index, speciesType in enumerate(self.material.speciesTypes) if index not in nonExistentSpeciesIndices]
+        returnSDData.fileName = fileName
+        return returnSDData
+
+    def generateSDAnalysisLogReport(self, outdir, fileName):
+        """Generates an log report of the MSD Analysis and outputs to the working directory"""
+        msdAnalysisLogFileName = 'SD_Analysis' + ('_' if fileName else '') + fileName + '.log'
+        msdLogFilePath = outdir + directorySeparator + msdAnalysisLogFileName
+        report = open(msdLogFilePath, 'w')
+        endTime = datetime.now()
+        timeElapsed = endTime - self.startTime
+        report.write('Time elapsed: ' + ('%2d days, ' % timeElapsed.days if timeElapsed.days else '') +
+                     ('%2d hours' % ((timeElapsed.seconds // 3600) % 24)) + 
+                     (', %2d minutes' % ((timeElapsed.seconds // 60) % 60)) + 
+                     (', %2d seconds' % (timeElapsed.seconds % 60)))
+        report.close()
+        
+    def generateSDPlot(self, sdData, speciesTypes, fileName, outdir):
+        """Returns a scatter plot of the SD data"""
+        assert outdir, 'Please provide the destination path where MSD Plot files needs to be saved'
+        import matplotlib
+        matplotlib.use('Agg')
+        import matplotlib.pyplot as plt
+        from textwrap import wrap
+        plt.figure()
+
+        for speciesIndex, speciesType in enumerate(speciesTypes):
+            plt.scatter(sdData[:,0], sdData[:,speciesIndex + 1], label=speciesType)
+            
+        plt.xlabel('Time (' + self.reprTime + ')')
+        plt.ylabel('SD (' + self.reprDist + '**2)')
+        figureTitle = 'SD_' + fileName
+        plt.title('\n'.join(wrap(figureTitle,60)))
+        plt.legend()
+        plt.show() # Temp change
+        figureName = 'SD_Plot_' + fileName + '.jpg'
+        figurePath = outdir + directorySeparator + figureName
+        plt.savefig(figurePath)
+        
     #@profile
     def computeAutoMSD(self, outdir, report=1):
         nDim = 3 # number of dimensions
