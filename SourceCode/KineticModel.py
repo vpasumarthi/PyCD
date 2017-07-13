@@ -992,6 +992,40 @@ class analysis(object):
         returnMSDData.fileName = fileName
         return returnMSDData
 
+    def generateMSDAnalysisLogReport(self, outdir, fileName):
+        """Generates an log report of the MSD Analysis and outputs to the working directory"""
+        msdAnalysisLogFileName = 'MSD_Analysis' + ('_' if fileName else '') + fileName + '.log'
+        msdLogFilePath = outdir + directorySeparator + msdAnalysisLogFileName
+        report = open(msdLogFilePath, 'w')
+        endTime = datetime.now()
+        timeElapsed = endTime - self.startTime
+        report.write('Time elapsed: ' + ('%2d days, ' % timeElapsed.days if timeElapsed.days else '') +
+                     ('%2d hours' % ((timeElapsed.seconds // 3600) % 24)) + 
+                     (', %2d minutes' % ((timeElapsed.seconds // 60) % 60)) + 
+                     (', %2d seconds' % (timeElapsed.seconds % 60)))
+        report.close()
+
+    def generateMSDPlot(self, msdData, speciesTypes, fileName, outdir):
+        """Returns a line plot of the MSD data"""
+        assert outdir, 'Please provide the destination path where MSD Plot files needs to be saved'
+        import matplotlib
+        matplotlib.use('Agg')
+        import matplotlib.pyplot as plt
+        from textwrap import wrap
+        plt.figure()
+        for speciesIndex, speciesType in enumerate(speciesTypes):
+            plt.plot(msdData[:,0], msdData[:,speciesIndex + 1], label=speciesType)
+            
+        plt.xlabel('Time (' + self.reprTime + ')')
+        plt.ylabel('MSD (' + self.reprDist + '**2)')
+        figureTitle = 'MSD_' + fileName
+        plt.title('\n'.join(wrap(figureTitle,60)))
+        plt.legend()
+        plt.show() # Temp change
+        figureName = 'MSD_Plot_' + fileName + '.jpg'
+        figurePath = outdir + directorySeparator + figureName
+        plt.savefig(figurePath)
+
     def computeSD(self, outdir, report=1):
         """Returns the squared displacement of the trajectories"""
         assert outdir, 'Please provide the destination path where MSD output files needs to be saved'
@@ -1077,106 +1111,6 @@ class analysis(object):
         figurePath = outdir + directorySeparator + figureName
         plt.savefig(figurePath)
         
-    #@profile
-    def computeAutoMSD(self, outdir, report=1):
-        nDim = 3 # number of dimensions
-        numPathStepsPerTraj = int(self.kmcSteps / self.stepInterval) + 1
-        time = np.loadtxt(outdir + directorySeparator + 'Time.dat') * self.timeConversion
-        numTrajRecorded = int(len(time) / numPathStepsPerTraj)
-        positionArray = np.loadtxt(outdir + directorySeparator + 'unwrappedTraj.dat')[:numTrajRecorded * numPathStepsPerTraj + 1].reshape((numTrajRecorded * numPathStepsPerTraj, self.totalSpecies, 3)) * self.distConversion
-        iTrajDiff = np.zeros((numTrajRecorded, self.totalSpecies))
-        nonExistentSpeciesIndices = []
-        addOn = np.arange(self.nDispMSD)
-        for trajIndex in range(numTrajRecorded):
-            trajTimeData = time[trajIndex * numPathStepsPerTraj:(trajIndex + 1) * numPathStepsPerTraj]
-            trajPosData = positionArray[trajIndex * numPathStepsPerTraj:(trajIndex + 1) * numPathStepsPerTraj, :, :]
-            trajVelData = np.diff(trajPosData, axis=0) / np.diff(trajTimeData)[:, None, None]
-            meanVelProd = np.zeros((self.nStepsMSD, self.totalSpecies))
-            for timestep in range(self.nStepsMSD):
-                meanVelProd[timestep, :] = np.mean(np.einsum('ijk,ijk->ij', trajVelData[addOn], trajVelData[timestep + addOn]), axis=0)
-            iTrajDiff[trajIndex, :] = np.trapz(meanVelProd, trajTimeData[1:self.nStepsMSD + 1], axis=0) / nDim
-        iSpeciesDiff = np.mean(iTrajDiff, axis=0)
-        numNonExistentSpecies = 0
-        startIndex = 0
-        speciesTypeMeanVelProd = np.zeros((self.nStepsMSD, self.totalSpecies - list(self.speciesCount).count(0)))
-        for speciesTypeIndex in range(self.totalSpecies):
-            if self.speciesCount[speciesTypeIndex] != 0:
-                endIndex = startIndex + self.speciesCount[speciesTypeIndex]
-                speciesTypeMeanVelProd[:, speciesTypeIndex - numNonExistentSpecies] = np.mean(meanVelProd[:, startIndex:endIndex], axis=1)
-            else:
-                numNonExistentSpecies += 1
-                nonExistentSpeciesIndices.append(speciesTypeIndex)
-        print "Species-wise diffusivity obtained from velocity autocorrelation in um2/s: " + " ".join('%4.5f'%element for element in iSpeciesDiff)
-        print "Diffusivity obtained from velocity autocorrelation: %4.5f um2/s" % np.mean(iSpeciesDiff)
-
-        fileName = ('nTraj: %1.2E' % numTrajRecorded if numTrajRecorded != self.nTraj else '')
-        msdFileName = 'MeanVelProdData' + ('_' if fileName else '') + fileName + '.npy'
-        msdFilePath = outdir + directorySeparator + msdFileName
-        np.save(msdFilePath, meanVelProd)
-        if report:
-            self.generateMSDAnalysisLogReport(outdir, fileName)
-        returnMSDData = returnValues()
-        returnMSDData.speciesTypeMeanVelProd = speciesTypeMeanVelProd
-        returnMSDData.speciesTypes = [speciesType for index, speciesType in enumerate(self.material.speciesTypes) if index not in nonExistentSpeciesIndices]
-        returnMSDData.fileName = fileName
-        return returnMSDData
-    
-    def generateMSDAnalysisLogReport(self, outdir, fileName):
-        """Generates an log report of the MSD Analysis and outputs to the working directory"""
-        msdAnalysisLogFileName = 'MSD_Analysis' + ('_' if fileName else '') + fileName + '.log'
-        msdLogFilePath = outdir + directorySeparator + msdAnalysisLogFileName
-        report = open(msdLogFilePath, 'w')
-        endTime = datetime.now()
-        timeElapsed = endTime - self.startTime
-        report.write('Time elapsed: ' + ('%2d days, ' % timeElapsed.days if timeElapsed.days else '') +
-                     ('%2d hours' % ((timeElapsed.seconds // 3600) % 24)) + 
-                     (', %2d minutes' % ((timeElapsed.seconds // 60) % 60)) + 
-                     (', %2d seconds' % (timeElapsed.seconds % 60)))
-        report.close()
-
-    def displayMSDPlot(self, msdData, speciesTypes, fileName, outdir):
-        """Returns a line plot of the MSD data"""
-        assert outdir, 'Please provide the destination path where MSD Plot files needs to be saved'
-        import matplotlib
-        matplotlib.use('Agg')
-        import matplotlib.pyplot as plt
-        from textwrap import wrap
-        plt.figure()
-        for speciesIndex, speciesType in enumerate(speciesTypes):
-            plt.plot(msdData[:,0], msdData[:,speciesIndex + 1], label=speciesType)
-            
-        plt.xlabel('Time (' + self.reprTime + ')')
-        plt.ylabel('MSD (' + self.reprDist + '**2)')
-        figureTitle = 'MSD_' + fileName
-        plt.title('\n'.join(wrap(figureTitle,60)))
-        plt.legend()
-        plt.show() # Temp change
-        figureName = 'MSD_Plot_' + fileName + '.jpg'
-        figurePath = outdir + directorySeparator + figureName
-        plt.savefig(figurePath)
-
-    def generateAutoMSDPlot(self, speciesTypeMeanVelProd, speciesTypes, fileName, outdir):
-        """Returns a line plot of the MSD data"""
-        assert outdir, 'Please provide the destination path where MSD Plot files needs to be saved'
-        import matplotlib
-        matplotlib.use('Agg')
-        import matplotlib.pyplot as plt
-        from textwrap import wrap
-        plt.figure()
-        plt.axhline(0, color='black')
-        for speciesTypeIndex, speciesType in enumerate(speciesTypes):
-            plt.plot(speciesTypeMeanVelProd[:,speciesTypeIndex], label=speciesType)
-            
-        plt.xlabel('delT (' + self.reprTime + ')')
-        plt.ylabel('<v(0).v(t)>')
-        figureTitle = 'Velocity Autocorrelation Function' + fileName
-        plt.title('\n'.join(wrap(figureTitle,60)))
-        plt.legend()
-        plt.show() # Temp change
-        figureName = 'VelocityAutoCorrelationPlot' + fileName + '.jpg'
-        figurePath = outdir + directorySeparator + figureName
-        plt.savefig(figurePath)
-    
     '''
     # TODO: Finish writing the method soon.
     def displayCollectiveMSDPlot(self, msdData, speciesTypes, fileName, outdir=None):
