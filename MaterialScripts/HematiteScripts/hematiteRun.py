@@ -42,12 +42,16 @@ def hematiteRun(systemSize, pbc, Temp, speciesCount, tFinal, nTraj, stepInterval
     if os.path.exists('Run.log') and os.path.exists('Time.dat'):
         fileExists = 1
     if not fileExists or overWrite:
+        # Determine path for input files
+        inputFileDirectoryName = 'InputFiles'
+        inputFileDirectoryPath = systemDirectoryPath + directorySeparator + inputFileDirectoryName
+        
         # Build path for material and neighbors object files
         materialName = 'hematite'
         tailName = '.obj'
         directorySeparator = '\\' if platform.uname()[0]=='Windows' else '/'
         objectFileDirectoryName = 'ObjectFiles'
-        objectFileDirPath = systemDirectoryPath + directorySeparator + objectFileDirectoryName
+        objectFileDirPath = inputFileDirectoryPath + directorySeparator + objectFileDirectoryName
         materialFileName = objectFileDirPath + directorySeparator + materialName + tailName
         neighborsFileName = objectFileDirPath + directorySeparator + materialName + 'Neighbors' + tailName
         
@@ -65,15 +69,20 @@ def hematiteRun(systemSize, pbc, Temp, speciesCount, tFinal, nTraj, stepInterval
         neighborListDirectoryName = 'NeighborListFiles'
         neighborListDirectoryPath = systemDirectoryPath + directorySeparator + neighborListDirectoryName
 
-        # Load Neighbor List
-        os.chdir(neighborListDirectoryPath)
-        hopNeighborListFileName = neighborListDirectoryPath + directorySeparator + 'hopNeighborList.npy'
+        # Load input files to instantiate system class
+        os.chdir(inputFileDirectoryPath)
+        hopNeighborListFileName = inputFileDirectoryPath + directorySeparator + 'hopNeighborList.npy'
         hopNeighborList = np.load(hopNeighborListFileName)[()]
-        cumulativeDisplacementListFilePath = neighborListDirectoryPath + directorySeparator + 'cumulativeDisplacementList.npy'
+        cumulativeDisplacementListFilePath = inputFileDirectoryPath + directorySeparator + 'cumulativeDisplacementList.npy'
         cumulativeDisplacementList = np.load(cumulativeDisplacementListFilePath)
-        
         hematiteSystem = system(hematite, hematiteNeighbors, hopNeighborList, cumulativeDisplacementList, speciesCount)
-        hematiteRun = run(hematiteSystem, Temp, nTraj, kmcSteps, stepInterval, gui)
+        
+        # Load precomputed array, ewald parameters file to instantiate run class
+        precomputedArrayFilePath = inputFileDirectoryPath + directorySeparator + 'precomputedArray.npy'
+        precomputedArray = np.load(precomputedArrayFilePath)
+        ewaldParametersFilePath = inputFileDirectoryPath + directorySeparator + 'ewaldParameters.npy'
+        ewaldParameters = np.load(ewaldParametersFilePath)
+        hematiteRun = run(hematiteSystem, precomputedArray, ewaldParameters, Temp, nTraj, kmcSteps, stepInterval, gui)
         
         hematiteRun.doKMCSteps(workDirPath, report, randomSeed)
     else:

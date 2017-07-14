@@ -45,13 +45,18 @@ def hematiteMSD(systemSize, pbc, nDim, Temp, speciesCount, tFinal, nTraj, stepIn
         print 'Simulation files do not exist. Aborting.'
     else:
         os.chdir(workDirPath)
+
+        # Determine path for neighbor list directories
+        inputFileDirectoryName = 'InputFiles'
+        inputFileDirectoryPath = systemDirectoryPath + directorySeparator + inputFileDirectoryName
+    
     
         # Build path for material and neighbors object files
         materialName = 'hematite'
         tailName = '.obj'
         directorySeparator = '\\' if platform.uname()[0]=='Windows' else '/'
         objectFileDirectoryName = 'ObjectFiles'
-        objectFileDirPath = systemDirectoryPath + directorySeparator + objectFileDirectoryName
+        objectFileDirPath = inputFileDirectoryPath + directorySeparator + objectFileDirectoryName
         materialFileName = objectFileDirPath + directorySeparator + materialName + tailName
         
         # Load material object

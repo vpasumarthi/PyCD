@@ -352,7 +352,7 @@ class neighbors(object):
         cumulativeDisplacementList = np.zeros((self.numSystemElements, self.numSystemElements, 3))
         for centerSiteIndex, centerCoord in enumerate(self.bulkSites.cellCoordinates):
             cumulativeUnitCellTranslationalCoords = np.tile(self.unitcellTranslationalCoords, (self.numSystemElements, 1, 1))
-            cumulativeNeighborImageCoords = cumulativeUnitCellTranslationalCoords + np.tile(self.bulkSites.cellCoordinates[:, np.newaxis, :], (1, len(unitcellTranslationalCoords), 1))
+            cumulativeNeighborImageCoords = cumulativeUnitCellTranslationalCoords + np.tile(self.bulkSites.cellCoordinates[:, np.newaxis, :], (1, len(self.unitcellTranslationalCoords), 1))
             cumulativeNeighborImageDisplacementVectors = cumulativeNeighborImageCoords - centerCoord
             cumulativeNeighborImageDisplacements = np.linalg.norm(cumulativeNeighborImageDisplacementVectors, axis=2)
             cumulativeDisplacementList[centerSiteIndex] = cumulativeNeighborImageDisplacementVectors[np.arange(self.numSystemElements), np.argmin(cumulativeNeighborImageDisplacements, axis=1)]
@@ -457,7 +457,7 @@ class system(object):
                                                                                  np.cross(self.translationalMatrix[2], self.translationalMatrix[0]),
                                                                                  np.cross(self.translationalMatrix[0], self.translationalMatrix[1])])
         self.translationalVectorLength = np.linalg.norm(self.translationalMatrix, axis=1)
-        self.reciprocalLatticeVectorLength = np.linalg.norm(self.reciprocalLatticeMatrix, axis=1)        
+        self.reciprocalLatticeVectorLength = np.linalg.norm(self.reciprocalLatticeMatrix, axis=1)
     
     def generateRandomOccupancy(self, speciesCount):
         """generates initial occupancy list based on species count"""
@@ -490,16 +490,16 @@ class system(object):
                 chargeList[centerSiteSystemElementIndices] = self.material.chargeTypes[chargeKeyType]
         return chargeList
 
-    def ewaldSumSetup(self, alpha, nmax, kmax):
+    def ewaldSumSetup(self):
         from scipy.special import erfc
-        sqrtalpha = np.sqrt(alpha)
-        alpha4 = 4 * alpha
+        sqrtalpha = np.sqrt(self.alpha)
+        alpha4 = 4 * self.alpha
         fourierSumCoeff = (2 * np.pi) / self.systemVolume
         precomputedArray = np.zeros((self.neighbors.numSystemElements, self.neighbors.numSystemElements))
 
-        for i in range(-nmax, nmax+1):
-            for j in range(-nmax, nmax+1):
-                for k in range(-nmax, nmax+1):
+        for i in range(-self.nmax, self.nmax+1):
+            for j in range(-self.nmax, self.nmax+1):
+                for k in range(-self.nmax, self.nmax+1):
                     tempArray = np.linalg.norm(self.cumulativeDisplacementList + np.dot(np.array([i, j, k]), self.translationalMatrix), axis=2)
                     precomputedArray += erfc(sqrtalpha * tempArray) / 2
 
@@ -511,9 +511,9 @@ class system(object):
                     else:
                         precomputedArray /= tempArray
         
-        for i in range(-kmax, kmax+1):
-            for j in range(-kmax, kmax+1):
-                for k in range(-kmax, kmax+1):
+        for i in range(-self.kmax, self.kmax+1):
+            for j in range(-self.kmax, self.kmax+1):
+                for k in range(-self.kmax, self.kmax+1):
                     if not np.all(np.array([i, j, k])==0):
                         kVector = np.dot(np.array([i, j, k]), self.reciprocalLatticeMatrix)
                         kVector2 = np.dot(kVector, kVector)
@@ -525,13 +525,18 @@ class system(object):
 class run(object):
     """defines the subroutines for running Kinetic Monte Carlo and computing electrostatic 
     interaction energies"""
-    def __init__(self, system, T, nTraj, kmcSteps, stepInterval, gui):
+    def __init__(self, system, precomputedArray, ewaldParameters, T, nTraj, kmcSteps, stepInterval, gui):
         """Returns the PBC condition of the system"""
         self.startTime = datetime.now()
 
         self.system = system
         self.material = self.system.material
         self.neighbors = self.system.neighbors
+        self.precomputedArray = precomputedArray
+        self.ewaldParameters = ewaldParameters[()]
+        self.alpha = self.ewaldParameters['alpha']
+        self.nmax = self.ewaldParameters['nmax']
+        self.kmax = self.ewaldParameters['kmax']
         self.T = T * self.material.K2AUTEMP
         self.nTraj = int(nTraj)
         self.kmcSteps = int(kmcSteps)
@@ -580,7 +585,7 @@ class run(object):
         # total number of species
         self.totalSpecies = self.system.speciesCount.sum()
     
-    #@profile
+    @profile
     def doKMCSteps(self, outdir, report=1, randomSeed=1):
         """Subroutine to run the KMC simulation by specified number of steps"""
         assert outdir, 'Please provide the destination path where simulation output files needs to be saved'
@@ -617,18 +622,14 @@ class run(object):
         rowIndexList = np.zeros(self.nProc, dtype=int)
         neighborIndexList = np.zeros(self.nProc, dtype=int)
         
-        alpha = 0.18
-        nmax = 0
-        kmax = 4
-        precomputedArray = self.system.ewaldSumSetup(alpha, nmax, kmax)
-        ewaldNeut = - np.pi * (self.system.systemCharge**2) / (2 * self.system.systemVolume * alpha)
+        ewaldNeut = - np.pi * (self.system.systemCharge**2) / (2 * self.system.systemVolume * self.alpha)
 
         for trajIndex in range(nTraj):
             currentStateOccupancy = self.system.generateRandomOccupancy(self.system.speciesCount)
             currentStateChargeConfig = self.system.chargeConfig(currentStateOccupancy)
             currentStateChargeConfigProd = np.multiply(currentStateChargeConfig.transpose(), currentStateChargeConfig)
-            ewaldSelf = - np.sqrt(alpha / np.pi) * np.einsum('ii', currentStateChargeConfigProd)
-            currentStateEnergy = ewaldNeut + ewaldSelf + np.sum(np.multiply(currentStateChargeConfigProd, precomputedArray))
+            ewaldSelf = - np.sqrt(self.alpha / np.pi) * np.einsum('ii', currentStateChargeConfigProd)
+            currentStateEnergy = ewaldNeut + ewaldSelf + np.sum(np.multiply(currentStateChargeConfigProd, self.precomputedArray))
             pathIndex = 0
             if excess:
                 # TODO: Avoid using flatten
@@ -656,10 +657,10 @@ class run(object):
                             neighborIndexList[iProc] = neighborIndex
                             # TODO: Print out a prompt about the assumption; detailed comment here. <Using species charge to compute change in energy> May be print log report
                             delG0 = (self.speciesChargeList[speciesIndex] 
-                                     * (2 * np.dot(currentStateChargeConfig[:, 0], precomputedArray[neighborSiteSystemElementIndex, :] - precomputedArray[speciesSiteSystemElementIndex, :]) 
-                                        + self.speciesChargeList[speciesIndex] * (precomputedArray[speciesSiteSystemElementIndex, speciesSiteSystemElementIndex] 
-                                                                                  + precomputedArray[neighborSiteSystemElementIndex, neighborSiteSystemElementIndex] 
-                                                                                  - 2 * precomputedArray[speciesSiteSystemElementIndex, neighborSiteSystemElementIndex])))
+                                     * (2 * np.dot(currentStateChargeConfig[:, 0], self.precomputedArray[neighborSiteSystemElementIndex, :] - self.precomputedArray[speciesSiteSystemElementIndex, :]) 
+                                        + self.speciesChargeList[speciesIndex] * (self.precomputedArray[speciesSiteSystemElementIndex, speciesSiteSystemElementIndex] 
+                                                                                  + self.precomputedArray[neighborSiteSystemElementIndex, neighborSiteSystemElementIndex] 
+                                                                                  - 2 * self.precomputedArray[speciesSiteSystemElementIndex, neighborSiteSystemElementIndex])))
                             delG0List.append(delG0)
                             newStateEnergy = currentStateEnergy + delG0
                             lambdaValue = self.nProcLambdaValueList[iProc]
