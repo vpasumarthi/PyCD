@@ -530,6 +530,7 @@ class system(object):
 class run(object):
     """defines the subroutines for running Kinetic Monte Carlo and computing electrostatic 
     interaction energies"""
+    @profile
     def __init__(self, system, precomputedArray, T, nTraj, kmcSteps, stepInterval, gui):
         """Returns the PBC condition of the system"""
         self.startTime = datetime.now()
@@ -586,7 +587,7 @@ class run(object):
         # total number of species
         self.totalSpecies = self.system.speciesCount.sum()
     
-    #@profile
+    @profile
     def doKMCSteps(self, outdir, report=1, randomSeed=1):
         """Subroutine to run the KMC simulation by specified number of steps"""
         assert outdir, 'Please provide the destination path where simulation output files needs to be saved'
@@ -624,13 +625,13 @@ class run(object):
         neighborIndexList = np.zeros(self.nProc, dtype=int)
         
         ewaldNeut = - np.pi * (self.system.systemCharge**2) / (2 * self.system.systemVolume * self.system.alpha)
-
+        precomputedArray = self.precomputedArray
         for trajIndex in range(nTraj):
             currentStateOccupancy = self.system.generateRandomOccupancy(self.system.speciesCount)
             currentStateChargeConfig = self.system.chargeConfig(currentStateOccupancy)
             currentStateChargeConfigProd = np.multiply(currentStateChargeConfig.transpose(), currentStateChargeConfig)
             ewaldSelf = - np.sqrt(self.system.alpha / np.pi) * np.einsum('ii', currentStateChargeConfigProd)
-            currentStateEnergy = ewaldNeut + ewaldSelf + np.sum(np.multiply(currentStateChargeConfigProd, self.precomputedArray))
+            currentStateEnergy = ewaldNeut + ewaldSelf + np.sum(np.multiply(currentStateChargeConfigProd, precomputedArray))
             pathIndex = 0
             if excess:
                 # TODO: Avoid using flatten
@@ -658,10 +659,10 @@ class run(object):
                             neighborIndexList[iProc] = neighborIndex
                             # TODO: Print out a prompt about the assumption; detailed comment here. <Using species charge to compute change in energy> May be print log report
                             delG0 = (self.speciesChargeList[speciesIndex] 
-                                     * (2 * np.dot(currentStateChargeConfig[:, 0], self.precomputedArray[neighborSiteSystemElementIndex, :] - self.precomputedArray[speciesSiteSystemElementIndex, :]) 
-                                        + self.speciesChargeList[speciesIndex] * (self.precomputedArray[speciesSiteSystemElementIndex, speciesSiteSystemElementIndex] 
-                                                                                  + self.precomputedArray[neighborSiteSystemElementIndex, neighborSiteSystemElementIndex] 
-                                                                                  - 2 * self.precomputedArray[speciesSiteSystemElementIndex, neighborSiteSystemElementIndex])))
+                                     * (2 * np.dot(currentStateChargeConfig[:, 0], precomputedArray[neighborSiteSystemElementIndex, :] - precomputedArray[speciesSiteSystemElementIndex, :]) 
+                                        + self.speciesChargeList[speciesIndex] * (precomputedArray[speciesSiteSystemElementIndex, speciesSiteSystemElementIndex] 
+                                                                                  + precomputedArray[neighborSiteSystemElementIndex, neighborSiteSystemElementIndex] 
+                                                                                  - 2 * precomputedArray[speciesSiteSystemElementIndex, neighborSiteSystemElementIndex])))
                             delG0List.append(delG0)
                             newStateEnergy = currentStateEnergy + delG0
                             lambdaValue = self.nProcLambdaValueList[iProc]
