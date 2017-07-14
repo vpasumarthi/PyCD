@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-def hematiteRun(systemSize, pbc, Temp, cutE, speciesCount, tFinal, nTraj, stepInterval, 
-                   kmcStepCountPrecision, randomSeed, report, overWrite, gui):
+def hematiteRun(systemSize, pbc, Temp, speciesCount, tFinal, nTraj, stepInterval, 
+                kmcStepCountPrecision, randomSeed, report, overWrite, gui):
     from KineticModel import system, run
     import os
     import platform
@@ -26,7 +26,7 @@ def hematiteRun(systemSize, pbc, Temp, cutE, speciesCount, tFinal, nTraj, stepIn
                                                    ('SystemSize' + str(systemSize).replace(' ', ''))])
 
     # Change to working directory
-    parentDir1 = 'E_' + str(cutE)
+    parentDir1 = 'SimulationFiles'
     nElectrons = speciesCount[0]
     nHoles = speciesCount[1]
     parentDir2 = str(nElectrons) + ('electron' if nElectrons==1 else 'electrons') + ', ' + str(nHoles) + ('hole' if nHoles==1 else 'holes')
@@ -44,7 +44,7 @@ def hematiteRun(systemSize, pbc, Temp, cutE, speciesCount, tFinal, nTraj, stepIn
     if not fileExists or overWrite:
         # Build path for material and neighbors object files
         materialName = 'hematite'
-        tailName = '_E' + str(cutE) + '.obj'
+        tailName = '.obj'
         directorySeparator = '\\' if platform.uname()[0]=='Windows' else '/'
         objectFileDirectoryName = 'ObjectFiles'
         objectFileDirPath = systemDirectoryPath + directorySeparator + objectFileDirectoryName
@@ -63,19 +63,16 @@ def hematiteRun(systemSize, pbc, Temp, cutE, speciesCount, tFinal, nTraj, stepIn
         
         # Determine path for neighbor list directories
         neighborListDirectoryName = 'NeighborListFiles'
-        neighborListDirectoryPath = systemDirectoryPath + directorySeparator + neighborListDirectoryName + directorySeparator + 'E_' + str(cutE)
+        neighborListDirectoryPath = systemDirectoryPath + directorySeparator + neighborListDirectoryName
 
         # Load Neighbor List
         os.chdir(neighborListDirectoryPath)
         hopNeighborListFileName = neighborListDirectoryPath + directorySeparator + 'hopNeighborList.npy'
-        elecNeighborListFileName =  neighborListDirectoryPath + directorySeparator + 'elecNeighborList.npy'
         hopNeighborList = np.load(hopNeighborListFileName)[()]
+        cumulativeDisplacementListFilePath = neighborListDirectoryPath + directorySeparator + 'cumulativeDisplacementList.npy'
+        cumulativeDisplacementList = np.load(cumulativeDisplacementListFilePath)
         
-        # Determine paths for electrostatic neighbor list component files
-        numNeighborsFileName = neighborListDirectoryPath + directorySeparator + 'numNeighbors.npy'
-        numNeighbors = np.load(numNeighborsFileName)    
-        
-        hematiteSystem = system(hematite, hematiteNeighbors, hopNeighborList, numNeighbors, speciesCount)
+        hematiteSystem = system(hematite, hematiteNeighbors, hopNeighborList, cumulativeDisplacementList, speciesCount)
         hematiteRun = run(hematiteSystem, Temp, nTraj, kmcSteps, stepInterval, gui)
         
         hematiteRun.doKMCSteps(workDirPath, report, randomSeed)

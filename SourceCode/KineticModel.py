@@ -221,6 +221,17 @@ class neighbors(object):
         self.elementTypeIndices = range(self.material.nElementTypes)
         self.bulkSites = self.material.generateSites(self.elementTypeIndices, self.systemSize)
 
+        xRange = range(-1, 2) if self.pbc[0] == 1 else [0]
+        yRange = range(-1, 2) if self.pbc[1] == 1 else [0]
+        zRange = range(-1, 2) if self.pbc[2] == 1 else [0]
+        self.unitcellTranslationalCoords = np.zeros((3**sum(self.pbc), 3)) # Initialization
+        index = 0
+        for xOffset in xRange:
+            for yOffset in yRange:
+                for zOffset in zRange:
+                    self.unitcellTranslationalCoords[index] = np.dot(np.multiply(np.array([xOffset, yOffset, zOffset]), systemSize), self.material.latticeMatrix)
+                    index += 1
+
     def generateNeighborsFile(self, materialNeighbors, neighborsFileName, replaceExistingObjectFiles):
         """ """
         if not os.path.isfile(neighborsFileName) or replaceExistingObjectFiles:
@@ -274,17 +285,7 @@ class neighbors(object):
         centerCoord = self.computeCoordinates(systemSize, systemElementIndex1)
         neighborCoord = self.computeCoordinates(systemSize, systemElementIndex2)
         
-        xRange = range(-1, 2) if self.pbc[0] == 1 else [0]
-        yRange = range(-1, 2) if self.pbc[1] == 1 else [0]
-        zRange = range(-1, 2) if self.pbc[2] == 1 else [0]
-        unitcellTranslationalCoords = np.zeros((3**sum(self.pbc), 3)) # Initialization
-        index = 0
-        for xOffset in xRange:
-            for yOffset in yRange:
-                for zOffset in zRange:
-                    unitcellTranslationalCoords[index] = np.dot(np.multiply(np.array([xOffset, yOffset, zOffset]), systemSize), self.material.latticeMatrix)
-                    index += 1
-        neighborImageCoords = unitcellTranslationalCoords + neighborCoord
+        neighborImageCoords = self.unitcellTranslationalCoords + neighborCoord
         neighborImageDisplacementVectors = neighborImageCoords - centerCoord
         neighborImageDisplacements = np.linalg.norm(neighborImageDisplacementVectors, axis=1)
         displacement = np.min(neighborImageDisplacements)
@@ -323,22 +324,12 @@ class neighbors(object):
                 print np.sort(displacementList) / self.material.ANG2BOHR
                 import pdb; pdb.set_trace()
         else:
-            xRange = range(-1, 2) if self.pbc[0] == 1 else [0]
-            yRange = range(-1, 2) if self.pbc[1] == 1 else [0]
-            zRange = range(-1, 2) if self.pbc[2] == 1 else [0]
-            unitcellTranslationalCoords = np.zeros((3**sum(self.pbc), 3)) # Initialization
-            index = 0
-            for xOffset in xRange:
-                for yOffset in yRange:
-                    for zOffset in zRange:
-                        unitcellTranslationalCoords[index] = np.dot(np.multiply(np.array([xOffset, yOffset, zOffset]), self.systemSize), self.material.latticeMatrix)
-                        index += 1
             for centerSiteIndex, centerCoord in enumerate(centerSiteCoords):
                 iNeighborSiteIndexList = []
                 iDisplacementVectors = []
                 iNumNeighbors = 0
                 for neighborSiteIndex, neighborCoord in enumerate(neighborSiteCoords):
-                    neighborImageCoords = unitcellTranslationalCoords + neighborCoord
+                    neighborImageCoords = self.unitcellTranslationalCoords + neighborCoord
                     neighborImageDisplacementVectors = neighborImageCoords - centerCoord
                     neighborImageDisplacements = np.linalg.norm(neighborImageDisplacementVectors, axis=1)
                     [displacement, imageIndex] = [np.min(neighborImageDisplacements), np.argmin(neighborImageDisplacements)]
@@ -356,174 +347,66 @@ class neighbors(object):
         returnNeighbors.numNeighbors = numNeighbors
         return returnNeighbors
     
-    def electrostaticNeighborSites(self, systemSize, bulkSites, centerSiteIndices, neighborSiteIndices, cutoffDistLimits, dstPath, replaceExistingNeighborList):
-        """Returns systemElementIndexMap and distances between center sites and its 
-        neighbor sites within cutoff distance"""
-        neighborSiteCoords = bulkSites.cellCoordinates[neighborSiteIndices]
-        neighborSiteSystemElementIndexList = bulkSites.systemElementIndexList[neighborSiteIndices]
-        centerSiteCoords = bulkSites.cellCoordinates[centerSiteIndices]
-        
-        neighborSystemElementIndicesFileName = dstPath + directorySeparator + 'neighborSystemElementIndices.dat'
-        displacementListFileName = dstPath + directorySeparator + 'displacementList.dat'
-        numNeighborsFileName = dstPath + directorySeparator + 'numNeighbors.dat'
-        assert (not os.path.isfile(numNeighborsFileName) or replaceExistingNeighborList), 'Requested neighbor list file already exists in the destination folder.'
-        
-        open(neighborSystemElementIndicesFileName, 'w').close()
-        open(displacementListFileName, 'w').close()
-        open(numNeighborsFileName, 'w').close()
-        
-        numElements = len(centerSiteCoords)
-        numNeighbors = np.empty(numElements, dtype=int)
-        
-        xRange = range(-1, 2) if self.pbc[0] == 1 else [0]
-        yRange = range(-1, 2) if self.pbc[1] == 1 else [0]
-        zRange = range(-1, 2) if self.pbc[2] == 1 else [0]
-        unitcellTranslationalCoords = np.zeros((3**sum(self.pbc), 3)) # Initialization
-        index = 0
-        for xOffset in xRange:
-            for yOffset in yRange:
-                for zOffset in zRange:
-                    unitcellTranslationalCoords[index] = np.dot(np.multiply(np.array([xOffset, yOffset, zOffset]), self.systemSize), self.material.latticeMatrix)
-                    index += 1
-        for centerSiteIndex, centerCoord in enumerate(centerSiteCoords):
-            iNeighborSiteIndexList = []
-            iDisplacementList = []
-            iNumNeighbors = 0
-            for neighborSiteIndex, neighborCoord in enumerate(neighborSiteCoords):
-                neighborImageCoords = unitcellTranslationalCoords + neighborCoord
-                neighborImageDisplacementVectors = neighborImageCoords - centerCoord
-                neighborImageDisplacements = np.linalg.norm(neighborImageDisplacementVectors, axis=1)
-                [displacement, imageIndex] = [np.min(neighborImageDisplacements), np.argmin(neighborImageDisplacements)]
-                if cutoffDistLimits[0] < displacement <= cutoffDistLimits[1]:
-                    iNeighborSiteIndexList.append(neighborSiteIndex)
-                    iDisplacementList.append(displacement)
-                    iNumNeighbors += 1
-            numNeighbors[centerSiteIndex] = iNumNeighbors
-            with open(neighborSystemElementIndicesFileName, 'a') as neighborSystemElementIndicesFile:
-                np.savetxt(neighborSystemElementIndicesFile, neighborSiteSystemElementIndexList[iNeighborSiteIndexList], fmt='%i')
-            with open(displacementListFileName, 'a') as displacementListFile:
-                np.savetxt(displacementListFile, iDisplacementList)
-        with open(numNeighborsFileName, 'a') as numNeighborsFile:
-            np.savetxt(numNeighborsFile, numNeighbors, fmt='%i')
-            
-    def extractElectrostaticNeighborSites(self, neighborListDirPath, parentCutoff, extractCutoff, replaceExistingNeighborList):
-        """Returns systemElementIndexMap and distances between center sites and its 
-        neighbor sites within cutoff distance"""
-        from operator import itemgetter
-        
-        extractCutoffBohr = extractCutoff * self.material.ANG2BOHR
-        
-        parentNeighborListDirPath = neighborListDirPath + directorySeparator + 'E_' + str(parentCutoff)
-        childNeighborListDirPath = neighborListDirPath + directorySeparator + 'E_' + str(extractCutoff)
-        
-        parentNeighborSystemElementIndicesFileName = parentNeighborListDirPath + directorySeparator + 'neighborSystemElementIndices.dat'
-        parentdisplacementListFileName = parentNeighborListDirPath + directorySeparator + 'displacementList.dat'
-        parentNumNeighborsFileName = parentNeighborListDirPath + directorySeparator + 'numNeighbors.dat'
-        parentNeighborSystemElementIndicesFile = open(parentNeighborSystemElementIndicesFileName, 'r')
-        parentdisplacementListFile = open(parentdisplacementListFileName, 'r')
-        parentNumNeighborsFile = open(parentNumNeighborsFileName, 'r')
-        
-        neighborSystemElementIndicesFileName = childNeighborListDirPath + directorySeparator + 'neighborSystemElementIndices.dat'
-        displacementListFileName = childNeighborListDirPath + directorySeparator + 'displacementList.dat'
-        numNeighborsFileName = childNeighborListDirPath + directorySeparator + 'numNeighbors.dat'
-        assert (not os.path.isfile(numNeighborsFileName) or replaceExistingNeighborList), 'Requested neighbor list file already exists in the destination folder.'
-        
-        open(neighborSystemElementIndicesFileName, 'w').close()
-        open(displacementListFileName, 'w').close()
-        open(numNeighborsFileName, 'w').close()
-        
-        numNeighbors = np.zeros(self.numSystemElements, dtype=int)
-        for centerSiteIndex in range(self.numSystemElements):
-            neighborSystemElementIndexList = []
-            displacementList = []
-            for index in range(int(parentNumNeighborsFile.readline())):
-                neighborSystemElementIndex = parentNeighborSystemElementIndicesFile.readline()
-                displacement = float(parentdisplacementListFile.readline().split('\n')[0])
-                if 0 < displacement <= extractCutoffBohr:
-                    neighborSystemElementIndexList.append(int(neighborSystemElementIndex.split('\n')[0]))
-                    displacementList.append(displacement)
-                    numNeighbors[centerSiteIndex] += 1
-            with open(neighborSystemElementIndicesFileName, 'a') as neighborSystemElementIndicesFile:
-                np.savetxt(neighborSystemElementIndicesFile, neighborSystemElementIndexList, fmt='%i')
-            with open(displacementListFileName, 'a') as displacementListFile:
-                np.savetxt(displacementListFile, displacementList)
-        with open(numNeighborsFileName, 'a') as numNeighborsFile:
-            np.savetxt(numNeighborsFile, numNeighbors, '%i')
-        parentNeighborSystemElementIndicesFile.close()
-        parentdisplacementListFile.close()
-        parentNumNeighborsFile.close()
-
+    def cumulativeDisplacementList(self, systemSize, dstPath, replaceExistingNeighborList):
+        """Returns cumulative displacement list for the given system size printed out to disk"""
+        cumulativeDisplacementList = np.zeros((self.numSystemElements, self.numSystemElements, 3))
+        for centerSiteIndex, centerCoord in enumerate(self.bulkSites.cellCoordinates):
+            cumulativeUnitCellTranslationalCoords = np.tile(self.unitcellTranslationalCoords, (self.numSystemElements, 1, 1))
+            cumulativeNeighborImageCoords = cumulativeUnitCellTranslationalCoords + np.tile(self.bulkSites.cellCoordinates[:, np.newaxis, :], (1, len(unitcellTranslationalCoords), 1))
+            cumulativeNeighborImageDisplacementVectors = cumulativeNeighborImageCoords - centerCoord
+            cumulativeNeighborImageDisplacements = np.linalg.norm(cumulativeNeighborImageDisplacementVectors, axis=2)
+            cumulativeDisplacementList[centerSiteIndex] = cumulativeNeighborImageDisplacementVectors[np.arange(self.numSystemElements), np.argmin(cumulativeNeighborImageDisplacements, axis=1)]
+        return cumulativeDisplacementList
     
-    def generateNeighborList(self, parentCutoff, extractCutoff, neighborListDirPath, replaceExistingNeighborList=0, report=1, 
+    def generateNeighborList(self, neighborListDirPath, replaceExistingNeighborList=0, report=1, 
                              localSystemSize=np.array([3, 3, 3]), centerUnitCellIndex=np.array([1, 1, 1])):
         """Adds the neighbor list to the system object and returns the neighbor list"""
-        assert parentCutoff >= extractCutoff, 'Cutoff for child neighbor list should be smaller than that of parent neighbor list.'
         assert neighborListDirPath, 'Please provide the path to the parent directory of neighbor list files'
         assert all(size >= 3 for size in localSystemSize), 'Local system size in all dimensions should always be greater than or equal to 3'
         
-        quickTest = 0 # commit reference: 1472bb4
-        if quickTest:
-            del self.material.neighborCutoffDist['E']
-        if extractCutoff is None:
-            dstPath = neighborListDirPath + directorySeparator + 'E_' + str(parentCutoff)
-            if not os.path.exists(dstPath):
-                os.makedirs(dstPath)
-            hopNeighborListFilePath = dstPath + directorySeparator + 'hopNeighborList.npy'
-            assert (not os.path.isfile(hopNeighborListFilePath) or replaceExistingNeighborList), 'Requested neighbor list file already exists in the destination folder.'
-            hopNeighborList = {}
-            tolDist = self.material.neighborCutoffDistTol
-            elementTypes = self.material.elementTypes[:]
-            
-            for cutoffDistKey in self.material.neighborCutoffDist.keys():
-                cutoffDistList = self.material.neighborCutoffDist[cutoffDistKey][:]
-                neighborListCutoffDistKey = []
-                if cutoffDistKey is not self.material.electrostaticCutoffDistKey:
-                    [centerElementType, neighborElementType] = cutoffDistKey.split(self.material.elementTypeDelimiter)
-                    centerSiteElementTypeIndex = elementTypes.index(centerElementType) 
-                    neighborSiteElementTypeIndex = elementTypes.index(neighborElementType)
-                    if quickTest:
-                        localBulkSites = self.material.generateSites(self.elementTypeIndices, 
-                                                                     localSystemSize)
-                        centerSiteIndices = [self.generateSystemElementIndex(localSystemSize, np.concatenate((centerUnitCellIndex, np.array([centerSiteElementTypeIndex]), np.array([elementIndex])))) 
-                                             for elementIndex in range(self.material.nElementsPerUnitCell[centerSiteElementTypeIndex])]
-                        neighborSiteIndices = [self.generateSystemElementIndex(localSystemSize, np.array([xSize, ySize, zSize, neighborSiteElementTypeIndex, elementIndex])) 
-                                               for xSize in range(localSystemSize[0]) for ySize in range(localSystemSize[1]) 
-                                               for zSize in range(localSystemSize[2]) 
-                                               for elementIndex in range(self.material.nElementsPerUnitCell[neighborSiteElementTypeIndex])]
-                    else:
-                        localBulkSites = self.material.generateSites(self.elementTypeIndices, 
-                                                                     self.systemSize)
-                        systemElementIndexOffsetArray = (np.repeat(np.arange(0, self.material.totalElementsPerUnitCell * self.numCells, self.material.totalElementsPerUnitCell), 
-                                                                   self.material.nElementsPerUnitCell[centerSiteElementTypeIndex]))
-                        centerSiteIndices = neighborSiteIndices = (np.tile(self.material.nElementsPerUnitCell[:centerSiteElementTypeIndex].sum() + 
-                                                                           np.arange(0, self.material.nElementsPerUnitCell[centerSiteElementTypeIndex]), self.numCells) + systemElementIndexOffsetArray)
+        dstPath = neighborListDirPath
+        if not os.path.exists(dstPath):
+            os.makedirs(dstPath)
+        hopNeighborListFilePath = dstPath + directorySeparator + 'hopNeighborList.npy'
+        assert (not os.path.isfile(hopNeighborListFilePath) or replaceExistingNeighborList), 'Requested neighbor list file already exists in the destination folder.'
+        hopNeighborList = {}
+        tolDist = self.material.neighborCutoffDistTol
+        elementTypes = self.material.elementTypes[:]
+        
+        for cutoffDistKey in self.material.neighborCutoffDist.keys():
+            cutoffDistList = self.material.neighborCutoffDist[cutoffDistKey][:]
+            neighborListCutoffDistKey = []
+            if cutoffDistKey is not self.material.electrostaticCutoffDistKey:
+                [centerElementType, neighborElementType] = cutoffDistKey.split(self.material.elementTypeDelimiter)
+                centerSiteElementTypeIndex = elementTypes.index(centerElementType) 
+                neighborSiteElementTypeIndex = elementTypes.index(neighborElementType)
+                localBulkSites = self.material.generateSites(self.elementTypeIndices, 
+                                                             self.systemSize)
+                systemElementIndexOffsetArray = (np.repeat(np.arange(0, self.material.totalElementsPerUnitCell * self.numCells, self.material.totalElementsPerUnitCell), 
+                                                           self.material.nElementsPerUnitCell[centerSiteElementTypeIndex]))
+                centerSiteIndices = neighborSiteIndices = (np.tile(self.material.nElementsPerUnitCell[:centerSiteElementTypeIndex].sum() + 
+                                                                   np.arange(0, self.material.nElementsPerUnitCell[centerSiteElementTypeIndex]), self.numCells) + systemElementIndexOffsetArray)
+                
+                for iCutoffDist in range(len(cutoffDistList)):
+                    cutoffDistLimits = [cutoffDistList[iCutoffDist] - tolDist[cutoffDistKey][iCutoffDist], cutoffDistList[iCutoffDist] + tolDist[cutoffDistKey][iCutoffDist]]
                     
-                    for iCutoffDist in range(len(cutoffDistList)):
-                        cutoffDistLimits = [cutoffDistList[iCutoffDist] - tolDist[cutoffDistKey][iCutoffDist], cutoffDistList[iCutoffDist] + tolDist[cutoffDistKey][iCutoffDist]]
-                        
-                        neighborListCutoffDistKey.append(self.hopNeighborSites(localBulkSites, centerSiteIndices, 
-                                                                               neighborSiteIndices, cutoffDistLimits, cutoffDistKey))
-                hopNeighborList[cutoffDistKey] = neighborListCutoffDistKey[:]
-            np.save(hopNeighborListFilePath, hopNeighborList)
+                    neighborListCutoffDistKey.append(self.hopNeighborSites(localBulkSites, centerSiteIndices, 
+                                                                           neighborSiteIndices, cutoffDistLimits, cutoffDistKey))
+            hopNeighborList[cutoffDistKey] = neighborListCutoffDistKey[:]
+        np.save(hopNeighborListFilePath, hopNeighborList)
 
-            if self.material.electrostaticCutoffDistKey in self.material.neighborCutoffDist.keys():
-                centerSiteIndices = neighborSiteIndices = np.arange(self.numCells * self.material.totalElementsPerUnitCell)
-                cutoffDistLimits = [0, parentCutoff]
-                self.electrostaticNeighborSites(self.systemSize, self.bulkSites, centerSiteIndices, 
-                                                neighborSiteIndices, cutoffDistLimits, dstPath, replaceExistingNeighborList)
-            if report:
-                self.generateNeighborListReport(dstPath)
-        else:
-            from shutil import copy
-            dstPath = neighborListDirPath + directorySeparator + 'E_' + str(extractCutoff)
-            parentNeighborListDirPath = neighborListDirPath + directorySeparator + 'E_' + str(parentCutoff)
-            hopNeighborListFilePath = parentNeighborListDirPath + directorySeparator + 'hopNeighborList.npy'
-            if not os.path.exists(dstPath):
-                os.makedirs(dstPath)
-            copy(hopNeighborListFilePath, dstPath)
-            self.extractElectrostaticNeighborSites(neighborListDirPath, parentCutoff, extractCutoff, replaceExistingNeighborList)
-            if report:
-                self.generateNeighborListReport(dstPath)
+        cumulativeDisplacementListFilePath = dstPath + directorySeparator + 'cumulativeDisplacementList.npy'
+        assert (not os.path.isfile(cumulativeDisplacementListFilePath) or replaceExistingNeighborList), 'Requested neighbor list file already exists in the destination folder.'
+        cumulativeDisplacementList = self.cumulativeDisplacementList(self.systemSize, dstPath, replaceExistingNeighborList)
+        np.save(cumulativeDisplacementListFilePath, cumulativeDisplacementList)
+
+        if self.material.electrostaticCutoffDistKey in self.material.neighborCutoffDist.keys():
+            centerSiteIndices = neighborSiteIndices = np.arange(self.numCells * self.material.totalElementsPerUnitCell)
+            cutoffDistLimits = [0, parentCutoff]
+            self.electrostaticNeighborSites(self.systemSize, self.bulkSites, centerSiteIndices, 
+                                            neighborSiteIndices, cutoffDistLimits, dstPath, replaceExistingNeighborList)
+        if report:
+            self.generateNeighborListReport(dstPath)
 
     def generateNeighborListReport(self, dstPath):
         """Generates a neighbor list and prints out a report to the output directory"""
@@ -545,7 +428,7 @@ class system(object):
     size: An array (3 x 1) defining the system size in multiple of unit cells
     """
     #@profile
-    def __init__(self, material, neighbors, hopNeighborList, numNeighbors, speciesCount):
+    def __init__(self, material, neighbors, hopNeighborList, cumulativeDisplacementList, speciesCount):
         """Return a system object whose size is *size*"""
         self.material = material
         self.neighbors = neighbors
@@ -565,7 +448,7 @@ class system(object):
                                        for elementTypeIndex in self.material.elementTypeIndexList])
         self.latticeChargeList = np.tile(unitcellChargeList, self.numCells)
         
-        self.numNeighbors = numNeighbors
+        self.cumulativeDisplacementList = cumulativeDisplacementList
 
         # variables for ewald sum
         self.translationalMatrix = np.multiply(self.systemSize, self.material.latticeMatrix) 
@@ -576,24 +459,6 @@ class system(object):
         self.translationalVectorLength = np.linalg.norm(self.translationalMatrix, axis=1)
         self.reciprocalLatticeVectorLength = np.linalg.norm(self.reciprocalLatticeMatrix, axis=1)        
     
-        xRange = range(-1, 2) if self.neighbors.pbc[0] == 1 else [0]
-        yRange = range(-1, 2) if self.neighbors.pbc[1] == 1 else [0]
-        zRange = range(-1, 2) if self.neighbors.pbc[2] == 1 else [0]
-        unitcellTranslationalCoords = np.zeros((3**sum(self.pbc), 3)) # Initialization
-        index = 0
-        for xOffset in xRange:
-            for yOffset in yRange:
-                for zOffset in zRange:
-                    unitcellTranslationalCoords[index] = np.dot(np.multiply(np.array([xOffset, yOffset, zOffset]), self.systemSize), self.material.latticeMatrix)
-                    index += 1
-        self.systemCartesianDistance = np.zeros((self.neighbors.numSystemElements, self.neighbors.numSystemElements, 3))
-        for centerSiteIndex, centerCoord in enumerate(self.neighbors.bulkSites.cellCoordinates):
-            cumulativeUnitCellTranslationalCoords = np.tile(unitcellTranslationalCoords, (self.neighbors.numSystemElements, 1, 1))
-            cumulativeNeighborImageCoords = cumulativeUnitCellTranslationalCoords + np.tile(self.neighbors.bulkSites.cellCoordinates[:, np.newaxis, :], (1, len(unitcellTranslationalCoords), 1))
-            cumulativeNeighborImageDisplacementVectors = cumulativeNeighborImageCoords - centerCoord
-            cumulativeNeighborImageDisplacements = np.linalg.norm(cumulativeNeighborImageDisplacementVectors, axis=2)
-            self.systemCartesianDistance[centerSiteIndex] = cumulativeNeighborImageDisplacementVectors[np.arange(self.neighbors.numSystemElements), np.argmin(cumulativeNeighborImageDisplacements, axis=1)]
-
     def generateRandomOccupancy(self, speciesCount):
         """generates initial occupancy list based on species count"""
         occupancy = []
@@ -625,14 +490,6 @@ class system(object):
                 chargeList[centerSiteSystemElementIndices] = self.material.chargeTypes[chargeKeyType]
         return chargeList
 
-    def ESPConfig(self, currentStateChargeConfig):
-        ESPConfig = np.zeros((self.neighbors.numSystemElements, 1))
-        for elementIndex in range(self.neighbors.numSystemElements):
-            neighborIndices = self.neighborSystemElementIndexMap[elementIndex].keys()
-            ESPConfig[elementIndex] = np.dot(self.inverseCoeffDistanceList[elementIndex], currentStateChargeConfig[neighborIndices])
-        return ESPConfig
-    
-    #@profile
     def ewaldSumSetup(self, alpha, nmax, kmax):
         from scipy.special import erfc
         sqrtalpha = np.sqrt(alpha)
@@ -643,7 +500,7 @@ class system(object):
         for i in range(-nmax, nmax+1):
             for j in range(-nmax, nmax+1):
                 for k in range(-nmax, nmax+1):
-                    tempArray = np.linalg.norm(self.systemCartesianDistance + np.dot(np.array([i, j, k]), self.translationalMatrix), axis=2)
+                    tempArray = np.linalg.norm(self.cumulativeDisplacementList + np.dot(np.array([i, j, k]), self.translationalMatrix), axis=2)
                     precomputedArray += erfc(sqrtalpha * tempArray) / 2
 
                     if np.all(np.array([i, j, k])==0):
@@ -660,7 +517,7 @@ class system(object):
                     if not np.all(np.array([i, j, k])==0):
                         kVector = np.dot(np.array([i, j, k]), self.reciprocalLatticeMatrix)
                         kVector2 = np.dot(kVector, kVector)
-                        precomputedArray += fourierSumCoeff * np.exp(-kVector2 / alpha4) * np.cos(np.tensordot(self.systemCartesianDistance, kVector, axes=([2], [0]))) / kVector2
+                        precomputedArray += fourierSumCoeff * np.exp(-kVector2 / alpha4) * np.cos(np.tensordot(self.cumulativeDisplacementList, kVector, axes=([2], [0]))) / kVector2
         
         precomputedArray /= self.material.dielectricConstant
         return precomputedArray
@@ -759,7 +616,6 @@ class run(object):
         neighborSiteSystemElementIndexList = np.zeros(self.nProc, dtype=int)
         rowIndexList = np.zeros(self.nProc, dtype=int)
         neighborIndexList = np.zeros(self.nProc, dtype=int)
-        assert 'E' in self.material.neighborCutoffDist.keys(), 'Please specify the cutoff distance for electrostatic interactions'
         
         alpha = 0.18
         nmax = 0
@@ -777,8 +633,7 @@ class run(object):
             if excess:
                 # TODO: Avoid using flatten
                 wrappedPositionArray[pathIndex] = self.systemCoordinates[currentStateOccupancy].flatten()
-                energyArray[pathIndex] = np.sum(currentStateChargeConfig * currentStateESPConfig) / 2
-                potentialArray[pathIndex] = currentStateESPConfig[currentStateOccupancy]
+                energyArray[pathIndex] = currentStateEnergy
             pathIndex += 1
             kmcTime = 0
             speciesDisplacementVectorList = np.zeros((1, self.totalSpecies * 3))
@@ -842,8 +697,7 @@ class run(object):
                     if excess:
                         # TODO: Avoid using flatten
                         wrappedPositionArray[pathIndex] = self.systemCoordinates[currentStateOccupancy].flatten()
-                        energyArray[pathIndex] = energyArray[pathIndex - 1] + sum(delG0Array[trajIndex * self.kmcSteps + step + 1 - stepInterval: trajIndex * self.kmcSteps + step + 1])
-                        potentialArray[pathIndex] = currentStateESPConfig[currentStateOccupancy]
+                        energyArray[pathIndex] = currentStateEnergy
                     pathIndex += 1
 
             with open(timeDataFileName, 'a') as timeDataFile:

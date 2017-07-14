@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-def hematiteMSD(systemSize, pbc, nDim, Temp, cutE, speciesCount, tFinal, nTraj, stepInterval, kmcStepCountPrecision, 
+def hematiteMSD(systemSize, pbc, nDim, Temp, speciesCount, tFinal, nTraj, stepInterval, kmcStepCountPrecision, 
                    msdStepCountPrecision, msdTFinal, nBins, popThld, trimLength, reprTime, reprDist, report, overWrite):
 
     from KineticModel import analysis
@@ -33,7 +33,7 @@ def hematiteMSD(systemSize, pbc, nDim, Temp, cutE, speciesCount, tFinal, nTraj, 
                                                    ('SystemSize' + str(systemSize).replace(' ', ''))])
 
     # Change to working directory
-    parentDir1 = 'E_' + str(cutE)
+    parentDir1 = 'SimulationFiles'
     nElectrons = speciesCount[0]
     nHoles = speciesCount[1]
     parentDir2 = str(nElectrons) + ('electron' if nElectrons==1 else 'electrons') + ', ' + str(nHoles) + ('hole' if nHoles==1 else 'holes')
@@ -48,7 +48,7 @@ def hematiteMSD(systemSize, pbc, nDim, Temp, cutE, speciesCount, tFinal, nTraj, 
     
         # Build path for material and neighbors object files
         materialName = 'hematite'
-        tailName = '_E' + str(cutE) + '.obj'
+        tailName = '.obj'
         directorySeparator = '\\' if platform.uname()[0]=='Windows' else '/'
         objectFileDirectoryName = 'ObjectFiles'
         objectFileDirPath = systemDirectoryPath + directorySeparator + objectFileDirectoryName

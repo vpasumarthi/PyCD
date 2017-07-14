@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-def hematiteSetup(systemSize, pbc, parentCutoff, extractCutoff, replaceExistingObjectFiles, replaceExistingNeighborList):
+def hematiteSetup(systemSize, pbc, replaceExistingObjectFiles, replaceExistingNeighborList):
     """Prepare material class object file, neighborlist and saves to the provided destination path"""
     from hematiteParameters import hematiteParameters
     from KineticModel import material, neighbors
@@ -16,8 +16,7 @@ def hematiteSetup(systemSize, pbc, parentCutoff, extractCutoff, replaceExistingO
                                                    ('SystemSize[' + ','.join(['%i' % systemSize[i] for i in range(len(systemSize))]) + ']')])
     # Build path for material and neighbors object files
     materialName = 'hematite'
-    cutE = extractCutoff if extractCutoff else parentCutoff
-    tailName = '_E' + str(cutE) + '.obj'
+    tailName = '.obj'
     objectFileDirectoryName = 'ObjectFiles'
     objectFileDirPath = systemDirectoryPath + directorySeparator + objectFileDirectoryName
     if not os.path.exists(objectFileDirPath):
@@ -27,15 +26,11 @@ def hematiteSetup(systemSize, pbc, parentCutoff, extractCutoff, replaceExistingO
     neighborsFileName = objectFileDirPath + directorySeparator + materialName + 'Neighbors' + tailName
     neighborListDirPath = systemDirectoryPath + directorySeparator + neighborListDirectoryName
     
-    # Load hematite parameters and update electrostatic interaction cutoff
-    hematiteParameters = hematiteParameters()
-    hematiteParameters.neighborCutoffDist['E'] = [cutE]
-    
     # Build material object files
-    hematite = material(hematiteParameters)
+    hematite = material(hematiteParameters())
     hematite.generateMaterialFile(hematite, materialFileName, replaceExistingObjectFiles)
     
     # Build neighbors object files
     hematiteNeighbors = neighbors(hematite, systemSize, pbc)
     hematiteNeighbors.generateNeighborsFile(hematiteNeighbors, neighborsFileName, replaceExistingObjectFiles)
-    hematiteNeighbors.generateNeighborList(parentCutoff, extractCutoff, neighborListDirPath, replaceExistingNeighborList)
+    hematiteNeighbors.generateNeighborList(neighborListDirPath, replaceExistingNeighborList)
