@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 def hematiteRun(systemSize, pbc, Temp, cutE, speciesCount, tFinal, nTraj, stepInterval, 
-                   kmcStepCountPrecision, randomSeed, ewald, report, overWrite, gui):
+                   kmcStepCountPrecision, randomSeed, report, overWrite, gui):
     from KineticModel import system, run
     import os
     import platform
@@ -72,22 +72,12 @@ def hematiteRun(systemSize, pbc, Temp, cutE, speciesCount, tFinal, nTraj, stepIn
         hopNeighborList = np.load(hopNeighborListFileName)[()]
         
         # Determine paths for electrostatic neighbor list component files
-        neighborSystemElementIndicesFileName = neighborListDirectoryPath + directorySeparator + 'neighborSystemElementIndices.npy'
-        displacementListFileName = neighborListDirectoryPath + directorySeparator + 'displacementList.npy'
         numNeighborsFileName = neighborListDirectoryPath + directorySeparator + 'numNeighbors.npy'
-        
-        if ewald:
-            displacementList = None
-            neighborSystemElementIndices = None
-        else:            
-            # Load electrostatic neighbor list component files
-            neighborSystemElementIndices = np.load(neighborSystemElementIndicesFileName)
-            displacementList = np.load(displacementListFileName)
         numNeighbors = np.load(numNeighborsFileName)    
         
-        hematiteSystem = system(hematite, hematiteNeighbors, ewald, hopNeighborList, neighborSystemElementIndices, displacementList, numNeighbors, speciesCount)
+        hematiteSystem = system(hematite, hematiteNeighbors, hopNeighborList, numNeighbors, speciesCount)
         hematiteRun = run(hematiteSystem, Temp, nTraj, kmcSteps, stepInterval, gui)
         
-        hematiteRun.doKMCSteps(workDirPath, ewald, report, randomSeed)
+        hematiteRun.doKMCSteps(workDirPath, report, randomSeed)
     else:
         print 'Simulation files already exists in the destination directory'

@@ -545,7 +545,7 @@ class system(object):
     size: An array (3 x 1) defining the system size in multiple of unit cells
     """
     #@profile
-    def __init__(self, material, neighbors, ewald, hopNeighborList, neighborSystemElementIndices, displacementList, numNeighbors, speciesCount):
+    def __init__(self, material, neighbors, hopNeighborList, numNeighbors, speciesCount):
         """Return a system object whose size is *size*"""
         self.material = material
         self.neighbors = neighbors
@@ -566,17 +566,6 @@ class system(object):
         self.latticeChargeList = np.tile(unitcellChargeList, self.numCells)
         
         self.numNeighbors = numNeighbors
-        if not ewald:
-            self.neighborSystemElementIndices = neighborSystemElementIndices
-            self.neighborSystemElementIndexMap = np.empty(self.neighbors.numSystemElements, dtype=object)
-            for elementIndex in range(self.neighbors.numSystemElements):
-                self.neighborSystemElementIndexMap[elementIndex] = OrderedDict(zip(self.neighborSystemElementIndices[elementIndex], range(self.numNeighbors[elementIndex])))
-            self.displacementList = displacementList
-            # inverse of cumulative Distance
-            inverseDielectricConstant = 1 / self.material.dielectricConstant
-            self.inverseCoeffDistanceList = np.empty(self.neighbors.numSystemElements, dtype=object)
-            for elementIndex in range(self.neighbors.numSystemElements):
-                self.inverseCoeffDistanceList[elementIndex] = inverseDielectricConstant / self.displacementList[elementIndex]
 
         # variables for ewald sum
         self.translationalMatrix = np.multiply(self.systemSize, self.material.latticeMatrix) 
@@ -735,7 +724,7 @@ class run(object):
         self.totalSpecies = self.system.speciesCount.sum()
     
     #@profile
-    def doKMCSteps(self, outdir, ewald=1, report=1, randomSeed=1):
+    def doKMCSteps(self, outdir, report=1, randomSeed=1):
         """Subroutine to run the KMC simulation by specified number of steps"""
         assert outdir, 'Please provide the destination path where simulation output files needs to be saved'
         
@@ -772,25 +761,18 @@ class run(object):
         neighborIndexList = np.zeros(self.nProc, dtype=int)
         assert 'E' in self.material.neighborCutoffDist.keys(), 'Please specify the cutoff distance for electrostatic interactions'
         
-        if ewald:
-            alpha = 0.18
-            nmax = 0
-            kmax = 4
-            precomputedArray = self.system.ewaldSumSetup(alpha, nmax, kmax)
-            ewaldNeut = - np.pi * (self.system.systemCharge**2) / (2 * self.system.systemVolume * alpha)
+        alpha = 0.18
+        nmax = 0
+        kmax = 4
+        precomputedArray = self.system.ewaldSumSetup(alpha, nmax, kmax)
+        ewaldNeut = - np.pi * (self.system.systemCharge**2) / (2 * self.system.systemVolume * alpha)
 
         for trajIndex in range(nTraj):
             currentStateOccupancy = self.system.generateRandomOccupancy(self.system.speciesCount)
             currentStateChargeConfig = self.system.chargeConfig(currentStateOccupancy)
-            if ewald:
-                #print currentStateOccupancy
-                currentStateChargeConfigProd = np.multiply(currentStateChargeConfig.transpose(), currentStateChargeConfig)
-                ewaldSelf = - np.sqrt(alpha / np.pi) * np.einsum('ii', currentStateChargeConfigProd)
-                currentStateEnergy = ewaldNeut + ewaldSelf + np.sum(np.multiply(currentStateChargeConfigProd, precomputedArray))
-                #print currentStateEnergy
-            else:
-                currentStateESPConfig = self.system.ESPConfig(currentStateChargeConfig)
-                currentStateEnergy = np.sum(currentStateChargeConfig * currentStateESPConfig)
+            currentStateChargeConfigProd = np.multiply(currentStateChargeConfig.transpose(), currentStateChargeConfig)
+            ewaldSelf = - np.sqrt(alpha / np.pi) * np.einsum('ii', currentStateChargeConfigProd)
+            currentStateEnergy = ewaldNeut + ewaldSelf + np.sum(np.multiply(currentStateChargeConfigProd, precomputedArray))
             pathIndex = 0
             if excess:
                 # TODO: Avoid using flatten
@@ -802,10 +784,7 @@ class run(object):
             speciesDisplacementVectorList = np.zeros((1, self.totalSpecies * 3))
             for step in range(kmcSteps):
                 iProc = 0
-                if ewald:
-                    delG0List = []
-                if excess:
-                    delG0List = []
+                delG0List = []
                 for speciesIndex, speciesSiteSystemElementIndex in enumerate(currentStateOccupancy):
                     speciesIndex = self.nProcSpeciesIndexList[iProc]
                     hopElementType = self.nProcHopElementTypeList[iProc]
@@ -821,20 +800,13 @@ class run(object):
                             rowIndexList[iProc] = rowIndex
                             neighborIndexList[iProc] = neighborIndex
                             # TODO: Print out a prompt about the assumption; detailed comment here. <Using species charge to compute change in energy> May be print log report
-                            if ewald:
-                                delG0 = (self.speciesChargeList[speciesIndex] 
-                                         * (2 * np.dot(currentStateChargeConfig[:, 0], precomputedArray[neighborSiteSystemElementIndex, :] - precomputedArray[speciesSiteSystemElementIndex, :]) 
-                                            + self.speciesChargeList[speciesIndex] * (precomputedArray[speciesSiteSystemElementIndex, speciesSiteSystemElementIndex] 
-                                                                                      + precomputedArray[neighborSiteSystemElementIndex, neighborSiteSystemElementIndex] 
-                                                                                      - 2 * precomputedArray[speciesSiteSystemElementIndex, neighborSiteSystemElementIndex])))
-                                delG0List.append(delG0)
-                                newStateEnergy = currentStateEnergy + delG0
-                            else:
-                                columnIndex = self.system.neighborSystemElementIndexMap[speciesSiteSystemElementIndex][neighborSiteSystemElementIndex]
-                                delG0 = (self.speciesChargeList[speciesIndex] * ((currentStateESPConfig[neighborSiteSystemElementIndex][0] - currentStateESPConfig[speciesSiteSystemElementIndex][0]
-                                                                                  - self.speciesChargeList[speciesIndex] * self.system.inverseCoeffDistanceList[speciesSiteSystemElementIndex][columnIndex])))
-                            if excess:
-                                delG0List.append(delG0)
+                            delG0 = (self.speciesChargeList[speciesIndex] 
+                                     * (2 * np.dot(currentStateChargeConfig[:, 0], precomputedArray[neighborSiteSystemElementIndex, :] - precomputedArray[speciesSiteSystemElementIndex, :]) 
+                                        + self.speciesChargeList[speciesIndex] * (precomputedArray[speciesSiteSystemElementIndex, speciesSiteSystemElementIndex] 
+                                                                                  + precomputedArray[neighborSiteSystemElementIndex, neighborSiteSystemElementIndex] 
+                                                                                  - 2 * precomputedArray[speciesSiteSystemElementIndex, neighborSiteSystemElementIndex])))
+                            delG0List.append(delG0)
+                            newStateEnergy = currentStateEnergy + delG0
                             lambdaValue = self.nProcLambdaValueList[iProc]
                             VAB = self.nProcVABList[iProc]
                             delGs = ((lambdaValue + delG0) ** 2 / (4 * lambdaValue)) - VAB
@@ -860,15 +832,9 @@ class run(object):
                 currentStateOccupancy[speciesIndex] = newSiteSystemElementIndex
                 speciesDisplacementVectorList[0, speciesIndex * 3:(speciesIndex + 1) * 3] += self.system.hopNeighborList[hopElementType][hopDistType].displacementVectorList[rowIndex][neighborIndex]
                 
-                if ewald:
-                    currentStateEnergy += delG0List[procIndex]
-                    currentStateChargeConfig[oldSiteSystemElementIndex] -= self.speciesChargeList[speciesIndex]
-                    currentStateChargeConfig[newSiteSystemElementIndex] += self.speciesChargeList[speciesIndex]
-                else:
-                    oldSiteNeighbors = self.system.neighborSystemElementIndexMap[oldSiteSystemElementIndex].keys()
-                    newSiteNeighbors = self.system.neighborSystemElementIndexMap[newSiteSystemElementIndex].keys()
-                    currentStateESPConfig[oldSiteNeighbors] -= self.speciesChargeList[speciesIndex] * self.system.inverseCoeffDistanceList[oldSiteSystemElementIndex][:, None]
-                    currentStateESPConfig[newSiteNeighbors] += self.speciesChargeList[speciesIndex] * self.system.inverseCoeffDistanceList[newSiteSystemElementIndex][:, None]
+                currentStateEnergy += delG0List[procIndex]
+                currentStateChargeConfig[oldSiteSystemElementIndex] -= self.speciesChargeList[speciesIndex]
+                currentStateChargeConfig[newSiteSystemElementIndex] += self.speciesChargeList[speciesIndex]
                 if (step + 1) % stepInterval == 0:
                     timeArray[pathIndex] = kmcTime
                     unwrappedPositionArray[pathIndex] = unwrappedPositionArray[pathIndex - 1] + speciesDisplacementVectorList
