@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-def hematiteMSD(systemSize, pbc, Temp, cutE, speciesCount, tFinal, nTraj, stepInterval, kmcStepCountPrecision, 
-                   msdStepCountPrecision, msdTFinal, nDispMin, binsize, reprTime, reprDist, report, overWrite):
+def hematiteMSD(systemSize, pbc, nDim, Temp, cutE, speciesCount, tFinal, nTraj, stepInterval, kmcStepCountPrecision, 
+                   msdStepCountPrecision, msdTFinal, nBins, popThld, trimLength, reprTime, reprDist, report, overWrite):
 
     from KineticModel import analysis
     import numpy as np
@@ -23,8 +23,7 @@ def hematiteMSD(systemSize, pbc, Temp, cutE, speciesCount, tFinal, nTraj, stepIn
     trajTimeStep = timeStep * stepInterval
     # TODO: Is it possible to get away with msdStepCountPrecision
     nStepsMSD = int(np.ceil(msdTFinal * (1.00E-09 if reprTime is 'ns' else 1.00E+00) / trajTimeStep / msdStepCountPrecision) * msdStepCountPrecision)
-    nDispMSD = min([nDispMin, kmcSteps / stepInterval / 2])
-
+    
     # Determine path for system directory    
     cwd = os.path.dirname(os.path.realpath(__file__))
     directorySeparator = '\\' if platform.uname()[0]=='Windows' else '/'
@@ -60,8 +59,8 @@ def hematiteMSD(systemSize, pbc, Temp, cutE, speciesCount, tFinal, nTraj, stepIn
         hematite = pickle.load(file_hematite)
         file_hematite.close()
     
-        hematiteAnalysis = analysis(hematite, speciesCount, nTraj, kmcSteps, stepInterval, 
-                                    systemSize, nStepsMSD, nDispMSD, binsize, reprTime, reprDist)
+        hematiteAnalysis = analysis(hematite, speciesCount, nDim, nTraj, kmcSteps, stepInterval, 
+                                    systemSize, nStepsMSD, nBins, popThld, trimLength, reprTime, reprDist)
         
         msdAnalysisData = hematiteAnalysis.computeMSD(workDirPath, report)
         msdData = msdAnalysisData.msdData
