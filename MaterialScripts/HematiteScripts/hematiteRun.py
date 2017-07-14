@@ -75,14 +75,18 @@ def hematiteRun(systemSize, pbc, Temp, speciesCount, tFinal, nTraj, stepInterval
         hopNeighborList = np.load(hopNeighborListFileName)[()]
         cumulativeDisplacementListFilePath = inputFileDirectoryPath + directorySeparator + 'cumulativeDisplacementList.npy'
         cumulativeDisplacementList = np.load(cumulativeDisplacementListFilePath)
-        hematiteSystem = system(hematite, hematiteNeighbors, hopNeighborList, cumulativeDisplacementList, speciesCount)
+        ewaldParametersFilePath = inputFileDirectoryPath + directorySeparator + 'ewaldParameters.npy'
+        ewaldParameters = np.load(ewaldParametersFilePath)[()]
+        alpha = ewaldParameters['alpha']
+        nmax = ewaldParameters['nmax']
+        kmax = ewaldParameters['kmax']
+        hematiteSystem = system(hematite, hematiteNeighbors, hopNeighborList, cumulativeDisplacementList, 
+                                speciesCount, alpha, nmax, kmax)
         
-        # Load precomputed array, ewald parameters file to instantiate run class
+        # Load precomputed array to instantiate run class
         precomputedArrayFilePath = inputFileDirectoryPath + directorySeparator + 'precomputedArray.npy'
         precomputedArray = np.load(precomputedArrayFilePath)
-        ewaldParametersFilePath = inputFileDirectoryPath + directorySeparator + 'ewaldParameters.npy'
-        ewaldParameters = np.load(ewaldParametersFilePath)
-        hematiteRun = run(hematiteSystem, precomputedArray, ewaldParameters, Temp, nTraj, kmcSteps, stepInterval, gui)
+        hematiteRun = run(hematiteSystem, precomputedArray, Temp, nTraj, kmcSteps, stepInterval, gui)
         
         hematiteRun.doKMCSteps(workDirPath, report, randomSeed)
     else:

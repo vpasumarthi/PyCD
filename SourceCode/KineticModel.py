@@ -428,7 +428,7 @@ class system(object):
     size: An array (3 x 1) defining the system size in multiple of unit cells
     """
     #@profile
-    def __init__(self, material, neighbors, hopNeighborList, cumulativeDisplacementList, speciesCount):
+    def __init__(self, material, neighbors, hopNeighborList, cumulativeDisplacementList, speciesCount, alpha, nmax, kmax):
         """Return a system object whose size is *size*"""
         self.material = material
         self.neighbors = neighbors
@@ -458,6 +458,11 @@ class system(object):
                                                                                  np.cross(self.translationalMatrix[0], self.translationalMatrix[1])])
         self.translationalVectorLength = np.linalg.norm(self.translationalMatrix, axis=1)
         self.reciprocalLatticeVectorLength = np.linalg.norm(self.reciprocalLatticeMatrix, axis=1)
+        
+        # ewald parameters:
+        self.alpha = alpha
+        self.nmax = nmax
+        self.kmax = kmax
     
     def generateRandomOccupancy(self, speciesCount):
         """generates initial occupancy list based on species count"""
@@ -525,7 +530,7 @@ class system(object):
 class run(object):
     """defines the subroutines for running Kinetic Monte Carlo and computing electrostatic 
     interaction energies"""
-    def __init__(self, system, precomputedArray, ewaldParameters, T, nTraj, kmcSteps, stepInterval, gui):
+    def __init__(self, system, precomputedArray, T, nTraj, kmcSteps, stepInterval, gui):
         """Returns the PBC condition of the system"""
         self.startTime = datetime.now()
 
@@ -533,10 +538,6 @@ class run(object):
         self.material = self.system.material
         self.neighbors = self.system.neighbors
         self.precomputedArray = precomputedArray
-        self.ewaldParameters = ewaldParameters[()]
-        self.alpha = self.ewaldParameters['alpha']
-        self.nmax = self.ewaldParameters['nmax']
-        self.kmax = self.ewaldParameters['kmax']
         self.T = T * self.material.K2AUTEMP
         self.nTraj = int(nTraj)
         self.kmcSteps = int(kmcSteps)
@@ -585,7 +586,7 @@ class run(object):
         # total number of species
         self.totalSpecies = self.system.speciesCount.sum()
     
-    @profile
+    #@profile
     def doKMCSteps(self, outdir, report=1, randomSeed=1):
         """Subroutine to run the KMC simulation by specified number of steps"""
         assert outdir, 'Please provide the destination path where simulation output files needs to be saved'
@@ -622,13 +623,13 @@ class run(object):
         rowIndexList = np.zeros(self.nProc, dtype=int)
         neighborIndexList = np.zeros(self.nProc, dtype=int)
         
-        ewaldNeut = - np.pi * (self.system.systemCharge**2) / (2 * self.system.systemVolume * self.alpha)
+        ewaldNeut = - np.pi * (self.system.systemCharge**2) / (2 * self.system.systemVolume * self.system.alpha)
 
         for trajIndex in range(nTraj):
             currentStateOccupancy = self.system.generateRandomOccupancy(self.system.speciesCount)
             currentStateChargeConfig = self.system.chargeConfig(currentStateOccupancy)
             currentStateChargeConfigProd = np.multiply(currentStateChargeConfig.transpose(), currentStateChargeConfig)
-            ewaldSelf = - np.sqrt(self.alpha / np.pi) * np.einsum('ii', currentStateChargeConfigProd)
+            ewaldSelf = - np.sqrt(self.system.alpha / np.pi) * np.einsum('ii', currentStateChargeConfigProd)
             currentStateEnergy = ewaldNeut + ewaldSelf + np.sum(np.multiply(currentStateChargeConfigProd, self.precomputedArray))
             pathIndex = 0
             if excess:
