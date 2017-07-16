@@ -24,7 +24,7 @@ def hematiteSetup(systemSize, pbc, replaceExistingObjectFiles, replaceExistingNe
     materialName = 'hematite'
     tailName = '.obj'
     objectFileDirectoryName = 'ObjectFiles'
-    objectFileDirPath = inputFileDirectoryPath + directorySeparator + objectFileDirectoryName
+    objectFileDirPath = directorySeparator.join(systemDirectoryPath.split(directorySeparator)[:-2]) + directorySeparator + objectFileDirectoryName
     if not os.path.exists(objectFileDirPath):
         os.makedirs(objectFileDirPath)
     materialFileName = objectFileDirPath + directorySeparator + materialName + tailName
@@ -41,7 +41,8 @@ def hematiteSetup(systemSize, pbc, replaceExistingObjectFiles, replaceExistingNe
     # Build neighbors object files
     hematiteNeighbors = neighbors(hematite, systemSize, pbc)
     hematiteNeighbors.generateNeighborsFile(hematiteNeighbors, neighborsFileName, replaceExistingObjectFiles)
-    hematiteNeighbors.generateNeighborList(inputFileDirectoryPath, replaceExistingNeighborList)
+    if replaceExistingNeighborList:
+        hematiteNeighbors.generateNeighborList(inputFileDirectoryPath, replaceExistingNeighborList)
 
     # Build precomputed array and save to disk
     precomputedArrayFilePath = inputFileDirectoryPath + directorySeparator + 'precomputedArray.npy'

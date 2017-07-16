@@ -1,22 +1,12 @@
 #!/usr/bin/env python
-def hematiteRun(systemSize, pbc, Temp, speciesCount, tFinal, nTraj, stepInterval, 
-                kmcStepCountPrecision, randomSeed, report, overWrite, gui):
+def hematiteRun(systemSize, pbc, Temp, speciesCount, tFinal, nTraj, 
+                timeInterval, randomSeed, report, overWrite, gui):
     from KineticModel import system, run
     import os
     import platform
     import numpy as np
     import pickle
     
-    # Compute number of estimated KMC steps to reach tFinal
-    totalSpecies = sum(speciesCount)
-    kBasal = 2.58E-08 # au
-    kC = 1.57E-11 # au
-    SEC2AUTIME = 41341373366343300
-    kTotalPerSpecies = 3 * kBasal + kC
-    kTotal = kTotalPerSpecies * totalSpecies
-    timeStep = 1 / (kTotal * SEC2AUTIME)
-    kmcSteps = int(np.ceil(tFinal / timeStep / kmcStepCountPrecision) * kmcStepCountPrecision)
-
     # Determine path for system directory    
     cwd = os.path.dirname(os.path.realpath(__file__))
     directorySeparator = '\\' if platform.uname()[0]=='Windows' else '/'
@@ -29,10 +19,10 @@ def hematiteRun(systemSize, pbc, Temp, speciesCount, tFinal, nTraj, stepInterval
     parentDir1 = 'SimulationFiles'
     nElectrons = speciesCount[0]
     nHoles = speciesCount[1]
-    parentDir2 = str(nElectrons) + ('electron' if nElectrons==1 else 'electrons') + ', ' + str(nHoles) + ('hole' if nHoles==1 else 'holes')
+    parentDir2 = (str(nElectrons) + ('electron' if nElectrons==1 else 'electrons') + ', ' + 
+                  str(nHoles) + ('hole' if nHoles==1 else 'holes'))
     parentDir3 = str(Temp) + 'K'
-    workDir = (('%1.2E' % kmcSteps) + 'Steps,' + ('%1.2E' % (kmcSteps/stepInterval)) + 'PathSteps,' + ('%1.2E' % nTraj) + 'Traj')
-    workDir = workDir.replace('+','')
+    workDir = (('%1.2E' % tFinal) + 'SEC,' + ('%1.2E' % timeInterval) + 'TimeInterval,' + ('%1.2E' % nTraj) + 'Traj')
     workDirPath = systemDirectoryPath + directorySeparator + directorySeparator.join([parentDir1, parentDir2, parentDir3, workDir])
     if not os.path.exists(workDirPath):
         os.makedirs(workDirPath)
@@ -51,7 +41,7 @@ def hematiteRun(systemSize, pbc, Temp, speciesCount, tFinal, nTraj, stepInterval
         tailName = '.obj'
         directorySeparator = '\\' if platform.uname()[0]=='Windows' else '/'
         objectFileDirectoryName = 'ObjectFiles'
-        objectFileDirPath = inputFileDirectoryPath + directorySeparator + objectFileDirectoryName
+        objectFileDirPath = directorySeparator.join(systemDirectoryPath.split(directorySeparator)[:-2]) + directorySeparator + objectFileDirectoryName
         materialFileName = objectFileDirPath + directorySeparator + materialName + tailName
         neighborsFileName = objectFileDirPath + directorySeparator + materialName + 'Neighbors' + tailName
         
@@ -86,7 +76,7 @@ def hematiteRun(systemSize, pbc, Temp, speciesCount, tFinal, nTraj, stepInterval
         # Load precomputed array to instantiate run class
         precomputedArrayFilePath = inputFileDirectoryPath + directorySeparator + 'precomputedArray.npy'
         precomputedArray = np.load(precomputedArrayFilePath)
-        hematiteRun = run(hematiteSystem, precomputedArray, Temp, nTraj, kmcSteps, stepInterval, gui)
+        hematiteRun = run(hematiteSystem, precomputedArray, Temp, nTraj, tFinal, timeInterval, gui)
         
         hematiteRun.doKMCSteps(workDirPath, report, randomSeed)
     else:

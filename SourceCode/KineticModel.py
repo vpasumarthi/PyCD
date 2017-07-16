@@ -347,7 +347,7 @@ class neighbors(object):
         returnNeighbors.numNeighbors = numNeighbors
         return returnNeighbors
     
-    def cumulativeDisplacementList(self, systemSize, dstPath, replaceExistingNeighborList):
+    def cumulativeDisplacementList(self, systemSize, dstPath):
         """Returns cumulative displacement list for the given system size printed out to disk"""
         cumulativeDisplacementList = np.zeros((self.numSystemElements, self.numSystemElements, 3))
         for centerSiteIndex, centerCoord in enumerate(self.bulkSites.cellCoordinates):
@@ -358,8 +358,8 @@ class neighbors(object):
             cumulativeDisplacementList[centerSiteIndex] = cumulativeNeighborImageDisplacementVectors[np.arange(self.numSystemElements), np.argmin(cumulativeNeighborImageDisplacements, axis=1)]
         return cumulativeDisplacementList
     
-    def generateNeighborList(self, neighborListDirPath, replaceExistingNeighborList=0, report=1, 
-                             localSystemSize=np.array([3, 3, 3]), centerUnitCellIndex=np.array([1, 1, 1])):
+    def generateNeighborList(self, neighborListDirPath, report=1, localSystemSize=np.array([3, 3, 3]), 
+                             centerUnitCellIndex=np.array([1, 1, 1])):
         """Adds the neighbor list to the system object and returns the neighbor list"""
         assert neighborListDirPath, 'Please provide the path to the parent directory of neighbor list files'
         assert all(size >= 3 for size in localSystemSize), 'Local system size in all dimensions should always be greater than or equal to 3'
@@ -368,7 +368,6 @@ class neighbors(object):
         if not os.path.exists(dstPath):
             os.makedirs(dstPath)
         hopNeighborListFilePath = dstPath + directorySeparator + 'hopNeighborList.npy'
-        assert (not os.path.isfile(hopNeighborListFilePath) or replaceExistingNeighborList), 'Requested neighbor list file already exists in the destination folder.'
         hopNeighborList = {}
         tolDist = self.material.neighborCutoffDistTol
         elementTypes = self.material.elementTypes[:]
@@ -396,15 +395,9 @@ class neighbors(object):
         np.save(hopNeighborListFilePath, hopNeighborList)
 
         cumulativeDisplacementListFilePath = dstPath + directorySeparator + 'cumulativeDisplacementList.npy'
-        assert (not os.path.isfile(cumulativeDisplacementListFilePath) or replaceExistingNeighborList), 'Requested neighbor list file already exists in the destination folder.'
-        cumulativeDisplacementList = self.cumulativeDisplacementList(self.systemSize, dstPath, replaceExistingNeighborList)
+        cumulativeDisplacementList = self.cumulativeDisplacementList(self.systemSize, dstPath)
         np.save(cumulativeDisplacementListFilePath, cumulativeDisplacementList)
 
-        if self.material.electrostaticCutoffDistKey in self.material.neighborCutoffDist.keys():
-            centerSiteIndices = neighborSiteIndices = np.arange(self.numCells * self.material.totalElementsPerUnitCell)
-            cutoffDistLimits = [0, parentCutoff]
-            self.electrostaticNeighborSites(self.systemSize, self.bulkSites, centerSiteIndices, 
-                                            neighborSiteIndices, cutoffDistLimits, dstPath, replaceExistingNeighborList)
         if report:
             self.generateNeighborListReport(dstPath)
 
@@ -530,8 +523,7 @@ class system(object):
 class run(object):
     """defines the subroutines for running Kinetic Monte Carlo and computing electrostatic 
     interaction energies"""
-    @profile
-    def __init__(self, system, precomputedArray, T, nTraj, kmcSteps, stepInterval, gui):
+    def __init__(self, system, precomputedArray, T, nTraj, tFinal, timeInterval, gui):
         """Returns the PBC condition of the system"""
         self.startTime = datetime.now()
 
@@ -541,8 +533,8 @@ class run(object):
         self.precomputedArray = precomputedArray
         self.T = T * self.material.K2AUTEMP
         self.nTraj = int(nTraj)
-        self.kmcSteps = int(kmcSteps)
-        self.stepInterval = int(stepInterval)
+        self.tFinal = tFinal * self.material.SEC2AUTIME
+        self.timeInterval = timeInterval * self.material.SEC2AUTIME
         self.gui = gui
 
         self.systemSize = self.system.systemSize
@@ -587,36 +579,35 @@ class run(object):
         # total number of species
         self.totalSpecies = self.system.speciesCount.sum()
     
-    @profile
     def doKMCSteps(self, outdir, report=1, randomSeed=1):
         """Subroutine to run the KMC simulation by specified number of steps"""
         assert outdir, 'Please provide the destination path where simulation output files needs to be saved'
         
         excess = 0
-        
-        timeDataFileName = outdir + directorySeparator + 'Time.dat'
+        energy = 1
         unwrappedTrajFileName = outdir + directorySeparator + 'unwrappedTraj.dat'
-        open(timeDataFileName, 'w').close()
         open(unwrappedTrajFileName, 'w').close()
+        if energy:
+            energyTrajFileName = outdir + directorySeparator + 'energyTraj.dat'
+            open(energyTrajFileName, 'w').close()
+        
         if excess:
             wrappedTrajFileName = outdir + directorySeparator + 'wrappedTraj.dat'
-            energyTrajFileName = outdir + directorySeparator + 'energyTraj.dat'
             delG0TrajFileName = outdir + directorySeparator + 'delG0Traj.dat'
             potentialTrajFileName = outdir + directorySeparator + 'potentialTraj.dat'
             open(wrappedTrajFileName, 'w').close()
-            open(energyTrajFileName, 'w').close()
             open(delG0TrajFileName, 'w').close()
             open(potentialTrajFileName, 'w').close()
+        
         rnd.seed(randomSeed)
         nTraj = self.nTraj
-        kmcSteps = self.kmcSteps
-        stepInterval = self.stepInterval
-        numPathStepsPerTraj = int(kmcSteps / stepInterval) + 1
-        timeArray = np.zeros(numPathStepsPerTraj)
+        numPathStepsPerTraj = int(self.tFinal / self.timeInterval) + 1
         unwrappedPositionArray = np.zeros(( numPathStepsPerTraj, self.totalSpecies * 3))
+        if energy:
+            energyArray = np.zeros(( numPathStepsPerTraj ))
+
         if excess:
             wrappedPositionArray = np.zeros(( numPathStepsPerTraj, self.totalSpecies * 3))
-            energyArray = np.zeros(( numPathStepsPerTraj ))
             delG0Array = np.zeros(( self.kmcSteps ))
             potentialArray = np.zeros(( numPathStepsPerTraj, self.totalSpecies))
         kList = np.zeros(self.nProc)
@@ -632,15 +623,18 @@ class run(object):
             currentStateChargeConfigProd = np.multiply(currentStateChargeConfig.transpose(), currentStateChargeConfig)
             ewaldSelf = - np.sqrt(self.system.alpha / np.pi) * np.einsum('ii', currentStateChargeConfigProd)
             currentStateEnergy = ewaldNeut + ewaldSelf + np.sum(np.multiply(currentStateChargeConfigProd, precomputedArray))
-            pathIndex = 0
-            if excess:
+            startPathIndex = 1
+            endPathIndex = startPathIndex + 1
+            if energy:
+                energyArray[0] = currentStateEnergy
+            # TODO: How to deal excess flag?
+            #if excess:
                 # TODO: Avoid using flatten
-                wrappedPositionArray[pathIndex] = self.systemCoordinates[currentStateOccupancy].flatten()
-                energyArray[pathIndex] = currentStateEnergy
-            pathIndex += 1
-            kmcTime = 0
+            #    wrappedPositionArray[pathIndex] = self.systemCoordinates[currentStateOccupancy].flatten()
             speciesDisplacementVectorList = np.zeros((1, self.totalSpecies * 3))
-            for step in range(kmcSteps):
+            simTime = 0
+            breakFlag = 0
+            while True:
                 iProc = 0
                 delG0List = []
                 for speciesIndex, speciesSiteSystemElementIndex in enumerate(currentStateOccupancy):
@@ -676,10 +670,11 @@ class run(object):
                 rand1 = rnd.random()
                 procIndex = np.where(kCumSum > rand1)[0][0]
                 rand2 = rnd.random()
-                kmcTime -= np.log(rand2) / kTotal
+                simTime -= np.log(rand2) / kTotal
                 
-                if excess:
-                    delG0Array[step] = delG0List[procIndex]
+                # TODO: Address pre-defining excess data arrays
+                #if excess:
+                #    delG0Array[step] = delG0List[procIndex]
                 speciesIndex = self.nProcSpeciesIndexList[procIndex]
                 hopElementType = self.nProcHopElementTypeList[procIndex]
                 hopDistType = self.nProcHopDistTypeList[procIndex]
@@ -693,25 +688,29 @@ class run(object):
                 currentStateEnergy += delG0List[procIndex]
                 currentStateChargeConfig[oldSiteSystemElementIndex] -= self.speciesChargeList[speciesIndex]
                 currentStateChargeConfig[newSiteSystemElementIndex] += self.speciesChargeList[speciesIndex]
-                if (step + 1) % stepInterval == 0:
-                    timeArray[pathIndex] = kmcTime
-                    unwrappedPositionArray[pathIndex] = unwrappedPositionArray[pathIndex - 1] + speciesDisplacementVectorList
+                endPathIndex = int(simTime / self.timeInterval)
+                if endPathIndex >= startPathIndex + 1:
+                    if endPathIndex >= numPathStepsPerTraj:
+                        endPathIndex = numPathStepsPerTraj
+                        breakFlag = 1
+                    unwrappedPositionArray[startPathIndex:endPathIndex] = unwrappedPositionArray[startPathIndex-1] + speciesDisplacementVectorList
+                    energyArray[startPathIndex:endPathIndex] = currentStateEnergy 
                     speciesDisplacementVectorList = np.zeros((1, self.totalSpecies * 3))
-                    if excess:
+                    startPathIndex = endPathIndex
+                    if breakFlag:
+                        break
+                    # TODO: Address excess flag
+                    #if excess:
                         # TODO: Avoid using flatten
-                        wrappedPositionArray[pathIndex] = self.systemCoordinates[currentStateOccupancy].flatten()
-                        energyArray[pathIndex] = currentStateEnergy
-                    pathIndex += 1
+                    #    wrappedPositionArray[pathIndex] = self.systemCoordinates[currentStateOccupancy].flatten()
 
-            with open(timeDataFileName, 'a') as timeDataFile:
-                np.savetxt(timeDataFile, timeArray)
             with open(unwrappedTrajFileName, 'a') as unwrappedTrajFile:
                 np.savetxt(unwrappedTrajFile, unwrappedPositionArray)
+            with open(energyTrajFileName, 'a') as energyTrajFile:
+                np.savetxt(energyTrajFile, energyArray)
             if excess:
                 with open(wrappedTrajFileName, 'a') as wrappedTrajFile:
                     np.savetxt(wrappedTrajFile, wrappedPositionArray)
-                with open(energyTrajFileName, 'a') as energyTrajFile:
-                    np.savetxt(energyTrajFile, energyArray)
                 with open(delG0TrajFileName, 'a') as delG0TrajFile:
                     np.savetxt(delG0TrajFile, delG0Array)
                 with open(potentialTrajFileName, 'a') as potentialTrajFile:
@@ -734,23 +733,22 @@ class run(object):
 
 class analysis(object):
     """Post-simulation analysis methods"""
-    def __init__(self, material, speciesCount, nDim, nTraj, kmcSteps, stepInterval, 
-                 systemSize, nStepsMSD, nBins, popThld, trimLength, reprTime = 'ns', reprDist = 'Angstrom'):
+    def __init__(self, material, nDim, systemSize, speciesCount, nTraj, tFinal, 
+                 timeInterval, msdTFinal, trimLength, reprTime = 'ns', reprDist = 'Angstrom'):
         """"""
         self.startTime = datetime.now()
         self.material = material
+        self.nDim = nDim
+        self.systemSize = systemSize
         self.speciesCount = speciesCount
         self.totalSpecies = self.speciesCount.sum()
-        self.nDim = nDim
         self.nTraj = int(nTraj)
-        self.kmcSteps = kmcSteps
-        self.stepInterval = stepInterval
-        self.systemSize = systemSize
-        self.nStepsMSD = int(nStepsMSD)
-        self.nBins = nBins
-        self.popThld = popThld
+        self.tFinal = tFinal * self.material.SEC2AUTIME
+        self.timeInterval = timeInterval * self.material.SEC2AUTIME
+        self.msdTFinal = msdTFinal / self.material.SEC2NS * self.material.SEC2AUTIME
         self.trimLength = trimLength
-        self.nDispMSD = int(kmcSteps / stepInterval - self.nStepsMSD)
+        self.numPathStepsPerTraj = int(self.tFinal / self.timeInterval) + 1
+        self.numMSDStepsPerTraj = int(msdTFinal / timeInterval / self.material.SEC2NS) + 1
         self.reprTime = reprTime
         self.reprDist = reprDist
         
@@ -769,44 +767,33 @@ class analysis(object):
     def computeMSD(self, outdir, report=1):
         """Returns the squared displacement of the trajectories"""
         assert outdir, 'Please provide the destination path where MSD output files needs to be saved'
-        numPathStepsPerTraj = int(self.kmcSteps / self.stepInterval) + 1
-        time = np.loadtxt(outdir + directorySeparator + 'Time.dat') * self.timeConversion
-        numTrajRecorded = int(len(time) / numPathStepsPerTraj)
-        positionArray = np.loadtxt(outdir + directorySeparator + 'unwrappedTraj.dat')[:numTrajRecorded * numPathStepsPerTraj + 1].reshape((numTrajRecorded * numPathStepsPerTraj, self.totalSpecies, 3)) * self.distConversion
-        msdTimeArray = np.zeros(numTrajRecorded * (self.nStepsMSD * self.nDispMSD))
-        msdDisp2Array = np.zeros((numTrajRecorded * (self.nStepsMSD * self.nDispMSD), self.totalSpecies))
-        addOn = np.arange(self.nDispMSD)
+        positionArray = np.loadtxt(outdir + directorySeparator + 'unwrappedTraj.dat')
+        numTrajRecorded = int(len(positionArray) / self.numPathStepsPerTraj)
+        positionArray = positionArray[:numTrajRecorded * self.numPathStepsPerTraj + 1].reshape((numTrajRecorded * self.numPathStepsPerTraj, self.totalSpecies, 3)) * self.distConversion
+        sdArray = np.zeros((numTrajRecorded, self.numMSDStepsPerTraj, self.totalSpecies))
         for trajIndex in range(numTrajRecorded):
-            headStart = trajIndex * numPathStepsPerTraj
-            workingRowHeadStart = trajIndex * (self.nStepsMSD * self.nDispMSD) 
-            for timestep in range(1, self.nStepsMSD + 1):
-                workingRows = workingRowHeadStart + (timestep-1) * self.nDispMSD + addOn
-                msdTimeArray[workingRows] = time[headStart + timestep + addOn] - time[headStart + addOn]
+            headStart = trajIndex * self.numPathStepsPerTraj
+            for timestep in range(1, self.numMSDStepsPerTraj):
+                numDisp = self.numPathStepsPerTraj - timestep
+                addOn = np.arange(numDisp)
                 posDiff = positionArray[headStart + timestep + addOn] - positionArray[headStart + addOn]
-                msdDisp2Array[workingRows, :] = np.einsum('ijk,ijk->ij', posDiff, posDiff)
-        minEndTime = np.min(msdTimeArray[np.arange(self.nStepsMSD * self.nDispMSD - 1, numTrajRecorded * (self.nStepsMSD * self.nDispMSD), self.nStepsMSD * self.nDispMSD)])
-        speciesMSDData = np.zeros((self.nBins, self.totalSpecies))
-        msdTimeHistogram, binEdges = np.histogram(msdTimeArray, bins=self.nBins)
-        for iSpecies in range(self.totalSpecies):
-            iSpeciesHist, dummy = np.histogram(msdTimeArray, bins=self.nBins, weights=msdDisp2Array[:, iSpecies])
-            speciesMSDData[:, iSpecies] = iSpeciesHist / msdTimeHistogram
-        msdData = np.zeros((self.nBins+1, self.material.numSpeciesTypes + 1 - list(self.speciesCount).count(0)))
-        msdData[1:, 0] = (binEdges[1:] + binEdges[:-1]) / 2
+                sdArray[trajIndex, timestep, :] = np.mean(np.einsum('ijk,ijk->ij', posDiff, posDiff), axis=0)
+        trajAvgSDArray = np.mean(sdArray, axis=0)
+        msdData = np.zeros((self.numMSDStepsPerTraj, self.material.numSpeciesTypes + 1 - list(self.speciesCount).count(0)))
+        timeArray = np.arange(self.numMSDStepsPerTraj) * self.timeInterval * self.timeConversion
+        msdData[:, 0] = timeArray
         startIndex = 0
         numNonExistentSpecies = 0
         nonExistentSpeciesIndices = []
         for speciesTypeIndex in range(self.material.numSpeciesTypes):
             if self.speciesCount[speciesTypeIndex] != 0:
                 endIndex = startIndex + self.speciesCount[speciesTypeIndex]
-                msdData[1:, speciesTypeIndex + 1 - numNonExistentSpecies] = np.mean(speciesMSDData[:, startIndex:endIndex], axis=1)
+                msdData[:, speciesTypeIndex + 1 - numNonExistentSpecies] = np.mean(trajAvgSDArray[:, startIndex:endIndex], axis=1)
                 startIndex = endIndex
             else:
                 numNonExistentSpecies += 1
                 nonExistentSpeciesIndices.append(speciesTypeIndex)
-        extractIndices = np.hstack((np.array([0]), np.where(msdTimeHistogram > self.popThld * np.max(msdTimeHistogram))[0] + 1))
-        msdData = msdData[extractIndices, :]
-        fileName = (('%1.2E' % self.nStepsMSD) + 'nStepsMSD,' + 
-                    ('%1.2E' % self.nDispMSD) + 'nDispMSD' + 
+        fileName = (('%1.2E' % (self.msdTFinal * self.timeConversion)) + str(self.reprTime) + 
                     (',nTraj: %1.2E' % numTrajRecorded if numTrajRecorded != self.nTraj else ''))
         msdFileName = 'MSD_Data_' + fileName + '.npy'
         msdFilePath = outdir + directorySeparator + msdFileName
