@@ -5,8 +5,7 @@ import platform
 
 directorySeparator = '\\' if platform.uname()[0]=='Windows' else '/'
 inputCoordinatesDirectoryName= 'InputCoordinates'
-inputCoorType = 0 # 0:Experimental; 1: Relaxed
-inputCoordinateFileName = 'Fe2O3_index_coord_' + ('Experimental' if inputCoorType is 0 else 'relaxed') + '.txt'
+inputCoordinateFileName = 'Fe2O3_index_coord_Experimental.txt'
 
 class hematiteParameters(object):
     
@@ -22,18 +21,11 @@ class hematiteParameters(object):
         self.unitcellCoords = index_pos[:, 1:] 
         self.elementTypeIndexList = index_pos[:,0]
         self.chargeTypes = {'Fe': +3.0, 'O': -2.0, 'Fe0': +2.0} # multiples of elementary charge
-        if inputCoorType:
-            a = 5.0180397814313995 # lattice constant along x-axis # RelaxCell_Trial08
-            b = 5.0180397814313995 # lattice constant along y-axis # RelaxCell_Trial08
-            c = 13.8742926905499075 # lattice constant along z-axis # RelaxCell_Trial08
-            self.neighborCutoffDist = {'Fe:Fe': [2.963, 2.930], 'O:O': [2.847], 'Fe:O': [2.033]} # Relax Cell_Trial08
-            self.neighborCutoffDistTol = {'Fe:Fe': [0.002, 0.002], 'O:O': [0.163], 'Fe:O': [0.103]} # Relax Cell_Trial08
-        else:
-            a = 5.0380000000000003 # lattice constant along x-axis # Experimental
-            b = 5.0380000000000003 # lattice constant along y-axis # Experimental
-            c = 13.7720000000000002 # lattice constant along z-axis # Experimental
-            self.neighborCutoffDist = {'Fe:Fe': [2.971, 2.901]} # Basal: 2.971, C: 2.901 # Experimental
-            self.neighborCutoffDistTol = {'Fe:Fe': [0.002, 0.002]} # Experimental
+        a = 5.0380000000000003 # lattice constant along x-axis # Experimental
+        b = 5.0380000000000003 # lattice constant along y-axis # Experimental
+        c = 13.7720000000000002 # lattice constant along z-axis # Experimental
+        self.neighborCutoffDist = {'Fe:Fe': [2.971, 2.901]} # Basal: 2.971, C: 2.901 # Experimental
+        self.neighborCutoffDistTol = {'Fe:Fe': [0.002, 0.002]} # Experimental
         alpha = 90. / 180 * np.pi # interaxial angle between b-c
         beta = 90. / 180 * np.pi # lattice angle between a-c
         gamma = 120. / 180 * np.pi # lattice angle between a-b
