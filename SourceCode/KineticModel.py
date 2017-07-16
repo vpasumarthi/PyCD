@@ -423,6 +423,8 @@ class system(object):
     #@profile
     def __init__(self, material, neighbors, hopNeighborList, cumulativeDisplacementList, speciesCount, alpha, nmax, kmax):
         """Return a system object whose size is *size*"""
+        self.startTime = datetime.now()
+        
         self.material = material
         self.neighbors = neighbors
         self.hopNeighborList = hopNeighborList
@@ -488,7 +490,7 @@ class system(object):
                 chargeList[centerSiteSystemElementIndices] = self.material.chargeTypes[chargeKeyType]
         return chargeList
 
-    def ewaldSumSetup(self):
+    def ewaldSumSetup(self, outdir=None):
         from scipy.special import erfc
         sqrtalpha = np.sqrt(self.alpha)
         alpha4 = 4 * self.alpha
@@ -518,7 +520,23 @@ class system(object):
                         precomputedArray += fourierSumCoeff * np.exp(-kVector2 / alpha4) * np.cos(np.tensordot(self.cumulativeDisplacementList, kVector, axes=([2], [0]))) / kVector2
         
         precomputedArray /= self.material.dielectricConstant
+        
+        if outdir:
+            self.generatePreComputedArrayLogReport(outdir)
         return precomputedArray
+
+    def generatePreComputedArrayLogReport(self, outdir):
+        """Generates an log report of the simulation and outputs to the working directory"""
+        precomputedArrayLogFileName = 'precompuedArray.log'
+        precomputedArrayLogFilePath = outdir + directorySeparator + precomputedArrayLogFileName
+        report = open(precomputedArrayLogFilePath, 'w')
+        endTime = datetime.now()
+        timeElapsed = endTime - self.startTime
+        report.write('Time elapsed: ' + ('%2d days, ' % timeElapsed.days if timeElapsed.days else '') +
+                     ('%2d hours' % ((timeElapsed.seconds // 3600) % 24)) + 
+                     (', %2d minutes' % ((timeElapsed.seconds // 60) % 60)) + 
+                     (', %2d seconds' % (timeElapsed.seconds % 60)))
+        report.close()
     
 class run(object):
     """defines the subroutines for running Kinetic Monte Carlo and computing electrostatic 

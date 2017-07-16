@@ -62,7 +62,7 @@ def hematiteSetup(systemSize, pbc, replaceExistingObjectFiles, replaceExistingNe
 
         hematiteSystem = system(hematite, hematiteNeighbors, hopNeighborList, cumulativeDisplacementList, 
                                 speciesCount, alpha, nmax, kmax)
-        precomputedArray = hematiteSystem.ewaldSumSetup()
+        precomputedArray = hematiteSystem.ewaldSumSetup(inputFileDirectoryPath)
         np.save(precomputedArrayFilePath, precomputedArray)
         
         ewaldParametersFilePath = inputFileDirectoryPath + directorySeparator + 'ewaldParameters.npy'
