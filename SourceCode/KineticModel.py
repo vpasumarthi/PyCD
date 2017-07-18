@@ -116,7 +116,6 @@ class material(object):
         self.neighborCutoffDistTol = deepcopy(materialParameters.neighborCutoffDistTol)
         self.neighborCutoffDistTol.update((x, [(y[index] * self.ANG2BOHR) if y[index] else None for index in range(len(y))]) for x, y in self.neighborCutoffDistTol.items())
         
-        self.electrostaticCutoffDistKey = materialParameters.electrostaticCutoffDistKey
         self.elementTypeDelimiter = materialParameters.elementTypeDelimiter
         self.emptySpeciesType = materialParameters.emptySpeciesType
         self.siteIdentifier = materialParameters.siteIdentifier
@@ -376,22 +375,21 @@ class neighbors(object):
             for cutoffDistKey in self.material.neighborCutoffDist.keys():
                 cutoffDistList = self.material.neighborCutoffDist[cutoffDistKey][:]
                 neighborListCutoffDistKey = []
-                if cutoffDistKey is not self.material.electrostaticCutoffDistKey:
-                    [centerElementType, neighborElementType] = cutoffDistKey.split(self.material.elementTypeDelimiter)
-                    centerSiteElementTypeIndex = elementTypes.index(centerElementType) 
-                    neighborSiteElementTypeIndex = elementTypes.index(neighborElementType)
-                    localBulkSites = self.material.generateSites(self.elementTypeIndices, 
-                                                                 self.systemSize)
-                    systemElementIndexOffsetArray = (np.repeat(np.arange(0, self.material.totalElementsPerUnitCell * self.numCells, self.material.totalElementsPerUnitCell), 
-                                                               self.material.nElementsPerUnitCell[centerSiteElementTypeIndex]))
-                    centerSiteIndices = neighborSiteIndices = (np.tile(self.material.nElementsPerUnitCell[:centerSiteElementTypeIndex].sum() + 
-                                                                       np.arange(0, self.material.nElementsPerUnitCell[centerSiteElementTypeIndex]), self.numCells) + systemElementIndexOffsetArray)
+                [centerElementType, neighborElementType] = cutoffDistKey.split(self.material.elementTypeDelimiter)
+                centerSiteElementTypeIndex = elementTypes.index(centerElementType) 
+                neighborSiteElementTypeIndex = elementTypes.index(neighborElementType)
+                localBulkSites = self.material.generateSites(self.elementTypeIndices, 
+                                                             self.systemSize)
+                systemElementIndexOffsetArray = (np.repeat(np.arange(0, self.material.totalElementsPerUnitCell * self.numCells, self.material.totalElementsPerUnitCell), 
+                                                           self.material.nElementsPerUnitCell[centerSiteElementTypeIndex]))
+                centerSiteIndices = neighborSiteIndices = (np.tile(self.material.nElementsPerUnitCell[:centerSiteElementTypeIndex].sum() + 
+                                                                   np.arange(0, self.material.nElementsPerUnitCell[centerSiteElementTypeIndex]), self.numCells) + systemElementIndexOffsetArray)
+                
+                for iCutoffDist in range(len(cutoffDistList)):
+                    cutoffDistLimits = [cutoffDistList[iCutoffDist] - tolDist[cutoffDistKey][iCutoffDist], cutoffDistList[iCutoffDist] + tolDist[cutoffDistKey][iCutoffDist]]
                     
-                    for iCutoffDist in range(len(cutoffDistList)):
-                        cutoffDistLimits = [cutoffDistList[iCutoffDist] - tolDist[cutoffDistKey][iCutoffDist], cutoffDistList[iCutoffDist] + tolDist[cutoffDistKey][iCutoffDist]]
-                        
-                        neighborListCutoffDistKey.append(self.hopNeighborSites(localBulkSites, centerSiteIndices, 
-                                                                               neighborSiteIndices, cutoffDistLimits, cutoffDistKey))
+                    neighborListCutoffDistKey.append(self.hopNeighborSites(localBulkSites, centerSiteIndices, 
+                                                                           neighborSiteIndices, cutoffDistLimits, cutoffDistKey))
                 hopNeighborList[cutoffDistKey] = neighborListCutoffDistKey[:]
             np.save(hopNeighborListFilePath, hopNeighborList)
         
