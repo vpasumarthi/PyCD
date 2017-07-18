@@ -517,6 +517,62 @@ class neighbors(object):
                      (', %2d seconds' % (timeElapsed.seconds % 60)))
         report.close()
 
+    def generateTransitionProbMatrix(self, neighborSystemElementIndices, dstPath, report=1):
+        startTime = datetime.now()
+        elementTypeIndex = 0
+        numNeighbors = len(neighborSystemElementIndices[0])
+        numBasalNeighbors = 3
+        numCNeighbors = 1
+        T = 300 * self.material.K2AUTEMP
+        
+        hopElementType = 'Fe:Fe'
+        kList = np.zeros(numNeighbors)
+        delG0 = 0
+        for neighborIndex in range(numNeighbors):
+            if neighborIndex < numBasalNeighbors:
+                hopDistType = 0
+            else:
+                hopDistType = 1
+            lambdaValue = self.material.lambdaValues[hopElementType][hopDistType]
+            VAB = self.material.VAB[hopElementType][hopDistType]
+            delGs = ((lambdaValue + delG0) ** 2 / (4 * lambdaValue)) - VAB
+            kList[neighborIndex] = self.material.vn * np.exp(-delGs / T)
+        
+        kTotal = np.sum(kList)
+        probList = kList / kTotal
+
+        localBulkSites = self.material.generateSites(self.elementTypeIndices, self.systemSize)
+        systemElementIndexOffsetArray = (np.repeat(np.arange(0, self.material.totalElementsPerUnitCell * self.numCells, self.material.totalElementsPerUnitCell), 
+                                                   self.material.nElementsPerUnitCell[elementTypeIndex]))
+        neighborSiteSEIndices = (np.tile(self.material.nElementsPerUnitCell[:elementTypeIndex].sum() + 
+                                         np.arange(0, self.material.nElementsPerUnitCell[elementTypeIndex]), self.numCells) + systemElementIndexOffsetArray)
+        
+        numElementTypeSites = len(neighborSystemElementIndices)
+        transitionProbMatrix = np.zeros((numElementTypeSites, numElementTypeSites))
+        for centerSiteIndex in range(numElementTypeSites):
+            for neighborIndex in range(numNeighbors):
+                neighborSiteIndex = np.where(neighborSiteSEIndices == neighborSystemElementIndices[centerSiteIndex][neighborIndex])[0][0]
+                transitionProbMatrix[centerSiteIndex][neighborSiteIndex] = probList[neighborIndex]
+        fileName = 'transitionProbMatrix.npy'
+        transitionProbMatrixFilePath = dstPath + directorySeparator + fileName
+        np.save(transitionProbMatrixFilePath, transitionProbMatrix)
+        if report:
+            self.generateTransitionProbMatrixListReport(dstPath, startTime)
+        return
+    
+    def generateTransitionProbMatrixListReport(self, dstPath, startTime):
+        """Generates a neighbor list and prints out a report to the output directory"""
+        transitionProbMatrixLogName = 'transitionProbMatrix.log' 
+        transitionProbMatrixLogPath = dstPath + directorySeparator + transitionProbMatrixLogName
+        report = open(transitionProbMatrixLogPath, 'w')
+        endTime = datetime.now()
+        timeElapsed = endTime - startTime
+        report.write('Time elapsed: ' + ('%2d days, ' % timeElapsed.days if timeElapsed.days else '') +
+                     ('%2d hours' % ((timeElapsed.seconds // 3600) % 24)) + 
+                     (', %2d minutes' % ((timeElapsed.seconds // 60) % 60)) + 
+                     (', %2d seconds' % (timeElapsed.seconds % 60)))
+        report.close()
+    
 class system(object):
     """defines the system we are working on
     
