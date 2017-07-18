@@ -496,7 +496,7 @@ class neighbors(object):
         speciesSiteSDList = np.zeros(len(neighborSiteSEIndices))
         for neighborSiteIndex, neighborSiteSEIndex in enumerate(neighborSiteSEIndices):
             speciesSiteSDList[neighborSiteIndex] = self.computeDistance(self.systemSize, centerSiteSEIndex, neighborSiteSEIndex)**2
-        
+        speciesSiteSDList /= self.material.ANG2BOHR**2
         fileName = 'speciesSiteSDList.npy'
         speciesSiteSDListFilePath = dstPath + directorySeparator + fileName
         np.save(speciesSiteSDListFilePath, speciesSiteSDList)
@@ -565,6 +565,85 @@ class neighbors(object):
         transitionProbMatrixLogName = 'transitionProbMatrix.log' 
         transitionProbMatrixLogPath = dstPath + directorySeparator + transitionProbMatrixLogName
         report = open(transitionProbMatrixLogPath, 'w')
+        endTime = datetime.now()
+        timeElapsed = endTime - startTime
+        report.write('Time elapsed: ' + ('%2d days, ' % timeElapsed.days if timeElapsed.days else '') +
+                     ('%2d hours' % ((timeElapsed.seconds // 3600) % 24)) + 
+                     (', %2d minutes' % ((timeElapsed.seconds // 60) % 60)) + 
+                     (', %2d seconds' % (timeElapsed.seconds % 60)))
+        report.close()
+    
+    def generateMSDAnalyticalData(self, transitionProbMatrix, speciesSiteSDList, centerSiteQuantumIndices, analyticalTFinal, timeInterval, dstPath, report=1):
+        startTime = datetime.now()
+        
+        elementTypeIndex = 0
+        numDataPoints = int(analyticalTFinal / timeInterval) + 1
+        msdData = np.zeros((numDataPoints, 2))
+        msdData[:, 0] = np.arange(0, analyticalTFinal + timeInterval, timeInterval)
+
+        localBulkSites = self.material.generateSites(self.elementTypeIndices, self.systemSize)
+        systemElementIndexOffsetArray = (np.repeat(np.arange(0, self.material.totalElementsPerUnitCell * self.numCells, self.material.totalElementsPerUnitCell), 
+                                                   self.material.nElementsPerUnitCell[elementTypeIndex]))
+        centerSiteSEIndices = (np.tile(self.material.nElementsPerUnitCell[:elementTypeIndex].sum() + 
+                                       np.arange(0, self.material.nElementsPerUnitCell[elementTypeIndex]), self.numCells) + systemElementIndexOffsetArray)
+        
+        centerSiteSEIndex = self.generateSystemElementIndex(self.systemSize, centerSiteQuantumIndices)
+        
+        
+        
+        numBasalNeighbors = 3
+        numCNeighbors = 1
+        numNeighbors = numBasalNeighbors + numCNeighbors
+        T = 300 * self.material.K2AUTEMP
+        
+        hopElementType = 'Fe:Fe'
+        kList = np.zeros(numNeighbors)
+        delG0 = 0
+        for neighborIndex in range(numNeighbors):
+            if neighborIndex < numBasalNeighbors:
+                hopDistType = 0
+            else:
+                hopDistType = 1
+            lambdaValue = self.material.lambdaValues[hopElementType][hopDistType]
+            VAB = self.material.VAB[hopElementType][hopDistType]
+            delGs = ((lambdaValue + delG0) ** 2 / (4 * lambdaValue)) - VAB
+            kList[neighborIndex] = self.material.vn * np.exp(-delGs / T)
+        
+        kTotal = np.sum(kList)        
+        timestep = (1 / kTotal) / self.material.SEC2AUTIME * self.material.SEC2NS
+        
+        simTime = 0
+        startIndex = 0
+        rowIndex = np.where(centerSiteSEIndices == centerSiteSEIndex)
+        newTransitionProbMatrix = np.copy(transitionProbMatrix)
+        while True:
+            newTransitionProbMatrix = np.dot(newTransitionProbMatrix, transitionProbMatrix)
+            simTime += timestep
+            endIndex = int(simTime / timeInterval)
+            if endIndex >= startIndex + 1:
+                msdData[endIndex, 1] = np.dot(newTransitionProbMatrix[rowIndex], speciesSiteSDList)
+                startIndex += 1
+                if endIndex == numDataPoints - 1:
+                    break
+        fileName = '%1.2Ens' % analyticalTFinal
+        MSDAnalyticalDataFileName = 'MSD_Analytical_Data_' + fileName + '.npy'
+        MSDAnalyticalDataFilePath = dstPath + directorySeparator + MSDAnalyticalDataFileName
+        np.save(MSDAnalyticalDataFilePath, msdData)
+        speciesTypes = ['electron']
+        
+        if report:
+            self.generateMSDAnalyticalDataReport(fileName, dstPath, startTime)
+        returnMSDData = returnValues()
+        returnMSDData.msdData = msdData
+        returnMSDData.speciesTypes = speciesTypes
+        returnMSDData.fileName = fileName
+        return returnMSDData
+    
+    def generateMSDAnalyticalDataReport(self, fileName, dstPath, startTime):
+        """Generates a neighbor list and prints out a report to the output directory"""
+        MSDAnalyticalDataLogName = 'MSD_Analytical_Data_' + fileName + '.log' 
+        MSDAnalyticalDataLogPath = dstPath + directorySeparator + MSDAnalyticalDataLogName
+        report = open(MSDAnalyticalDataLogPath, 'w')
         endTime = datetime.now()
         timeElapsed = endTime - startTime
         report.write('Time elapsed: ' + ('%2d days, ' % timeElapsed.days if timeElapsed.days else '') +

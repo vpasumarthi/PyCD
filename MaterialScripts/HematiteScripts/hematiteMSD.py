@@ -34,7 +34,6 @@ def hematiteMSD(systemSize, pbc, nDim, Temp, speciesCount, tFinal, nTraj, timeIn
         inputFileDirectoryName = 'InputFiles'
         inputFileDirectoryPath = systemDirectoryPath + directorySeparator + inputFileDirectoryName
     
-    
         # Build path for material and neighbors object files
         materialName = 'hematite'
         tailName = '.obj'
