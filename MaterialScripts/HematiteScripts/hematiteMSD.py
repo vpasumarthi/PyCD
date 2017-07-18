@@ -40,7 +40,7 @@ def hematiteMSD(systemSize, pbc, nDim, Temp, speciesCount, tFinal, nTraj, timeIn
         tailName = '.obj'
         directorySeparator = '\\' if platform.uname()[0]=='Windows' else '/'
         objectFileDirectoryName = 'ObjectFiles'
-        objectFileDirPath = directorySeparator.join(systemDirectoryPath.split(directorySeparator)[:-2]) + directorySeparator + objectFileDirectoryName
+        objectFileDirPath = inputFileDirectoryPath + directorySeparator + objectFileDirectoryName
         materialFileName = objectFileDirPath + directorySeparator + materialName + tailName
         
         # Load material object

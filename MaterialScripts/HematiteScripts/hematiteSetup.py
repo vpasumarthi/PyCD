@@ -24,16 +24,12 @@ def hematiteSetup(systemSize, pbc, replaceExistingObjectFiles, generateHopNeighb
     materialName = 'hematite'
     tailName = '.obj'
     objectFileDirectoryName = 'ObjectFiles'
-    objectFileDirPath = directorySeparator.join(systemDirectoryPath.split(directorySeparator)[:-2]) + directorySeparator + objectFileDirectoryName
+    objectFileDirPath = inputFileDirectoryPath + directorySeparator + objectFileDirectoryName
     if not os.path.exists(objectFileDirPath):
         os.makedirs(objectFileDirPath)
     materialFileName = objectFileDirPath + directorySeparator + materialName + tailName
     neighborsFileName = objectFileDirPath + directorySeparator + materialName + 'Neighbors' + tailName
     
-    # Determine path for neighbor list directories
-    inputFileDirectoryName = 'InputFiles'
-    inputFileDirectoryPath = systemDirectoryPath + directorySeparator + inputFileDirectoryName
-
     # Build material object files
     hematite = material(hematiteParameters())
     hematite.generateMaterialFile(hematite, materialFileName, replaceExistingObjectFiles)

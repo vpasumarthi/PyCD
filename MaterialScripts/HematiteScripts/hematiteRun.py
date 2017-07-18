@@ -41,7 +41,7 @@ def hematiteRun(systemSize, pbc, Temp, speciesCount, tFinal, nTraj,
         tailName = '.obj'
         directorySeparator = '\\' if platform.uname()[0]=='Windows' else '/'
         objectFileDirectoryName = 'ObjectFiles'
-        objectFileDirPath = directorySeparator.join(systemDirectoryPath.split(directorySeparator)[:-2]) + directorySeparator + objectFileDirectoryName
+        objectFileDirPath = inputFileDirectoryPath + directorySeparator + objectFileDirectoryName
         materialFileName = objectFileDirPath + directorySeparator + materialName + tailName
         neighborsFileName = objectFileDirPath + directorySeparator + materialName + 'Neighbors' + tailName
         
