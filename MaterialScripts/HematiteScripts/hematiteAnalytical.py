@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 def hematiteAnalytical(systemSize, pbc, nDim, Temp, speciesCount, tFinal, nTraj, timeInterval, randomSeed, 
-                       msdTFinal, trimLength, reprTime, reprDist, report, overWrite, gui):
+                       analyticalTFinal, msdTFinal, trimLength, reprTime, reprDist, report, overWrite, gui):
     from KineticModel import system, run, analysis
     import os
     import platform
@@ -41,7 +41,7 @@ def hematiteAnalytical(systemSize, pbc, nDim, Temp, speciesCount, tFinal, nTraj,
         tailName = '.obj'
         directorySeparator = '\\' if platform.uname()[0]=='Windows' else '/'
         objectFileDirectoryName = 'ObjectFiles'
-        objectFileDirPath = directorySeparator.join(systemDirectoryPath.split(directorySeparator)[:-2]) + directorySeparator + objectFileDirectoryName
+        objectFileDirPath = inputFileDirectoryPath + directorySeparator + objectFileDirectoryName
         materialFileName = objectFileDirPath + directorySeparator + materialName + tailName
         neighborsFileName = objectFileDirPath + directorySeparator + materialName + 'Neighbors' + tailName
         
@@ -78,7 +78,7 @@ def hematiteAnalytical(systemSize, pbc, nDim, Temp, speciesCount, tFinal, nTraj,
         precomputedArray = np.load(precomputedArrayFilePath)
         hematiteRun = run(hematiteSystem, precomputedArray, Temp, nTraj, tFinal, timeInterval, gui)
         
-        msdAnalysisData = hematiteRun.generateTransitionProbabilityMatrix(workDirPath, report, randomSeed)
+        msdAnalysisData = hematiteRun.generateTransitionProbabilityMatrix(workDirPath, analyticalTFinal)
 
         hematiteAnalysis = analysis(hematite, nDim, systemSize, speciesCount, nTraj, tFinal, 
                                     timeInterval, msdTFinal, trimLength, reprTime, reprDist)
