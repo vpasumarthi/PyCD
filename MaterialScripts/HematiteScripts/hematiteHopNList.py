@@ -38,4 +38,4 @@ def hematiteHopNList(systemSize, pbc, generateHopNeighborList):
     # Build neighbors object files
     hematiteNeighbors = neighbors(hematite, systemSize, pbc)
     if generateHopNeighborList:
-        hematiteNeighbors.generateHematiteNeighborSEIndices()
+        hematiteNeighbors.generateHematiteNeighborSEIndices(inputFileDirectoryPath)
