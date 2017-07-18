@@ -413,7 +413,59 @@ class neighbors(object):
                      (', %2d minutes' % ((timeElapsed.seconds // 60) % 60)) + 
                      (', %2d seconds' % (timeElapsed.seconds % 60)))
         report.close()
-    
+
+    def generateHematiteNeighborSEIndices(self, dstPath=None, report=0):
+        startTime = datetime.now()
+        offsetList = np.array([[[-1, 0, -1], [0, 0, -1], [0, -1, -1], [0, 0, -1]],
+                                [[-1, -1, 0], [-1, 0, 0], [0, 0, 0], [0, 0, 0]],
+                                [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 0, -1]],
+                                [[0, 0, 0], [0, 1, 0], [1, 1, 0], [0, 0, 0]],
+                                [[-1, -1, 0], [0, -1, 0], [0, 0, 0], [0, 0, 0]],
+                                [[0, -1, 0], [0, 0, 0], [1, 0, 0], [0, 0, 0]],
+                                [[-1, 0, 0], [0, 0, 0], [0, 1, 0], [0, 0, 0]],
+                                [[-1, -1, 0], [-1, 0, 0], [0, 0, 0], [0, 0, 0]],
+                                [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 0, 0]],
+                                [[0, 0, 0], [0, 1, 0], [1, 1, 0], [0, 0, 1]],
+                                [[-1, -1, 0], [0, -1, 0], [0, 0, 0], [0, 0, 0]],
+                                [[0, -1, 1], [0, 0, 1], [1, 0, 1], [0, 0, 1]]])
+        elementTypeIndex = 0
+        basalNeighborElementSiteIndices = np.array([11, 2, 1, 4, 3, 6, 5, 8, 7, 10, 9, 0])
+        cNeighborElementSiteIndices = np.array([9, 4, 11, 6, 1, 8, 3, 10, 5, 0, 7, 2])
+        nBasal = 3
+        nC = 1
+        neighborElementSiteIndices = np.zeros((12, 4), int)
+        neighborElementSiteIndices[:, 0] = basalNeighborElementSiteIndices
+        neighborElementSiteIndices[:, 1] = basalNeighborElementSiteIndices
+        neighborElementSiteIndices[:, 2] = basalNeighborElementSiteIndices
+        neighborElementSiteIndices[:, 3] = cNeighborElementSiteIndices
+        interDistances = np.zeros((12, 4))
+        localSystemSize = np.array([3, 3, 3])
+        centerSiteQuantumIndices = np.ones(3, int)
+        for elementIndex in range(12):
+             centerSiteSEIndex = self.generateSystemElementIndex(localSystemSize, np.hstack((centerSiteQuantumIndices, elementTypeIndex, elementIndex)))
+             for neighborIndex in range(4):
+                 neighborQuantumIndices = np.hstack((centerSiteQuantumIndices + offsetList[elementIndex][neighborIndex], elementTypeIndex, neighborElementSiteIndices[elementIndex][neighborIndex]))
+                 neighborSEIndex = self.generateSystemElementIndex(localSystemSize, neighborQuantumIndices)
+                 interDistances[elementIndex][neighborIndex] = self.computeDistance(localSystemSize, centerSiteSEIndex, neighborSEIndex) / self.material.ANG2BOHR
+        print interDistances
+        if report:
+            self.generateHematiteNeighborSEIndicesReport(dstPath, startTime)
+        return
+
+    def generateHematiteNeighborSEIndicesReport(self, dstPath, startTime):
+        """Generates a neighbor list and prints out a report to the output directory"""
+        neighborListLogName = 'NeighborList.log' 
+        neighborListLogPath = dstPath + directorySeparator + neighborListLogName
+        report = open(neighborListLogPath, 'w')
+        endTime = datetime.now()
+        timeElapsed = endTime - startTime
+        report.write('Time elapsed: ' + ('%2d days, ' % timeElapsed.days if timeElapsed.days else '') +
+                     ('%2d hours' % ((timeElapsed.seconds // 3600) % 24)) + 
+                     (', %2d minutes' % ((timeElapsed.seconds // 60) % 60)) + 
+                     (', %2d seconds' % (timeElapsed.seconds % 60)))
+        report.close()
+
+
 class system(object):
     """defines the system we are working on
     
