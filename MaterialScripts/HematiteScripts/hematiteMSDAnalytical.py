@@ -25,7 +25,7 @@ def hematiteMSDAnalytical(systemSize, pbc, centerSiteQuantumIndices, analyticalT
     analysisDirectoryName = 'AnalysisFiles'
     analysisDirectoryPath = systemDirectoryPath + directorySeparator + analysisDirectoryName
     analyticalAnalysisDirectoryName = 'AnalyticalAnalysis'
-    analyticalAnalysisDirectoryPath = systemDirectoryPath + directorySeparator + analyticalAnalysisDirectoryName
+    analyticalAnalysisDirectoryPath = analysisDirectoryPath + directorySeparator + analyticalAnalysisDirectoryName
     if not os.path.exists(analyticalAnalysisDirectoryPath):
         os.makedirs(analyticalAnalysisDirectoryPath)
     
