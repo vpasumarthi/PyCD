@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-def hematiteHopNList(systemSize, pbc, generateHopNeighborList):
+def hematiteHopNList(systemSize, pbc, centerSiteQuantumIndices, generateHopNeighborList, generateSpeciesSiteSDList):
     """Prepare material class object file, neighborlist and saves to the provided destination path"""
     from hematiteParameters import hematiteParameters
     from KineticModel import material, neighbors
@@ -39,3 +39,5 @@ def hematiteHopNList(systemSize, pbc, generateHopNeighborList):
     hematiteNeighbors = neighbors(hematite, systemSize, pbc)
     if generateHopNeighborList:
         hematiteNeighbors.generateHematiteNeighborSEIndices(inputFileDirectoryPath)
+    if generateSpeciesSiteSDList:
+        hematiteNeighbors.generateSpeciesSiteSDList(centerSiteQuantumIndices, inputFileDirectoryPath)

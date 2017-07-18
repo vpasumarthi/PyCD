@@ -484,6 +484,38 @@ class neighbors(object):
                      (', %2d seconds' % (timeElapsed.seconds % 60)))
         report.close()
 
+    def generateSpeciesSiteSDList(self, centerSiteQuantumIndices, dstPath, report=1):
+        startTime = datetime.now()
+        elementTypeIndex = centerSiteQuantumIndices[3]
+        centerSiteSEIndex = self.generateSystemElementIndex(self.systemSize, centerSiteQuantumIndices)
+        localBulkSites = self.material.generateSites(self.elementTypeIndices, self.systemSize)
+        systemElementIndexOffsetArray = (np.repeat(np.arange(0, self.material.totalElementsPerUnitCell * self.numCells, self.material.totalElementsPerUnitCell), 
+                                                   self.material.nElementsPerUnitCell[elementTypeIndex]))
+        neighborSiteSEIndices = (np.tile(self.material.nElementsPerUnitCell[:elementTypeIndex].sum() + 
+                                         np.arange(0, self.material.nElementsPerUnitCell[elementTypeIndex]), self.numCells) + systemElementIndexOffsetArray)
+        speciesSiteSDList = np.zeros(len(neighborSiteSEIndices))
+        for neighborSiteIndex, neighborSiteSEIndex in enumerate(neighborSiteSEIndices):
+            speciesSiteSDList[neighborSiteIndex] = self.computeDistance(self.systemSize, centerSiteSEIndex, neighborSiteSEIndex)**2
+        
+        fileName = 'speciesSiteSDList.npy'
+        speciesSiteSDListFilePath = dstPath + directorySeparator + fileName
+        np.save(speciesSiteSDListFilePath, speciesSiteSDList)
+        if report:
+            self.generateSpeciesSiteSDListReport(dstPath, startTime)
+        return
+
+    def generateSpeciesSiteSDListReport(self, dstPath, startTime):
+        """Generates a neighbor list and prints out a report to the output directory"""
+        speciesSiteSDListLogName = 'speciesSiteDisplacementList.log' 
+        speciesSiteSDListLogPath = dstPath + directorySeparator + speciesSiteSDListLogName
+        report = open(speciesSiteSDListLogPath, 'w')
+        endTime = datetime.now()
+        timeElapsed = endTime - startTime
+        report.write('Time elapsed: ' + ('%2d days, ' % timeElapsed.days if timeElapsed.days else '') +
+                     ('%2d hours' % ((timeElapsed.seconds // 3600) % 24)) + 
+                     (', %2d minutes' % ((timeElapsed.seconds // 60) % 60)) + 
+                     (', %2d seconds' % (timeElapsed.seconds % 60)))
+        report.close()
 
 class system(object):
     """defines the system we are working on
@@ -821,9 +853,10 @@ class run(object):
                      (', %2d seconds' % (timeElapsed.seconds % 60)))
         report.close()
     
-    def generateTransitionProbabilityMatrix(self, outdir, tFinal):
+    def generateTransitionProbabilityMatrix(self, neighborSystemElementIndices, outdir, tFinal):
         #currentStateOccupancy = [self.neighbors.generateSystemElementIndex(self.systemSize, [4, 4, 2, 0, 0])]
-        currentStateOccupancy = [self.neighbors.generateSystemElementIndex(self.systemSize, [2, 2, 1, 0, 0])]
+        #currentStateOccupancy = [self.neighbors.generateSystemElementIndex(self.systemSize, [2, 2, 1, 0, 0])]
+        currentStateOccupancy = [self.neighbors.generateSystemElementIndex(self.systemSize, [1, 1, 0, 0, 6])]
         occupantSystemElementIndex = currentStateOccupancy[0]
         speciesIndex = 0
         centerSiteElementTypeIndex = 0
@@ -853,12 +886,10 @@ class run(object):
         for centerSiteIndex, speciesSiteSystemElementIndex in enumerate(centerSiteIndices):
             rowIndex = (speciesSiteSystemElementIndex / self.material.totalElementsPerUnitCell * self.material.nElementsPerUnitCell[centerSiteElementTypeIndex] + 
                         speciesSiteSystemElementIndex % self.material.totalElementsPerUnitCell - self.headStart_nElementsPerUnitCellCumSum[centerSiteElementTypeIndex])
-            for hopDistType in range(self.lenHopDistTypeList[speciesIndex]):
-                localNeighborSiteSystemElementIndexList = self.system.hopNeighborList[hopElementType][hopDistType].neighborSystemElementIndices[rowIndex]
-                for neighborSystemElementIndex in localNeighborSiteSystemElementIndexList:
-                    columnIndex = np.where(centerSiteIndices == neighborSystemElementIndex)[0][0]
-                    transProbMatrix[centerSiteIndex][columnIndex] = probList[hopDistType]
-        
+            localNeighborSiteSystemElementIndexList = neighborSystemElementIndices[centerSiteIndex]
+            for neighborSystemElementIndex in localNeighborSiteSystemElementIndexList:
+                columnIndex = np.where(centerSiteIndices == neighborSystemElementIndex)[0][0]
+                transProbMatrix[centerSiteIndex][columnIndex] = probList[hopDistType]
         timestep = (1 / kTotal) / self.material.SEC2AUTIME * self.material.SEC2NS # ns
         timeInterval = 1 # ns
         index = 1

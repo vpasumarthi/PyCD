@@ -77,8 +77,11 @@ def hematiteAnalytical(systemSize, pbc, nDim, Temp, speciesCount, tFinal, nTraj,
         precomputedArrayFilePath = inputFileDirectoryPath + directorySeparator + 'precomputedArray.npy'
         precomputedArray = np.load(precomputedArrayFilePath)
         hematiteRun = run(hematiteSystem, precomputedArray, Temp, nTraj, tFinal, timeInterval, gui)
+
+        neighborSystemElementIndicesFileName = inputFileDirectoryPath + directorySeparator + 'neighborSystemElementIndices.npy'
+        neighborSystemElementIndices = np.load(neighborSystemElementIndicesFileName)[()]
         
-        msdAnalysisData = hematiteRun.generateTransitionProbabilityMatrix(workDirPath, analyticalTFinal)
+        msdAnalysisData = hematiteRun.generateTransitionProbabilityMatrix(neighborSystemElementIndices, workDirPath, analyticalTFinal)
 
         hematiteAnalysis = analysis(hematite, nDim, systemSize, speciesCount, nTraj, tFinal, 
                                     timeInterval, msdTFinal, trimLength, reprTime, reprDist)
