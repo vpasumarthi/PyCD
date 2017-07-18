@@ -358,7 +358,7 @@ class neighbors(object):
             cumulativeDisplacementList[centerSiteIndex] = cumulativeNeighborImageDisplacementVectors[np.arange(self.numSystemElements), np.argmin(cumulativeNeighborImageDisplacements, axis=1)]
         return cumulativeDisplacementList
     
-    def generateNeighborList(self, neighborListDirPath, report=1, localSystemSize=np.array([3, 3, 3]), 
+    def generateNeighborList(self, neighborListDirPath, generateHopNeighborList=0, generateCumDispList=0, report=1, localSystemSize=np.array([3, 3, 3]), 
                              centerUnitCellIndex=np.array([1, 1, 1])):
         """Adds the neighbor list to the system object and returns the neighbor list"""
         assert neighborListDirPath, 'Please provide the path to the parent directory of neighbor list files'
@@ -368,35 +368,37 @@ class neighbors(object):
         if not os.path.exists(dstPath):
             os.makedirs(dstPath)
         hopNeighborListFilePath = dstPath + directorySeparator + 'hopNeighborList.npy'
-        hopNeighborList = {}
-        tolDist = self.material.neighborCutoffDistTol
-        elementTypes = self.material.elementTypes[:]
-        
-        for cutoffDistKey in self.material.neighborCutoffDist.keys():
-            cutoffDistList = self.material.neighborCutoffDist[cutoffDistKey][:]
-            neighborListCutoffDistKey = []
-            if cutoffDistKey is not self.material.electrostaticCutoffDistKey:
-                [centerElementType, neighborElementType] = cutoffDistKey.split(self.material.elementTypeDelimiter)
-                centerSiteElementTypeIndex = elementTypes.index(centerElementType) 
-                neighborSiteElementTypeIndex = elementTypes.index(neighborElementType)
-                localBulkSites = self.material.generateSites(self.elementTypeIndices, 
-                                                             self.systemSize)
-                systemElementIndexOffsetArray = (np.repeat(np.arange(0, self.material.totalElementsPerUnitCell * self.numCells, self.material.totalElementsPerUnitCell), 
-                                                           self.material.nElementsPerUnitCell[centerSiteElementTypeIndex]))
-                centerSiteIndices = neighborSiteIndices = (np.tile(self.material.nElementsPerUnitCell[:centerSiteElementTypeIndex].sum() + 
-                                                                   np.arange(0, self.material.nElementsPerUnitCell[centerSiteElementTypeIndex]), self.numCells) + systemElementIndexOffsetArray)
-                
-                for iCutoffDist in range(len(cutoffDistList)):
-                    cutoffDistLimits = [cutoffDistList[iCutoffDist] - tolDist[cutoffDistKey][iCutoffDist], cutoffDistList[iCutoffDist] + tolDist[cutoffDistKey][iCutoffDist]]
+        if (not os.path.isfile(hopNeighborListFilePath) and generateHopNeighborList):
+            hopNeighborList = {}
+            tolDist = self.material.neighborCutoffDistTol
+            elementTypes = self.material.elementTypes[:]
+            
+            for cutoffDistKey in self.material.neighborCutoffDist.keys():
+                cutoffDistList = self.material.neighborCutoffDist[cutoffDistKey][:]
+                neighborListCutoffDistKey = []
+                if cutoffDistKey is not self.material.electrostaticCutoffDistKey:
+                    [centerElementType, neighborElementType] = cutoffDistKey.split(self.material.elementTypeDelimiter)
+                    centerSiteElementTypeIndex = elementTypes.index(centerElementType) 
+                    neighborSiteElementTypeIndex = elementTypes.index(neighborElementType)
+                    localBulkSites = self.material.generateSites(self.elementTypeIndices, 
+                                                                 self.systemSize)
+                    systemElementIndexOffsetArray = (np.repeat(np.arange(0, self.material.totalElementsPerUnitCell * self.numCells, self.material.totalElementsPerUnitCell), 
+                                                               self.material.nElementsPerUnitCell[centerSiteElementTypeIndex]))
+                    centerSiteIndices = neighborSiteIndices = (np.tile(self.material.nElementsPerUnitCell[:centerSiteElementTypeIndex].sum() + 
+                                                                       np.arange(0, self.material.nElementsPerUnitCell[centerSiteElementTypeIndex]), self.numCells) + systemElementIndexOffsetArray)
                     
-                    neighborListCutoffDistKey.append(self.hopNeighborSites(localBulkSites, centerSiteIndices, 
-                                                                           neighborSiteIndices, cutoffDistLimits, cutoffDistKey))
-            hopNeighborList[cutoffDistKey] = neighborListCutoffDistKey[:]
-        np.save(hopNeighborListFilePath, hopNeighborList)
-
-        cumulativeDisplacementListFilePath = dstPath + directorySeparator + 'cumulativeDisplacementList.npy'
-        cumulativeDisplacementList = self.cumulativeDisplacementList(self.systemSize, dstPath)
-        np.save(cumulativeDisplacementListFilePath, cumulativeDisplacementList)
+                    for iCutoffDist in range(len(cutoffDistList)):
+                        cutoffDistLimits = [cutoffDistList[iCutoffDist] - tolDist[cutoffDistKey][iCutoffDist], cutoffDistList[iCutoffDist] + tolDist[cutoffDistKey][iCutoffDist]]
+                        
+                        neighborListCutoffDistKey.append(self.hopNeighborSites(localBulkSites, centerSiteIndices, 
+                                                                               neighborSiteIndices, cutoffDistLimits, cutoffDistKey))
+                hopNeighborList[cutoffDistKey] = neighborListCutoffDistKey[:]
+            np.save(hopNeighborListFilePath, hopNeighborList)
+        
+        if generateCumDispList:
+            cumulativeDisplacementListFilePath = dstPath + directorySeparator + 'cumulativeDisplacementList.npy'
+            cumulativeDisplacementList = self.cumulativeDisplacementList(self.systemSize, dstPath)
+            np.save(cumulativeDisplacementListFilePath, cumulativeDisplacementList)
 
         if report:
             self.generateNeighborListReport(dstPath)

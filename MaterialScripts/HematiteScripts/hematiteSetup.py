@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-def hematiteSetup(systemSize, pbc, replaceExistingObjectFiles, replaceExistingNeighborList, 
-                  alpha, nmax, kmax, replaceExistingPrecomputedArray):
+def hematiteSetup(systemSize, pbc, replaceExistingObjectFiles, generateHopNeighborList, 
+                  generateCumDispList, alpha, nmax, kmax, replaceExistingPrecomputedArray):
     """Prepare material class object file, neighborlist and saves to the provided destination path"""
     from hematiteParameters import hematiteParameters
     from KineticModel import material, neighbors, system
@@ -41,8 +41,7 @@ def hematiteSetup(systemSize, pbc, replaceExistingObjectFiles, replaceExistingNe
     # Build neighbors object files
     hematiteNeighbors = neighbors(hematite, systemSize, pbc)
     hematiteNeighbors.generateNeighborsFile(hematiteNeighbors, neighborsFileName, replaceExistingObjectFiles)
-    if replaceExistingNeighborList:
-        hematiteNeighbors.generateNeighborList(inputFileDirectoryPath, replaceExistingNeighborList)
+    hematiteNeighbors.generateNeighborList(inputFileDirectoryPath, generateHopNeighborList, generateCumDispList)
 
     # Build precomputed array and save to disk
     precomputedArrayFilePath = inputFileDirectoryPath + directorySeparator + 'precomputedArray.npy'
