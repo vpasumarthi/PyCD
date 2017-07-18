@@ -573,13 +573,13 @@ class neighbors(object):
                      (', %2d seconds' % (timeElapsed.seconds % 60)))
         report.close()
     
-    def generateMSDAnalyticalData(self, transitionProbMatrix, speciesSiteSDList, centerSiteQuantumIndices, analyticalTFinal, timeInterval, dstPath, report=1):
+    def generateMSDAnalyticalData(self, transitionProbMatrix, speciesSiteSDList, centerSiteQuantumIndices, analyticalTFinal, analyticalTimeInterval, dstPath, report=1):
         startTime = datetime.now()
         
         elementTypeIndex = 0
-        numDataPoints = int(analyticalTFinal / timeInterval) + 1
+        numDataPoints = int(analyticalTFinal / analyticalTimeInterval) + 1
         msdData = np.zeros((numDataPoints, 2))
-        msdData[:, 0] = np.arange(0, analyticalTFinal + timeInterval, timeInterval)
+        msdData[:, 0] = np.arange(0, analyticalTFinal + analyticalTimeInterval, analyticalTimeInterval)
 
         localBulkSites = self.material.generateSites(self.elementTypeIndices, self.systemSize)
         systemElementIndexOffsetArray = (np.repeat(np.arange(0, self.material.totalElementsPerUnitCell * self.numCells, self.material.totalElementsPerUnitCell), 
@@ -619,7 +619,7 @@ class neighbors(object):
         while True:
             newTransitionProbMatrix = np.dot(newTransitionProbMatrix, transitionProbMatrix)
             simTime += timestep
-            endIndex = int(simTime / timeInterval)
+            endIndex = int(simTime / analyticalTimeInterval)
             if endIndex >= startIndex + 1:
                 msdData[endIndex, 1] = np.dot(newTransitionProbMatrix[rowIndex], speciesSiteSDList)
                 startIndex += 1
