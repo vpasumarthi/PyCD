@@ -658,6 +658,7 @@ class run(object):
                 iProc = 0
                 delG0List = []
                 for speciesIndex, speciesSiteSystemElementIndex in enumerate(currentStateOccupancy):
+                    # TODO: Avoid re-defining speciesIndex
                     speciesIndex = self.nProcSpeciesIndexList[iProc]
                     hopElementType = self.nProcHopElementTypeList[iProc]
                     siteElementTypeIndex = self.nProcSiteElementTypeIndexList[iProc]
@@ -750,6 +751,70 @@ class run(object):
                      (', %2d minutes' % ((timeElapsed.seconds // 60) % 60)) + 
                      (', %2d seconds' % (timeElapsed.seconds % 60)))
         report.close()
+
+    def generateTransitionProbabilityMatrix(self, outdir, report=1, randomSeed=1):
+        currentStateOccupancy = [self.neighbors.generateSystemElementIndex(self.systemSize, [4, 4, 2, 0, 0])]
+        occupantSystemElementIndex = currentStateOccupancy[0]
+        speciesSiteDisplacementList = np.linalg.norm(self.system.cumulativeDisplacementList[occupantSystemElementIndex], axis=1) / self.material.ANG2BOHR * self.material.ANG2UM
+        speciesIndex = 0
+        centerSiteElementTypeIndex = 0
+        hopElementType = 'Fe:Fe'
+        localBulkSites = self.material.generateSites(self.neighbors.elementTypeIndices, self.systemSize)
+        systemElementIndexOffsetArray = (np.repeat(np.arange(0, self.material.totalElementsPerUnitCell * self.neighbors.numCells, self.material.totalElementsPerUnitCell), 
+                                                   self.material.nElementsPerUnitCell[centerSiteElementTypeIndex]))
+        centerSiteIndices = (np.tile(self.material.nElementsPerUnitCell[:centerSiteElementTypeIndex].sum() + 
+                                     np.arange(0, self.material.nElementsPerUnitCell[centerSiteElementTypeIndex]), self.neighbors.numCells) + systemElementIndexOffsetArray)
+        numCenterSiteElements = len(centerSiteIndices)
+        transProbMatrix = np.zeros((self.neighbors.numSystemElements, self.neighbors.numSystemElements))
+        kList = np.zeros(self.lenHopDistTypeList[speciesIndex])
+        numNeighborsList = np.zeros(self.lenHopDistTypeList[speciesIndex])
+        delG0 = 0
+        for hopDistType in range(self.lenHopDistTypeList[speciesIndex]):
+            numNeighborsList[hopDistType] = np.unique(self.system.hopNeighborList[hopElementType][hopDistType].numNeighbors)
+            lambdaValue = self.material.lambdaValues[hopElementType][hopDistType]
+            VAB = self.material.VAB[hopElementType][hopDistType]
+            delGs = ((lambdaValue + delG0) ** 2 / (4 * lambdaValue)) - VAB
+            kList[hopDistType] = self.material.vn * np.exp(-delGs / self.T)
+        
+        kTotal = np.dot(kList, numNeighborsList)
+        probList = kList / kTotal
+        
+        for speciesSiteSystemElementIndex in range(self.neighbors.numSystemElements):
+            if speciesSiteSystemElementIndex in centerSiteIndices:
+                rowIndex = (speciesSiteSystemElementIndex / self.material.totalElementsPerUnitCell * self.material.nElementsPerUnitCell[centerSiteElementTypeIndex] + 
+                            speciesSiteSystemElementIndex % self.material.totalElementsPerUnitCell - self.headStart_nElementsPerUnitCellCumSum[centerSiteElementTypeIndex])
+                for hopDistType in range(self.lenHopDistTypeList[speciesIndex]):
+                    localNeighborSiteSystemElementIndexList = self.system.hopNeighborList[hopElementType][hopDistType].neighborSystemElementIndices[rowIndex]
+                    transProbMatrix[speciesSiteSystemElementIndex][localNeighborSiteSystemElementIndexList] = probList[hopDistType]
+        
+        timestep = (1 / kTotal) / self.material.SEC2AUTIME * self.material.SEC2NS # ns
+        tFinal = 5 # ns
+        timeInterval = 0.1 # ns
+        index = 1
+        oldTransProbMatrix = transProbMatrix
+        numSteps = int(np.ceil(tFinal / timestep))
+        numIntervalSteps = int(tFinal / timeInterval)
+        msdData = np.zeros((numIntervalSteps, 2))
+        msdData[:, 0] = np.arange(0, tFinal, timeInterval)
+        for step in range(numSteps):
+            newTransProbMatrix = np.dot(oldTransProbMatrix, transProbMatrix)
+            if step % numIntervalSteps == 0:
+                msdData[index, 1] = np.dot(speciesSiteDisplacementList, newTransProbMatrix[occupantSystemElementIndex])
+                print msdData[index]
+                index += 1
+            oldTransProbMatrix = np.copy(newTransProbMatrix)
+
+        fileName = '%1.2Ens' % tFinal
+        msdFileName = 'MSD_Analytical_Data_' + fileName + '.npy'
+        msdFilePath = outdir + directorySeparator + msdFileName
+        speciesTypes = ['electron']
+        np.save(msdFilePath, msdData)
+        
+        returnMSDData = returnValues()
+        returnMSDData.msdData = msdData
+        returnMSDData.speciesTypes = speciesTypes
+        returnMSDData.fileName = fileName
+        return returnMSDData
 
 class analysis(object):
     """Post-simulation analysis methods"""
