@@ -49,11 +49,14 @@ def hematiteMSDAnalytical(systemSize, pbc, centerSiteQuantumIndices, analyticalT
     speciesSiteSDListFileName = 'speciesSiteSDList.npy'
     speciesSiteSDListFilePath = inputFileDirectoryPath + directorySeparator + speciesSiteSDListFileName
     speciesSiteSDList = np.load(speciesSiteSDListFilePath)
-    msdAnalysisData = hematiteNeighbors.generateMSDAnalyticalData(transitionProbMatrix, speciesSiteSDList, centerSiteQuantumIndices, analyticalTFinal, analyticalTimeInterval, analyticalAnalysisDirectoryPath)
+    hematiteNeighbors.generateMSDAnalyticalData(transitionProbMatrix, speciesSiteSDList, centerSiteQuantumIndices, analyticalTFinal, analyticalTimeInterval, analyticalAnalysisDirectoryPath)
     
     hematiteAnalysis = analysis(hematite, nDim, systemSize, speciesCount, nTraj, tFinal, timeInterval, msdTFinal, trimLength, reprTime, reprDist)
-    msdData = msdAnalysisData.msdData
-    stdData = msdAnalysisData.stdData
-    speciesTypes = msdAnalysisData.speciesTypes
-    fileName = msdAnalysisData.fileName
+    stdData = None
+    speciesTypes = ['electron']
+    fileName = '%1.2Ens' % analyticalTFinal
+    MSDAnalyticalDataFileName = 'MSD_Analytical_Data_' + fileName + '.dat'
+    MSDAnalyticalDataFilePath = analyticalAnalysisDirectoryPath + directorySeparator + MSDAnalyticalDataFileName
+    msdData = np.loadtxt(MSDAnalyticalDataFilePath)
+    
     msdAnalysisData = hematiteAnalysis.generateMSDPlot(msdData, stdData, displayErrorBars, speciesTypes, fileName, analyticalAnalysisDirectoryPath)

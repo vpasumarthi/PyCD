@@ -576,6 +576,11 @@ class neighbors(object):
     def generateMSDAnalyticalData(self, transitionProbMatrix, speciesSiteSDList, centerSiteQuantumIndices, analyticalTFinal, analyticalTimeInterval, dstPath, report=1):
         startTime = datetime.now()
         
+        fileName = '%1.2Ens' % analyticalTFinal
+        MSDAnalyticalDataFileName = 'MSD_Analytical_Data_' + fileName + '.dat'
+        MSDAnalyticalDataFilePath = dstPath + directorySeparator + MSDAnalyticalDataFileName
+        open(MSDAnalyticalDataFilePath, 'w').close()
+
         elementTypeIndex = 0
         numDataPoints = int(analyticalTFinal / analyticalTimeInterval) + 1
         msdData = np.zeros((numDataPoints, 2))
@@ -616,28 +621,24 @@ class neighbors(object):
         startIndex = 0
         rowIndex = np.where(centerSiteSEIndices == centerSiteSEIndex)
         newTransitionProbMatrix = np.copy(transitionProbMatrix)
+        with open(MSDAnalyticalDataFilePath, 'a') as MSDAnalyticalDataFile:
+            np.savetxt(MSDAnalyticalDataFile, msdData[startIndex, :][None, :])
         while True:
             newTransitionProbMatrix = np.dot(newTransitionProbMatrix, transitionProbMatrix)
             simTime += timestep
             endIndex = int(simTime / analyticalTimeInterval)
             if endIndex >= startIndex + 1:
                 msdData[endIndex, 1] = np.dot(newTransitionProbMatrix[rowIndex], speciesSiteSDList)
+                with open(MSDAnalyticalDataFilePath, 'a') as MSDAnalyticalDataFile:
+                    np.savetxt(MSDAnalyticalDataFile, msdData[endIndex, :][None, :])
                 startIndex += 1
                 if endIndex == numDataPoints - 1:
                     break
-        fileName = '%1.2Ens' % analyticalTFinal
-        MSDAnalyticalDataFileName = 'MSD_Analytical_Data_' + fileName + '.npy'
-        MSDAnalyticalDataFilePath = dstPath + directorySeparator + MSDAnalyticalDataFileName
-        np.save(MSDAnalyticalDataFilePath, msdData)
-        speciesTypes = ['electron']
         
         if report:
             self.generateMSDAnalyticalDataReport(fileName, dstPath, startTime)
         returnMSDData = returnValues()
         returnMSDData.msdData = msdData
-        returnMSDData.stdData = None
-        returnMSDData.speciesTypes = speciesTypes
-        returnMSDData.fileName = fileName
         return returnMSDData
     
     def generateMSDAnalyticalDataReport(self, fileName, dstPath, startTime):
