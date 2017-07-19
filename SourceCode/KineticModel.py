@@ -1035,21 +1035,24 @@ class analysis(object):
                 addOn = np.arange(numDisp)
                 posDiff = positionArray[headStart + timestep + addOn] - positionArray[headStart + addOn]
                 sdArray[trajIndex, timestep, :] = np.mean(np.einsum('ijk,ijk->ij', posDiff, posDiff), axis=0)
-        trajAvgSDArray = np.mean(sdArray, axis=0)
-        msdData = np.zeros((self.numMSDStepsPerTraj, self.material.numSpeciesTypes + 1 - list(self.speciesCount).count(0)))
-        timeArray = np.arange(self.numMSDStepsPerTraj) * self.timeInterval * self.timeConversion
-        msdData[:, 0] = timeArray
+        speciesAvgSDArray = np.zeros((numTrajRecorded, self.numMSDStepsPerTraj, self.material.numSpeciesTypes - list(self.speciesCount).count(0)))
         startIndex = 0
         numNonExistentSpecies = 0
         nonExistentSpeciesIndices = []
         for speciesTypeIndex in range(self.material.numSpeciesTypes):
             if self.speciesCount[speciesTypeIndex] != 0:
                 endIndex = startIndex + self.speciesCount[speciesTypeIndex]
-                msdData[:, speciesTypeIndex + 1 - numNonExistentSpecies] = np.mean(trajAvgSDArray[:, startIndex:endIndex], axis=1)
+                speciesAvgSDArray[:, :, speciesTypeIndex - numNonExistentSpecies] = np.mean(sdArray[:, :, startIndex:endIndex], axis=2)
                 startIndex = endIndex
             else:
                 numNonExistentSpecies += 1
                 nonExistentSpeciesIndices.append(speciesTypeIndex)
+        
+        msdData = np.zeros((self.numMSDStepsPerTraj, self.material.numSpeciesTypes + 1 - list(self.speciesCount).count(0)))
+        timeArray = np.arange(self.numMSDStepsPerTraj) * self.timeInterval * self.timeConversion
+        msdData[:, 0] = timeArray
+        msdData[:, 1:] = np.mean(speciesAvgSDArray, axis=0)
+        stdData = np.std(speciesAvgSDArray, axis=0)
         fileName = (('%1.2E' % (self.msdTFinal * self.timeConversion)) + str(self.reprTime) + 
                     (',nTraj: %1.2E' % numTrajRecorded if numTrajRecorded != self.nTraj else ''))
         msdFileName = 'MSD_Data_' + fileName + '.npy'
@@ -1062,6 +1065,7 @@ class analysis(object):
         
         returnMSDData = returnValues()
         returnMSDData.msdData = msdData
+        returnMSDData.stdData = stdData
         returnMSDData.speciesTypes = speciesTypes
         returnMSDData.fileName = fileName
         return returnMSDData
@@ -1084,7 +1088,7 @@ class analysis(object):
                      (', %2d seconds' % (timeElapsed.seconds % 60)))
         report.close()
 
-    def generateMSDPlot(self, msdData, speciesTypes, fileName, outdir):
+    def generateMSDPlot(self, msdData, stdData, speciesTypes, fileName, outdir):
         """Returns a line plot of the MSD data"""
         assert outdir, 'Please provide the destination path where MSD Plot files needs to be saved'
         import matplotlib
@@ -1096,8 +1100,7 @@ class analysis(object):
         ax = fig.add_subplot(111)
         from scipy.stats import linregress
         for speciesIndex, speciesType in enumerate(speciesTypes):
-            ax.plot(msdData[:,0], msdData[:,speciesIndex + 1], 'o', 
-                     markerfacecolor='blue', markeredgecolor='black', label=speciesType)
+            ax.errorbar(msdData[:,0], msdData[:,speciesIndex + 1], yerr=stdData[:,speciesIndex], fmt='o', capsize=3, color='blue', markerfacecolor='blue', markeredgecolor='black', label=speciesType)
             slope, intercept, rValue, pValue, stdErr = linregress(msdData[self.trimLength:-self.trimLength,0], msdData[self.trimLength:-self.trimLength,speciesIndex + 1])
             speciesDiff = slope * self.material.ANG2UM**2 * self.material.SEC2NS / (2 * self.nDim)
             ax.add_artist(AnchoredText('Est. $D_{{%s}}$ = %4.3f  ${{\mu}}m^2/s$; $r^2$=%4.3e' % (speciesType, speciesDiff, rValue**2), loc=4))

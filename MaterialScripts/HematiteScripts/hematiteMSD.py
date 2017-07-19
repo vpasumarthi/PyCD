@@ -52,6 +52,7 @@ def hematiteMSD(systemSize, pbc, nDim, Temp, speciesCount, tFinal, nTraj, timeIn
         
         msdAnalysisData = hematiteAnalysis.computeMSD(workDirPath, report)
         msdData = msdAnalysisData.msdData
+        stdData = msdAnalysisData.stdData
         speciesTypes = msdAnalysisData.speciesTypes
         fileName = msdAnalysisData.fileName
-        hematiteAnalysis.generateMSDPlot(msdData, speciesTypes, fileName, workDirPath)
+        hematiteAnalysis.generateMSDPlot(msdData, stdData, speciesTypes, fileName, workDirPath)
