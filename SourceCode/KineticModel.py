@@ -1088,7 +1088,7 @@ class analysis(object):
                      (', %2d seconds' % (timeElapsed.seconds % 60)))
         report.close()
 
-    def generateMSDPlot(self, msdData, stdData, speciesTypes, fileName, outdir):
+    def generateMSDPlot(self, msdData, stdData, displayErrorBars, speciesTypes, fileName, outdir):
         """Returns a line plot of the MSD data"""
         assert outdir, 'Please provide the destination path where MSD Plot files needs to be saved'
         import matplotlib
@@ -1100,7 +1100,10 @@ class analysis(object):
         ax = fig.add_subplot(111)
         from scipy.stats import linregress
         for speciesIndex, speciesType in enumerate(speciesTypes):
-            ax.errorbar(msdData[:,0], msdData[:,speciesIndex + 1], yerr=stdData[:,speciesIndex], fmt='o', capsize=3, color='blue', markerfacecolor='blue', markeredgecolor='black', label=speciesType)
+            if displayErrorBars:
+                ax.errorbar(msdData[:,0], msdData[:,speciesIndex + 1], yerr=stdData[:,speciesIndex], fmt='o', capsize=3, color='blue', markerfacecolor='blue', markeredgecolor='black', label=speciesType)
+            else:
+                ax.plot(msdData[:,0], msdData[:,speciesIndex + 1], 'o', markerfacecolor='blue', markeredgecolor='black', label=speciesType)
             slope, intercept, rValue, pValue, stdErr = linregress(msdData[self.trimLength:-self.trimLength,0], msdData[self.trimLength:-self.trimLength,speciesIndex + 1])
             speciesDiff = slope * self.material.ANG2UM**2 * self.material.SEC2NS / (2 * self.nDim)
             ax.add_artist(AnchoredText('Est. $D_{{%s}}$ = %4.3f  ${{\mu}}m^2/s$; $r^2$=%4.3e' % (speciesType, speciesDiff, rValue**2), loc=4))

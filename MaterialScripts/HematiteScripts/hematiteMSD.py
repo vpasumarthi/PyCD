@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 def hematiteMSD(systemSize, pbc, nDim, Temp, speciesCount, tFinal, nTraj, timeInterval, 
-                msdTFinal, trimLength, reprTime, reprDist, report, overWrite):
+                msdTFinal, trimLength, displayErrorBars, reprTime, reprDist, report, overWrite):
 
     from KineticModel import analysis
     import numpy as np
@@ -55,4 +55,4 @@ def hematiteMSD(systemSize, pbc, nDim, Temp, speciesCount, tFinal, nTraj, timeIn
         stdData = msdAnalysisData.stdData
         speciesTypes = msdAnalysisData.speciesTypes
         fileName = msdAnalysisData.fileName
-        hematiteAnalysis.generateMSDPlot(msdData, stdData, speciesTypes, fileName, workDirPath)
+        hematiteAnalysis.generateMSDPlot(msdData, stdData, displayErrorBars, speciesTypes, fileName, workDirPath)
