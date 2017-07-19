@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 def hematiteMSDAnalytical(systemSize, pbc, centerSiteQuantumIndices, analyticalTFinal, analyticalTimeInterval, nDim, 
-                          speciesCount, nTraj, tFinal, timeInterval, msdTFinal, trimLength, reprTime, reprDist):
+                          speciesCount, nTraj, tFinal, timeInterval, msdTFinal, trimLength, displayErrorBars, reprTime, reprDist):
 
     from KineticModel import material, neighbors, analysis
     import numpy as np
@@ -53,6 +53,7 @@ def hematiteMSDAnalytical(systemSize, pbc, centerSiteQuantumIndices, analyticalT
     
     hematiteAnalysis = analysis(hematite, nDim, systemSize, speciesCount, nTraj, tFinal, timeInterval, msdTFinal, trimLength, reprTime, reprDist)
     msdData = msdAnalysisData.msdData
+    stdData = msdAnalysisData.stdData
     speciesTypes = msdAnalysisData.speciesTypes
     fileName = msdAnalysisData.fileName
-    msdAnalysisData = hematiteAnalysis.generateMSDPlot(msdData, speciesTypes, fileName, analyticalAnalysisDirectoryPath)
+    msdAnalysisData = hematiteAnalysis.generateMSDPlot(msdData, stdData, displayErrorBars, speciesTypes, fileName, analyticalAnalysisDirectoryPath)

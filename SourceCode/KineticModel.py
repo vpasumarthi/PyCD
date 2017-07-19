@@ -635,6 +635,7 @@ class neighbors(object):
             self.generateMSDAnalyticalDataReport(fileName, dstPath, startTime)
         returnMSDData = returnValues()
         returnMSDData.msdData = msdData
+        returnMSDData.stdData = None
         returnMSDData.speciesTypes = speciesTypes
         returnMSDData.fileName = fileName
         return returnMSDData
