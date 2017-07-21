@@ -70,6 +70,8 @@ class material(object):
         self.J2HARTREE = 1 / self.HARTREE
         self.SEC2AUTIME = 1 / self.AUTIME
         self.SEC2NS = 1.00E+09
+        self.SEC2PS = 1.00E+12
+        self.SEC2FS = 1.00E+15
         self.K2AUTEMP = 1 / self.AUTEMPERATURE
         
         # TODO: introduce a method to view the material using ase atoms or other gui module
@@ -1004,15 +1006,17 @@ class analysis(object):
         self.nTraj = int(nTraj)
         self.tFinal = tFinal * self.material.SEC2AUTIME
         self.timeInterval = timeInterval * self.material.SEC2AUTIME
-        self.msdTFinal = msdTFinal / self.material.SEC2NS * self.material.SEC2AUTIME
         self.trimLength = trimLength
         self.numPathStepsPerTraj = int(self.tFinal / self.timeInterval) + 1
-        self.numMSDStepsPerTraj = int(msdTFinal / timeInterval / self.material.SEC2NS) + 1
         self.reprTime = reprTime
         self.reprDist = reprDist
         
         if reprTime == 'ns':
             self.timeConversion = self.material.SEC2NS / self.material.SEC2AUTIME
+        elif reprTime == 'ps':
+            self.timeConversion = self.material.SEC2PS / self.material.SEC2AUTIME
+        elif reprTime == 'fs':
+            self.timeConversion = self.material.SEC2FS / self.material.SEC2AUTIME
         elif reprTime == 's':
             self.timeConversion = 1E+00 / self.material.SEC2AUTIME
         
@@ -1022,6 +1026,9 @@ class analysis(object):
             self.distConversion = self.material.ANG2UM / self.material.ANG2BOHR
         elif reprDist == 'angstrom':
             self.distConversion = 1E+00 / self.material.ANG2BOHR
+        
+        self.msdTFinal = msdTFinal / self.timeConversion
+        self.numMSDStepsPerTraj = int(self.msdTFinal / self.timeInterval) + 1
         
     def computeMSD(self, outdir, report=1):
         """Returns the squared displacement of the trajectories"""
