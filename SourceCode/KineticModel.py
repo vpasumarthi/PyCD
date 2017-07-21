@@ -508,7 +508,7 @@ class neighbors(object):
 
     def generateSpeciesSiteSDListReport(self, dstPath, startTime):
         """Generates a neighbor list and prints out a report to the output directory"""
-        speciesSiteSDListLogName = 'speciesSiteDisplacementList.log' 
+        speciesSiteSDListLogName = 'speciesSiteSDList.log' 
         speciesSiteSDListLogPath = dstPath + directorySeparator + speciesSiteSDListLogName
         report = open(speciesSiteSDListLogPath, 'w')
         endTime = datetime.now()
@@ -521,7 +521,6 @@ class neighbors(object):
 
     def generateTransitionProbMatrix(self, neighborSystemElementIndices, dstPath, report=1):
         startTime = datetime.now()
-        import pdb; pdb.set_trace()
         elementTypeIndex = 0
         numNeighbors = len(neighborSystemElementIndices[0])
         numBasalNeighbors = 3
@@ -1124,7 +1123,7 @@ class analysis(object):
         ax.set_title('\n'.join(wrap(figureTitle,60)))
         plt.legend()
         plt.show() # Temp change
-        figureName = 'MSD_Plot_' + fileName + '.jpg'
+        figureName = 'MSD_Plot_' + fileName + '_Trim=' + str(self.trimLength) + '.jpg'
         figurePath = outdir + directorySeparator + figureName
         plt.savefig(figurePath)
 
