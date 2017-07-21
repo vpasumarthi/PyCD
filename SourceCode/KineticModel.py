@@ -418,7 +418,7 @@ class neighbors(object):
 
     def generateHematiteNeighborSEIndices(self, dstPath, report=1):
         startTime = datetime.now()
-        offsetList = np.array([[[-1, 0, -1], [0, 0, -1], [0, -1, -1], [0, 0, -1]],
+        offsetList = np.array([[[-1, 0, -1], [0, 0, -1], [0, 1, -1], [0, 0, -1]],
                                 [[-1, -1, 0], [-1, 0, 0], [0, 0, 0], [0, 0, 0]],
                                 [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 0, -1]],
                                 [[0, 0, 0], [0, 1, 0], [1, 1, 0], [0, 0, 0]],
@@ -521,6 +521,7 @@ class neighbors(object):
 
     def generateTransitionProbMatrix(self, neighborSystemElementIndices, dstPath, report=1):
         startTime = datetime.now()
+        import pdb; pdb.set_trace()
         elementTypeIndex = 0
         numNeighbors = len(neighborSystemElementIndices[0])
         numBasalNeighbors = 3
