@@ -2,7 +2,7 @@
 
 import numpy as np
 
-inputData = np.loadtxt('InputPOSCAR')
+inputData = np.loadtxt('POSCAR', skiprows=8)
 indexLength = np.array([4, 16, 4])
 indices = np.arange(len(indexLength))
 output = np.zeros((len(inputData), 4))
