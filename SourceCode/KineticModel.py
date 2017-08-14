@@ -304,43 +304,32 @@ class neighbors(object):
         displacementVectorList = np.empty(len(centerSiteCoords), dtype=object)
         numNeighbors = np.array([], dtype=int)
 
-        quickTest = 0 # commit reference: 1472bb4
-        if quickTest:
-            for centerSiteIndex, centerCoord in enumerate(centerSiteCoords):
-                iDisplacementVectors = []
-                iNeighborSiteIndexList = []
-                iNumNeighbors = 0
+        quickTest = 0 # commit reference: 1472bb4        
+
+        for centerSiteIndex, centerCoord in enumerate(centerSiteCoords):
+            iNeighborSiteIndexList = []
+            iDisplacementVectors = []
+            iNumNeighbors = 0
+            if quickTest:
                 displacementList = np.zeros(len(neighborSiteCoords))
-                for neighborSiteIndex, neighborCoord in enumerate(neighborSiteCoords):
-                    neighborImageDisplacementVectors = np.array([neighborCoord - centerCoord])
-                    displacement = np.linalg.norm(neighborImageDisplacementVectors)
+            for neighborSiteIndex, neighborCoord in enumerate(neighborSiteCoords):
+                neighborImageCoords = self.unitcellTranslationalCoords + neighborCoord
+                neighborImageDisplacementVectors = neighborImageCoords - centerCoord
+                neighborImageDisplacements = np.linalg.norm(neighborImageDisplacementVectors, axis=1)
+                [displacement, imageIndex] = [np.min(neighborImageDisplacements), np.argmin(neighborImageDisplacements)]
+                if quickTest:
                     displacementList[neighborSiteIndex] = displacement
-                    if cutoffDistLimits[0] < displacement <= cutoffDistLimits[1]:
-                        iNeighborSiteIndexList.append(neighborSiteIndex)
-                        iDisplacementVectors.append(neighborImageDisplacementVectors[0])
-                        iNumNeighbors += 1
-                neighborSystemElementIndices[centerSiteIndex] = neighborSiteSystemElementIndexList[iNeighborSiteIndexList]
-                numNeighbors = np.append(numNeighbors, iNumNeighbors)
-                displacementVectorList[centerSiteIndex] = np.asarray(iDisplacementVectors)
-                print np.sort(displacementList) / self.material.ANG2BOHR
+                if cutoffDistLimits[0] < displacement <= cutoffDistLimits[1]:
+                    iNeighborSiteIndexList.append(neighborSiteIndex)
+                    iDisplacementVectors.append(neighborImageDisplacementVectors[imageIndex])
+                    iNumNeighbors += 1
+            neighborSystemElementIndices[centerSiteIndex] = neighborSiteSystemElementIndexList[iNeighborSiteIndexList]
+            displacementVectorList[centerSiteIndex] = np.asarray(iDisplacementVectors)
+            numNeighbors = np.append(numNeighbors, iNumNeighbors)
+            if quickTest:
+                print np.sort(displacementList)[:10] / self.material.ANG2BOHR
                 import pdb; pdb.set_trace()
-        else:
-            for centerSiteIndex, centerCoord in enumerate(centerSiteCoords):
-                iNeighborSiteIndexList = []
-                iDisplacementVectors = []
-                iNumNeighbors = 0
-                for neighborSiteIndex, neighborCoord in enumerate(neighborSiteCoords):
-                    neighborImageCoords = self.unitcellTranslationalCoords + neighborCoord
-                    neighborImageDisplacementVectors = neighborImageCoords - centerCoord
-                    neighborImageDisplacements = np.linalg.norm(neighborImageDisplacementVectors, axis=1)
-                    [displacement, imageIndex] = [np.min(neighborImageDisplacements), np.argmin(neighborImageDisplacements)]
-                    if cutoffDistLimits[0] < displacement <= cutoffDistLimits[1]:
-                        iNeighborSiteIndexList.append(neighborSiteIndex)
-                        iDisplacementVectors.append(neighborImageDisplacementVectors[imageIndex])
-                        iNumNeighbors += 1
-                neighborSystemElementIndices[centerSiteIndex] = neighborSiteSystemElementIndexList[iNeighborSiteIndexList]
-                displacementVectorList[centerSiteIndex] = np.asarray(iDisplacementVectors)
-                numNeighbors = np.append(numNeighbors, iNumNeighbors)
+                    
             
         returnNeighbors = returnValues()
         returnNeighbors.neighborSystemElementIndices = neighborSystemElementIndices
