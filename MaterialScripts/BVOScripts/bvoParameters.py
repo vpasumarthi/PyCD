@@ -26,7 +26,7 @@ class bvoParameters(object):
         a = 5.193500 # lattice constant along x-axis
         b = 5.089800 # lattice constant along y-axis
         c = 11.69720 # lattice constant along z-axis
-        self.neighborCutoffDist = {'V:V': [3.824, 3.966, 5.090, 5.194], 'O:O': [2.745, 2.860, 2.972, 3.008, 3.047, 11.704]}
+        self.neighborCutoffDist = {'V:V': [3.824, 3.966, 5.090, 5.194], 'O:O': [2.794, 2.807, 2.829, 3.002, 3.117, 11.696]} # 'O:O': [2.794, 2.829, 2.953, 3.009, 3.047, 11.704]
         self.neighborCutoffDistTol = {'V:V': [0.002, 0.002, 0.002, 0.002], 'O:O': [0.002, 0.002, 0.002, 0.002, 0.002, 0.002]}
         alpha = 90. / 180 * np.pi # interaxial angle between b-c
         beta = 90. / 180 * np.pi # lattice angle between a-c
