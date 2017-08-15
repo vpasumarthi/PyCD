@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 def bvoSetup(systemSize, pbc, generateObjectFiles, generateHopNeighborList, 
-                  generateCumDispList, alpha, nmax, kmax, replaceExistingPrecomputedArray):
+                  generateCumDispList, alpha, nmax, kmax, generatePrecomputedArray):
     """Prepare material class object file, neighborlist and saves to the provided destination path"""
     from bvoParameters import bvoParameters
     from KineticModel import material, neighbors, system
@@ -46,7 +46,7 @@ def bvoSetup(systemSize, pbc, generateObjectFiles, generateHopNeighborList,
 
     # Build precomputed array and save to disk
     precomputedArrayFilePath = inputFileDirectoryPath + directorySeparator + 'precomputedArray.npy'
-    if (not os.path.isfile(precomputedArrayFilePath) or replaceExistingPrecomputedArray):
+    if generatePrecomputedArray:
         # Load input files to instantiate system class
         os.chdir(inputFileDirectoryPath)
         hopNeighborListFileName = inputFileDirectoryPath + directorySeparator + 'hopNeighborList.npy'
