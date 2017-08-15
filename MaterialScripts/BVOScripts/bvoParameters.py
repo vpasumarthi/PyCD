@@ -32,7 +32,8 @@ class bvoParameters(object):
         beta = 90. / 180 * np.pi # lattice angle between a-c
         gamma = 90.387 / 180 * np.pi # lattice angle between a-b
         self.latticeParameters = [a, b, c, alpha, beta, gamma]
-        self.vn = 1.85E+13 # typical frequency for nuclear motion in (1/sec)
+        # typical frequency for nuclear motion in (1/sec)
+        self.vn = 1.85E+13 # source: Kerisit et al., GCA 2006. DOI: 10.1016/j.gca.2005.12.021
         self.lambdaValues = {'V:V': [1.4768, 1.4964, 1.4652, 1.4932], 'O:O': [1.4668, 0.6756, 0.9952, 1.4072, 2.3464, 3.1328]} # reorganization energy in eV
         self.VAB = {'V:V': [0.000, 0.000, 0.000, 0.000], 'O:O': [0.000, 0.000, 0.000, 0.000, 0.000, 0.000]} # electronic coupling matrix element in eV
         self.elementTypeDelimiter = ':' 

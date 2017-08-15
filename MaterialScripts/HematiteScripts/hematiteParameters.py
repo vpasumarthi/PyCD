@@ -30,7 +30,8 @@ class hematiteParameters(object):
         beta = 90. / 180 * np.pi # lattice angle between a-c
         gamma = 120. / 180 * np.pi # lattice angle between a-b
         self.latticeParameters = [a, b, c, alpha, beta, gamma]
-        self.vn = 1.85E+13 # typical frequency for nuclear motion in (1/sec)
+        # typical frequency for nuclear motion in (1/sec)
+        self.vn = 1.85E+13 # source: Kerisit et al., GCA 2006. DOI: 10.1016/j.gca.2005.12.021
         self.lambdaValues = {'Fe:Fe': [1.74533, 1.88683]} # reorganization energy in eV for basal plane, c-direction
         self.VAB = {'Fe:Fe': [0.184, 0.028]} # electronic coupling matrix element in eV for basal plane, c-direction
         self.elementTypeDelimiter = ':' 
