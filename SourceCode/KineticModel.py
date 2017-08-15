@@ -145,12 +145,11 @@ class material(object):
                                        [ b * np.cos(gamma), b * np.sin(gamma), 0],
                                        [ c * np.cos(alpha), c * np.cos(beta) , c * np.sqrt(np.sin(alpha)**2 - np.cos(beta)**2)]])
         
-    def generateMaterialFile(self, material, materialFileName, replaceExistingObjectFiles):
+    def generateMaterialFile(self, material, materialFileName):
         """ """
-        if not os.path.isfile(materialFileName) or replaceExistingObjectFiles:
-            file_material = open(materialFileName, 'w')
-            pickle.dump(material, file_material)
-            file_material.close()
+        file_material = open(materialFileName, 'w')
+        pickle.dump(material, file_material)
+        file_material.close()
         pass
 
     def generateSites(self, elementTypeIndices, cellSize=np.array([1, 1, 1])):
@@ -233,12 +232,11 @@ class neighbors(object):
                     self.unitcellTranslationalCoords[index] = np.dot(np.multiply(np.array([xOffset, yOffset, zOffset]), systemSize), self.material.latticeMatrix)
                     index += 1
 
-    def generateNeighborsFile(self, materialNeighbors, neighborsFileName, replaceExistingObjectFiles):
+    def generateNeighborsFile(self, materialNeighbors, neighborsFileName):
         """ """
-        if not os.path.isfile(neighborsFileName) or replaceExistingObjectFiles:
-            file_Neighbors = open(neighborsFileName, 'w')
-            pickle.dump(materialNeighbors, file_Neighbors)
-            file_Neighbors.close()
+        file_Neighbors = open(neighborsFileName, 'w')
+        pickle.dump(materialNeighbors, file_Neighbors)
+        file_Neighbors.close()
         pass
     
     def generateSystemElementIndex(self, systemSize, quantumIndices):

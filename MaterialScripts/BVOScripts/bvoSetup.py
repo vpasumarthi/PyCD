@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-def bvoSetup(systemSize, pbc, replaceExistingObjectFiles, generateHopNeighborList, 
+def bvoSetup(systemSize, pbc, generateObjectFiles, generateHopNeighborList, 
                   generateCumDispList, alpha, nmax, kmax, replaceExistingPrecomputedArray):
     """Prepare material class object file, neighborlist and saves to the provided destination path"""
     from bvoParameters import bvoParameters
@@ -30,14 +30,15 @@ def bvoSetup(systemSize, pbc, replaceExistingObjectFiles, generateHopNeighborLis
     materialFileName = objectFileDirPath + directorySeparator + materialName + tailName
     neighborsFileName = objectFileDirPath + directorySeparator + materialName + 'Neighbors' + tailName
     
-    # Build material object files
-    bvo = material(bvoParameters())
-    bvo.generateMaterialFile(bvo, materialFileName, replaceExistingObjectFiles)
-    
-    # Build neighbors object files
-    bvoNeighbors = neighbors(bvo, systemSize, pbc)
-    bvoNeighbors.generateNeighborsFile(bvoNeighbors, neighborsFileName, replaceExistingObjectFiles)
-    bvoNeighbors.generateNeighborList(inputFileDirectoryPath, generateHopNeighborList, generateCumDispList)
+    if generateObjectFiles:
+        # Build material object files
+        bvo = material(bvoParameters())
+        bvo.generateMaterialFile(bvo, materialFileName)
+        
+        # Build neighbors object files
+        bvoNeighbors = neighbors(bvo, systemSize, pbc)
+        bvoNeighbors.generateNeighborsFile(bvoNeighbors, neighborsFileName)
+        bvoNeighbors.generateNeighborList(inputFileDirectoryPath, generateHopNeighborList, generateCumDispList)
 
     # Build precomputed array and save to disk
     precomputedArrayFilePath = inputFileDirectoryPath + directorySeparator + 'precomputedArray.npy'
