@@ -29,16 +29,20 @@ def bvoSetup(systemSize, pbc, generateObjectFiles, generateHopNeighborList,
         os.makedirs(objectFileDirPath)
     materialFileName = objectFileDirPath + directorySeparator + materialName + tailName
     neighborsFileName = objectFileDirPath + directorySeparator + materialName + 'Neighbors' + tailName
-    
+
+    # Build material object files
+    bvo = material(bvoParameters())
+
+    # Build neighbors object files
+    bvoNeighbors = neighbors(bvo, systemSize, pbc)
+            
     if generateObjectFiles:
-        # Build material object files
-        bvo = material(bvoParameters())
         bvo.generateMaterialFile(bvo, materialFileName)
-        
-        # Build neighbors object files
-        bvoNeighbors = neighbors(bvo, systemSize, pbc)
         bvoNeighbors.generateNeighborsFile(bvoNeighbors, neighborsFileName)
-        bvoNeighbors.generateNeighborList(inputFileDirectoryPath, generateHopNeighborList, generateCumDispList)
+    
+    # generate neighbor list
+    if generateHopNeighborList:
+        bvoNeighbors.generateNeighborList(inputFileDirectoryPath, generateCumDispList)
 
     # Build precomputed array and save to disk
     precomputedArrayFilePath = inputFileDirectoryPath + directorySeparator + 'precomputedArray.npy'
