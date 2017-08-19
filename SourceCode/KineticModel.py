@@ -643,6 +643,12 @@ class neighbors(object):
                      (', %2d seconds' % (timeElapsed.seconds % 60)))
         report.close()
     
+    def generateLatticeDirections(self, atomType1, atomType2, cutoff):
+        """ generate lattice directions and distances for neighboring atoms"""
+        convArray = np.linalg.inv(self.material.latticeMatrix.T)
+        latticeDirection = np.dot(convArray, neighborVector)
+        return latticeDirection
+        
 class system(object):
     """defines the system we are working on
     
