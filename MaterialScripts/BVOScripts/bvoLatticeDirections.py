@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-def bvoLatticeDirections(systemSize, pbc, cutoffDistKey, cutoff, nDim):
+def bvoLatticeDirections(systemSize, pbc, cutoffDistKey, cutoff, nDigits, nDim):
 
     from KineticModel import material, neighbors
     import numpy as np
@@ -42,4 +42,4 @@ def bvoLatticeDirections(systemSize, pbc, cutoffDistKey, cutoff, nDim):
     file_hematite.close()
     
     hematiteNeighbors = neighbors(hematite, systemSize, pbc)
-    latticeDirectionList = hematiteNeighbors.generateLatticeDirections(cutoffDistKey, cutoff)
+    latticeDirectionList = hematiteNeighbors.generateLatticeDirections(cutoffDistKey, cutoff, nDigits, latticeDirectionsDirectoryPath)
