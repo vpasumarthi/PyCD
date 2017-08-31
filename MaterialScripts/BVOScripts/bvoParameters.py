@@ -23,14 +23,14 @@ class bvoParameters(object):
         self.unitcellCoords = index_pos[:, 1:] 
         self.elementTypeIndexList = index_pos[:,0]
         self.chargeTypes = {'Bi': +3.0, 'O': -2.0, 'V': +5.0, 'V0': +4.0} # multiples of elementary charge
-        a = 5.193500 # lattice constant along x-axis
-        b = 5.089800 # lattice constant along y-axis
-        c = 11.69720 # lattice constant along z-axis
-        self.neighborCutoffDist = {'V:V': [3.824, 3.966, 5.090, 5.194], 'O:O': [2.794, 2.807, 2.829, 3.002, 3.117, 11.696]} # 'O:O': [2.794, 2.829, 2.953, 3.009, 3.047, 11.704]
+        a = 5.1893210411 # lattice constant along x-axis
+        b = 5.1893210411 # lattice constant along y-axis
+        c = 11.7714366913 # lattice constant along z-axis
+        self.neighborCutoffDist = {'V:V': [3.92335, 3.92335, 5.18932, 5.18932], 'O:O': [2.794, 2.807, 2.829, 3.002, 3.117, 11.696]} # 'O:O': [2.794, 2.829, 2.953, 3.009, 3.047, 11.704]
         self.neighborCutoffDistTol = {'V:V': [0.002, 0.002, 0.002, 0.002], 'O:O': [0.002, 0.002, 0.002, 0.002, 0.002, 0.002]}
         alpha = 90. / 180 * np.pi # interaxial angle between b-c
         beta = 90. / 180 * np.pi # lattice angle between a-c
-        gamma = 90.387 / 180 * np.pi # lattice angle between a-b
+        gamma = 90. / 180 * np.pi # lattice angle between a-b
         self.latticeParameters = [a, b, c, alpha, beta, gamma]
         # typical frequency for nuclear motion in (1/sec)
         self.vn = 1.00E+13 # source: Liu et al., PCCP 2015. DOI: 10.1039/C5CP04299B
