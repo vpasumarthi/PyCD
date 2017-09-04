@@ -645,60 +645,60 @@ class neighbors(object):
     
     def generateLatticeDirections(self, cutoffDistKey, cutoff, nDigits, outdir):
         """ generate lattice directions and distances for neighboring atoms"""
-        from fractions import gcd
-        
-        localSystemSize=np.array([3, 3, 3])
-        centerUnitCellIndices = np.array([1, 1, 1])
-        cutoffDistLimits = [0, cutoff * self.material.ANG2BOHR]
-        numCells = localSystemSize.prod()
-        
-        elementTypes = self.material.elementTypes[:]
+
         [centerElementType, neighborElementType] = cutoffDistKey.split(self.material.elementTypeDelimiter)
+        elementTypes = self.material.elementTypes[:]
         centerSiteElementTypeIndex = elementTypes.index(centerElementType) 
         neighborSiteElementTypeIndex = elementTypes.index(neighborElementType)
         numCenterElements = self.material.nElementsPerUnitCell[centerSiteElementTypeIndex]
-        localBulkSites = self.material.generateSites(self.elementTypeIndices, localSystemSize)
-        systemElementIndexOffsetArray = (np.repeat(np.arange(0, self.material.totalElementsPerUnitCell * numCells, self.material.totalElementsPerUnitCell), 
-                                                   numCenterElements))
-        centerSiteIndices = np.zeros(numCenterElements, int)
-        for iCenterElementIndex in range(numCenterElements):
-            centerSiteQuantumIndices = np.hstack((centerUnitCellIndices, centerSiteElementTypeIndex, iCenterElementIndex))
-            centerSiteIndices[iCenterElementIndex] = self.generateSystemElementIndex(localSystemSize, centerSiteQuantumIndices)
-        neighborSiteIndices = (np.tile(self.material.nElementsPerUnitCell[:centerSiteElementTypeIndex].sum() + 
-                                     np.arange(0, numCenterElements), numCells) + systemElementIndexOffsetArray)
-
-        convArray = np.linalg.inv((self.material.latticeMatrix * localSystemSize[:, None]).T)
-        #fractionalUnitCellCoords = np.dot(convArray, self.material.unitcellCoords.T).T
-
-        neighborSiteCoords = localBulkSites.cellCoordinates[neighborSiteIndices]
-        neighborSiteFractCoords = np.dot(convArray, neighborSiteCoords.T).T
-        neighborSiteSystemElementIndexList = localBulkSites.systemElementIndexList[neighborSiteIndices]
-        centerSiteCoords = localBulkSites.cellCoordinates[centerSiteIndices]
-        centerSiteFractCoords = np.dot(convArray, centerSiteCoords.T).T
-        centerSiteSystemElementIndexList = localBulkSites.systemElementIndexList[centerSiteIndices]
         
+        cutoffDistLimits = [0, cutoff * self.material.ANG2BOHR]
         
+        convArray = np.linalg.inv(self.material.latticeMatrix.T)
+        fractionalUnitCellCoords = np.dot(convArray, self.material.unitcellCoords.T).T
+        
+        numCenterElements = self.material.nElementsPerUnitCell[centerSiteElementTypeIndex]
+        numCells = 3**sum(self.pbc)
+        xRange = range(-1, 2) if self.pbc[0] == 1 else [0]
+        yRange = range(-1, 2) if self.pbc[1] == 1 else [0]
+        zRange = range(-1, 2) if self.pbc[2] == 1 else [0]
+        unitcellTranslationalCoords = np.zeros((numCells, 3)) # Initialization
+        index = 0
+        for xOffset in xRange:
+            for yOffset in yRange:
+                for zOffset in zRange:
+                    unitcellTranslationalCoords[index] = np.array([xOffset, yOffset, zOffset])
+                    index += 1
+        
+        centerSiteIndices = self.material.nElementsPerUnitCell[:centerSiteElementTypeIndex].sum() + np.arange(numCenterElements)
+        centerSiteFractCoords = fractionalUnitCellCoords[centerSiteIndices]
+        neighborSiteFractCoords = np.zeros((numCenterElements * numCells, 3))
+        for centerSiteIndex, centerSiteFractCoord in enumerate(centerSiteFractCoords):
+             neighborSiteFractCoords[(centerSiteIndex * numCells):((centerSiteIndex+1) * numCells)] = centerSiteFractCoord + unitcellTranslationalCoords
+
         displacementVectorList = np.empty(numCenterElements, dtype=object)
         latticeDirectionList = np.empty(numCenterElements, dtype=object)
         displacementList = np.empty(numCenterElements, dtype=object)
-        for centerSiteIndex, centerCoord in enumerate(centerSiteCoords):
+        for centerSiteIndex, centerSiteFractCoord in enumerate(centerSiteFractCoords):
             iDisplacementVectors = []
             iLatticeDirectionList = []
             iDisplacements = []
-            for neighborSiteIndex, neighborCoord in enumerate(neighborSiteCoords):
-                neighborDisplacementVector = neighborCoord - centerCoord
+            for neighborSiteIndex, neighborSiteFractCoord in enumerate(neighborSiteFractCoords):
+                latticeDirection = neighborSiteFractCoord - centerSiteFractCoord
+                neighborDisplacementVector = np.dot(latticeDirection[None, :], self.material.latticeMatrix)
                 displacement = np.linalg.norm(neighborDisplacementVector)
                 if cutoffDistLimits[0] < displacement <= cutoffDistLimits[1]:
                     iDisplacementVectors.append(neighborDisplacementVector)
-                    iLatticeDirectionList.append(neighborSiteFractCoords[neighborSiteIndex] - centerSiteFractCoords[centerSiteIndex])
+                    iLatticeDirectionList.append(latticeDirection)
                     iDisplacements.append(displacement)
             displacementVectorList[centerSiteIndex] = np.asarray(iDisplacementVectors)
             latticeDirectionList[centerSiteIndex] = np.asarray(iLatticeDirectionList)
             displacementList[centerSiteIndex] = np.asarray(iDisplacements) / self.material.ANG2BOHR
-                    
-        import pdb; pdb.set_trace()
+        
+        from fractions import gcd
         for iCenterElementIndex in range(numCenterElements):
-            intLDList = np.array(np.round(latticeDirectionList[centerSiteIndex], nDigits) * 10**nDigits, int)
+            intLDList = np.array(np.round(latticeDirectionList[iCenterElementIndex], nDigits) * 10**nDigits, int)
+            latticeDirectionList[iCenterElementIndex] = latticeDirectionList[iCenterElementIndex].astype(int)
             iNumNeighbors = len(intLDList)
             for index in range(iNumNeighbors):
                 nz = np.nonzero(intLDList[index])[0]
@@ -709,8 +709,6 @@ class neighbors(object):
                     latticeDirectionList[iCenterElementIndex][index] = intLDList[index] / abs(gcd(twoValues[0], twoValues[1]))
                 else:
                     latticeDirectionList[iCenterElementIndex][index] = intLDList[index] / abs(gcd(gcd(intLDList[index][0], intLDList[index][1]), intLDList[index][2]))
-            print latticeDirectionList[iCenterElementIndex]
-            import pdb; pdb.set_trace()
         sortedLatticeDirectionList = np.empty(numCenterElements, dtype=object)
         sortedDisplacementList = np.empty(numCenterElements, dtype=object)
         for iCenterElementIndex in range(numCenterElements):
@@ -721,14 +719,8 @@ class neighbors(object):
         latticeDirectionListFilePath = outdir + directorySeparator + latticeDirectionListFileName + '.npy'
         displacementListFilePath = outdir + directorySeparator + displacementListFileName + '.npy'
         import pdb; pdb.set_trace()
-        np.save(latticeDirectionListFilePath, sortedLatticeDirectionList)
-        np.save(displacementListFilePath, sortedDisplacementList)
+
         return
-        
-        def generateNewLatticeDirections(self):
-            convArray = np.linalg.inv(self.material.latticeMatrix.T)
-            fractionalUnitCellCoords = np.dot(convArray, self.material.unitcellCoords.T).T
-            pass
         
         
 class system(object):
