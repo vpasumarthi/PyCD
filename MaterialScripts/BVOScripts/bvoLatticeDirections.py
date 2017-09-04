@@ -37,9 +37,9 @@ def bvoLatticeDirections(systemSize, pbc, cutoffDistKey, cutoff, nDigits, nDim):
     materialFileName = objectFileDirPath + directorySeparator + materialName + tailName
     
     # Load material object
-    file_hematite = open(materialFileName, 'r')
-    hematite = pickle.load(file_hematite)
-    file_hematite.close()
+    file_material = open(materialFileName, 'r')
+    material = pickle.load(file_material)
+    file_material.close()
     
-    hematiteNeighbors = neighbors(hematite, systemSize, pbc)
-    latticeDirectionList = hematiteNeighbors.generateLatticeDirections(cutoffDistKey, cutoff, nDigits, latticeDirectionsDirectoryPath)
+    materialNeighbors = neighbors(material, systemSize, pbc)
+    latticeDirectionList = materialNeighbors.generateLatticeDirections(cutoffDistKey, cutoff, nDigits, latticeDirectionsDirectoryPath)
