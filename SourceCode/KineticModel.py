@@ -643,7 +643,7 @@ class neighbors(object):
                      (', %2d seconds' % (timeElapsed.seconds % 60)))
         report.close()
     
-    def generateLatticeDirections(self, cutoffDistKey, cutoff, nDigits, outdir):
+    def generateLatticeDirections(self, cutoffDistKey, cutoff, nDigits, tol, outdir):
         """ generate lattice directions and distances for neighboring atoms"""
 
         [centerElementType, neighborElementType] = cutoffDistKey.split(self.material.elementTypeDelimiter)
@@ -705,8 +705,19 @@ class neighbors(object):
                 if len(nz) == 1:
                     latticeDirectionList[iCenterElementIndex][index] = intLDList[index] / abs(intLDList[index][nz])
                 elif len(nz) == 2:
-                    twoValues = intLDList[index][nz]
-                    latticeDirectionList[iCenterElementIndex][index] = intLDList[index] / abs(gcd(twoValues[0], twoValues[1]))
+                    two_values = intLDList[index][nz]
+                    gcd_value = abs(gcd(two_values[0], two_values[1]))
+                    abs_two_values = abs(two_values)
+                    max_value = max(abs_two_values)
+                    max_value_index = nz[np.argmax(abs_two_values)]
+                    min_value = min(abs_two_values)
+                    min_value_index = nz[np.argmin(abs_two_values)]
+                    multiple = max_value / float(min_value)
+                    if abs(abs(multiple) - round(abs(multiple))) < tol:
+                        latticeDirectionList[iCenterElementIndex][index][max_value_index] = np.sign(intLDList[index][max_value_index]) * round(abs(multiple))
+                        latticeDirectionList[iCenterElementIndex][index][min_value_index] = np.sign(intLDList[index][min_value_index])
+                    else:
+                        latticeDirectionList[iCenterElementIndex][index] = intLDList[index] / abs(gcd(two_values[0], two_values[1]))
                 else:
                     latticeDirectionList[iCenterElementIndex][index] = intLDList[index] / abs(gcd(gcd(intLDList[index][0], intLDList[index][1]), intLDList[index][2]))
         sortedLatticeDirectionList = np.empty(numCenterElements, dtype=object)

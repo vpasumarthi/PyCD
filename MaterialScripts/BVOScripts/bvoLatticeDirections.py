@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-def bvoLatticeDirections(systemSize, pbc, cutoffDistKey, cutoff, nDigits, nDim):
+def bvoLatticeDirections(systemSize, pbc, cutoffDistKey, cutoff, nDigits, tol, nDim):
 
     from KineticModel import material, neighbors
     import numpy as np
@@ -42,4 +42,4 @@ def bvoLatticeDirections(systemSize, pbc, cutoffDistKey, cutoff, nDigits, nDim):
     file_material.close()
     
     materialNeighbors = neighbors(material, systemSize, pbc)
-    latticeDirectionList = materialNeighbors.generateLatticeDirections(cutoffDistKey, cutoff, nDigits, latticeDirectionsDirectoryPath)
+    latticeDirectionList = materialNeighbors.generateLatticeDirections(cutoffDistKey, cutoff, nDigits, tol, latticeDirectionsDirectoryPath)
