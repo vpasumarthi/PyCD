@@ -718,8 +718,6 @@ class neighbors(object):
         displacementListFileName = 'displacementList_' + centerElementType + '-' + neighborElementType + '_cutoff=' + str(cutoff)
         latticeDirectionListFilePath = outdir + directorySeparator + latticeDirectionListFileName + '.npy'
         displacementListFilePath = outdir + directorySeparator + displacementListFileName + '.npy'
-        import pdb; pdb.set_trace()
-
         return
         
         
