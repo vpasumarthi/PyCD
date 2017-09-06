@@ -663,7 +663,6 @@ class neighbors(object):
         centerSiteElementTypeIndex = elementTypes.index(centerElementType) 
         neighborSiteElementTypeIndex = elementTypes.index(neighborElementType)
         numCenterElements = self.material.nElementsPerUnitCell[centerSiteElementTypeIndex]
-        
         cutoffDistLimits = [0, cutoff * self.material.ANG2BOHR]
         
         convArray = np.linalg.inv(self.material.latticeMatrix.T)
@@ -690,42 +689,50 @@ class neighbors(object):
         displacementVectorList = np.empty(numCenterElements, dtype=object)
         latticeDirectionList = np.empty(numCenterElements, dtype=object)
         displacementList = np.empty(numCenterElements, dtype=object)
-
+        numNeighbors = np.zeros(numCenterElements, dtype=int)
         for centerSiteIndex, centerSiteFractCoord in enumerate(centerSiteFractCoords):
             iDisplacementVectors = []
             iLatticeDirectionList = []
             iDisplacements = []
             for neighborSiteIndex, neighborSiteFractCoord in enumerate(neighborSiteFractCoords):
-                latticeDirection = np.round(base * np.round((neighborSiteFractCoord - centerSiteFractCoord) / base), prec)
+                latticeDirection = neighborSiteFractCoord - centerSiteFractCoord
+                roundedLatticeDirection = np.round(base * np.round((latticeDirection) / base), prec)
                 neighborDisplacementVector = np.dot(latticeDirection[None, :], self.material.latticeMatrix)
                 displacement = np.linalg.norm(neighborDisplacementVector)
                 if cutoffDistLimits[0] < displacement <= cutoffDistLimits[1]:
                     iDisplacementVectors.append(neighborDisplacementVector)
-                    iLatticeDirectionList.append(latticeDirection)
+                    iLatticeDirectionList.append(roundedLatticeDirection)
                     iDisplacements.append(displacement)
+                    numNeighbors[centerSiteIndex] += 1
             displacementVectorList[centerSiteIndex] = np.asarray(iDisplacementVectors)
             latticeDirectionList[centerSiteIndex] = np.asarray(iLatticeDirectionList)
             displacementList[centerSiteIndex] = np.asarray(iDisplacements) / self.material.ANG2BOHR
         
         from fractions import gcd
-        for iCenterElementIndex in range(numCenterElements):
-            intLDList = np.array(np.round(latticeDirectionList[iCenterElementIndex], prec) * 10**prec, int)
-            latticeDirectionList[iCenterElementIndex] = latticeDirectionList[iCenterElementIndex].astype(int)
-            iNumNeighbors = len(intLDList)
-            for index in range(iNumNeighbors):
-                nz = np.nonzero(intLDList[index])[0]
-                if len(nz) == 1:
-                    latticeDirectionList[iCenterElementIndex][index] = intLDList[index] / abs(intLDList[index][nz])
-                elif len(nz) == 2:
-                    two_values = intLDList[index][nz]
-                    latticeDirectionList[iCenterElementIndex][index] = intLDList[index] / abs(gcd(two_values[0], two_values[1]))
-                else:
-                    latticeDirectionList[iCenterElementIndex][index] = intLDList[index] / abs(gcd(gcd(intLDList[index][0], intLDList[index][1]), intLDList[index][2]))
         sortedLatticeDirectionList = np.empty(numCenterElements, dtype=object)
         sortedDisplacementList = np.empty(numCenterElements, dtype=object)
         for iCenterElementIndex in range(numCenterElements):
-            sortedLatticeDirectionList[iCenterElementIndex] = latticeDirectionList[iCenterElementIndex][displacementList[iCenterElementIndex].argsort()]
             sortedDisplacementList[iCenterElementIndex] = displacementList[iCenterElementIndex][displacementList[iCenterElementIndex].argsort()]
+            sortedDisplacementList[iCenterElementIndex] = np.round(sortedDisplacementList[iCenterElementIndex], 5)
+            latticeDirectionList[iCenterElementIndex] = (latticeDirectionList[iCenterElementIndex] / base).astype(int)
+            iCenterLDList = latticeDirectionList[iCenterElementIndex]
+            for index in range(numNeighbors[iCenterElementIndex]):
+                iAbsCenterLDList = abs(iCenterLDList[index])
+                nz = np.nonzero(iAbsCenterLDList)[0]
+                nzAbsCenterLDList = iAbsCenterLDList[nz]
+                if len(nz) == 1:
+                    latticeDirectionList[iCenterElementIndex][index] = iCenterLDList[index] / iAbsCenterLDList[nz]
+                elif len(nz) == 2:
+                    latticeDirectionList[iCenterElementIndex][index] = iCenterLDList[index] / gcd(nzAbsCenterLDList[0], nzAbsCenterLDList[1])
+                else:
+                    latticeDirectionList[iCenterElementIndex][index] = iCenterLDList[index] / gcd(gcd(nzAbsCenterLDList[0], nzAbsCenterLDList[1]), nzAbsCenterLDList[2])
+            sortedLatticeDirectionList[iCenterElementIndex] = latticeDirectionList[iCenterElementIndex][displacementList[iCenterElementIndex].argsort()]
+#             print sortedLatticeDirectionList[iCenterElementIndex]
+#             print np.round(sortedDisplacementList[iCenterElementIndex], 4)
+#             print np.hstack((sortedLatticeDirectionList[iCenterElementIndex], np.round(sortedDisplacementList[iCenterElementIndex], 4)[:, None]))
+#             import pdb; pdb.set_trace()
+#         print np.hstack((sortedLatticeDirectionList[0], sortedDisplacementList[0][:, None]))
+#         import pdb; pdb.set_trace()
         latticeDirectionListFileName = 'latticeDirectionList_' + centerElementType + '-' + neighborElementType + '_cutoff=' + str(cutoff)
         displacementListFileName = 'displacementList_' + centerElementType + '-' + neighborElementType + '_cutoff=' + str(cutoff)
         latticeDirectionListFilePath = outdir + directorySeparator + latticeDirectionListFileName + '.npy'
