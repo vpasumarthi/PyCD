@@ -302,7 +302,10 @@ class neighbors(object):
         displacementVectorList = np.empty(len(centerSiteCoords), dtype=object)
         numNeighbors = np.array([], dtype=int)
 
-        quickTest = 0 # commit reference: 1472bb4        
+        if cutoffDistKey == 'O:O':
+            quickTest = 0 # commit reference: 1472bb4
+        else:
+            quickTest = 0                
 
         for centerSiteIndex, centerCoord in enumerate(centerSiteCoords):
             iNeighborSiteIndexList = []
@@ -325,7 +328,16 @@ class neighbors(object):
             displacementVectorList[centerSiteIndex] = np.asarray(iDisplacementVectors)
             numNeighbors = np.append(numNeighbors, iNumNeighbors)
             if quickTest:
-                print np.sort(displacementList)[:10] / self.material.ANG2BOHR
+#                 print np.sort(displacementList)[:10] / self.material.ANG2BOHR
+                for cutoffDist in range(2, 7):
+                    cutoff = cutoffDist * self.material.ANG2BOHR
+                    print cutoffDist
+                    print displacementList[displacementList < cutoff].shape
+                    print np.unique(np.sort(np.round(displacementList[displacementList < cutoff] / self.material.ANG2BOHR, 4))).shape
+                    print np.unique(np.sort(np.round(displacementList[displacementList < cutoff] / self.material.ANG2BOHR, 3))).shape
+                    print np.unique(np.sort(np.round(displacementList[displacementList < cutoff] / self.material.ANG2BOHR, 2))).shape
+                    print np.unique(np.sort(np.round(displacementList[displacementList < cutoff] / self.material.ANG2BOHR, 1))).shape
+                    print np.unique(np.sort(np.round(displacementList[displacementList < cutoff] / self.material.ANG2BOHR, 0))).shape
                 import pdb; pdb.set_trace()
                     
             

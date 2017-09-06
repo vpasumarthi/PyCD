@@ -6,7 +6,7 @@ import platform
 directorySeparator = '\\' if platform.uname()[0]=='Windows' else '/'
 inputCoordinatesDirectoryName= 'InputCoordinates'
 inputCoordinateFileName = 'BVO_index_coord_Experimental.txt'
-inputCoordinateSourceType = 2 # 0: AFlow; 1: ms-BVO; 2: 9013437
+inputCoordinateSourceType = 1 # 0: AFlow; 1: ms-BVO; 2: 9013437
 
 class bvoParameters(object):
     
