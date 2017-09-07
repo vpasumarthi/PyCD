@@ -661,7 +661,7 @@ class neighbors(object):
         printStack = 1
         if cutoffDistKey == 'O:O':
             computePathway = 1
-            bridgeCutoff = 3
+            bridgeCutoff = 2.75
             bridgeCutoffDistLimits = [0, bridgeCutoff * self.material.ANG2BOHR]
             avoidONeighbors = 1
         else:
@@ -720,11 +720,19 @@ class neighbors(object):
                             neighborDisplacementVector = np.dot(latticeDirection[None, :], self.material.latticeMatrix)
                             displacement = np.linalg.norm(neighborDisplacementVector)
                             if bridgeCutoffDistLimits[0] < displacement <= bridgeCutoffDistLimits[1]:
+                                debug = 0
+                                if debug:
+#                                     print np.round(centerSiteFractCoord, 3)
+#                                     import pdb; pdb.set_trace()
+                                    if np.array_equal(np.round(centerSiteFractCoord / 2, 3), np.array([0.376, 0.299, 0.272])):
+                                        print neighborSiteIndex
+                                        print displacement / self.material.ANG2BOHR
                                 iNeighborList.append(neighborSiteIndex)
                 neighborList[centerSiteIndex] = np.asarray(iNeighborList)
-
-        for centerSiteIndex, centerSiteFractCoord in enumerate(centerSiteFractCoords):
-             neighborSiteFractCoords[(centerSiteIndex * numCells):((centerSiteIndex+1) * numCells)] = centerSiteFractCoord + unitcellTranslationalCoords
+#         import pdb; pdb.set_trace()
+        for iCell in range(numCells):
+            neighborSiteFractCoords[(iCell * numCenterElements):((iCell + 1) * numCenterElements)] = centerSiteFractCoords + unitcellTranslationalCoords[iCell]
+            
         if cutoffDistKey == 'O:O':
             centerSiteClassList = np.array([1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1])
             neighborSiteClassList = np.tile(centerSiteClassList, numCells)
@@ -756,10 +764,15 @@ class neighbors(object):
                     iDisplacements.append(displacement)
                     debug = 0
                     if debug:
-                        if np.round(displacement / self.material.ANG2BOHR, 5) == 3.00761:
-                            import pdb; pdb.set_trace()
-                        elif np.round(displacement / self.material.ANG2BOHR, 5) == 3.02054:
-                            import pdb; pdb.set_trace()
+                        debugDistList = [3.04725, 3.6123, 3.68451] #[2.85413, 2.86002, 3.00761, 3.02054]
+                        debugDist = np.round(displacement / self.material.ANG2BOHR, 5)
+                        if debugDist in debugDistList:
+                            print debugDist
+                            print 'center class:', centerSiteClassList[centerSiteIndex]
+                            print 'neighbor class:', neighborSiteClassList[neighborSiteIndex]
+                            print 'num of bonds:', len(neighborList[centerSiteIndex])
+                            print 'center:', np.round(centerSiteFractCoord / 2, 3)
+                            print 'neighbor:', np.round(neighborSiteFractCoord / 2, 3)
                     numNeighbors[centerSiteIndex] += 1
                     if cutoffDistKey == 'O:O':
                         iClassPairList.append(str(centerSiteClassList[centerSiteIndex]) + ':' + str(neighborSiteClassList[neighborSiteIndex]))
@@ -775,6 +788,7 @@ class neighbors(object):
                                 bridgeSiteQuantumIndices = self.generateQuantumIndices(localSystemSize, bridgeSiteIndex)
                                 bridgeSiteType = self.material.elementTypes[bridgeSiteQuantumIndices[3]]
                         iBridgeList.append(bridgeSiteType)
+#             import pdb; pdb.set_trace()
             bridgeList[centerSiteIndex] = np.asarray(iBridgeList)
             displacementVectorList[centerSiteIndex] = np.asarray(iDisplacementVectors)
             latticeDirectionList[centerSiteIndex] = np.asarray(iLatticeDirectionList)
@@ -785,8 +799,14 @@ class neighbors(object):
         from fractions import gcd
         sortedLatticeDirectionList = np.empty(numCenterElements, dtype=object)
         sortedDisplacementList = np.empty(numCenterElements, dtype=object)
+        if cutoffDistKey == 'O:O':
+            sortedClassPairList = np.empty(numCenterElements, dtype=object)
+        if computePathway:
+            sortedBridgeList = np.empty(numCenterElements, dtype=object)
         for iCenterElementIndex in range(numCenterElements):
             sortedDisplacementList[iCenterElementIndex] = displacementList[iCenterElementIndex][displacementList[iCenterElementIndex].argsort()]
+            sortedClassPairList[iCenterElementIndex] = classPairList[iCenterElementIndex][displacementList[iCenterElementIndex].argsort()]
+            sortedBridgeList[iCenterElementIndex] = bridgeList[iCenterElementIndex][displacementList[iCenterElementIndex].argsort()]
             if roundLattice:
                 latticeDirectionList[iCenterElementIndex] = (latticeDirectionList[iCenterElementIndex] / base).astype(int)
                 iCenterLDList = latticeDirectionList[iCenterElementIndex]
@@ -806,9 +826,9 @@ class neighbors(object):
             np.set_printoptions(suppress=True)
             printingArray = np.hstack((np.round(sortedLatticeDirectionList[0], 4), np.round(sortedDisplacementList[0], 5)[:, None]))
             if cutoffDistKey == 'O:O':
-                printingArray = np.hstack((printingArray, classPairList[0][:, None]))
+                printingArray = np.hstack((printingArray, sortedClassPairList[0][:, None]))
             if computePathway:
-                printingArray = np.hstack((printingArray, bridgeList[0][:, None]))
+                printingArray = np.hstack((printingArray, sortedBridgeList[0][:, None]))
             print printingArray
             import pdb; pdb.set_trace()
         latticeDirectionListFileName = 'latticeDirectionList_' + centerElementType + '-' + neighborElementType + '_cutoff=' + str(cutoff)
@@ -933,7 +953,7 @@ class system(object):
 
     def generatePreComputedArrayLogReport(self, outdir):
         """Generates an log report of the simulation and outputs to the working directory"""
-        precomputedArrayLogFileName = 'precompuedArray.log'
+        precomputedArrayLogFileName = 'precomputedArray.log'
         precomputedArrayLogFilePath = outdir + directorySeparator + precomputedArrayLogFileName
         report = open(precomputedArrayLogFilePath, 'w')
         endTime = datetime.now()
