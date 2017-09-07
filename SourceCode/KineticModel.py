@@ -754,6 +754,12 @@ class neighbors(object):
                     iDisplacementVectors.append(neighborDisplacementVector)
                     iLatticeDirectionList.append(roundedLatticeDirection)
                     iDisplacements.append(displacement)
+                    debug = 0
+                    if debug:
+                        if np.round(displacement / self.material.ANG2BOHR, 5) == 3.00761:
+                            import pdb; pdb.set_trace()
+                        elif np.round(displacement / self.material.ANG2BOHR, 5) == 3.02054:
+                            import pdb; pdb.set_trace()
                     numNeighbors[centerSiteIndex] += 1
                     if cutoffDistKey == 'O:O':
                         iClassPairList.append(str(centerSiteClassList[centerSiteIndex]) + ':' + str(neighborSiteClassList[neighborSiteIndex]))
