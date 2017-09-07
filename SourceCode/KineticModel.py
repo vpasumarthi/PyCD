@@ -667,7 +667,7 @@ class neighbors(object):
         
         convArray = np.linalg.inv(self.material.latticeMatrix.T)
         fractionalUnitCellCoords = np.dot(convArray, self.material.unitcellCoords.T).T
-        
+
         numCells = 3**sum(self.pbc)
         xRange = range(-1, 2) if self.pbc[0] == 1 else [0]
         yRange = range(-1, 2) if self.pbc[1] == 1 else [0]
@@ -684,7 +684,11 @@ class neighbors(object):
         centerSiteFractCoords = fractionalUnitCellCoords[centerSiteIndices]
         neighborSiteFractCoords = np.zeros((numCenterElements * numCells, 3))
         for centerSiteIndex, centerSiteFractCoord in enumerate(centerSiteFractCoords):
-             neighborSiteFractCoords[(centerSiteIndex * numCells):((centerSiteIndex+1) * numCells)] = centerSiteFractCoord + unitcellTranslationalCoords
+             neighborSiteFractCoords[(centerSiteIndex * numCells):((centerSiteIndex+1) * numCells)] = centerSiteFractCoord + unitcellTranslationalCoords             
+        if cutoffDistKey == 'O:O':
+            centerSiteClassList = np.array([1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1])
+            neighborSiteClassList = np.tile(centerSiteClassList, numCells)
+            classPairList = np.empty(numCenterElements, dtype=object)
 
         displacementVectorList = np.empty(numCenterElements, dtype=object)
         latticeDirectionList = np.empty(numCenterElements, dtype=object)
@@ -695,6 +699,8 @@ class neighbors(object):
             iDisplacementVectors = []
             iLatticeDirectionList = []
             iDisplacements = []
+            if cutoffDistKey == 'O:O':
+                iClassPairList = []
             for neighborSiteIndex, neighborSiteFractCoord in enumerate(neighborSiteFractCoords):
                 latticeDirection = neighborSiteFractCoord - centerSiteFractCoord
                 if roundLattice:
@@ -708,9 +714,14 @@ class neighbors(object):
                     iLatticeDirectionList.append(roundedLatticeDirection)
                     iDisplacements.append(displacement)
                     numNeighbors[centerSiteIndex] += 1
+                    if cutoffDistKey == 'O:O':
+#                         import pdb; pdb.set_trace()
+                        iClassPairList.append(str(centerSiteClassList[centerSiteIndex]) + ':' + str(neighborSiteClassList[neighborSiteIndex]))
             displacementVectorList[centerSiteIndex] = np.asarray(iDisplacementVectors)
             latticeDirectionList[centerSiteIndex] = np.asarray(iLatticeDirectionList)
             displacementList[centerSiteIndex] = np.asarray(iDisplacements) / self.material.ANG2BOHR
+            if cutoffDistKey == 'O:O':
+                classPairList[centerSiteIndex] = np.asarray(iClassPairList)
         
         from fractions import gcd
         sortedLatticeDirectionList = np.empty(numCenterElements, dtype=object)
@@ -734,7 +745,10 @@ class neighbors(object):
         printStack = 1
         if printStack:
             np.set_printoptions(suppress=True)
-            print np.hstack((np.round(sortedLatticeDirectionList[0], 4), np.round(sortedDisplacementList[0], 5)[:, None]))
+            if cutoffDistKey == 'O:O':
+                print np.hstack((np.round(sortedLatticeDirectionList[0], 4), np.round(sortedDisplacementList[0], 5)[:, None], classPairList[0][:, None]))
+            else:
+                print np.hstack((np.round(sortedLatticeDirectionList[0], 4), np.round(sortedDisplacementList[0], 5)[:, None]))
             import pdb; pdb.set_trace()
         latticeDirectionListFileName = 'latticeDirectionList_' + centerElementType + '-' + neighborElementType + '_cutoff=' + str(cutoff)
         displacementListFileName = 'displacementList_' + centerElementType + '-' + neighborElementType + '_cutoff=' + str(cutoff)
