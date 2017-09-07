@@ -689,13 +689,39 @@ class neighbors(object):
                     unitcellTranslationalCoords[index] = np.array([xOffset, yOffset, zOffset])
                     index += 1
         
+        try:
+            avoidONeighbors
+        except NameError:
+                pass
+        else:
+            if avoidONeighbors:
+                avoidElementType = 'O'
+                avoidElementTypeIndex = self.material.elementTypes.index(avoidElementType)
+                systemElementIndexOffsetArray = (np.repeat(np.arange(0, self.material.totalElementsPerUnitCell * numCells, self.material.totalElementsPerUnitCell), 
+                                                           self.material.nElementsPerUnitCell[centerSiteElementTypeIndex]))                
+                avoidElementIndices = (np.tile(self.material.nElementsPerUnitCell[:avoidElementTypeIndex].sum() + 
+                                               np.arange(0, self.material.nElementsPerUnitCell[avoidElementTypeIndex]), numCells) + systemElementIndexOffsetArray)
+        
         centerSiteIndices = self.material.nElementsPerUnitCell[:centerSiteElementTypeIndex].sum() + np.arange(numCenterElements)
         centerSiteFractCoords = fractionalUnitCellCoords[centerSiteIndices]
         neighborSiteFractCoords = np.zeros((numCenterElements * numCells, 3))
         if computePathway:
+            localSystemSize = np.array([3, 3, 3])
             supercellFractCoords = np.zeros((numCells * self.material.totalElementsPerUnitCell, 3))
             for iCell in range(numCells):
                 supercellFractCoords[(iCell * self.material.totalElementsPerUnitCell):((iCell + 1) * self.material.totalElementsPerUnitCell)] = fractionalUnitCellCoords + unitcellTranslationalCoords[iCell]
+            neighborList = np.empty(numCenterElements, dtype=object)
+            for centerSiteIndex, centerSiteFractCoord in enumerate(centerSiteFractCoords):
+                iNeighborList = []
+                for neighborSiteIndex, neighborSiteFractCoord in enumerate(supercellFractCoords):
+                    if avoidONeighbors:
+                        if neighborSiteIndex not in avoidElementIndices:
+                            latticeDirection = neighborSiteFractCoord - centerSiteFractCoord
+                            neighborDisplacementVector = np.dot(latticeDirection[None, :], self.material.latticeMatrix)
+                            displacement = np.linalg.norm(neighborDisplacementVector)
+                            if bridgeCutoffDistLimits[0] < displacement <= bridgeCutoffDistLimits[1]:
+                                iNeighborList.append(neighborSiteIndex)
+                neighborList[centerSiteIndex] = np.asarray(iNeighborList)
 
         for centerSiteIndex, centerSiteFractCoord in enumerate(centerSiteFractCoords):
              neighborSiteFractCoords[(centerSiteIndex * numCells):((centerSiteIndex+1) * numCells)] = centerSiteFractCoord + unitcellTranslationalCoords
@@ -708,10 +734,12 @@ class neighbors(object):
         latticeDirectionList = np.empty(numCenterElements, dtype=object)
         displacementList = np.empty(numCenterElements, dtype=object)
         numNeighbors = np.zeros(numCenterElements, dtype=int)
+        bridgeList = np.empty(numCenterElements, dtype=object)
         for centerSiteIndex, centerSiteFractCoord in enumerate(centerSiteFractCoords):
             iDisplacementVectors = []
             iLatticeDirectionList = []
             iDisplacements = []
+            iBridgeList = []
             if cutoffDistKey == 'O:O':
                 iClassPairList = []
             for neighborSiteIndex, neighborSiteFractCoord in enumerate(neighborSiteFractCoords):
@@ -729,32 +757,30 @@ class neighbors(object):
                     numNeighbors[centerSiteIndex] += 1
                     if cutoffDistKey == 'O:O':
                         iClassPairList.append(str(centerSiteClassList[centerSiteIndex]) + ':' + str(neighborSiteClassList[neighborSiteIndex]))
+                    if computePathway:
+                        bridgeSiteType = 'space'
+                        for iCenterNeighborSEIndex in neighborList[centerSiteIndex]:
+                            iCenterNeighborFractCoord = supercellFractCoords[iCenterNeighborSEIndex]
+                            bridgelatticeDirection = neighborSiteFractCoord - iCenterNeighborFractCoord
+                            bridgeneighborDisplacementVector = np.dot(bridgelatticeDirection[None, :], self.material.latticeMatrix)
+                            bridgedisplacement = np.linalg.norm(bridgeneighborDisplacementVector)
+                            if bridgeCutoffDistLimits[0] < bridgedisplacement <= bridgeCutoffDistLimits[1]:
+                                bridgeSiteIndex = iCenterNeighborSEIndex
+                                bridgeSiteQuantumIndices = self.generateQuantumIndices(localSystemSize, bridgeSiteIndex)
+                                bridgeSiteType = self.material.elementTypes[bridgeSiteQuantumIndices[3]]
+                        iBridgeList.append(bridgeSiteType)
+            bridgeList[centerSiteIndex] = np.asarray(iBridgeList)
             displacementVectorList[centerSiteIndex] = np.asarray(iDisplacementVectors)
             latticeDirectionList[centerSiteIndex] = np.asarray(iLatticeDirectionList)
             displacementList[centerSiteIndex] = np.asarray(iDisplacements) / self.material.ANG2BOHR
             if cutoffDistKey == 'O:O':
                 classPairList[centerSiteIndex] = np.asarray(iClassPairList)
         
-        if computePathway:
-            neighborList = np.empty(numCenterElements, dtype=object)
-            for centerSiteIndex, centerSiteFractCoord in enumerate(centerSiteFractCoords):
-                iNeighborList = []
-                for neighborSiteIndex, neighborSiteFractCoord in enumerate(supercellFractCoords):
-                    if avoidONeighbors:
-#                         statement to avoid O neighbors
-                        latticeDirection = neighborSiteFractCoord - centerSiteFractCoord
-                        neighborDisplacementVector = np.dot(latticeDirection[None, :], self.material.latticeMatrix)
-                        displacement = np.linalg.norm(neighborDisplacementVector)
-                        if bridgeCutoffDistLimits[0] < displacement <= bridgeCutoffDistLimits[1]:
-                            iNeighborList.append(neighborSiteIndex)
-                neighborList[centerSiteIndex] = np.asarray(iNeighborList)
         from fractions import gcd
         sortedLatticeDirectionList = np.empty(numCenterElements, dtype=object)
         sortedDisplacementList = np.empty(numCenterElements, dtype=object)
-        bridgeList = np.empty(numCenterElements, dtype=object)
         for iCenterElementIndex in range(numCenterElements):
             sortedDisplacementList[iCenterElementIndex] = displacementList[iCenterElementIndex][displacementList[iCenterElementIndex].argsort()]
-            bridgeList[iCenterElementIndex] = np.empty(numNeighbors[iCenterElementIndex], dtype=object)
             if roundLattice:
                 latticeDirectionList[iCenterElementIndex] = (latticeDirectionList[iCenterElementIndex] / base).astype(int)
                 iCenterLDList = latticeDirectionList[iCenterElementIndex]
@@ -768,9 +794,6 @@ class neighbors(object):
                         latticeDirectionList[iCenterElementIndex][index] = iCenterLDList[index] / gcd(nzAbsCenterLDList[0], nzAbsCenterLDList[1])
                     else:
                         latticeDirectionList[iCenterElementIndex][index] = iCenterLDList[index] / gcd(gcd(nzAbsCenterLDList[0], nzAbsCenterLDList[1]), nzAbsCenterLDList[2])
-            if computePathway:
-                for index in range(numNeighbors[iCenterElementIndex]):
-                    bridgeList[iCenterElementIndex][index] = 'NA'
             sortedLatticeDirectionList[iCenterElementIndex] = latticeDirectionList[iCenterElementIndex][displacementList[iCenterElementIndex].argsort()]
 
         if printStack:
