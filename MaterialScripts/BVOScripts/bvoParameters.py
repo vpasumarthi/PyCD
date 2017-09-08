@@ -40,8 +40,8 @@ class bvoParameters(object):
             a = 5.19560 # lattice constant along x-axis
             b = 5.09350 # lattice constant along y-axis
             c = 11.70450 # lattice constant along z-axis
-            self.neighborCutoffDist = {'V:V': [3.8474, 3.9447, 5.0935, 5.1956], 'O:O': [2.7450, 2.8600, 2.9723, 3.0076, 3.0473, 11.7045]} # 'O:O': [2.794, 2.829, 2.953, 3.009, 3.047, 11.704]
-            self.neighborCutoffDistTol = {'V:V': [0.002, 0.002, 0.002, 0.002], 'O:O': [0.002, 0.002, 0.002, 0.002, 0.002, 0.002]}
+            self.neighborCutoffDist = {'V:V': [3.8474, 3.9447, 5.0935, 5.1956], 'O:O': [2.7450, 2.8600, 2.9723, 3.0076, 3.0473]} # 'O:O': [2.794, 2.829, 2.953, 3.009, 3.047, 11.704]
+            self.neighborCutoffDistTol = {'V:V': [0.002, 0.002, 0.002, 0.002], 'O:O': [0.002, 0.002, 0.002, 0.002, 0.002]}
             alpha = 90. / 180 * np.pi # interaxial angle between b-c
             beta = 90. / 180 * np.pi # lattice angle between a-c
             gamma = 90.383 / 180 * np.pi # lattice angle between a-b

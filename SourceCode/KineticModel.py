@@ -658,7 +658,7 @@ class neighbors(object):
     def generateLatticeDirections(self, cutoffDistKey, cutoff, base, prec, outdir):
         """ generate lattice directions and distances for neighboring atoms"""
         roundLattice = 0
-        printStack = 1
+        printStack = 0
         if cutoffDistKey == 'O:O':
             computePathway = 1
             bridgeCutoff = 2.75
@@ -723,13 +723,11 @@ class neighbors(object):
                                 debug = 0
                                 if debug:
 #                                     print np.round(centerSiteFractCoord, 3)
-#                                     import pdb; pdb.set_trace()
                                     if np.array_equal(np.round(centerSiteFractCoord / 2, 3), np.array([0.376, 0.299, 0.272])):
                                         print neighborSiteIndex
                                         print displacement / self.material.ANG2BOHR
                                 iNeighborList.append(neighborSiteIndex)
                 neighborList[centerSiteIndex] = np.asarray(iNeighborList)
-#         import pdb; pdb.set_trace()
         for iCell in range(numCells):
             neighborSiteFractCoords[(iCell * numCenterElements):((iCell + 1) * numCenterElements)] = centerSiteFractCoords + unitcellTranslationalCoords[iCell]
             
@@ -764,7 +762,7 @@ class neighbors(object):
                     iDisplacements.append(displacement)
                     debug = 0
                     if debug:
-                        debugDistList = [3.04725, 3.6123, 3.68451] #[2.85413, 2.86002, 3.00761, 3.02054]
+                        debugDistList = [2.99576] #[2.85413, 2.86002, 3.00761, 3.02054]
                         debugDist = np.round(displacement / self.material.ANG2BOHR, 5)
                         if debugDist in debugDistList:
                             print debugDist
@@ -788,7 +786,6 @@ class neighbors(object):
                                 bridgeSiteQuantumIndices = self.generateQuantumIndices(localSystemSize, bridgeSiteIndex)
                                 bridgeSiteType = self.material.elementTypes[bridgeSiteQuantumIndices[3]]
                         iBridgeList.append(bridgeSiteType)
-#             import pdb; pdb.set_trace()
             bridgeList[centerSiteIndex] = np.asarray(iBridgeList)
             displacementVectorList[centerSiteIndex] = np.asarray(iDisplacementVectors)
             latticeDirectionList[centerSiteIndex] = np.asarray(iLatticeDirectionList)
@@ -821,16 +818,22 @@ class neighbors(object):
                     else:
                         latticeDirectionList[iCenterElementIndex][index] = iCenterLDList[index] / gcd(gcd(nzAbsCenterLDList[0], nzAbsCenterLDList[1]), nzAbsCenterLDList[2])
             sortedLatticeDirectionList[iCenterElementIndex] = latticeDirectionList[iCenterElementIndex][displacementList[iCenterElementIndex].argsort()]
-
-        if printStack:
             np.set_printoptions(suppress=True)
-            printingArray = np.hstack((np.round(sortedLatticeDirectionList[0], 4), np.round(sortedDisplacementList[0], 5)[:, None]))
-            if cutoffDistKey == 'O:O':
-                printingArray = np.hstack((printingArray, sortedClassPairList[0][:, None]))
-            if computePathway:
-                printingArray = np.hstack((printingArray, sortedBridgeList[0][:, None]))
-            print printingArray
-            import pdb; pdb.set_trace()
+            # Check if hops from all sites are equivalent
+            if centerSiteClassList[iCenterElementIndex] == 1:
+                refIndex = 0
+            else:
+                refIndex = 2
+            print np.array_equal(np.round(abs(sortedLatticeDirectionList[refIndex]), 4), np.round(abs(sortedLatticeDirectionList[iCenterElementIndex]), 4))
+            if printStack:
+                if not np.array_equal(np.round(abs(sortedLatticeDirectionList[refIndex]), 4), np.round(abs(sortedLatticeDirectionList[iCenterElementIndex]), 4)):
+                    printingArray = np.hstack((np.round(sortedLatticeDirectionList[iCenterElementIndex], 4), np.round(sortedDisplacementList[iCenterElementIndex], 5)[:, None]))
+                    if cutoffDistKey == 'O:O':
+                        printingArray = np.hstack((printingArray, sortedClassPairList[iCenterElementIndex][:, None]))
+                    if computePathway:
+                        printingArray = np.hstack((printingArray, sortedBridgeList[iCenterElementIndex][:, None]))
+                    print printingArray
+        import pdb; pdb.set_trace()
         latticeDirectionListFileName = 'latticeDirectionList_' + centerElementType + '-' + neighborElementType + '_cutoff=' + str(cutoff)
         displacementListFileName = 'displacementList_' + centerElementType + '-' + neighborElementType + '_cutoff=' + str(cutoff)
         latticeDirectionListFilePath = outdir + directorySeparator + latticeDirectionListFileName + '.npy'
