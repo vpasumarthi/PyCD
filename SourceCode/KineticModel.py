@@ -659,13 +659,12 @@ class neighbors(object):
         """ generate lattice directions and distances for neighboring atoms"""
         roundLattice = 0
         printStack = 1
-        if cutoffDistKey == 'O:O':
-            computePathway = 1
+        printEquivalency = 0
+        avoidElementType = '' # 'O' for cutoffDistKey = 'O:O'
+        computePathway = 1
+        if computePathway:
             bridgeCutoff = 2.50
             bridgeCutoffDistLimits = [0, bridgeCutoff * self.material.ANG2BOHR]
-            avoidONeighbors = 1
-        else:
-            computePathway = 0
         
         [centerElementType, neighborElementType] = cutoffDistKey.split(self.material.elementTypeDelimiter)
         elementTypes = self.material.elementTypes[:]
@@ -689,18 +688,12 @@ class neighbors(object):
                     unitcellTranslationalCoords[index] = np.array([xOffset, yOffset, zOffset])
                     index += 1
         
-        try:
-            avoidONeighbors
-        except NameError:
-                pass
-        else:
-            if avoidONeighbors:
-                avoidElementType = 'O'
-                avoidElementTypeIndex = self.material.elementTypes.index(avoidElementType)
-                systemElementIndexOffsetArray = (np.repeat(np.arange(0, self.material.totalElementsPerUnitCell * numCells, self.material.totalElementsPerUnitCell), 
-                                                           self.material.nElementsPerUnitCell[centerSiteElementTypeIndex]))                
-                avoidElementIndices = (np.tile(self.material.nElementsPerUnitCell[:avoidElementTypeIndex].sum() + 
-                                               np.arange(0, self.material.nElementsPerUnitCell[avoidElementTypeIndex]), numCells) + systemElementIndexOffsetArray)
+        if avoidElementType:
+            avoidElementTypeIndex = self.material.elementTypes.index(avoidElementType)
+            systemElementIndexOffsetArray = (np.repeat(np.arange(0, self.material.totalElementsPerUnitCell * numCells, self.material.totalElementsPerUnitCell), 
+                                                       self.material.nElementsPerUnitCell[centerSiteElementTypeIndex]))                
+            avoidElementIndices = (np.tile(self.material.nElementsPerUnitCell[:avoidElementTypeIndex].sum() + 
+                                           np.arange(0, self.material.nElementsPerUnitCell[avoidElementTypeIndex]), numCells) + systemElementIndexOffsetArray)
         
         centerSiteIndices = self.material.nElementsPerUnitCell[:centerSiteElementTypeIndex].sum() + np.arange(numCenterElements)
         centerSiteFractCoords = fractionalUnitCellCoords[centerSiteIndices]
@@ -714,7 +707,7 @@ class neighbors(object):
             for centerSiteIndex, centerSiteFractCoord in enumerate(centerSiteFractCoords):
                 iNeighborList = []
                 for neighborSiteIndex, neighborSiteFractCoord in enumerate(supercellFractCoords):
-                    if avoidONeighbors:
+                    if avoidElementType:
                         if neighborSiteIndex not in avoidElementIndices:
                             latticeDirection = neighborSiteFractCoord - centerSiteFractCoord
                             neighborDisplacementVector = np.dot(latticeDirection[None, :], self.material.latticeMatrix)
@@ -806,8 +799,10 @@ class neighbors(object):
             sortedBridgeList = np.empty(numCenterElements, dtype=object)
         for iCenterElementIndex in range(numCenterElements):
             sortedDisplacementList[iCenterElementIndex] = displacementList[iCenterElementIndex][displacementList[iCenterElementIndex].argsort()]
-            sortedClassPairList[iCenterElementIndex] = classPairList[iCenterElementIndex][displacementList[iCenterElementIndex].argsort()]
-            sortedBridgeList[iCenterElementIndex] = bridgeList[iCenterElementIndex][displacementList[iCenterElementIndex].argsort()]
+            if cutoffDistKey == 'O:O':
+                sortedClassPairList[iCenterElementIndex] = classPairList[iCenterElementIndex][displacementList[iCenterElementIndex].argsort()]
+            if computePathway:
+                sortedBridgeList[iCenterElementIndex] = bridgeList[iCenterElementIndex][displacementList[iCenterElementIndex].argsort()]
             if roundLattice:
                 latticeDirectionList[iCenterElementIndex] = (latticeDirectionList[iCenterElementIndex] / base).astype(int)
                 iCenterLDList = latticeDirectionList[iCenterElementIndex]
@@ -824,12 +819,16 @@ class neighbors(object):
             sortedLatticeDirectionList[iCenterElementIndex] = latticeDirectionList[iCenterElementIndex][displacementList[iCenterElementIndex].argsort()]
             np.set_printoptions(suppress=True)
             # Check if hops from all sites are equivalent
-            if centerSiteClassList[iCenterElementIndex] == 1:
+            if cutoffDistKey == 'O:O':
+                if centerSiteClassList[iCenterElementIndex] == 1:
+                    refIndex = 0
+                else:
+                    refIndex = 2
+            elif cutoffDistKey == 'V:V':
                 refIndex = 0
-            else:
-                refIndex = 2
             # print equivalency of all O sites with their respective class reference site
-#             print np.array_equal(np.round(abs(sortedLatticeDirectionList[refIndex]), 4), np.round(abs(sortedLatticeDirectionList[iCenterElementIndex]), 4))
+            if printEquivalency:
+                print np.array_equal(np.round(abs(sortedLatticeDirectionList[refIndex]), 4), np.round(abs(sortedLatticeDirectionList[iCenterElementIndex]), 4))
             if printStack:
                 printingArray = np.hstack((np.round(sortedLatticeDirectionList[iCenterElementIndex], 4), np.round(sortedDisplacementList[iCenterElementIndex], 5)[:, None]))
                 if cutoffDistKey == 'O:O':
