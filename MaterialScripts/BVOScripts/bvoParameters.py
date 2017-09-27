@@ -29,8 +29,8 @@ class bvoParameters(object):
             a = 5.1893210411 # lattice constant along x-axis
             b = 5.1893210411 # lattice constant along y-axis
             c = 11.7714366913 # lattice constant along z-axis
-            self.neighborCutoffDist = {'V:V': [3.92335, 5.18932], 'O:O': [2.808, 2.815, 2.984, 3.002, 3.117, 11.771]}
-            self.neighborCutoffDistTol = {'V:V': [0.002, 0.002], 'O:O': [0.002, 0.002, 0.002, 0.002, 0.002, 0.002]}
+            self.neighborCutoffDist = {'V:V': [3.92335, 5.18932], 'O:O': [2.808, 2.815, 2.984, 3.002, 3.117]}
+            self.neighborCutoffDistTol = {'V:V': [0.002, 0.002], 'O:O': [0.002, 0.002, 0.002, 0.002, 0.002]}
             alpha = 90. / 180 * np.pi # interaxial angle between b-c
             beta = 90. / 180 * np.pi # lattice angle between a-c
             gamma = 90. / 180 * np.pi # lattice angle between a-b
@@ -51,8 +51,8 @@ class bvoParameters(object):
             a = 5.193500 # lattice constant along x-axis
             b = 5.089800 # lattice constant along y-axis
             c = 11.69720 # lattice constant along z-axis
-            self.neighborCutoffDist = {'V:V': [3.8242, 3.9656, 5.0898, 5.1935], 'O:O': [2.7945, 2.8077, 2.8296, 3.0028, 3.1179, 11.6972]}
-            self.neighborCutoffDistTol = {'V:V': [0.002, 0.002, 0.002, 0.002], 'O:O': [0.002, 0.002, 0.002, 0.002, 0.002, 0.002]}
+            self.neighborCutoffDist = {'V:V': [3.8242, 3.9656, 5.0898, 5.1935], 'O:O': [2.7945, 2.8077, 2.8296, 3.0028, 3.1179]}
+            self.neighborCutoffDistTol = {'V:V': [0.002, 0.002, 0.002, 0.002], 'O:O': [0.002, 0.002, 0.002, 0.002, 0.002]}
             alpha = 90. / 180 * np.pi # interaxial angle between b-c
             beta = 90. / 180 * np.pi # lattice angle between a-c
             gamma = 90.387 / 180 * np.pi # lattice angle between a-b
