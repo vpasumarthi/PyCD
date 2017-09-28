@@ -36,4 +36,4 @@ def test_min():
 
 def test_max():
     assert km.math.max(3, 4) == 4
-assert km.math.max(4, 4) == 4
+    assert km.math.max(4, 4) == 4

@@ -44,4 +44,4 @@ def max(arg1, arg2):
         maxValue = arg1
     else:
         maxValue = arg2 
-return maxValue
+    return maxValue
