@@ -3,7 +3,9 @@
 import os
 import platform
 import pickle
+
 import numpy as np
+
 from KineticModel import system, run
 
 directorySeparator = '\\' if platform.uname()[0] == 'Windows' else '/'

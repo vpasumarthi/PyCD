@@ -2,6 +2,7 @@
 
 import os
 import platform
+
 import numpy as np
 
 directorySeparator = '\\' if platform.uname()[0] == 'Windows' else '/'

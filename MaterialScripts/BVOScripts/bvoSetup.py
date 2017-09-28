@@ -2,7 +2,9 @@
 
 import os
 import platform
+
 import numpy as np
+
 from KineticModel import material, neighbors, system
 from bvoParameters import bvoParameters
 

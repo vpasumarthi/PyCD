@@ -3,6 +3,7 @@
 import os
 import platform
 import pickle
+
 from KineticModel import analysis
 
 directorySeparator = '\\' if platform.uname()[0] == 'Windows' else '/'

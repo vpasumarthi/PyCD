@@ -11,6 +11,7 @@ import itertools
 from copy import deepcopy
 import platform
 import pdb
+
 import numpy as np
 
 directorySeparator = '\\' if platform.uname()[0] == 'Windows' else '/'
