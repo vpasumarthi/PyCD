@@ -1128,9 +1128,10 @@ class system(object):
 
 
 class run(object):
-    """defines the subroutines for running Kinetic Monte Carlo and computing electrostatic 
-    interaction energies"""
-    def __init__(self, system, precomputedArray, T, nTraj, tFinal, timeInterval, gui):
+    """defines the subroutines for running Kinetic Monte Carlo and
+        computing electrostatic interaction energies"""
+    def __init__(self, system, precomputedArray, T, nTraj,
+                 tFinal, timeInterval, gui):
         """Returns the PBC condition of the system"""
         self.startTime = datetime.now()
 
@@ -1147,14 +1148,27 @@ class run(object):
         self.systemSize = self.system.systemSize
 
         # nElementsPerUnitCell
-        self.headStart_nElementsPerUnitCellCumSum = [self.material.nElementsPerUnitCell[:siteElementTypeIndex].sum() for siteElementTypeIndex in self.neighbors.elementTypeIndices]
-        
+        self.headStart_nElementsPerUnitCellCumSum = [
+                self.material.nElementsPerUnitCell[:siteElementTypeIndex].sum()
+                for siteElementTypeIndex in self.neighbors.elementTypeIndices]
+
         # speciesTypeList
-        self.speciesTypeList = [self.material.speciesTypes[index] for index, value in enumerate(self.system.speciesCount) for _ in range(value)]
-        self.speciesTypeIndexList = [index for index, value in enumerate(self.system.speciesCount) for _ in range(value)]
-        self.speciesChargeList = [self.material.speciesChargeList[index] for index in self.speciesTypeIndexList]
-        self.hopElementTypeList = [self.material.hopElementTypes[speciesType][0] for speciesType in self.speciesTypeList]
-        self.lenHopDistTypeList = [len(self.material.neighborCutoffDist[hopElementType]) for hopElementType in self.hopElementTypeList]
+        self.speciesTypeList = [
+                        self.material.speciesTypes[index]
+                        for index, value in enumerate(self.system.speciesCount)
+                        for _ in range(value)]
+        self.speciesTypeIndexList = [
+                        index
+                        for index, value in enumerate(self.system.speciesCount)
+                        for _ in range(value)]
+        self.speciesChargeList = [self.material.speciesChargeList[index]
+                                  for index in self.speciesTypeIndexList]
+        self.hopElementTypeList = [
+                                self.material.hopElementTypes[speciesType][0]
+                                for speciesType in self.speciesTypeList]
+        self.lenHopDistTypeList = [
+                        len(self.material.neighborCutoffDist[hopElementType])
+                        for hopElementType in self.hopElementTypeList]
         # number of kinetic processes
         self.nProc = 0
         self.nProcHopElementTypeList = []
@@ -1163,124 +1177,198 @@ class run(object):
         self.nProcSiteElementTypeIndexList = []
         self.nProcLambdaValueList = []
         self.nProcVABList = []
-        for hopElementTypeIndex, hopElementType in enumerate(self.hopElementTypeList):
-            centerElementType = hopElementType.split(self.material.elementTypeDelimiter)[0]
-            speciesTypeIndex = self.material.speciesTypes.index(self.material.elementTypeToSpeciesMap[centerElementType][0])
-            centerSiteElementTypeIndex = self.material.elementTypes.index(centerElementType)
-            for hopDistTypeIndex in range(self.lenHopDistTypeList[hopElementTypeIndex]):
+        for hopElementTypeIndex, hopElementType in enumerate(
+                                                    self.hopElementTypeList):
+            centerElementType = hopElementType.split(
+                                        self.material.elementTypeDelimiter)[0]
+            speciesTypeIndex = self.material.speciesTypes.index(
+                self.material.elementTypeToSpeciesMap[centerElementType][0])
+            centerSiteElementTypeIndex = self.material.elementTypes.index(
+                                                            centerElementType)
+            for hopDistTypeIndex in range(self.lenHopDistTypeList[
+                                                        hopElementTypeIndex]):
                 if self.system.speciesCount[speciesTypeIndex] != 0:
-                    numNeighbors = np.unique(self.system.hopNeighborList[hopElementType][hopDistTypeIndex].numNeighbors)
+                    numNeighbors = np.unique(self.system.hopNeighborList[
+                                hopElementType][hopDistTypeIndex].numNeighbors)
                     # TODO: What if it is not equal to 1
                     if len(numNeighbors) == 1:
-                        self.nProc += numNeighbors[0]# * self.system.speciesCount[speciesTypeIndex]
-                        self.nProcHopElementTypeList.extend([hopElementType] * numNeighbors[0])
-                        self.nProcHopDistTypeList.extend([hopDistTypeIndex] * numNeighbors[0])
-                        self.nProcSpeciesIndexList.extend([hopElementTypeIndex] * numNeighbors[0])
-                        self.nProcSiteElementTypeIndexList.extend([centerSiteElementTypeIndex] * numNeighbors[0])
-                        self.nProcLambdaValueList.extend([self.material.lambdaValues[hopElementType][hopDistTypeIndex]] * numNeighbors[0])
-                        self.nProcVABList.extend([self.material.VAB[hopElementType][hopDistTypeIndex]] * numNeighbors[0])
-        
+                        # * self.system.speciesCount[speciesTypeIndex]
+                        self.nProc += numNeighbors[0]
+                        self.nProcHopElementTypeList.extend([hopElementType]
+                                                            * numNeighbors[0])
+                        self.nProcHopDistTypeList.extend([hopDistTypeIndex]
+                                                         * numNeighbors[0])
+                        self.nProcSpeciesIndexList.extend([hopElementTypeIndex]
+                                                          * numNeighbors[0])
+                        self.nProcSiteElementTypeIndexList.extend(
+                                [centerSiteElementTypeIndex] * numNeighbors[0])
+                        self.nProcLambdaValueList.extend(
+                                [self.material.lambdaValues[hopElementType][
+                                                            hopDistTypeIndex]]
+                                * numNeighbors[0])
+                        self.nProcVABList.extend(
+                                        [self.material.VAB[hopElementType][
+                                                            hopDistTypeIndex]]
+                                        * numNeighbors[0])
+
         # system coordinates
         self.systemCoordinates = self.neighbors.bulkSites.cellCoordinates
-        
+
         # total number of species
         self.totalSpecies = self.system.speciesCount.sum()
-    
+
     def doKMCSteps(self, outdir, report=1, randomSeed=1):
         """Subroutine to run the KMC simulation by specified number of steps"""
-        assert outdir, 'Please provide the destination path where simulation output files needs to be saved'
-        
+        assert outdir, 'Please provide the destination path where \
+                        simulation output files needs to be saved'
+
         excess = 0
         energy = 1
-        unwrappedTrajFileName = outdir + directorySeparator + 'unwrappedTraj.dat'
+        unwrappedTrajFileName = (outdir
+                                 + directorySeparator
+                                 + 'unwrappedTraj.dat')
         open(unwrappedTrajFileName, 'w').close()
         if energy:
             energyTrajFileName = outdir + directorySeparator + 'energyTraj.dat'
             open(energyTrajFileName, 'w').close()
-        
+
         if excess:
-            wrappedTrajFileName = outdir + directorySeparator + 'wrappedTraj.dat'
+            wrappedTrajFileName = (outdir
+                                   + directorySeparator
+                                   + 'wrappedTraj.dat')
             delG0TrajFileName = outdir + directorySeparator + 'delG0Traj.dat'
-            potentialTrajFileName = outdir + directorySeparator + 'potentialTraj.dat'
+            potentialTrajFileName = (outdir
+                                     + directorySeparator
+                                     + 'potentialTraj.dat')
             open(wrappedTrajFileName, 'w').close()
             open(delG0TrajFileName, 'w').close()
             open(potentialTrajFileName, 'w').close()
-        
+
         rnd.seed(randomSeed)
         nTraj = self.nTraj
         numPathStepsPerTraj = int(self.tFinal / self.timeInterval) + 1
-        unwrappedPositionArray = np.zeros(( numPathStepsPerTraj, self.totalSpecies * 3))
+        unwrappedPositionArray = np.zeros((numPathStepsPerTraj,
+                                           self.totalSpecies * 3))
         if energy:
-            energyArray = np.zeros(( numPathStepsPerTraj ))
+            energyArray = np.zeros(numPathStepsPerTraj)
 
         if excess:
-            wrappedPositionArray = np.zeros(( numPathStepsPerTraj, self.totalSpecies * 3))
-            delG0Array = np.zeros(( self.kmcSteps ))
-            potentialArray = np.zeros(( numPathStepsPerTraj, self.totalSpecies))
+            wrappedPositionArray = np.zeros((numPathStepsPerTraj,
+                                             self.totalSpecies * 3))
+            delG0Array = np.zeros(self.kmcSteps)
+            potentialArray = np.zeros((numPathStepsPerTraj,
+                                       self.totalSpecies))
         kList = np.zeros(self.nProc)
         neighborSiteSystemElementIndexList = np.zeros(self.nProc, dtype=int)
         rowIndexList = np.zeros(self.nProc, dtype=int)
         neighborIndexList = np.zeros(self.nProc, dtype=int)
-        
-        ewaldNeut = - np.pi * (self.system.systemCharge**2) / (2 * self.system.systemVolume * self.system.alpha)
+
+        ewaldNeut = - (np.pi
+                       * (self.system.systemCharge**2)
+                       / (2 * self.system.systemVolume * self.system.alpha))
         precomputedArray = self.precomputedArray
         for _ in range(nTraj):
-            currentStateOccupancy = self.system.generateRandomOccupancy(self.system.speciesCount)
-            currentStateChargeConfig = self.system.chargeConfig(currentStateOccupancy)
-            currentStateChargeConfigProd = np.multiply(currentStateChargeConfig.transpose(), currentStateChargeConfig)
-            ewaldSelf = - np.sqrt(self.system.alpha / np.pi) * np.einsum('ii', currentStateChargeConfigProd)
-            currentStateEnergy = ewaldNeut + ewaldSelf + np.sum(np.multiply(currentStateChargeConfigProd, precomputedArray))
+            currentStateOccupancy = self.system.generateRandomOccupancy(
+                                                    self.system.speciesCount)
+            currentStateChargeConfig = self.system.chargeConfig(
+                                                        currentStateOccupancy)
+            currentStateChargeConfigProd = np.multiply(
+                                        currentStateChargeConfig.transpose(),
+                                        currentStateChargeConfig)
+            ewaldSelf = - (np.sqrt(self.system.alpha / np.pi)
+                           * np.einsum('ii', currentStateChargeConfigProd))
+            currentStateEnergy = (ewaldNeut + ewaldSelf
+                                  + np.sum(np.multiply(
+                                      currentStateChargeConfigProd,
+                                      precomputedArray)))
             startPathIndex = 1
             endPathIndex = startPathIndex + 1
             if energy:
                 energyArray[0] = currentStateEnergy
             # TODO: How to deal excess flag?
-            #if excess:
-                # TODO: Avoid using flatten
-            #    wrappedPositionArray[pathIndex] = self.systemCoordinates[currentStateOccupancy].flatten()
-            speciesDisplacementVectorList = np.zeros((1, self.totalSpecies * 3))
+            # if excess:
+            #     # TODO: Avoid using flatten
+            #     wrappedPositionArray[pathIndex] = self.systemCoordinates[
+            #                                 currentStateOccupancy].flatten()
+            speciesDisplacementVectorList = np.zeros((1,
+                                                      self.totalSpecies * 3))
             simTime = 0
             breakFlag = 0
             while True:
                 iProc = 0
                 delG0List = []
-                for speciesIndex, speciesSiteSystemElementIndex in enumerate(currentStateOccupancy):
+                for speciesIndex, speciesSiteSystemElementIndex in enumerate(
+                                                        currentStateOccupancy):
                     # TODO: Avoid re-defining speciesIndex
                     speciesIndex = self.nProcSpeciesIndexList[iProc]
                     hopElementType = self.nProcHopElementTypeList[iProc]
-                    siteElementTypeIndex = self.nProcSiteElementTypeIndexList[iProc]
-                    rowIndex = (speciesSiteSystemElementIndex / self.material.totalElementsPerUnitCell * self.material.nElementsPerUnitCell[siteElementTypeIndex] + 
-                                speciesSiteSystemElementIndex % self.material.totalElementsPerUnitCell - self.headStart_nElementsPerUnitCellCumSum[siteElementTypeIndex])
-                    for hopDistType in range(self.lenHopDistTypeList[speciesIndex]):
-                        localNeighborSiteSystemElementIndexList = self.system.hopNeighborList[hopElementType][hopDistType].neighborSystemElementIndices[rowIndex]
-                        for neighborIndex, neighborSiteSystemElementIndex in enumerate(localNeighborSiteSystemElementIndexList):
+                    siteElementTypeIndex = self.nProcSiteElementTypeIndexList[
+                                                                        iProc]
+                    rowIndex = (speciesSiteSystemElementIndex
+                                / self.material.totalElementsPerUnitCell
+                                * self.material.nElementsPerUnitCell[
+                                                        siteElementTypeIndex]
+                                + speciesSiteSystemElementIndex
+                                % self.material.totalElementsPerUnitCell
+                                - self.headStart_nElementsPerUnitCellCumSum[
+                                                        siteElementTypeIndex])
+                    for hopDistType in range(self.lenHopDistTypeList[
+                                                                speciesIndex]):
+                        localNeighborSiteSystemElementIndexList = (
+                                self.system.hopNeighborList[hopElementType][
+                                    hopDistType].neighborSystemElementIndices[
+                                                                    rowIndex])
+                        for neighborIndex, neighborSiteSystemElementIndex in \
+                                enumerate(
+                                    localNeighborSiteSystemElementIndexList):
                             # TODO: Introduce If condition
-                            # if neighborSystemElementIndex not in currentStateOccupancy: commit 898baa8
-                            neighborSiteSystemElementIndexList[iProc] = neighborSiteSystemElementIndex
+                            # if neighborSystemElementIndex not in
+                            # currentStateOccupancy: commit 898baa8
+                            neighborSiteSystemElementIndexList[iProc] = \
+                                neighborSiteSystemElementIndex
                             rowIndexList[iProc] = rowIndex
                             neighborIndexList[iProc] = neighborIndex
-                            # TODO: Print out a prompt about the assumption; detailed comment here. <Using species charge to compute change in energy> May be print log report
-                            delG0 = (self.speciesChargeList[speciesIndex] 
-                                     * (2 * np.dot(currentStateChargeConfig[:, 0], precomputedArray[neighborSiteSystemElementIndex, :] - precomputedArray[speciesSiteSystemElementIndex, :]) 
-                                        + self.speciesChargeList[speciesIndex] * (precomputedArray[speciesSiteSystemElementIndex, speciesSiteSystemElementIndex] 
-                                                                                  + precomputedArray[neighborSiteSystemElementIndex, neighborSiteSystemElementIndex] 
-                                                                                  - 2 * precomputedArray[speciesSiteSystemElementIndex, neighborSiteSystemElementIndex])))
+                            # TODO: Print out a prompt about the assumption;
+                            # detailed comment here. <Using species charge to
+                            # compute change in energy> May be print log report
+                            delG0 = (
+                                self.speciesChargeList[speciesIndex]
+                                * (2
+                                   * np.dot(currentStateChargeConfig[:, 0],
+                                            (precomputedArray[
+                                                neighborSiteSystemElementIndex,
+                                                :]
+                                             - precomputedArray[
+                                                 speciesSiteSystemElementIndex,
+                                                 :]))
+                                   + self.speciesChargeList[speciesIndex]
+                                   * (precomputedArray[
+                                       speciesSiteSystemElementIndex,
+                                       speciesSiteSystemElementIndex]
+                                      + precomputedArray[
+                                          neighborSiteSystemElementIndex,
+                                          neighborSiteSystemElementIndex]
+                                      - 2 * precomputedArray[
+                                          speciesSiteSystemElementIndex,
+                                          neighborSiteSystemElementIndex])))
                             delG0List.append(delG0)
                             lambdaValue = self.nProcLambdaValueList[iProc]
                             VAB = self.nProcVABList[iProc]
-                            delGs = ((lambdaValue + delG0) ** 2 / (4 * lambdaValue)) - VAB
-                            kList[iProc] = self.material.vn * np.exp(-delGs / self.T)
+                            delGs = (((lambdaValue + delG0) ** 2
+                                      / (4 * lambdaValue)) - VAB)
+                            kList[iProc] = self.material.vn * np.exp(-delGs
+                                                                     / self.T)
                             iProc += 1
-                            
+
                 kTotal = sum(kList)
                 kCumSum = (kList / kTotal).cumsum()
                 rand1 = rnd.random()
                 procIndex = np.where(kCumSum > rand1)[0][0]
                 rand2 = rnd.random()
                 simTime -= np.log(rand2) / kTotal
-                
+
                 # TODO: Address pre-defining excess data arrays
-                #if excess:
+                # if excess:
                 #    delG0Array[step] = delG0List[procIndex]
                 speciesIndex = self.nProcSpeciesIndexList[procIndex]
                 hopElementType = self.nProcHopElementTypeList[procIndex]
@@ -1288,28 +1376,41 @@ class run(object):
                 rowIndex = rowIndexList[procIndex]
                 neighborIndex = neighborIndexList[procIndex]
                 oldSiteSystemElementIndex = currentStateOccupancy[speciesIndex]
-                newSiteSystemElementIndex = neighborSiteSystemElementIndexList[procIndex]
+                newSiteSystemElementIndex = neighborSiteSystemElementIndexList[
+                                                                    procIndex]
                 currentStateOccupancy[speciesIndex] = newSiteSystemElementIndex
-                speciesDisplacementVectorList[0, speciesIndex * 3:(speciesIndex + 1) * 3] += self.system.hopNeighborList[hopElementType][hopDistType].displacementVectorList[rowIndex][neighborIndex]
-                
+                speciesDisplacementVectorList[
+                    0, speciesIndex * 3:(speciesIndex + 1) * 3] \
+                    += self.system.hopNeighborList[
+                        hopElementType][hopDistType].displacementVectorList[
+                                                    rowIndex][neighborIndex]
+
                 currentStateEnergy += delG0List[procIndex]
-                currentStateChargeConfig[oldSiteSystemElementIndex] -= self.speciesChargeList[speciesIndex]
-                currentStateChargeConfig[newSiteSystemElementIndex] += self.speciesChargeList[speciesIndex]
+                currentStateChargeConfig[oldSiteSystemElementIndex] \
+                    -= self.speciesChargeList[speciesIndex]
+                currentStateChargeConfig[newSiteSystemElementIndex] \
+                    += self.speciesChargeList[speciesIndex]
                 endPathIndex = int(simTime / self.timeInterval)
                 if endPathIndex >= startPathIndex + 1:
                     if endPathIndex >= numPathStepsPerTraj:
                         endPathIndex = numPathStepsPerTraj
                         breakFlag = 1
-                    unwrappedPositionArray[startPathIndex:endPathIndex] = unwrappedPositionArray[startPathIndex-1] + speciesDisplacementVectorList
-                    energyArray[startPathIndex:endPathIndex] = currentStateEnergy 
-                    speciesDisplacementVectorList = np.zeros((1, self.totalSpecies * 3))
+                    unwrappedPositionArray[startPathIndex:endPathIndex] \
+                        = (unwrappedPositionArray[startPathIndex-1]
+                           + speciesDisplacementVectorList)
+                    energyArray[startPathIndex:endPathIndex] \
+                        = currentStateEnergy
+                    speciesDisplacementVectorList \
+                        = np.zeros((1, self.totalSpecies * 3))
                     startPathIndex = endPathIndex
                     if breakFlag:
                         break
                     # TODO: Address excess flag
-                    #if excess:
-                        # TODO: Avoid using flatten
-                    #    wrappedPositionArray[pathIndex] = self.systemCoordinates[currentStateOccupancy].flatten()
+                    # if excess:
+                    #     # TODO: Avoid using flatten
+                    #     wrappedPositionArray[pathIndex] \
+                    #         = self.systemCoordinates[
+                    #                         currentStateOccupancy].flatten()
 
             with open(unwrappedTrajFileName, 'a') as unwrappedTrajFile:
                 np.savetxt(unwrappedTrajFile, unwrappedPositionArray)
@@ -1326,22 +1427,29 @@ class run(object):
             self.generateSimulationLogReport(outdir)
 
     def generateSimulationLogReport(self, outdir):
-        """Generates an log report of the simulation and outputs to the working directory"""
+        """Generates an log report of the simulation and
+            outputs to the working directory"""
         simulationLogFileName = 'Run.log'
-        simulationLogFilePath = outdir + directorySeparator + simulationLogFileName
+        simulationLogFilePath = (outdir
+                                 + directorySeparator
+                                 + simulationLogFileName)
         report = open(simulationLogFilePath, 'w')
         endTime = datetime.now()
         timeElapsed = endTime - self.startTime
-        report.write('Time elapsed: ' + ('%2d days, ' % timeElapsed.days if timeElapsed.days else '') +
-                     ('%2d hours' % ((timeElapsed.seconds // 3600) % 24)) + 
-                     (', %2d minutes' % ((timeElapsed.seconds // 60) % 60)) + 
-                     (', %2d seconds' % (timeElapsed.seconds % 60)))
+        report.write('Time elapsed: '
+                     + ('%2d days, '
+                        % timeElapsed.days if timeElapsed.days else '')
+                     + ('%2d hours' % ((timeElapsed.seconds // 3600) % 24))
+                     + (', %2d minutes' % ((timeElapsed.seconds // 60) % 60))
+                     + (', %2d seconds' % (timeElapsed.seconds % 60)))
         report.close()
-    
+
+
 class analysis(object):
     """Post-simulation analysis methods"""
-    def __init__(self, material, nDim, systemSize, speciesCount, nTraj, tFinal, 
-                 timeInterval, msdTFinal, trimLength, reprTime = 'ns', reprDist = 'Angstrom'):
+    def __init__(self, material, nDim, systemSize, speciesCount, nTraj, tFinal,
+                 timeInterval, msdTFinal, trimLength, reprTime='ns',
+                 reprDist='Angstrom'):
         """"""
         self.startTime = datetime.now()
         self.material = material
@@ -1356,95 +1464,136 @@ class analysis(object):
         self.numPathStepsPerTraj = int(self.tFinal / self.timeInterval) + 1
         self.reprTime = reprTime
         self.reprDist = reprDist
-        
+
         if reprTime == 'ns':
-            self.timeConversion = self.material.SEC2NS / self.material.SEC2AUTIME
+            self.timeConversion = (self.material.SEC2NS
+                                   / self.material.SEC2AUTIME)
         elif reprTime == 'ps':
-            self.timeConversion = self.material.SEC2PS / self.material.SEC2AUTIME
+            self.timeConversion = (self.material.SEC2PS
+                                   / self.material.SEC2AUTIME)
         elif reprTime == 'fs':
-            self.timeConversion = self.material.SEC2FS / self.material.SEC2AUTIME
+            self.timeConversion = (self.material.SEC2FS
+                                   / self.material.SEC2AUTIME)
         elif reprTime == 's':
             self.timeConversion = 1E+00 / self.material.SEC2AUTIME
-        
+
         if reprDist == 'm':
             self.distConversion = self.material.ANG / self.material.ANG2BOHR
         elif reprDist == 'um':
             self.distConversion = self.material.ANG2UM / self.material.ANG2BOHR
         elif reprDist == 'angstrom':
             self.distConversion = 1E+00 / self.material.ANG2BOHR
-        
+
         self.msdTFinal = msdTFinal / self.timeConversion
         self.numMSDStepsPerTraj = int(self.msdTFinal / self.timeInterval) + 1
-        
+
     def computeMSD(self, outdir, report=1):
         """Returns the squared displacement of the trajectories"""
-        assert outdir, 'Please provide the destination path where MSD output files needs to be saved'
-        positionArray = np.loadtxt(outdir + directorySeparator + 'unwrappedTraj.dat')
+        assert outdir, 'Please provide the destination path where \
+                                MSD output files needs to be saved'
+        positionArray = np.loadtxt(outdir
+                                   + directorySeparator
+                                   + 'unwrappedTraj.dat')
         numTrajRecorded = int(len(positionArray) / self.numPathStepsPerTraj)
-        positionArray = positionArray[:numTrajRecorded * self.numPathStepsPerTraj + 1].reshape((numTrajRecorded * self.numPathStepsPerTraj, self.totalSpecies, 3)) * self.distConversion
-        sdArray = np.zeros((numTrajRecorded, self.numMSDStepsPerTraj, self.totalSpecies))
+        positionArray = (
+            positionArray[:numTrajRecorded
+                          * self.numPathStepsPerTraj + 1].reshape((
+                                  numTrajRecorded * self.numPathStepsPerTraj,
+                                  self.totalSpecies, 3))
+            * self.distConversion)
+        sdArray = np.zeros((numTrajRecorded,
+                            self.numMSDStepsPerTraj,
+                            self.totalSpecies))
         for trajIndex in range(numTrajRecorded):
             headStart = trajIndex * self.numPathStepsPerTraj
             for timestep in range(1, self.numMSDStepsPerTraj):
                 numDisp = self.numPathStepsPerTraj - timestep
                 addOn = np.arange(numDisp)
-                posDiff = positionArray[headStart + timestep + addOn] - positionArray[headStart + addOn]
-                sdArray[trajIndex, timestep, :] = np.mean(np.einsum('ijk,ijk->ij', posDiff, posDiff), axis=0)
-        speciesAvgSDArray = np.zeros((numTrajRecorded, self.numMSDStepsPerTraj, self.material.numSpeciesTypes - list(self.speciesCount).count(0)))
+                posDiff = (positionArray[headStart + timestep + addOn]
+                           - positionArray[headStart + addOn])
+                sdArray[trajIndex, timestep, :] = np.mean(
+                            np.einsum('ijk,ijk->ij', posDiff, posDiff), axis=0)
+        speciesAvgSDArray = np.zeros((numTrajRecorded,
+                                      self.numMSDStepsPerTraj,
+                                      self.material.numSpeciesTypes
+                                      - list(self.speciesCount).count(0)))
         startIndex = 0
         numNonExistentSpecies = 0
         nonExistentSpeciesIndices = []
         for speciesTypeIndex in range(self.material.numSpeciesTypes):
             if self.speciesCount[speciesTypeIndex] != 0:
                 endIndex = startIndex + self.speciesCount[speciesTypeIndex]
-                speciesAvgSDArray[:, :, speciesTypeIndex - numNonExistentSpecies] = np.mean(sdArray[:, :, startIndex:endIndex], axis=2)
+                speciesAvgSDArray[:, :, (speciesTypeIndex
+                                         - numNonExistentSpecies)] \
+                    = np.mean(sdArray[:, :, startIndex:endIndex], axis=2)
                 startIndex = endIndex
             else:
                 numNonExistentSpecies += 1
                 nonExistentSpeciesIndices.append(speciesTypeIndex)
-        
-        msdData = np.zeros((self.numMSDStepsPerTraj, self.material.numSpeciesTypes + 1 - list(self.speciesCount).count(0)))
-        timeArray = np.arange(self.numMSDStepsPerTraj) * self.timeInterval * self.timeConversion
+
+        msdData = np.zeros((self.numMSDStepsPerTraj,
+                            (self.material.numSpeciesTypes
+                             + 1 - list(self.speciesCount).count(0))))
+        timeArray = (np.arange(self.numMSDStepsPerTraj)
+                     * self.timeInterval
+                     * self.timeConversion)
         msdData[:, 0] = timeArray
         msdData[:, 1:] = np.mean(speciesAvgSDArray, axis=0)
         stdData = np.std(speciesAvgSDArray, axis=0)
-        fileName = (('%1.2E' % (self.msdTFinal * self.timeConversion)) + str(self.reprTime) + 
-                    (',nTraj: %1.2E' % numTrajRecorded if numTrajRecorded != self.nTraj else ''))
+        fileName = (('%1.2E' % (self.msdTFinal * self.timeConversion))
+                    + str(self.reprTime)
+                    + (',nTraj: %1.2E' % numTrajRecorded
+                        if numTrajRecorded != self.nTraj else ''))
         msdFileName = 'MSD_Data_' + fileName + '.npy'
         msdFilePath = outdir + directorySeparator + msdFileName
-        speciesTypes = [speciesType for index, speciesType in enumerate(self.material.speciesTypes) if index not in nonExistentSpeciesIndices]
+        speciesTypes = [
+                speciesType
+                for index, speciesType in enumerate(self.material.speciesTypes)
+                if index not in nonExistentSpeciesIndices]
         np.save(msdFilePath, msdData)
-        
+
         if report:
-            self.generateMSDAnalysisLogReport(msdData, speciesTypes, fileName, outdir)
-        
-        returnMSDData = returnValues(msdData = msdData,
-                                     stdData = stdData,
-                                     speciesTypes = speciesTypes,
-                                     fileName = fileName)
+            self.generateMSDAnalysisLogReport(msdData, speciesTypes,
+                                              fileName, outdir)
+
+        returnMSDData = returnValues(msdData=msdData,
+                                     stdData=stdData,
+                                     speciesTypes=speciesTypes,
+                                     fileName=fileName)
         return returnMSDData
 
-    def generateMSDAnalysisLogReport(self, msdData, speciesTypes, fileName, outdir):
-        """Generates an log report of the MSD Analysis and outputs to the working directory"""
-        msdAnalysisLogFileName = 'MSD_Analysis' + ('_' if fileName else '') + fileName + '.log'
+    def generateMSDAnalysisLogReport(self, msdData, speciesTypes,
+                                     fileName, outdir):
+        """Generates an log report of the MSD Analysis and
+            outputs to the working directory"""
+        msdAnalysisLogFileName = ('MSD_Analysis' + ('_' if fileName else '')
+                                  + fileName + '.log')
         msdLogFilePath = outdir + directorySeparator + msdAnalysisLogFileName
         report = open(msdLogFilePath, 'w')
         endTime = datetime.now()
         timeElapsed = endTime - self.startTime
         from scipy.stats import linregress
         for speciesIndex, speciesType in enumerate(speciesTypes):
-            slope, _, _, _, _ = linregress(msdData[self.trimLength:-self.trimLength,0], msdData[self.trimLength:-self.trimLength,speciesIndex + 1])
-            speciesDiff = slope * self.material.ANG2UM**2 * self.material.SEC2NS / (2 * self.nDim)
-            report.write('Estimated value of {:s} diffusivity is: {:4.3f} um2/s\n'.format(speciesType, speciesDiff))
-        report.write('Time elapsed: ' + ('%2d days, ' % timeElapsed.days if timeElapsed.days else '') +
-                     ('%2d hours' % ((timeElapsed.seconds // 3600) % 24)) + 
-                     (', %2d minutes' % ((timeElapsed.seconds // 60) % 60)) + 
-                     (', %2d seconds' % (timeElapsed.seconds % 60)))
+            slope, _, _, _, _ = linregress(
+                msdData[self.trimLength:-self.trimLength, 0],
+                msdData[self.trimLength:-self.trimLength, speciesIndex + 1])
+            speciesDiff = (slope * self.material.ANG2UM**2
+                           * self.material.SEC2NS / (2 * self.nDim))
+            report.write('Estimated value of {:s} diffusivity is: \
+                            {:4.3f} um2/s\n'.format(speciesType, speciesDiff))
+        report.write('Time elapsed: '
+                     + ('%2d days, '
+                        % timeElapsed.days if timeElapsed.days else '')
+                     + ('%2d hours' % ((timeElapsed.seconds // 3600) % 24))
+                     + (', %2d minutes' % ((timeElapsed.seconds // 60) % 60))
+                     + (', %2d seconds' % (timeElapsed.seconds % 60)))
         report.close()
 
-    def generateMSDPlot(self, msdData, stdData, displayErrorBars, speciesTypes, fileName, outdir):
+    def generateMSDPlot(self, msdData, stdData, displayErrorBars,
+                        speciesTypes, fileName, outdir):
         """Returns a line plot of the MSD data"""
-        assert outdir, 'Please provide the destination path where MSD Plot files needs to be saved'
+        assert outdir, 'Please provide the destination path \
+                            where MSD Plot files needs to be saved'
         import matplotlib
         matplotlib.use('Agg')
         import matplotlib.pyplot as plt
@@ -1455,83 +1604,111 @@ class analysis(object):
         from scipy.stats import linregress
         for speciesIndex, speciesType in enumerate(speciesTypes):
             if displayErrorBars:
-                ax.errorbar(msdData[:,0], msdData[:,speciesIndex + 1], yerr=stdData[:,speciesIndex], fmt='o', capsize=3, color='blue', markerfacecolor='blue', markeredgecolor='black', label=speciesType)
+                ax.errorbar(msdData[:, 0], msdData[:, speciesIndex + 1],
+                            yerr=stdData[:, speciesIndex], fmt='o', capsize=3,
+                            color='blue', markerfacecolor='blue',
+                            markeredgecolor='black', label=speciesType)
             else:
-                ax.plot(msdData[:,0], msdData[:,speciesIndex + 1], 'o', markerfacecolor='blue', markeredgecolor='black', label=speciesType)
-            slope, intercept, rValue, _, _ = linregress(msdData[self.trimLength:-self.trimLength,0], msdData[self.trimLength:-self.trimLength,speciesIndex + 1])
-            speciesDiff = slope * self.material.ANG2UM**2 * self.material.SEC2NS / (2 * self.nDim)
-            ax.add_artist(AnchoredText('Est. $D_{{%s}}$ = %4.3f  ${{\mu}}m^2/s$; $r^2$=%4.3e' % (speciesType, speciesDiff, rValue**2), loc=4))
-            ax.plot(msdData[self.trimLength:-self.trimLength,0], intercept + slope * msdData[self.trimLength:-self.trimLength,0], 'r', label=speciesType+'-fitted')
+                ax.plot(msdData[:, 0], msdData[:, speciesIndex + 1], 'o',
+                        markerfacecolor='blue', markeredgecolor='black',
+                        label=speciesType)
+            slope, intercept, rValue, _, _ = linregress(
+                msdData[self.trimLength:-self.trimLength, 0],
+                msdData[self.trimLength:-self.trimLength, speciesIndex + 1])
+            speciesDiff = (slope * self.material.ANG2UM**2
+                           * self.material.SEC2NS / (2 * self.nDim))
+            ax.add_artist(AnchoredText('Est. $D_{{%s}}$ = %4.3f'
+                                       % (speciesType, speciesDiff)
+                                       + '  ${{\mu}}m^2/s$; $r^2$=%4.3e'
+                                       % (rValue**2),
+                                       loc=4))
+            ax.plot(msdData[self.trimLength:-self.trimLength, 0], intercept
+                    + slope * msdData[self.trimLength:-self.trimLength, 0],
+                    'r', label=speciesType+'-fitted')
         ax.set_xlabel('Time (' + self.reprTime + ')')
-        ax.set_ylabel('MSD (' + ('$\AA^2$' if self.reprDist=='angstrom' else (self.reprDist + '^2')) + ')')
+        ax.set_ylabel('MSD ('
+                      + ('$\AA^2$'
+                         if self.reprDist == 'angstrom'
+                         else (self.reprDist + '^2')) + ')')
         figureTitle = 'MSD_' + fileName
-        ax.set_title('\n'.join(wrap(figureTitle,60)))
+        ax.set_title('\n'.join(wrap(figureTitle, 60)))
         plt.legend()
-        plt.show() # Temp change
-        figureName = 'MSD_Plot_' + fileName + '_Trim=' + str(self.trimLength) + '.jpg'
+        plt.show()  # Temp change
+        figureName = ('MSD_Plot_' + fileName + '_Trim='
+                      + str(self.trimLength) + '.jpg')
         figurePath = outdir + directorySeparator + figureName
         plt.savefig(figurePath)
 
-    '''
     # TODO: Finish writing the method soon.
-    def displayCollectiveMSDPlot(self, msdData, speciesTypes, fileName, outdir=None):
-        """Returns a line plot of the MSD data"""
-        import matplotlib
-        matplotlib.use('Agg')
-        import matplotlib.pyplot as plt
-        from textwrap import wrap
-        plt.figure()
-        figNum = 0
-        numRow = 3
-        numCol = 2
-        for iPlot in range(numPlots):
-            #msdData = 
-            for speciesIndex, speciesType in enumerate(speciesTypes):
-                plt.subplot(numRow, numCol, figNum)
-                plt.plot(msdData[:,0], msdData[:,speciesIndex + 1], label=speciesType)
-                figNum += 1
-        plt.xlabel('Time (' + self.reprTime + ')')
-        plt.ylabel('MSD (' + self.reprDist + '**2)')
-        figureTitle = 'MSD_' + fileName
-        plt.title('\n'.join(wrap(figureTitle,60)))
-        plt.legend()
-        if outdir:
-            figureName = 'MSD_Plot_' + fileName + '.jpg'
-            figurePath = outdir + directorySeparator + figureName
-            plt.savefig(figurePath)
-    '''
-    
+    # def displayCollectiveMSDPlot(self, msdData, speciesTypes,
+    #                              fileName, outdir=None):
+    #     """Returns a line plot of the MSD data"""
+    #     import matplotlib
+    #     matplotlib.use('Agg')
+    #     import matplotlib.pyplot as plt
+    #     from textwrap import wrap
+    #     plt.figure()
+    #     figNum = 0
+    #     numRow = 3
+    #     numCol = 2
+    #     for iPlot in range(numPlots):
+    #         for speciesIndex, speciesType in enumerate(speciesTypes):
+    #             plt.subplot(numRow, numCol, figNum)
+    #             plt.plot(msdData[:, 0], msdData[:, speciesIndex + 1],
+    #                      label=speciesType)
+    #             figNum += 1
+    #     plt.xlabel('Time (' + self.reprTime + ')')
+    #     plt.ylabel('MSD (' + self.reprDist + '**2)')
+    #     figureTitle = 'MSD_' + fileName
+    #     plt.title('\n'.join(wrap(figureTitle, 60)))
+    #     plt.legend()
+    #     if outdir:
+    #         figureName = 'MSD_Plot_' + fileName + '.jpg'
+    #         figurePath = outdir + directorySeparator + figureName
+    #         plt.savefig(figurePath)
+
     def meanDistance(self, outdir, mean=1, plot=1, report=1):
         """
-        Add combType as one of the inputs 
-        combType = 0: like-like; 1: like-unlike; 2: both
+        Add combType as one of the inputs
+        combType = 0  # combType = 0: like-like; 1: like-unlike; 2: both
         if combType == 0:
-            numComb = sum([self.speciesCount[index] * (self.speciesCount[index] - 1) for index in len(self.speciesCount)])
+            numComb = sum(
+                [self.speciesCount[index] * (self.speciesCount[index] - 1)
+                 for index in len(self.speciesCount)])
         elif combType == 1:
             numComb = np.prod(self.speciesCount)
         elif combType == 2:
-            numComb = np.prod(self.speciesCount) + sum([self.speciesCount[index] * (self.speciesCount[index] - 1) for index in len(self.speciesCount)])
+            numComb = (np.prod(self.speciesCount)
+                       + sum([self.speciesCount[index]
+                              * (self.speciesCount[index] - 1)
+                              for index in len(self.speciesCount)]))
         """
-        positionArray = self.trajectoryData.wrappedPositionArray * self.distConversion
+        positionArray = (self.trajectoryData.wrappedPositionArray
+                         * self.distConversion)
         numPathStepsPerTraj = int(self.kmcSteps / self.stepInterval) + 1
         # TODO: Currently assuming only electrons exist and coding accordingly.
         # Need to change according to combType
-        pbc = [1, 1, 1] # change to generic
-        nElectrons = self.speciesCount[0] # change to generic
+        pbc = [1, 1, 1]  # change to generic
+        nElectrons = self.speciesCount[0]  # change to generic
         xRange = range(-1, 2) if pbc[0] == 1 else [0]
         yRange = range(-1, 2) if pbc[1] == 1 else [0]
         zRange = range(-1, 2) if pbc[2] == 1 else [0]
-        unitcellTranslationalCoords = np.zeros((3**sum(pbc), 3)) # Initialization
+        # Initialization
+        unitcellTranslationalCoords = np.zeros((3**sum(pbc), 3))
         index = 0
         for xOffset in xRange:
             for yOffset in yRange:
                 for zOffset in zRange:
-                    unitcellTranslationalCoords[index] = np.dot(np.multiply(np.array([xOffset, yOffset, zOffset]), self.systemSize), (self.material.latticeMatrix * self.distConversion))
+                    unitcellTranslationalCoords[index] = np.dot(
+                        np.multiply(np.array([xOffset, yOffset, zOffset]),
+                                    self.systemSize),
+                        (self.material.latticeMatrix * self.distConversion))
                     index += 1
         if mean:
             meanDistance = np.zeros((self.nTraj, numPathStepsPerTraj))
         else:
-            interDistanceArray = np.zeros((self.nTraj, numPathStepsPerTraj, nElectrons * (nElectrons - 1) / 2))
+            interDistanceArray = np.zeros((self.nTraj, numPathStepsPerTraj,
+                                           nElectrons * (nElectrons - 1) / 2))
         interDistanceList = np.zeros(nElectrons * (nElectrons - 1) / 2)
         for trajIndex in range(self.nTraj):
             headStart = trajIndex * numPathStepsPerTraj
@@ -1539,9 +1716,15 @@ class analysis(object):
                 index = 0
                 for i in range(nElectrons):
                     for j in range(i + 1, nElectrons):
-                        neighborImageCoords = unitcellTranslationalCoords + positionArray[headStart + step, j]
-                        neighborImageDisplacementVectors = neighborImageCoords - positionArray[headStart + step, i]
-                        neighborImageDisplacements = np.linalg.norm(neighborImageDisplacementVectors, axis=1)
+                        neighborImageCoords = (unitcellTranslationalCoords
+                                               + positionArray[
+                                                        headStart + step, j])
+                        neighborImageDisplacementVectors = (
+                                        neighborImageCoords
+                                        - positionArray[headStart + step, i])
+                        neighborImageDisplacements = np.linalg.norm(
+                                            neighborImageDisplacementVectors,
+                                            axis=1)
                         displacement = np.min(neighborImageDisplacements)
                         interDistanceList[index] = displacement
                         index += 1
@@ -1549,27 +1732,36 @@ class analysis(object):
                     meanDistance[trajIndex, step] = np.mean(interDistanceList)
                     meanDistanceOverTraj = np.mean(meanDistance, axis=0)
                 else:
-                    interDistanceArray[trajIndex, step] = np.copy(interDistanceList)
-        
+                    interDistanceArray[trajIndex, step] = np.copy(
+                                                            interDistanceList)
+
         interDistanceArrayOverTraj = np.mean(interDistanceArray, axis=0)
-        kmcSteps = range(0, numPathStepsPerTraj * int(self.stepInterval), int(self.stepInterval))
+        kmcSteps = range(0,
+                         numPathStepsPerTraj * int(self.stepInterval),
+                         int(self.stepInterval))
         if mean:
             meanDistanceArray = np.zeros((numPathStepsPerTraj, 2))
             meanDistanceArray[:, 0] = kmcSteps
             meanDistanceArray[:, 1] = meanDistanceOverTraj
         else:
-            interSpeciesDistanceArray = np.zeros((numPathStepsPerTraj, nElectrons * (nElectrons - 1) / 2 + 1))
+            interSpeciesDistanceArray = np.zeros((
+                                        numPathStepsPerTraj,
+                                        nElectrons * (nElectrons - 1) / 2 + 1))
             interSpeciesDistanceArray[:, 0] = kmcSteps
             interSpeciesDistanceArray[:, 1:] = interDistanceArrayOverTraj
         if mean:
             meanDistanceFileName = 'MeanDistanceData.npy'
-            meanDistanceFilePath = outdir + directorySeparator + meanDistanceFileName
+            meanDistanceFilePath = (outdir
+                                    + directorySeparator
+                                    + meanDistanceFileName)
             np.save(meanDistanceFilePath, meanDistanceArray)
         else:
             interSpeciesDistanceFileName = 'InterSpeciesDistance.npy'
-            interSpeciesDistanceFilePath = outdir + directorySeparator + interSpeciesDistanceFileName
+            interSpeciesDistanceFilePath = (outdir
+                                            + directorySeparator
+                                            + interSpeciesDistanceFileName)
             np.save(interSpeciesDistanceFilePath, interSpeciesDistanceArray)
-        
+
         if plot:
             import matplotlib
             matplotlib.use('Agg')
@@ -1577,7 +1769,8 @@ class analysis(object):
             plt.figure()
             if mean:
                 plt.plot(meanDistanceArray[:, 0], meanDistanceArray[:, 1])
-                plt.title('Mean Distance between species along simulation length')
+                plt.title('Mean Distance between species \
+                            along simulation length')
                 plt.xlabel('KMC Step')
                 plt.ylabel('Distance (' + self.reprDist + ')')
                 figureName = 'MeanDistanceOverTraj.jpg'
@@ -1587,47 +1780,58 @@ class analysis(object):
                 legendList = []
                 for i in range(nElectrons):
                     for j in range(i + 1, nElectrons):
-                        legendList.append('r_' + str(i) + ':' + str(j)) 
-                lineObjects = plt.plot(interSpeciesDistanceArray[:, 0], interSpeciesDistanceArray[:, 1:])
+                        legendList.append('r_' + str(i) + ':' + str(j))
+                lineObjects = plt.plot(interSpeciesDistanceArray[:, 0],
+                                       interSpeciesDistanceArray[:, 1:])
                 plt.title('Inter-species Distances along simulation length')
                 plt.xlabel('KMC Step')
                 plt.ylabel('Distance (' + self.reprDist + ')')
-                lgd = plt.legend(lineObjects, legendList, loc='center left', bbox_to_anchor=(1, 0.5))
+                lgd = plt.legend(lineObjects, legendList, loc='center left',
+                                 bbox_to_anchor=(1, 0.5))
                 figureName = 'Inter-SpeciesDistance.jpg'
                 figurePath = outdir + directorySeparator + figureName
-                plt.savefig(figurePath, bbox_extra_artists=(lgd,), bbox_inches='tight')
+                plt.savefig(figurePath, bbox_extra_artists=(lgd,),
+                            bbox_inches='tight')
         if report:
             self.generateMeanDisplacementAnalysisLogReport(outdir)
         output = meanDistanceArray if mean else interSpeciesDistanceArray
         return output
 
     def generateMeanDisplacementAnalysisLogReport(self, outdir):
-        """Generates an log report of the MSD Analysis and outputs to the working directory"""
+        """Generates an log report of the MSD Analysis and \
+                outputs to the working directory"""
         meanDisplacementAnalysisLogFileName = 'MeanDisplacement_Analysis.log'
-        meanDisplacementAnalysisLogFilePath = outdir + directorySeparator + meanDisplacementAnalysisLogFileName
+        meanDisplacementAnalysisLogFilePath = (
+                                        outdir
+                                        + directorySeparator
+                                        + meanDisplacementAnalysisLogFileName)
         report = open(meanDisplacementAnalysisLogFilePath, 'w')
         endTime = datetime.now()
         timeElapsed = endTime - self.startTime
-        report.write('Time elapsed: ' + ('%2d days, ' % timeElapsed.days if timeElapsed.days else '') +
-                     ('%2d hours' % ((timeElapsed.seconds // 3600) % 24)) + 
-                     (', %2d minutes' % ((timeElapsed.seconds // 60) % 60)) + 
-                     (', %2d seconds' % (timeElapsed.seconds % 60)))
+        report.write('Time elapsed: '
+                     + ('%2d days, '
+                        % timeElapsed.days if timeElapsed.days else '')
+                     + ('%2d hours' % ((timeElapsed.seconds // 3600) % 24))
+                     + (', %2d minutes' % ((timeElapsed.seconds // 60) % 60))
+                     + (', %2d seconds' % (timeElapsed.seconds % 60)))
         report.close()
 
     def displayWrappedTrajectories(self):
         """ """
         pass
-    
+
     def displayUnwrappedTrajectories(self):
         """ """
         pass
-    
+
     def trajectoryToDCD(self):
         """Convert trajectory data and outputs dcd file"""
         pass
-        
+
+
 class returnValues(object):
-    """dummy class to return objects from methods defined inside other classes"""
+    """dummy class to return objects from methods \
+        defined inside other classes"""
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
             setattr(self, key, value)
