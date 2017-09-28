@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """
-kMC model to run kinetic Monte Carlo simulations and compute mean square displacement of 
-random walk of charge carriers on 3D lattice systems
+kMC model to run kinetic Monte Carlo simulations and compute mean square
+displacement of random walk of charge carriers on 3D lattice systems
 """
 import numpy as np
 import itertools
@@ -12,56 +12,68 @@ import os.path
 from copy import deepcopy
 import platform
 
-directorySeparator = '\\' if platform.uname()[0]=='Windows' else '/'
+directorySeparator = '\\' if platform.uname()[0] == 'Windows' else '/'
+
 
 class material(object):
     """Defines the properties and structure of working material
-    
     :param str name: A string representing the material name
     :param list elementTypes: list of chemical elements
     :param dict speciesToElementTypeMap: list of charge carrier species
     :param unitcellCoords: positions of all elements in the unit cell
     :type unitcellCoords: np.array (nx3)
-    :param elementTypeIndexList: list of element types for all unit cell coordinates
+    :param elementTypeIndexList: list of element types for all
+                                 unit cell coordinates
     :type elementTypeIndexList: np.array (n)
-    :param dict chargeTypes: types of atomic charges considered for the working material
-    :param list latticeParameters: list of three lattice constants in angstrom and three angles between them in degrees
+    :param dict chargeTypes: types of atomic charges considered
+                             for the working material
+    :param list latticeParameters: list of three lattice constants in angstrom
+                                   and three angles between them in degrees
     :param float vn: typical frequency for nuclear motion
     :param dict lambdaValues: Reorganization energies
     :param dict VAB: Electronic coupling matrix element
-    :param dict neighborCutoffDist: List of neighbors and their respective cutoff distances in angstrom
-    :param float neighborCutoffDistTol: Tolerance value in angstrom for neighbor cutoff distance
+    :param dict neighborCutoffDist: List of neighbors and their respective
+                                    cutoff distances in angstrom
+    :param float neighborCutoffDistTol: Tolerance value in angstrom for
+                                        neighbor cutoff distance
     :param str elementTypeDelimiter: Delimiter between element types
     :param str emptySpeciesType: name of the empty species type
     :param str siteIdentifier: suffix to the chargeType to identify site
     :param float epsilon: Dielectric constant of the material
-    
+
     The additional attributes are:
-        * **nElementsPerUnitCell** (np.array (n)): element-type wise total number of elements in a unit cell
+        * **nElementsPerUnitCell** (np.array (n)): element-type wise
+                            total number of elements in a unit cell
         * **siteList** (list): list of elements that act as sites
-        * **elementTypeToSpeciesMap** (dict): dictionary of element to species mapping
-        * **nonEmptySpeciesToElementTypeMap** (dict): dictionary of species to element mapping with elements excluding emptySpeciesType 
-        * **hopElementTypes** (dict): dictionary of species to hopping element types separated by elementTypeDelimiter
+        * **elementTypeToSpeciesMap** (dict): dictionary of element
+                                              to species mapping
+        * **nonEmptySpeciesToElementTypeMap** (dict): dictionary of species to
+                      element mapping with elements excluding emptySpeciesType
+        * **hopElementTypes** (dict): dictionary of species to hopping element
+                                      types separated by elementTypeDelimiter
         * **latticeMatrix** (np.array (3x3): lattice cell matrix
-    """ 
+    """
     def __init__(self, materialParameters):
         # CONSTANTS
-        self.EPSILON0 = 8.854187817E-12 # Electric constant in F.m-1
-        self.ANG = 1E-10 # Angstrom in m
-        self.KB = 1.38064852E-23 # Boltzmann constant in J/K
-        
-        # FUNDAMENTAL ATOMIC UNITS (Ref: http://physics.nist.gov/cuu/Constants/Table/allascii.txt)
-        self.EMASS = 9.10938356E-31 # Electron mass in Kg
-        self.ECHARGE = 1.6021766208E-19 # Elementary charge in C
-        self.HBAR =  1.054571800E-34 # Reduced Planck's constant in J.sec
+        self.EPSILON0 = 8.854187817E-12  # Electric constant in F.m-1
+        self.ANG = 1E-10  # Angstrom in m
+        self.KB = 1.38064852E-23  # Boltzmann constant in J/K
+
+        # FUNDAMENTAL ATOMIC UNITS
+        # Source: http://physics.nist.gov/cuu/Constants/Table/allascii.txt
+        self.EMASS = 9.10938356E-31  # Electron mass in Kg
+        self.ECHARGE = 1.6021766208E-19  # Elementary charge in C
+        self.HBAR = 1.054571800E-34  # Reduced Planck's constant in J.sec
         self.KE = 1 / (4 * np.pi * self.EPSILON0)
-        
+
         # DERIVED ATOMIC UNITS
-        self.BOHR = self.HBAR**2 / (self.EMASS * self.ECHARGE**2 * self.KE) # Bohr radius in m
-        self.HARTREE = self.HBAR**2 / (self.EMASS * self.BOHR**2) # Hartree in J
-        self.AUTIME = self.HBAR / self.HARTREE # sec
-        self.AUTEMPERATURE = self.HARTREE / self.KB # K
-        
+        # Bohr radius in m
+        self.BOHR = self.HBAR**2 / (self.EMASS * self.ECHARGE**2 * self.KE)
+        # Hartree in J
+        self.HARTREE = self.HBAR**2 / (self.EMASS * self.BOHR**2)
+        self.AUTIME = self.HBAR / self.HARTREE  # sec
+        self.AUTEMPERATURE = self.HARTREE / self.KB  # K
+
         # CONVERSIONS
         self.EV2J = self.ECHARGE
         self.ANG2BOHR = self.ANG / self.BOHR
@@ -72,78 +84,112 @@ class material(object):
         self.SEC2PS = 1.00E+12
         self.SEC2FS = 1.00E+15
         self.K2AUTEMP = 1 / self.AUTEMPERATURE
-        
-        # TODO: introduce a method to view the material using ase atoms or other gui module
+
+        # TODO: introduce a method to view the material using ase atoms or
+        # other gui module
         self.name = materialParameters.name
         self.elementTypes = materialParameters.elementTypes[:]
         self.speciesTypes = materialParameters.speciesTypes[:]
         self.numSpeciesTypes = len(self.speciesTypes)
         self.speciesChargeList = materialParameters.speciesChargeList[:]
-        self.speciesToElementTypeMap = deepcopy(materialParameters.speciesToElementTypeMap)
-        self.unitcellCoords = np.zeros((len(materialParameters.unitcellCoords), 3)) # Initialization
+        self.speciesToElementTypeMap = deepcopy(
+                                    materialParameters.speciesToElementTypeMap)
+        # Initialization
+        self.unitcellCoords = np.zeros((
+                                    len(materialParameters.unitcellCoords), 3))
         startIndex = 0
         self.nElementTypes = len(self.elementTypes)
         nElementsPerUnitCell = np.zeros(self.nElementTypes, int)
         for elementIndex in range(self.nElementTypes):
-            elementUnitCellCoords = materialParameters.unitcellCoords[materialParameters.elementTypeIndexList==elementIndex]
+            elementUnitCellCoords = materialParameters.unitcellCoords[
+                    materialParameters.elementTypeIndexList == elementIndex]
             nElementsPerUnitCell[elementIndex] = len(elementUnitCellCoords)
             endIndex = startIndex + nElementsPerUnitCell[elementIndex]
-            self.unitcellCoords[startIndex:endIndex] = elementUnitCellCoords[elementUnitCellCoords[:,2].argsort()]
+            self.unitcellCoords[startIndex:endIndex] = elementUnitCellCoords[
+                                        elementUnitCellCoords[:, 2].argsort()]
             startIndex = endIndex
-        
-        self.unitcellCoords *= self.ANG2BOHR # Unit cell coordinates converted to atomic units
+
+        self.unitcellCoords *= self.ANG2BOHR  # Unit cell coordinates in a.u.
         self.nElementsPerUnitCell = np.copy(nElementsPerUnitCell)
         self.totalElementsPerUnitCell = nElementsPerUnitCell.sum()
-        self.elementTypeIndexList = np.sort(materialParameters.elementTypeIndexList.astype(int))
+        self.elementTypeIndexList = np.sort(
+                        materialParameters.elementTypeIndexList.astype(int))
         self.chargeTypes = deepcopy(materialParameters.chargeTypes)
-        
-        self.latticeParameters = [0] * len(materialParameters.latticeParameters)
+
+        self.latticeParameters = [0] * len(
+            materialParameters.latticeParameters)
         # lattice parameters being converted to atomic units
         for index in range(len(materialParameters.latticeParameters)):
             if index < 3:
-                self.latticeParameters[index] = materialParameters.latticeParameters[index] * self.ANG2BOHR
+                self.latticeParameters[index] = (
+                    materialParameters.latticeParameters[index] * self.ANG2BOHR
+                    )
             else:
-                self.latticeParameters[index] = materialParameters.latticeParameters[index]
-        
+                self.latticeParameters[index] = (
+                                materialParameters.latticeParameters[index])
+
         self.vn = materialParameters.vn / self.SEC2AUTIME
         self.lambdaValues = deepcopy(materialParameters.lambdaValues)
-        self.lambdaValues.update((x, [y[index] * self.EV2J * self.J2HARTREE for index in range(len(y))]) for x, y in self.lambdaValues.items())
+        self.lambdaValues.update((x, [y[index] * self.EV2J * self.J2HARTREE
+                                      for index in range(len(y))])
+                                 for x, y in self.lambdaValues.items())
 
         self.VAB = deepcopy(materialParameters.VAB)
-        self.VAB.update((x, [y[index] * self.EV2J * self.J2HARTREE for index in range(len(y))]) for x, y in self.VAB.items())
-        
-        self.neighborCutoffDist = deepcopy(materialParameters.neighborCutoffDist)
-        self.neighborCutoffDist.update((x, [(y[index] * self.ANG2BOHR) if y[index] else None for index in range(len(y))]) for x, y in self.neighborCutoffDist.items())
-        self.neighborCutoffDistTol = deepcopy(materialParameters.neighborCutoffDistTol)
-        self.neighborCutoffDistTol.update((x, [(y[index] * self.ANG2BOHR) if y[index] else None for index in range(len(y))]) for x, y in self.neighborCutoffDistTol.items())
-        
+        self.VAB.update((x, [y[index] * self.EV2J * self.J2HARTREE
+                             for index in range(len(y))])
+                        for x, y in self.VAB.items())
+
+        self.neighborCutoffDist = deepcopy(
+                                        materialParameters.neighborCutoffDist)
+        self.neighborCutoffDist.update((x, [(y[index] * self.ANG2BOHR)
+                                            if y[index] else None
+                                            for index in range(len(y))])
+                                       for x, y in (
+                                           self.neighborCutoffDist.items()))
+        self.neighborCutoffDistTol = deepcopy(
+                                    materialParameters.neighborCutoffDistTol)
+        self.neighborCutoffDistTol.update((x, [(y[index] * self.ANG2BOHR)
+                                               if y[index] else None
+                                               for index in range(len(y))])
+                                          for x, y in (
+                                        self.neighborCutoffDistTol.items()))
+
         self.elementTypeDelimiter = materialParameters.elementTypeDelimiter
         self.emptySpeciesType = materialParameters.emptySpeciesType
         self.siteIdentifier = materialParameters.siteIdentifier
         self.dielectricConstant = materialParameters.dielectricConstant
-                
-        siteList = [self.speciesToElementTypeMap[key] for key in self.speciesToElementTypeMap 
+
+        siteList = [self.speciesToElementTypeMap[key]
+                    for key in self.speciesToElementTypeMap
                     if key is not self.emptySpeciesType]
-        self.siteList = list(set([item for sublist in siteList for item in sublist]))
-        self.nonEmptySpeciesToElementTypeMap = deepcopy(self.speciesToElementTypeMap)
+        self.siteList = list(
+                    set([item for sublist in siteList for item in sublist]))
+        self.nonEmptySpeciesToElementTypeMap = deepcopy(
+                                                self.speciesToElementTypeMap)
         del self.nonEmptySpeciesToElementTypeMap[self.emptySpeciesType]
-        
+
         self.elementTypeToSpeciesMap = {}
         for elementType in self.elementTypes:
             speciesList = []
             for speciesTypeKey in self.nonEmptySpeciesToElementTypeMap.keys():
-                if elementType in self.nonEmptySpeciesToElementTypeMap[speciesTypeKey]:
+                if elementType in (
+                        self.nonEmptySpeciesToElementTypeMap[speciesTypeKey]):
                     speciesList.append(speciesTypeKey)
             self.elementTypeToSpeciesMap[elementType] = speciesList[:]
-        
-        self.hopElementTypes = {key: [self.elementTypeDelimiter.join(comb) 
-                                      for comb in list(itertools.product(self.speciesToElementTypeMap[key], repeat=2))] 
-                                for key in self.speciesToElementTypeMap if key is not self.emptySpeciesType}
+
+        self.hopElementTypes = {
+                    key: [self.elementTypeDelimiter.join(comb)
+                          for comb in list(itertools.product(
+                              self.speciesToElementTypeMap[key], repeat=2))]
+                    for key in self.speciesToElementTypeMap
+                    if key is not self.emptySpeciesType}
         [a, b, c, alpha, beta, gamma] = self.latticeParameters
-        self.latticeMatrix = np.array([[ a                , 0                , 0],
-                                       [ b * np.cos(gamma), b * np.sin(gamma), 0],
-                                       [ c * np.cos(alpha), c * np.cos(beta) , c * np.sqrt(np.sin(alpha)**2 - np.cos(beta)**2)]])
-        
+        self.latticeMatrix = np.array(
+                        [[a, 0, 0],
+                         [b * np.cos(gamma), b * np.sin(gamma), 0],
+                         [c * np.cos(alpha), c * np.cos(beta),
+                          c * np.sqrt(np.sin(alpha)**2 - np.cos(beta)**2)]])
+
     def generateMaterialFile(self, material, materialFileName):
         """ """
         file_material = open(materialFileName, 'w')
@@ -151,53 +197,76 @@ class material(object):
         file_material.close()
 
     def generateSites(self, elementTypeIndices, cellSize=np.array([1, 1, 1])):
-        """Returns systemElementIndices and coordinates of specified elements in a cell of size 
-        *cellSize*
-            
+        """Returns systemElementIndices and coordinates of specified elements
+        in a cell of size *cellSize*
+
         :param str elementTypeIndices: element type indices
         :param cellSize: size of the cell
         :type cellSize: np.array (3x1)
         :return: an object with following attributes:
-        
-            * **cellCoordinates** (np.array (nx3)):  
-            * **quantumIndexList** (np.array (nx5)): 
-            * **systemElementIndexList** (np.array (n)): 
-        
+
+            * **cellCoordinates** (np.array (nx3)):
+            * **quantumIndexList** (np.array (nx5)):
+            * **systemElementIndexList** (np.array (n)):
+
         :raises ValueError: if the input cellSize is less than or equal to 0.
         """
-        assert all(size > 0 for size in cellSize), 'Input size should always be greater than 0'
-        extractIndices = np.in1d(self.elementTypeIndexList, elementTypeIndices).nonzero()[0]
+        assert all(size > 0 for size in cellSize), 'Input size should always \
+                                                    be greater than 0'
+        extractIndices = np.in1d(self.elementTypeIndexList,
+                                 elementTypeIndices).nonzero()[0]
         unitcellElementCoords = self.unitcellCoords[extractIndices]
         numCells = cellSize.prod()
         nSitesPerUnitCell = self.nElementsPerUnitCell[elementTypeIndices].sum()
         unitcellElementIndexList = np.arange(nSitesPerUnitCell)
-        unitcellElementTypeIndex = np.reshape(np.concatenate((np.asarray([[elementTypeIndex] * self.nElementsPerUnitCell[elementTypeIndex] 
-                                                                          for elementTypeIndex in elementTypeIndices]))), (nSitesPerUnitCell, 1))
-        unitCellElementTypeElementIndexList = np.reshape(np.concatenate(([np.arange(self.nElementsPerUnitCell[elementTypeIndex]) 
-                                                                          for elementTypeIndex in elementTypeIndices])), (nSitesPerUnitCell, 1))
-        cellCoordinates = np.zeros((numCells * nSitesPerUnitCell, 3)) # Initialization
-        # quantumIndex = [unitCellIndex, elementTypeIndex, elementIndex] # Definition format of Quantum Indices
-        quantumIndexList = np.zeros((numCells * nSitesPerUnitCell, 5), dtype=int)
-        systemElementIndexList = np.zeros(numCells * nSitesPerUnitCell, dtype=int)
+        unitcellElementTypeIndex = np.reshape(
+                np.concatenate((
+                    np.asarray([[elementTypeIndex] *
+                                self.nElementsPerUnitCell[elementTypeIndex]
+                                for elementTypeIndex in elementTypeIndices]))),
+                (nSitesPerUnitCell, 1))
+        unitCellElementTypeElementIndexList = np.reshape(
+                    np.concatenate((
+                        [np.arange(self.nElementsPerUnitCell[elementTypeIndex])
+                         for elementTypeIndex in elementTypeIndices])),
+                    (nSitesPerUnitCell, 1))
+        # Initialization
+        cellCoordinates = np.zeros((numCells * nSitesPerUnitCell, 3))
+        # Definition format of Quantum Indices
+        # quantumIndex = [unitCellIndex, elementTypeIndex, elementIndex]
+        quantumIndexList = np.zeros((numCells * nSitesPerUnitCell, 5),
+                                    dtype=int)
+        systemElementIndexList = np.zeros(numCells * nSitesPerUnitCell,
+                                          dtype=int)
         iUnitCell = 0
         for xIndex in range(cellSize[0]):
-            for yIndex in range(cellSize[1]):  
-                for zIndex in range(cellSize[2]): 
+            for yIndex in range(cellSize[1]):
+                for zIndex in range(cellSize[2]):
                     startIndex = iUnitCell * nSitesPerUnitCell
                     endIndex = startIndex + nSitesPerUnitCell
                     # TODO: Any reason to use fractional coordinates?
-                    unitcellTranslationalCoords = np.dot([xIndex, yIndex, zIndex], self.latticeMatrix)
-                    newCellSiteCoords = unitcellElementCoords + unitcellTranslationalCoords
+                    unitcellTranslationalCoords = np.dot(
+                                                    [xIndex, yIndex, zIndex],
+                                                    self.latticeMatrix)
+                    newCellSiteCoords = (unitcellElementCoords
+                                         + unitcellTranslationalCoords)
                     cellCoordinates[startIndex:endIndex] = newCellSiteCoords
-                    systemElementIndexList[startIndex:endIndex] = iUnitCell * nSitesPerUnitCell + unitcellElementIndexList
-                    quantumIndexList[startIndex:endIndex] = np.hstack((np.tile(np.array([xIndex, yIndex, zIndex]), (nSitesPerUnitCell, 1)), unitcellElementTypeIndex, unitCellElementTypeElementIndexList))
+                    systemElementIndexList[startIndex:endIndex] = (
+                                                iUnitCell * nSitesPerUnitCell
+                                                + unitcellElementIndexList)
+                    quantumIndexList[startIndex:endIndex] = np.hstack((
+                                    np.tile(np.array([xIndex, yIndex, zIndex]),
+                                            (nSitesPerUnitCell, 1)),
+                                    unitcellElementTypeIndex,
+                                    unitCellElementTypeElementIndexList))
                     iUnitCell += 1
 
-        returnSites = returnValues(cellCoordinates = cellCoordinates,
-                                   quantumIndexList = quantumIndexList,
-                                   systemElementIndexList = systemElementIndexList)
+        returnSites = returnValues(
+                                cellCoordinates=cellCoordinates,
+                                quantumIndexList=quantumIndexList,
+                                systemElementIndexList=systemElementIndexList)
         return returnSites
-    
+
 class neighbors(object):
     """Returns the neighbor list file
     :param systemSize: size of the super cell in terms of number of unit cell in three dimensions
@@ -323,7 +392,7 @@ class neighbors(object):
             displacementVectorList[centerSiteIndex] = np.asarray(iDisplacementVectors)
             numNeighbors = np.append(numNeighbors, iNumNeighbors)
             if quickTest:
-#                 print np.sort(displacementList)[:10] / self.material.ANG2BOHR
+                # print np.sort(displacementList)[:10] / self.material.ANG2BOHR
                 for cutoffDist in range(2, 7):
                     cutoff = cutoffDist * self.material.ANG2BOHR
                     print cutoffDist
