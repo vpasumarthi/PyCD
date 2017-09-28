@@ -193,7 +193,7 @@ class material(object):
                     systemElementIndexList[startIndex:endIndex] = iUnitCell * nSitesPerUnitCell + unitcellElementIndexList
                     quantumIndexList[startIndex:endIndex] = np.hstack((np.tile(np.array([xIndex, yIndex, zIndex]), (nSitesPerUnitCell, 1)), unitcellElementTypeIndex, unitCellElementTypeElementIndexList))
                     iUnitCell += 1
-        
+        # TODO: pass the attributes to returnValues using args, kwargs such that warning is not raised.
         returnSites = returnValues()
         returnSites.cellCoordinates = cellCoordinates
         returnSites.quantumIndexList = quantumIndexList
@@ -394,6 +394,7 @@ class neighbors(object):
         
         if generateCumDispList:
             cumulativeDisplacementListFilePath = dstPath + directorySeparator + 'cumulativeDisplacementList.npy'
+            # TODO: Is it necessary to define cumulativeDisplacementList as a function?
             cumulativeDisplacementList = self.cumulativeDisplacementList()
             np.save(cumulativeDisplacementListFilePath, cumulativeDisplacementList)
 
@@ -800,8 +801,8 @@ class run(object):
         self.headStart_nElementsPerUnitCellCumSum = [self.material.nElementsPerUnitCell[:siteElementTypeIndex].sum() for siteElementTypeIndex in self.neighbors.elementTypeIndices]
         
         # speciesTypeList
-        self.speciesTypeList = [self.material.speciesTypes[index] for index, value in enumerate(self.system.speciesCount) for i in range(value)]
-        self.speciesTypeIndexList = [index for index, value in enumerate(self.system.speciesCount) for iValue in range(value)]
+        self.speciesTypeList = [self.material.speciesTypes[index] for index, value in enumerate(self.system.speciesCount) for _ in range(value)]
+        self.speciesTypeIndexList = [index for index, value in enumerate(self.system.speciesCount) for _ in range(value)]
         self.speciesChargeList = [self.material.speciesChargeList[index] for index in self.speciesTypeIndexList]
         self.hopElementTypeList = [self.material.hopElementTypes[speciesType][0] for speciesType in self.speciesTypeList]
         self.lenHopDistTypeList = [len(self.material.neighborCutoffDist[hopElementType]) for hopElementType in self.hopElementTypeList]
@@ -874,7 +875,7 @@ class run(object):
         
         ewaldNeut = - np.pi * (self.system.systemCharge**2) / (2 * self.system.systemVolume * self.system.alpha)
         precomputedArray = self.precomputedArray
-        for trajIndex in range(nTraj):
+        for _ in range(nTraj):
             currentStateOccupancy = self.system.generateRandomOccupancy(self.system.speciesCount)
             currentStateChargeConfig = self.system.chargeConfig(currentStateOccupancy)
             currentStateChargeConfigProd = np.multiply(currentStateChargeConfig.transpose(), currentStateChargeConfig)
@@ -1085,7 +1086,7 @@ class analysis(object):
         timeElapsed = endTime - self.startTime
         from scipy.stats import linregress
         for speciesIndex, speciesType in enumerate(speciesTypes):
-            slope, intercept, rValue, pValue, stdErr = linregress(msdData[self.trimLength:-self.trimLength,0], msdData[self.trimLength:-self.trimLength,speciesIndex + 1])
+            slope, _, _, _, _ = linregress(msdData[self.trimLength:-self.trimLength,0], msdData[self.trimLength:-self.trimLength,speciesIndex + 1])
             speciesDiff = slope * self.material.ANG2UM**2 * self.material.SEC2NS / (2 * self.nDim)
             report.write('Estimated value of {:s} diffusivity is: {:4.3f} um2/s\n'.format(speciesType, speciesDiff))
         report.write('Time elapsed: ' + ('%2d days, ' % timeElapsed.days if timeElapsed.days else '') +
@@ -1110,7 +1111,7 @@ class analysis(object):
                 ax.errorbar(msdData[:,0], msdData[:,speciesIndex + 1], yerr=stdData[:,speciesIndex], fmt='o', capsize=3, color='blue', markerfacecolor='blue', markeredgecolor='black', label=speciesType)
             else:
                 ax.plot(msdData[:,0], msdData[:,speciesIndex + 1], 'o', markerfacecolor='blue', markeredgecolor='black', label=speciesType)
-            slope, intercept, rValue, pValue, stdErr = linregress(msdData[self.trimLength:-self.trimLength,0], msdData[self.trimLength:-self.trimLength,speciesIndex + 1])
+            slope, intercept, rValue, _, _ = linregress(msdData[self.trimLength:-self.trimLength,0], msdData[self.trimLength:-self.trimLength,speciesIndex + 1])
             speciesDiff = slope * self.material.ANG2UM**2 * self.material.SEC2NS / (2 * self.nDim)
             ax.add_artist(AnchoredText('Est. $D_{{%s}}$ = %4.3f  ${{\mu}}m^2/s$; $r^2$=%4.3e' % (speciesType, speciesDiff, rValue**2), loc=4))
             ax.plot(msdData[self.trimLength:-self.trimLength,0], intercept + slope * msdData[self.trimLength:-self.trimLength,0], 'r', label=speciesType+'-fitted')
@@ -1226,7 +1227,6 @@ class analysis(object):
             import matplotlib
             matplotlib.use('Agg')
             import matplotlib.pyplot as plt
-            from textwrap import wrap
             plt.figure()
             if mean:
                 plt.plot(meanDistanceArray[:, 0], meanDistanceArray[:, 1])
