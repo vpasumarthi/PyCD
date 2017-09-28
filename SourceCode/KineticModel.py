@@ -394,7 +394,7 @@ class neighbors(object):
         
         if generateCumDispList:
             cumulativeDisplacementListFilePath = dstPath + directorySeparator + 'cumulativeDisplacementList.npy'
-            cumulativeDisplacementList = self.cumulativeDisplacementList(self.systemSize, dstPath)
+            cumulativeDisplacementList = self.cumulativeDisplacementList()
             np.save(cumulativeDisplacementListFilePath, cumulativeDisplacementList)
 
         if report:
