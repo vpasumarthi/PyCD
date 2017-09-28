@@ -946,78 +946,118 @@ class neighbors(object):
 
 class system(object):
     """defines the system we are working on
-    
+
     Attributes:
     size: An array (3 x 1) defining the system size in multiple of unit cells
     """
-    #@profile
-    def __init__(self, material, neighbors, hopNeighborList, cumulativeDisplacementList, speciesCount, alpha, nmax, kmax):
+    # @profile
+    def __init__(self, material, neighbors, hopNeighborList,
+                 cumulativeDisplacementList, speciesCount, alpha, nmax, kmax):
         """Return a system object whose size is *size*"""
         self.startTime = datetime.now()
-        
+
         self.material = material
         self.neighbors = neighbors
         self.hopNeighborList = hopNeighborList
-        
+
         self.pbc = self.neighbors.pbc
         self.speciesCount = speciesCount
-        self.systemCharge = np.dot(speciesCount, self.material.speciesChargeList)
+        self.systemCharge = np.dot(speciesCount,
+                                   self.material.speciesChargeList)
         self.speciesCountCumSum = speciesCount.cumsum()
-        
+
         # total number of unit cells
         self.systemSize = self.neighbors.systemSize
         self.numCells = self.systemSize.prod()
-        
+
         # generate lattice charge list
-        unitcellChargeList = np.array([self.material.chargeTypes[self.material.elementTypes[elementTypeIndex]] 
-                                       for elementTypeIndex in self.material.elementTypeIndexList])
+        unitcellChargeList = np.array(
+                [self.material.chargeTypes[
+                    self.material.elementTypes[elementTypeIndex]]
+                 for elementTypeIndex in self.material.elementTypeIndexList])
         self.latticeChargeList = np.tile(unitcellChargeList, self.numCells)
-        
+
         self.cumulativeDisplacementList = cumulativeDisplacementList
 
         # variables for ewald sum
-        self.translationalMatrix = np.multiply(self.systemSize, self.material.latticeMatrix) 
-        self.systemVolume = abs(np.dot(self.translationalMatrix[0], np.cross(self.translationalMatrix[1], self.translationalMatrix[2])))
-        self.reciprocalLatticeMatrix = 2 * np.pi / self.systemVolume * np.array([np.cross(self.translationalMatrix[1], self.translationalMatrix[2]), 
-                                                                                 np.cross(self.translationalMatrix[2], self.translationalMatrix[0]),
-                                                                                 np.cross(self.translationalMatrix[0], self.translationalMatrix[1])])
-        self.translationalVectorLength = np.linalg.norm(self.translationalMatrix, axis=1)
-        self.reciprocalLatticeVectorLength = np.linalg.norm(self.reciprocalLatticeMatrix, axis=1)
-        
+        self.translationalMatrix = np.multiply(self.systemSize,
+                                               self.material.latticeMatrix)
+        self.systemVolume = abs(np.dot(self.translationalMatrix[0],
+                                       np.cross(self.translationalMatrix[1],
+                                                self.translationalMatrix[2])))
+        self.reciprocalLatticeMatrix = (
+                        2 * np.pi / self.systemVolume
+                        * np.array([np.cross(self.translationalMatrix[1],
+                                             self.translationalMatrix[2]),
+                                    np.cross(self.translationalMatrix[2],
+                                             self.translationalMatrix[0]),
+                                    np.cross(self.translationalMatrix[0],
+                                             self.translationalMatrix[1])]))
+        self.translationalVectorLength = np.linalg.norm(
+                                                    self.translationalMatrix,
+                                                    axis=1)
+        self.reciprocalLatticeVectorLength = np.linalg.norm(
+                                                self.reciprocalLatticeMatrix,
+                                                axis=1)
+
         # ewald parameters:
         self.alpha = alpha
         self.nmax = nmax
         self.kmax = kmax
-    
+
     def generateRandomOccupancy(self, speciesCount):
         """generates initial occupancy list based on species count"""
         occupancy = []
         for speciesTypeIndex, numSpecies in enumerate(speciesCount):
-            centerSiteElementTypeIndex = np.in1d(self.material.elementTypes, self.material.speciesToElementTypeMap[self.material.speciesTypes[speciesTypeIndex]]).nonzero()[0][0]
-            systemElementIndexOffsetArray = (np.repeat(np.arange(0, self.material.totalElementsPerUnitCell * self.numCells, self.material.totalElementsPerUnitCell), 
-                                                       self.material.nElementsPerUnitCell[centerSiteElementTypeIndex]))
-            siteIndices = (np.tile(self.material.nElementsPerUnitCell[:centerSiteElementTypeIndex].sum() + 
-                                                               np.arange(0, self.material.nElementsPerUnitCell[centerSiteElementTypeIndex]), self.numCells) + systemElementIndexOffsetArray)
+            centerSiteElementTypeIndex = np.in1d(
+                                    self.material.elementTypes,
+                                    self.material.speciesToElementTypeMap[
+                                        self.material.speciesTypes[
+                                            speciesTypeIndex]]).nonzero()[0][0]
+            systemElementIndexOffsetArray = np.repeat(
+                np.arange(0,
+                          (self.material.totalElementsPerUnitCell
+                           * self.numCells),
+                          self.material.totalElementsPerUnitCell),
+                self.material.nElementsPerUnitCell[centerSiteElementTypeIndex])
+            siteIndices = (
+                        np.tile(self.material.nElementsPerUnitCell[
+                                    :centerSiteElementTypeIndex].sum()
+                                + np.arange(0,
+                                            self.material.nElementsPerUnitCell[
+                                                centerSiteElementTypeIndex]),
+                                self.numCells)
+                        + systemElementIndexOffsetArray)
             occupancy.extend(rnd.sample(siteIndices, numSpecies)[:])
         return occupancy
-    
+
     def chargeConfig(self, occupancy):
         """Returns charge distribution of the current configuration"""
         chargeList = np.copy(self.latticeChargeList)
         chargeList = chargeList[:, np.newaxis]
         chargeTypeKeys = self.material.chargeTypes.keys()
-        
-        siteChargeTypeKeys = [key for key in chargeTypeKeys if key not in self.material.siteList if self.material.siteIdentifier in key]
+
+        siteChargeTypeKeys = [key for key in chargeTypeKeys
+                              if key not in self.material.siteList
+                              if self.material.siteIdentifier in key]
         for chargeKeyType in siteChargeTypeKeys:
-            centerSiteElementType = chargeKeyType.replace(self.material.siteIdentifier,'')
-            for speciesType in self.material.elementTypeToSpeciesMap[centerSiteElementType]:
-                assert speciesType in self.material.speciesTypes, ('Invalid definition of charge type \'' + str(chargeKeyType) + '\', \'' + 
-                                                              str(speciesType) + '\' species does not exist in this configuration') 
-                speciesTypeIndex = self.material.speciesTypes.index(speciesType)
+            centerSiteElementType = chargeKeyType.replace(
+                                                self.material.siteIdentifier,
+                                                '')
+            for speciesType in self.material.elementTypeToSpeciesMap[
+                                                        centerSiteElementType]:
+                assert speciesType in self.material.speciesTypes, \
+                    ('Invalid definition of charge type \''
+                     + str(chargeKeyType) + '\', \'' + str(speciesType)
+                     + '\' species does not exist in this configuration')
+                speciesTypeIndex = self.material.speciesTypes.index(
+                                                                speciesType)
                 startIndex = 0 + self.speciesCount[:speciesTypeIndex].sum()
                 endIndex = self.speciesCountCumSum[speciesTypeIndex]
-                centerSiteSystemElementIndices = occupancy[startIndex:endIndex][:]
-                chargeList[centerSiteSystemElementIndices] = self.material.chargeTypes[chargeKeyType]
+                centerSiteSystemElementIndices = occupancy[
+                                                        startIndex:endIndex][:]
+                chargeList[centerSiteSystemElementIndices] = \
+                    self.material.chargeTypes[chargeKeyType]
         return chargeList
 
     def ewaldSumSetup(self, outdir=None):
@@ -1025,49 +1065,68 @@ class system(object):
         sqrtalpha = np.sqrt(self.alpha)
         alpha4 = 4 * self.alpha
         fourierSumCoeff = (2 * np.pi) / self.systemVolume
-        precomputedArray = np.zeros((self.neighbors.numSystemElements, self.neighbors.numSystemElements))
+        precomputedArray = np.zeros((self.neighbors.numSystemElements,
+                                     self.neighbors.numSystemElements))
 
         for i in range(-self.nmax, self.nmax+1):
             for j in range(-self.nmax, self.nmax+1):
                 for k in range(-self.nmax, self.nmax+1):
-                    tempArray = np.linalg.norm(self.cumulativeDisplacementList + np.dot(np.array([i, j, k]), self.translationalMatrix), axis=2)
+                    tempArray = np.linalg.norm(
+                                        (self.cumulativeDisplacementList
+                                         + np.dot(np.array([i, j, k]),
+                                                  self.translationalMatrix)),
+                                        axis=2)
                     precomputedArray += erfc(sqrtalpha * tempArray) / 2
 
-                    if np.all(np.array([i, j, k])==0):
+                    if np.all(np.array([i, j, k]) == 0):
                         for a in range(self.neighbors.numSystemElements):
                             for b in range(self.neighbors.numSystemElements):
                                 if a != b:
                                     precomputedArray[a][b] /= tempArray[a][b]
                     else:
                         precomputedArray /= tempArray
-        
+
         for i in range(-self.kmax, self.kmax+1):
             for j in range(-self.kmax, self.kmax+1):
                 for k in range(-self.kmax, self.kmax+1):
-                    if not np.all(np.array([i, j, k])==0):
-                        kVector = np.dot(np.array([i, j, k]), self.reciprocalLatticeMatrix)
+                    if not np.all(np.array([i, j, k]) == 0):
+                        kVector = np.dot(np.array([i, j, k]),
+                                         self.reciprocalLatticeMatrix)
                         kVector2 = np.dot(kVector, kVector)
-                        precomputedArray += fourierSumCoeff * np.exp(-kVector2 / alpha4) * np.cos(np.tensordot(self.cumulativeDisplacementList, kVector, axes=([2], [0]))) / kVector2
-        
+                        precomputedArray += (
+                            fourierSumCoeff
+                            * np.exp(-kVector2 / alpha4)
+                            * np.cos(np.tensordot(
+                                            self.cumulativeDisplacementList,
+                                            kVector,
+                                            axes=([2], [0])))
+                            / kVector2)
+
         precomputedArray /= self.material.dielectricConstant
-        
+
         if outdir:
             self.generatePreComputedArrayLogReport(outdir)
         return precomputedArray
 
     def generatePreComputedArrayLogReport(self, outdir):
-        """Generates an log report of the simulation and outputs to the working directory"""
+        """Generates an log report of the simulation and outputs
+            to the working directory"""
         precomputedArrayLogFileName = 'precomputedArray.log'
-        precomputedArrayLogFilePath = outdir + directorySeparator + precomputedArrayLogFileName
+        precomputedArrayLogFilePath = (outdir
+                                       + directorySeparator
+                                       + precomputedArrayLogFileName)
         report = open(precomputedArrayLogFilePath, 'w')
         endTime = datetime.now()
         timeElapsed = endTime - self.startTime
-        report.write('Time elapsed: ' + ('%2d days, ' % timeElapsed.days if timeElapsed.days else '') +
-                     ('%2d hours' % ((timeElapsed.seconds // 3600) % 24)) + 
-                     (', %2d minutes' % ((timeElapsed.seconds // 60) % 60)) + 
-                     (', %2d seconds' % (timeElapsed.seconds % 60)))
+        report.write('Time elapsed: '
+                     + ('%2d days, '
+                        % timeElapsed.days if timeElapsed.days else '')
+                     + ('%2d hours' % ((timeElapsed.seconds // 3600) % 24))
+                     + (', %2d minutes' % ((timeElapsed.seconds // 60) % 60))
+                     + (', %2d seconds' % (timeElapsed.seconds % 60)))
         report.close()
-    
+
+
 class run(object):
     """defines the subroutines for running Kinetic Monte Carlo and computing electrostatic 
     interaction energies"""
