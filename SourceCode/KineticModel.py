@@ -4,7 +4,6 @@ kMC model to run kinetic Monte Carlo simulations and compute mean square displac
 random walk of charge carriers on 3D lattice systems
 """
 import numpy as np
-from collections import OrderedDict
 import itertools
 import random as rnd
 from datetime import datetime
@@ -347,7 +346,7 @@ class neighbors(object):
         returnNeighbors.numNeighbors = numNeighbors
         return returnNeighbors
     
-    def cumulativeDisplacementList(self, systemSize, dstPath):
+    def cumulativeDisplacementList(self):
         """Returns cumulative displacement list for the given system size printed out to disk"""
         cumulativeDisplacementList = np.zeros((self.numSystemElements, self.numSystemElements, 3))
         for centerSiteIndex, centerCoord in enumerate(self.bulkSites.cellCoordinates):
@@ -358,8 +357,7 @@ class neighbors(object):
             cumulativeDisplacementList[centerSiteIndex] = cumulativeNeighborImageDisplacementVectors[np.arange(self.numSystemElements), np.argmin(cumulativeNeighborImageDisplacements, axis=1)]
         return cumulativeDisplacementList
     
-    def generateNeighborList(self, neighborListDirPath, generateCumDispList=0, report=1, localSystemSize=np.array([3, 3, 3]), 
-                             centerUnitCellIndex=np.array([1, 1, 1])):
+    def generateNeighborList(self, neighborListDirPath, generateCumDispList=0, report=1, localSystemSize=np.array([3, 3, 3])):
         """Adds the neighbor list to the system object and returns the neighbor list"""
         assert neighborListDirPath, 'Please provide the path to the parent directory of neighbor list files'
         assert all(size >= 3 for size in localSystemSize), 'Local system size in all dimensions should always be greater than or equal to 3'
