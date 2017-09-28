@@ -192,11 +192,10 @@ class material(object):
                     systemElementIndexList[startIndex:endIndex] = iUnitCell * nSitesPerUnitCell + unitcellElementIndexList
                     quantumIndexList[startIndex:endIndex] = np.hstack((np.tile(np.array([xIndex, yIndex, zIndex]), (nSitesPerUnitCell, 1)), unitcellElementTypeIndex, unitCellElementTypeElementIndexList))
                     iUnitCell += 1
-        # TODO: pass the attributes to returnValues using args, kwargs such that warning is not raised.
-        returnSites = returnValues()
-        returnSites.cellCoordinates = cellCoordinates
-        returnSites.quantumIndexList = quantumIndexList
-        returnSites.systemElementIndexList = systemElementIndexList
+
+        returnSites = returnValues(cellCoordinates = cellCoordinates,
+                                   quantumIndexList = quantumIndexList,
+                                   systemElementIndexList = systemElementIndexList)
         return returnSites
     
 class neighbors(object):
@@ -337,10 +336,9 @@ class neighbors(object):
                 import pdb; pdb.set_trace()
                     
             
-        returnNeighbors = returnValues()
-        returnNeighbors.neighborSystemElementIndices = neighborSystemElementIndices
-        returnNeighbors.displacementVectorList = displacementVectorList
-        returnNeighbors.numNeighbors = numNeighbors
+        returnNeighbors = returnValues(neighborSystemElementIndices = neighborSystemElementIndices,
+                                       displacementVectorList = displacementVectorList,
+                                       numNeighbors = numNeighbors)
         return returnNeighbors
     
     def cumulativeDisplacementList(self):
@@ -630,8 +628,7 @@ class neighbors(object):
         
         if report:
             self.generateMSDAnalyticalDataReport(fileName, dstPath, startTime)
-        returnMSDData = returnValues()
-        returnMSDData.msdData = msdData
+        returnMSDData = returnValues(msdData = msdData)
         return returnMSDData
     
     def generateMSDAnalyticalDataReport(self, fileName, dstPath, startTime):
@@ -1062,11 +1059,10 @@ class analysis(object):
         if report:
             self.generateMSDAnalysisLogReport(msdData, speciesTypes, fileName, outdir)
         
-        returnMSDData = returnValues()
-        returnMSDData.msdData = msdData
-        returnMSDData.stdData = stdData
-        returnMSDData.speciesTypes = speciesTypes
-        returnMSDData.fileName = fileName
+        returnMSDData = returnValues(msdData = msdData,
+                                     stdData = stdData,
+                                     speciesTypes = speciesTypes,
+                                     fileName = fileName)
         return returnMSDData
 
     def generateMSDAnalysisLogReport(self, msdData, speciesTypes, fileName, outdir):
@@ -1273,4 +1269,6 @@ class analysis(object):
         
 class returnValues(object):
     """dummy class to return objects from methods defined inside other classes"""
-    pass
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
