@@ -3,15 +3,15 @@
 kMC model to run kinetic Monte Carlo simulations and compute mean square
 displacement of random walk of charge carriers on 3D lattice systems
 """
-import numpy as np
-import itertools
-import random as rnd
+import os.path
 from datetime import datetime
 import pickle
-import os.path
+import random as rnd
+import itertools
 from copy import deepcopy
 import platform
 import pdb
+import numpy as np
 
 directorySeparator = '\\' if platform.uname()[0] == 'Windows' else '/'
 
