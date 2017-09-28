@@ -149,7 +149,6 @@ class material(object):
         file_material = open(materialFileName, 'w')
         pickle.dump(material, file_material)
         file_material.close()
-        pass
 
     def generateSites(self, elementTypeIndices, cellSize=np.array([1, 1, 1])):
         """Returns systemElementIndices and coordinates of specified elements in a cell of size 
@@ -206,7 +205,7 @@ class neighbors(object):
     :type systemSize: np.array (3x1)
     """
     
-    def __init__(self, material, systemSize=np.array([10, 10, 10]), pbc=[1, 1, 1]):
+    def __init__(self, material, systemSize, pbc):
         self.startTime = datetime.now()
         self.material = material
         self.systemSize = systemSize
@@ -236,7 +235,6 @@ class neighbors(object):
         file_Neighbors = open(neighborsFileName, 'w')
         pickle.dump(materialNeighbors, file_Neighbors)
         file_Neighbors.close()
-        pass
     
     def generateSystemElementIndex(self, systemSize, quantumIndices):
         """Returns the systemElementIndex of the element"""
@@ -295,7 +293,6 @@ class neighbors(object):
         neighborSiteCoords = bulkSites.cellCoordinates[neighborSiteIndices]
         neighborSiteSystemElementIndexList = bulkSites.systemElementIndexList[neighborSiteIndices]
         centerSiteCoords = bulkSites.cellCoordinates[centerSiteIndices]
-        centerSiteSystemElementIndexList = bulkSites.systemElementIndexList[centerSiteIndices]
         
         neighborSystemElementIndices = np.empty(len(centerSiteCoords), dtype=object)
         displacementVectorList = np.empty(len(centerSiteCoords), dtype=object)
@@ -374,9 +371,8 @@ class neighbors(object):
         for cutoffDistKey in self.material.neighborCutoffDist.keys():
             cutoffDistList = self.material.neighborCutoffDist[cutoffDistKey][:]
             neighborListCutoffDistKey = []
-            [centerElementType, neighborElementType] = cutoffDistKey.split(self.material.elementTypeDelimiter)
+            [centerElementType, _] = cutoffDistKey.split(self.material.elementTypeDelimiter)
             centerSiteElementTypeIndex = elementTypes.index(centerElementType) 
-            neighborSiteElementTypeIndex = elementTypes.index(neighborElementType)
             localBulkSites = self.material.generateSites(self.elementTypeIndices, 
                                                          self.systemSize)
             systemElementIndexOffsetArray = (np.repeat(np.arange(0, self.material.totalElementsPerUnitCell * self.numCells, self.material.totalElementsPerUnitCell), 
@@ -413,7 +409,8 @@ class neighbors(object):
                      (', %2d minutes' % ((timeElapsed.seconds // 60) % 60)) + 
                      (', %2d seconds' % (timeElapsed.seconds % 60)))
         report.close()
-
+    
+    # TODO: remove the function
     def generateHematiteNeighborSEIndices(self, dstPath, report=1):
         startTime = datetime.now()
         offsetList = np.array([[[-1, 0, -1], [0, 0, -1], [0, 1, -1], [0, 0, -1]],
@@ -441,7 +438,6 @@ class neighbors(object):
                 neighborElementSiteIndices[:, iNeighbor] = basalNeighborElementSiteIndices
             else:
                 neighborElementSiteIndices[:, iNeighbor] = cNeighborElementSiteIndices
-        localBulkSites = self.material.generateSites(self.elementTypeIndices, self.systemSize)
         systemElementIndexOffsetArray = (np.repeat(np.arange(0, self.material.totalElementsPerUnitCell * self.numCells, self.material.totalElementsPerUnitCell), 
                                                    self.material.nElementsPerUnitCell[elementTypeIndex]))
         centerSiteSEIndices = (np.tile(self.material.nElementsPerUnitCell[:elementTypeIndex].sum() + 
@@ -488,7 +484,6 @@ class neighbors(object):
         startTime = datetime.now()
         elementTypeIndex = centerSiteQuantumIndices[3]
         centerSiteSEIndex = self.generateSystemElementIndex(self.systemSize, centerSiteQuantumIndices)
-        localBulkSites = self.material.generateSites(self.elementTypeIndices, self.systemSize)
         systemElementIndexOffsetArray = (np.repeat(np.arange(0, self.material.totalElementsPerUnitCell * self.numCells, self.material.totalElementsPerUnitCell), 
                                                    self.material.nElementsPerUnitCell[elementTypeIndex]))
         neighborSiteSEIndices = (np.tile(self.material.nElementsPerUnitCell[:elementTypeIndex].sum() + 
@@ -522,7 +517,7 @@ class neighbors(object):
         elementTypeIndex = 0
         numNeighbors = len(neighborSystemElementIndices[0])
         numBasalNeighbors = 3
-        numCNeighbors = 1
+        # numCNeighbors = 1
         T = 300 * self.material.K2AUTEMP
         
         hopElementType = 'Fe:Fe'
@@ -541,7 +536,6 @@ class neighbors(object):
         kTotal = np.sum(kList)
         probList = kList / kTotal
 
-        localBulkSites = self.material.generateSites(self.elementTypeIndices, self.systemSize)
         systemElementIndexOffsetArray = (np.repeat(np.arange(0, self.material.totalElementsPerUnitCell * self.numCells, self.material.totalElementsPerUnitCell), 
                                                    self.material.nElementsPerUnitCell[elementTypeIndex]))
         neighborSiteSEIndices = (np.tile(self.material.nElementsPerUnitCell[:elementTypeIndex].sum() + 
@@ -586,7 +580,6 @@ class neighbors(object):
         msdData = np.zeros((numDataPoints, 2))
         msdData[:, 0] = np.arange(0, analyticalTFinal + analyticalTimeInterval, analyticalTimeInterval)
 
-        localBulkSites = self.material.generateSites(self.elementTypeIndices, self.systemSize)
         systemElementIndexOffsetArray = (np.repeat(np.arange(0, self.material.totalElementsPerUnitCell * self.numCells, self.material.totalElementsPerUnitCell), 
                                                    self.material.nElementsPerUnitCell[elementTypeIndex]))
         centerSiteSEIndices = (np.tile(self.material.nElementsPerUnitCell[:elementTypeIndex].sum() + 
@@ -917,7 +910,6 @@ class run(object):
                                                                                   + precomputedArray[neighborSiteSystemElementIndex, neighborSiteSystemElementIndex] 
                                                                                   - 2 * precomputedArray[speciesSiteSystemElementIndex, neighborSiteSystemElementIndex])))
                             delG0List.append(delG0)
-                            newStateEnergy = currentStateEnergy + delG0
                             lambdaValue = self.nProcLambdaValueList[iProc]
                             VAB = self.nProcVABList[iProc]
                             delGs = ((lambdaValue + delG0) ** 2 / (4 * lambdaValue)) - VAB
