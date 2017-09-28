@@ -11,6 +11,7 @@ import pickle
 import os.path
 from copy import deepcopy
 import platform
+import pdb
 
 directorySeparator = '\\' if platform.uname()[0] == 'Windows' else '/'
 
@@ -267,35 +268,43 @@ class material(object):
                                 systemElementIndexList=systemElementIndexList)
         return returnSites
 
+
 class neighbors(object):
     """Returns the neighbor list file
-    :param systemSize: size of the super cell in terms of number of unit cell in three dimensions
+    :param systemSize: size of the super cell in terms of number of
+                        unit cell in three dimensions
     :type systemSize: np.array (3x1)
     """
-    
+
     def __init__(self, material, systemSize, pbc):
         self.startTime = datetime.now()
         self.material = material
         self.systemSize = systemSize
         self.pbc = pbc[:]
-        
+
         # total number of unit cells
         self.numCells = self.systemSize.prod()
-        self.numSystemElements = self.numCells * self.material.totalElementsPerUnitCell
-        
+        self.numSystemElements = (self.numCells
+                                  * self.material.totalElementsPerUnitCell)
+
         # generate all sites in the system
         self.elementTypeIndices = range(self.material.nElementTypes)
-        self.bulkSites = self.material.generateSites(self.elementTypeIndices, self.systemSize)
+        self.bulkSites = self.material.generateSites(self.elementTypeIndices,
+                                                     self.systemSize)
 
         xRange = range(-1, 2) if self.pbc[0] == 1 else [0]
         yRange = range(-1, 2) if self.pbc[1] == 1 else [0]
         zRange = range(-1, 2) if self.pbc[2] == 1 else [0]
-        self.unitcellTranslationalCoords = np.zeros((3**sum(self.pbc), 3)) # Initialization
+        # Initialization
+        self.unitcellTranslationalCoords = np.zeros((3**sum(self.pbc), 3))
         index = 0
         for xOffset in xRange:
             for yOffset in yRange:
                 for zOffset in zRange:
-                    self.unitcellTranslationalCoords[index] = np.dot(np.multiply(np.array([xOffset, yOffset, zOffset]), systemSize), self.material.latticeMatrix)
+                    self.unitcellTranslationalCoords[index] = np.dot(
+                        np.multiply(np.array([xOffset, yOffset, zOffset]),
+                                    systemSize),
+                        self.material.latticeMatrix)
                     index += 1
 
     def generateNeighborsFile(self, materialNeighbors, neighborsFileName):
@@ -303,73 +312,110 @@ class neighbors(object):
         file_Neighbors = open(neighborsFileName, 'w')
         pickle.dump(materialNeighbors, file_Neighbors)
         file_Neighbors.close()
-    
+
     def generateSystemElementIndex(self, systemSize, quantumIndices):
         """Returns the systemElementIndex of the element"""
-        #assert type(systemSize) is np.ndarray, 'Please input systemSize as a numpy array'
-        #assert type(quantumIndices) is np.ndarray, 'Please input quantumIndices as a numpy array'
-        #assert np.all(systemSize > 0), 'System size should be positive in all dimensions'
-        #assert all(quantumIndex >= 0 for quantumIndex in quantumIndices), 'Quantum Indices cannot be negative'
-        #assert quantumIndices[-1] < self.material.nElementsPerUnitCell[quantumIndices[-2]], 'Element Index exceed number of elements of the specified element type'
-        #assert np.all(quantumIndices[:3] < systemSize), 'Unit cell indices exceed the given system size'
+        # assert type(systemSize) is np.ndarray, \
+        #     'Please input systemSize as a numpy array'
+        # assert type(quantumIndices) is np.ndarray, \
+        #     'Please input quantumIndices as a numpy array'
+        # assert np.all(systemSize > 0), \
+        #     'System size should be positive in all dimensions'
+        # assert all(quantumIndex >= 0 for quantumIndex in quantumIndices), \
+        #     'Quantum Indices cannot be negative'
+        # assert quantumIndices[-1] < self.material.nElementsPerUnitCell[
+        #                                             quantumIndices[-2]], \
+        #                     'Element Index exceed number of elements of the \
+        #                     specified element type'
+        # assert np.all(quantumIndices[:3] < systemSize), \
+        #                     'Unit cell indices exceed the given system size'
         unitCellIndex = np.copy(quantumIndices[:3])
         [elementTypeIndex, elementIndex] = quantumIndices[-2:]
-        systemElementIndex = elementIndex + self.material.nElementsPerUnitCell[:elementTypeIndex].sum()
+        systemElementIndex = elementIndex + self.material.nElementsPerUnitCell[
+                                                    :elementTypeIndex].sum()
         nDim = len(systemSize)
         for index in range(nDim):
             if index == 0:
-                systemElementIndex += self.material.totalElementsPerUnitCell * unitCellIndex[nDim-1-index]
+                systemElementIndex += (self.material.totalElementsPerUnitCell
+                                       * unitCellIndex[nDim-1-index])
             else:
-                systemElementIndex += self.material.totalElementsPerUnitCell * unitCellIndex[nDim-1-index] * systemSize[-index:].prod()
+                systemElementIndex += (self.material.totalElementsPerUnitCell
+                                       * unitCellIndex[nDim-1-index]
+                                       * systemSize[-index:].prod())
         return systemElementIndex
-    
+
     def generateQuantumIndices(self, systemSize, systemElementIndex):
         """Returns the quantum indices of the element"""
-        #assert systemElementIndex >= 0, 'System Element Index cannot be negative'
-        #assert systemElementIndex < systemSize.prod() * self.material.totalElementsPerUnitCell, 'System Element Index out of range for the given system size'
-        quantumIndices = np.zeros(5, dtype=int)#[0] * 5
-        unitcellElementIndex = systemElementIndex % self.material.totalElementsPerUnitCell
-        quantumIndices[3] = np.where(self.material.nElementsPerUnitCell.cumsum() >= (unitcellElementIndex + 1))[0][0]
-        quantumIndices[4] = unitcellElementIndex - self.material.nElementsPerUnitCell[:quantumIndices[3]].sum()
-        nFilledUnitCells = (systemElementIndex - unitcellElementIndex) / self.material.totalElementsPerUnitCell
+        # assert systemElementIndex >= 0, \
+        #     'System Element Index cannot be negative'
+        # assert systemElementIndex < (
+        #     systemSize.prod() * self.material.totalElementsPerUnitCell), \
+        #     'System Element Index out of range for the given system size'
+        quantumIndices = np.zeros(5, dtype=int)  # [0] * 5
+        unitcellElementIndex = (systemElementIndex
+                                % self.material.totalElementsPerUnitCell)
+        quantumIndices[3] = np.where(
+                                    self.material.nElementsPerUnitCell.cumsum()
+                                    >= (unitcellElementIndex + 1))[0][0]
+        quantumIndices[4] = (unitcellElementIndex
+                             - self.material.nElementsPerUnitCell[
+                                                    :quantumIndices[3]].sum())
+        nFilledUnitCells = ((systemElementIndex - unitcellElementIndex)
+                            / self.material.totalElementsPerUnitCell)
         for index in range(3):
-            quantumIndices[index] = nFilledUnitCells / systemSize[index+1:].prod()
-            nFilledUnitCells -= quantumIndices[index] * systemSize[index+1:].prod()
+            quantumIndices[index] = (nFilledUnitCells
+                                     / systemSize[index+1:].prod())
+            nFilledUnitCells -= (quantumIndices[index]
+                                 * systemSize[index+1:].prod())
         return quantumIndices
-    
+
     def computeCoordinates(self, systemSize, systemElementIndex):
-        """Returns the coordinates in atomic units of the given system element index for a given system size"""
-        quantumIndices = self.generateQuantumIndices(systemSize, systemElementIndex)
-        unitcellTranslationalCoords = np.dot(quantumIndices[:3], self.material.latticeMatrix)
-        coordinates = unitcellTranslationalCoords + self.material.unitcellCoords[quantumIndices[4] + self.material.nElementsPerUnitCell[:quantumIndices[3]].sum()]
+        """Returns the coordinates in atomic units of the given
+            system element index for a given system size"""
+        quantumIndices = self.generateQuantumIndices(systemSize,
+                                                     systemElementIndex)
+        unitcellTranslationalCoords = np.dot(quantumIndices[:3],
+                                             self.material.latticeMatrix)
+        coordinates = (unitcellTranslationalCoords
+                       + self.material.unitcellCoords[
+                           quantumIndices[4]
+                           + self.material.nElementsPerUnitCell[
+                                                :quantumIndices[3]].sum()])
         return coordinates
-    
-    def computeDistance(self, systemSize, systemElementIndex1, systemElementindex):
-        """Returns the distance in atomic units between the two system element indices for a given system size"""
+
+    def computeDistance(self, systemSize, systemElementIndex1,
+                        systemElementindex2):
+        """Returns the distance in atomic units between the two
+            system element indices for a given system size"""
         centerCoord = self.computeCoordinates(systemSize, systemElementIndex1)
-        neighborCoord = self.computeCoordinates(systemSize, systemElementindex)
-        
+        neighborCoord = self.computeCoordinates(systemSize,
+                                                systemElementindex2)
+
         neighborImageCoords = self.unitcellTranslationalCoords + neighborCoord
         neighborImageDisplacementVectors = neighborImageCoords - centerCoord
-        neighborImageDisplacements = np.linalg.norm(neighborImageDisplacementVectors, axis=1)
+        neighborImageDisplacements = np.linalg.norm(
+                                    neighborImageDisplacementVectors, axis=1)
         displacement = np.min(neighborImageDisplacements)
         return displacement
-    
-    def hopNeighborSites(self, bulkSites, centerSiteIndices, neighborSiteIndices, cutoffDistLimits, cutoffDistKey):
-        """Returns systemElementIndexMap and distances between center sites and its neighbor sites within cutoff 
-        distance"""
+
+    def hopNeighborSites(self, bulkSites, centerSiteIndices,
+                         neighborSiteIndices, cutoffDistLimits, cutoffDistKey):
+        """Returns systemElementIndexMap and distances between
+            center sites and its neighbor sites within cutoff distance"""
         neighborSiteCoords = bulkSites.cellCoordinates[neighborSiteIndices]
-        neighborSiteSystemElementIndexList = bulkSites.systemElementIndexList[neighborSiteIndices]
+        neighborSiteSystemElementIndexList = bulkSites.systemElementIndexList[
+                                                        neighborSiteIndices]
         centerSiteCoords = bulkSites.cellCoordinates[centerSiteIndices]
-        
-        neighborSystemElementIndices = np.empty(len(centerSiteCoords), dtype=object)
+
+        neighborSystemElementIndices = np.empty(len(centerSiteCoords),
+                                                dtype=object)
         displacementVectorList = np.empty(len(centerSiteCoords), dtype=object)
         numNeighbors = np.array([], dtype=int)
 
         if cutoffDistKey == 'O:O':
-            quickTest = 0 # commit reference: 1472bb4
+            quickTest = 0  # commit reference: 1472bb4
         else:
-            quickTest = 0                
+            quickTest = 0
 
         for centerSiteIndex, centerCoord in enumerate(centerSiteCoords):
             iNeighborSiteIndexList = []
@@ -377,19 +423,29 @@ class neighbors(object):
             iNumNeighbors = 0
             if quickTest:
                 displacementList = np.zeros(len(neighborSiteCoords))
-            for neighborSiteIndex, neighborCoord in enumerate(neighborSiteCoords):
-                neighborImageCoords = self.unitcellTranslationalCoords + neighborCoord
-                neighborImageDisplacementVectors = neighborImageCoords - centerCoord
-                neighborImageDisplacements = np.linalg.norm(neighborImageDisplacementVectors, axis=1)
-                [displacement, imageIndex] = [np.min(neighborImageDisplacements), np.argmin(neighborImageDisplacements)]
+            for neighborSiteIndex, neighborCoord in enumerate(
+                                                        neighborSiteCoords):
+                neighborImageCoords = (self.unitcellTranslationalCoords
+                                       + neighborCoord)
+                neighborImageDisplacementVectors = (neighborImageCoords
+                                                    - centerCoord)
+                neighborImageDisplacements = np.linalg.norm(
+                                            neighborImageDisplacementVectors,
+                                            axis=1)
+                [displacement, imageIndex] = [
+                                        np.min(neighborImageDisplacements),
+                                        np.argmin(neighborImageDisplacements)]
                 if quickTest:
                     displacementList[neighborSiteIndex] = displacement
                 if cutoffDistLimits[0] < displacement <= cutoffDistLimits[1]:
                     iNeighborSiteIndexList.append(neighborSiteIndex)
-                    iDisplacementVectors.append(neighborImageDisplacementVectors[imageIndex])
+                    iDisplacementVectors.append(
+                                neighborImageDisplacementVectors[imageIndex])
                     iNumNeighbors += 1
-            neighborSystemElementIndices[centerSiteIndex] = neighborSiteSystemElementIndexList[iNeighborSiteIndexList]
-            displacementVectorList[centerSiteIndex] = np.asarray(iDisplacementVectors)
+            neighborSystemElementIndices[centerSiteIndex] = \
+                neighborSiteSystemElementIndexList[iNeighborSiteIndexList]
+            displacementVectorList[centerSiteIndex] = \
+                np.asarray(iDisplacementVectors)
             numNeighbors = np.append(numNeighbors, iNumNeighbors)
             if quickTest:
                 # print np.sort(displacementList)[:10] / self.material.ANG2BOHR
@@ -397,167 +453,289 @@ class neighbors(object):
                     cutoff = cutoffDist * self.material.ANG2BOHR
                     print cutoffDist
                     print displacementList[displacementList < cutoff].shape
-                    print np.unique(np.sort(np.round(displacementList[displacementList < cutoff] / self.material.ANG2BOHR, 4))).shape
-                    print np.unique(np.sort(np.round(displacementList[displacementList < cutoff] / self.material.ANG2BOHR, 3))).shape
-                    print np.unique(np.sort(np.round(displacementList[displacementList < cutoff] / self.material.ANG2BOHR, 2))).shape
-                    print np.unique(np.sort(np.round(displacementList[displacementList < cutoff] / self.material.ANG2BOHR, 1))).shape
-                    print np.unique(np.sort(np.round(displacementList[displacementList < cutoff] / self.material.ANG2BOHR, 0))).shape
-                import pdb; pdb.set_trace()
-                    
-            
-        returnNeighbors = returnValues(neighborSystemElementIndices = neighborSystemElementIndices,
-                                       displacementVectorList = displacementVectorList,
-                                       numNeighbors = numNeighbors)
+                    print np.unique(
+                        np.sort(np.round(displacementList[displacementList
+                                                          < cutoff]
+                                         / self.material.ANG2BOHR, 4))).shape
+                    print np.unique(
+                        np.sort(np.round(displacementList[displacementList
+                                                          < cutoff]
+                                         / self.material.ANG2BOHR, 3))).shape
+                    print np.unique(
+                        np.sort(np.round(displacementList[displacementList
+                                                          < cutoff]
+                                         / self.material.ANG2BOHR, 2))).shape
+                    print np.unique(
+                        np.sort(np.round(displacementList[displacementList
+                                                          < cutoff]
+                                         / self.material.ANG2BOHR, 1))).shape
+                    print np.unique(
+                        np.sort(np.round(displacementList[displacementList
+                                                          < cutoff]
+                                         / self.material.ANG2BOHR, 0))).shape
+                pdb.set_trace()
+
+        returnNeighbors = returnValues(
+                    neighborSystemElementIndices=neighborSystemElementIndices,
+                    displacementVectorList=displacementVectorList,
+                    numNeighbors=numNeighbors)
         return returnNeighbors
-    
+
     def cumulativeDisplacementList(self):
-        """Returns cumulative displacement list for the given system size printed out to disk"""
-        cumulativeDisplacementList = np.zeros((self.numSystemElements, self.numSystemElements, 3))
-        for centerSiteIndex, centerCoord in enumerate(self.bulkSites.cellCoordinates):
-            cumulativeUnitCellTranslationalCoords = np.tile(self.unitcellTranslationalCoords, (self.numSystemElements, 1, 1))
-            cumulativeNeighborImageCoords = cumulativeUnitCellTranslationalCoords + np.tile(self.bulkSites.cellCoordinates[:, np.newaxis, :], (1, len(self.unitcellTranslationalCoords), 1))
-            cumulativeNeighborImageDisplacementVectors = cumulativeNeighborImageCoords - centerCoord
-            cumulativeNeighborImageDisplacements = np.linalg.norm(cumulativeNeighborImageDisplacementVectors, axis=2)
-            cumulativeDisplacementList[centerSiteIndex] = cumulativeNeighborImageDisplacementVectors[np.arange(self.numSystemElements), np.argmin(cumulativeNeighborImageDisplacements, axis=1)]
+        """Returns cumulative displacement list for the given system size
+            printed out to disk"""
+        cumulativeDisplacementList = np.zeros((self.numSystemElements,
+                                               self.numSystemElements, 3))
+        for centerSiteIndex, centerCoord in enumerate(
+                                            self.bulkSites.cellCoordinates):
+            cumulativeUnitCellTranslationalCoords = np.tile(
+                                            self.unitcellTranslationalCoords,
+                                            (self.numSystemElements, 1, 1))
+            cumulativeNeighborImageCoords = (
+                    cumulativeUnitCellTranslationalCoords
+                    + np.tile(self.bulkSites.cellCoordinates[:, np.newaxis, :],
+                              (1, len(self.unitcellTranslationalCoords), 1)))
+            cumulativeNeighborImageDisplacementVectors = (
+                                                cumulativeNeighborImageCoords
+                                                - centerCoord)
+            cumulativeNeighborImageDisplacements = np.linalg.norm(
+                                    cumulativeNeighborImageDisplacementVectors,
+                                    axis=2)
+            cumulativeDisplacementList[centerSiteIndex] = \
+                cumulativeNeighborImageDisplacementVectors[
+                    np.arange(self.numSystemElements),
+                    np.argmin(cumulativeNeighborImageDisplacements, axis=1)]
         return cumulativeDisplacementList
-    
-    def generateNeighborList(self, neighborListDirPath, generateCumDispList=0, report=1, localSystemSize=np.array([3, 3, 3])):
-        """Adds the neighbor list to the system object and returns the neighbor list"""
-        assert neighborListDirPath, 'Please provide the path to the parent directory of neighbor list files'
-        assert all(size >= 3 for size in localSystemSize), 'Local system size in all dimensions should always be greater than or equal to 3'
-        
+
+    def generateNeighborList(self, neighborListDirPath, generateCumDispList=0,
+                             report=1, localSystemSize=np.array([3, 3, 3])):
+        """Adds the neighbor list to the system object and
+            returns the neighbor list"""
+        assert neighborListDirPath, \
+            'Please provide the path to the parent directory of \
+                neighbor list files'
+        assert all(size >= 3 for size in localSystemSize), \
+            'Local system size in all dimensions should always be \
+                greater than or equal to 3'
+
         dstPath = neighborListDirPath
         if not os.path.exists(dstPath):
             os.makedirs(dstPath)
-        hopNeighborListFilePath = dstPath + directorySeparator + 'hopNeighborList.npy'
+        hopNeighborListFilePath = (dstPath
+                                   + directorySeparator
+                                   + 'hopNeighborList.npy')
 
         hopNeighborList = {}
         tolDist = self.material.neighborCutoffDistTol
         elementTypes = self.material.elementTypes[:]
-        
+
         for cutoffDistKey in self.material.neighborCutoffDist.keys():
             cutoffDistList = self.material.neighborCutoffDist[cutoffDistKey][:]
             neighborListCutoffDistKey = []
-            [centerElementType, _] = cutoffDistKey.split(self.material.elementTypeDelimiter)
-            centerSiteElementTypeIndex = elementTypes.index(centerElementType) 
-            localBulkSites = self.material.generateSites(self.elementTypeIndices, 
-                                                         self.systemSize)
-            systemElementIndexOffsetArray = (np.repeat(np.arange(0, self.material.totalElementsPerUnitCell * self.numCells, self.material.totalElementsPerUnitCell), 
-                                                       self.material.nElementsPerUnitCell[centerSiteElementTypeIndex]))
-            centerSiteIndices = neighborSiteIndices = (np.tile(self.material.nElementsPerUnitCell[:centerSiteElementTypeIndex].sum() + 
-                                                               np.arange(0, self.material.nElementsPerUnitCell[centerSiteElementTypeIndex]), self.numCells) + systemElementIndexOffsetArray)
-            
+            [centerElementType, _] = cutoffDistKey.split(
+                                            self.material.elementTypeDelimiter)
+            centerSiteElementTypeIndex = elementTypes.index(centerElementType)
+            localBulkSites = self.material.generateSites(
+                                                    self.elementTypeIndices,
+                                                    self.systemSize)
+            systemElementIndexOffsetArray = (
+                np.repeat(np.arange(0,
+                                    (self.material.totalElementsPerUnitCell
+                                     * self.numCells),
+                                    self.material.totalElementsPerUnitCell),
+                          self.material.nElementsPerUnitCell[
+                                                centerSiteElementTypeIndex]))
+            centerSiteIndices = neighborSiteIndices = (
+                np.tile((self.material.nElementsPerUnitCell[
+                                            :centerSiteElementTypeIndex].sum()
+                         + np.arange(0, self.material.nElementsPerUnitCell[
+                                                centerSiteElementTypeIndex])),
+                        self.numCells)
+                + systemElementIndexOffsetArray)
+
             for iCutoffDist in range(len(cutoffDistList)):
-                cutoffDistLimits = [cutoffDistList[iCutoffDist] - tolDist[cutoffDistKey][iCutoffDist], cutoffDistList[iCutoffDist] + tolDist[cutoffDistKey][iCutoffDist]]
-                
-                neighborListCutoffDistKey.append(self.hopNeighborSites(localBulkSites, centerSiteIndices, 
-                                                                       neighborSiteIndices, cutoffDistLimits, cutoffDistKey))
+                cutoffDistLimits = ([(cutoffDistList[iCutoffDist]
+                                      - tolDist[cutoffDistKey][iCutoffDist]),
+                                     (cutoffDistList[iCutoffDist]
+                                      + tolDist[cutoffDistKey][iCutoffDist])])
+
+                neighborListCutoffDistKey.append(
+                    self.hopNeighborSites(localBulkSites, centerSiteIndices,
+                                          neighborSiteIndices,
+                                          cutoffDistLimits, cutoffDistKey))
             hopNeighborList[cutoffDistKey] = neighborListCutoffDistKey[:]
         np.save(hopNeighborListFilePath, hopNeighborList)
-        
+
         if generateCumDispList:
-            cumulativeDisplacementListFilePath = dstPath + directorySeparator + 'cumulativeDisplacementList.npy'
-            # TODO: Is it necessary to define cumulativeDisplacementList as a function?
+            cumulativeDisplacementListFilePath = (
+                                            dstPath
+                                            + directorySeparator
+                                            + 'cumulativeDisplacementList.npy')
+            # TODO: Is it necessary to define cumulativeDisplacementList
+            # as a function?
             cumulativeDisplacementList = self.cumulativeDisplacementList()
-            np.save(cumulativeDisplacementListFilePath, cumulativeDisplacementList)
+            np.save(cumulativeDisplacementListFilePath,
+                    cumulativeDisplacementList)
 
         if report:
             self.generateNeighborListReport(dstPath)
 
     def generateNeighborListReport(self, dstPath):
-        """Generates a neighbor list and prints out a report to the output directory"""
-        neighborListLogName = 'NeighborList.log' 
-        neighborListLogPath = dstPath + directorySeparator + neighborListLogName
+        """Generates a neighbor list and prints out a
+            report to the output directory"""
+        neighborListLogName = 'NeighborList.log'
+        neighborListLogPath = (dstPath
+                               + directorySeparator
+                               + neighborListLogName)
         report = open(neighborListLogPath, 'w')
         endTime = datetime.now()
         timeElapsed = endTime - self.startTime
-        report.write('Time elapsed: ' + ('%2d days, ' % timeElapsed.days if timeElapsed.days else '') +
-                     ('%2d hours' % ((timeElapsed.seconds // 3600) % 24)) + 
-                     (', %2d minutes' % ((timeElapsed.seconds // 60) % 60)) + 
-                     (', %2d seconds' % (timeElapsed.seconds % 60)))
+        report.write('Time elapsed: '
+                     + ('%2d days, ' % timeElapsed.days
+                        if timeElapsed.days else '')
+                     + ('%2d hours' % ((timeElapsed.seconds // 3600) % 24))
+                     + (', %2d minutes' % ((timeElapsed.seconds // 60) % 60))
+                     + (', %2d seconds' % (timeElapsed.seconds % 60)))
         report.close()
-    
+
     # TODO: remove the function
     def generateHematiteNeighborSEIndices(self, dstPath, report=1):
         startTime = datetime.now()
-        offsetList = np.array([[[-1, 0, -1], [0, 0, -1], [0, 1, -1], [0, 0, -1]],
-                                [[-1, -1, 0], [-1, 0, 0], [0, 0, 0], [0, 0, 0]],
-                                [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 0, -1]],
-                                [[0, 0, 0], [0, 1, 0], [1, 1, 0], [0, 0, 0]],
-                                [[-1, -1, 0], [0, -1, 0], [0, 0, 0], [0, 0, 0]],
-                                [[0, -1, 0], [0, 0, 0], [1, 0, 0], [0, 0, 0]],
-                                [[-1, 0, 0], [0, 0, 0], [0, 1, 0], [0, 0, 0]],
-                                [[-1, -1, 0], [-1, 0, 0], [0, 0, 0], [0, 0, 0]],
-                                [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 0, 0]],
-                                [[0, 0, 0], [0, 1, 0], [1, 1, 0], [0, 0, 1]],
-                                [[-1, -1, 0], [0, -1, 0], [0, 0, 0], [0, 0, 0]],
-                                [[0, -1, 1], [0, 0, 1], [1, 0, 1], [0, 0, 1]]])
+        offsetList = np.array(
+            [[[-1, 0, -1], [0, 0, -1], [0, 1, -1], [0, 0, -1]],
+             [[-1, -1, 0], [-1, 0, 0], [0, 0, 0], [0, 0, 0]],
+             [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 0, -1]],
+             [[0, 0, 0], [0, 1, 0], [1, 1, 0], [0, 0, 0]],
+             [[-1, -1, 0], [0, -1, 0], [0, 0, 0], [0, 0, 0]],
+             [[0, -1, 0], [0, 0, 0], [1, 0, 0], [0, 0, 0]],
+             [[-1, 0, 0], [0, 0, 0], [0, 1, 0], [0, 0, 0]],
+             [[-1, -1, 0], [-1, 0, 0], [0, 0, 0], [0, 0, 0]],
+             [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 0, 0]],
+             [[0, 0, 0], [0, 1, 0], [1, 1, 0], [0, 0, 1]],
+             [[-1, -1, 0], [0, -1, 0], [0, 0, 0], [0, 0, 0]],
+             [[0, -1, 1], [0, 0, 1], [1, 0, 1], [0, 0, 1]]])
         elementTypeIndex = 0
-        basalNeighborElementSiteIndices = np.array([11, 2, 1, 4, 3, 6, 5, 8, 7, 10, 9, 0])
-        cNeighborElementSiteIndices = np.array([9, 4, 11, 6, 1, 8, 3, 10, 5, 0, 7, 2])
+        basalNeighborElementSiteIndices = np.array(
+                                        [11, 2, 1, 4, 3, 6, 5, 8, 7, 10, 9, 0])
+        cNeighborElementSiteIndices = np.array(
+                                        [9, 4, 11, 6, 1, 8, 3, 10, 5, 0, 7, 2])
         numBasalNeighbors = 3
         numCNeighbors = 1
         numNeighbors = numBasalNeighbors + numCNeighbors
-        nElementsPerUnitCell = self.material.nElementsPerUnitCell[elementTypeIndex]
+        nElementsPerUnitCell = self.material.nElementsPerUnitCell[
+                                                            elementTypeIndex]
         neighborElementSiteIndices = np.zeros((nElementsPerUnitCell, 4), int)
         for iNeighbor in range(numNeighbors):
             if iNeighbor < numBasalNeighbors:
-                neighborElementSiteIndices[:, iNeighbor] = basalNeighborElementSiteIndices
+                neighborElementSiteIndices[:, iNeighbor] = \
+                                                basalNeighborElementSiteIndices
             else:
-                neighborElementSiteIndices[:, iNeighbor] = cNeighborElementSiteIndices
-        systemElementIndexOffsetArray = (np.repeat(np.arange(0, self.material.totalElementsPerUnitCell * self.numCells, self.material.totalElementsPerUnitCell), 
-                                                   self.material.nElementsPerUnitCell[elementTypeIndex]))
-        centerSiteSEIndices = (np.tile(self.material.nElementsPerUnitCell[:elementTypeIndex].sum() + 
-                                     np.arange(0, self.material.nElementsPerUnitCell[elementTypeIndex]), self.numCells) + systemElementIndexOffsetArray)
+                neighborElementSiteIndices[:, iNeighbor] = \
+                                                    cNeighborElementSiteIndices
+        systemElementIndexOffsetArray = (
+            np.repeat(np.arange(0,
+                                (self.material.totalElementsPerUnitCell
+                                 * self.numCells),
+                                self.material.totalElementsPerUnitCell),
+                      self.material.nElementsPerUnitCell[elementTypeIndex]))
+        centerSiteSEIndices = (
+            np.tile(self.material.nElementsPerUnitCell[:elementTypeIndex].sum()
+                    + np.arange(0,
+                                self.material.nElementsPerUnitCell[
+                                                            elementTypeIndex]),
+                    self.numCells)
+            + systemElementIndexOffsetArray)
         numCenterSiteElements = len(centerSiteSEIndices)
-        neighborSystemElementIndices = np.zeros((numCenterSiteElements, numNeighbors))
-        
-        for centerSiteIndex, centerSiteSEIndex in enumerate(centerSiteSEIndices):
-            centerSiteQuantumIndices = self.generateQuantumIndices(self.systemSize, centerSiteSEIndex)
+        neighborSystemElementIndices = np.zeros((numCenterSiteElements,
+                                                 numNeighbors))
+
+        for centerSiteIndex, centerSiteSEIndex in enumerate(
+                                                        centerSiteSEIndices):
+            centerSiteQuantumIndices = self.generateQuantumIndices(
+                                                            self.systemSize,
+                                                            centerSiteSEIndex)
             centerSiteUnitCellIndices = centerSiteQuantumIndices[:3]
             centerSiteElementSiteIndex = centerSiteQuantumIndices[-1:][0]
             for neighborIndex in range(numNeighbors):
-                neighborUnitCellIndices = centerSiteUnitCellIndices + offsetList[centerSiteElementSiteIndex][neighborIndex]
-                for index, neighborUnitCellIndex in enumerate(neighborUnitCellIndices):
+                neighborUnitCellIndices = (
+                    centerSiteUnitCellIndices
+                    + offsetList[centerSiteElementSiteIndex][neighborIndex])
+                for index, neighborUnitCellIndex in enumerate(
+                                                    neighborUnitCellIndices):
                     if neighborUnitCellIndex < 0:
-                        neighborUnitCellIndices[index] += self.systemSize[index]
+                        neighborUnitCellIndices[index] += \
+                                                        self.systemSize[index]
                     elif neighborUnitCellIndex >= self.systemSize[index]:
-                        neighborUnitCellIndices[index] -= self.systemSize[index]
-                    neighborQuantumIndices = np.hstack((neighborUnitCellIndices, elementTypeIndex, neighborElementSiteIndices[centerSiteElementSiteIndex][neighborIndex]))
-                    neighborSEIndex = self.generateSystemElementIndex(self.systemSize, neighborQuantumIndices)
-                    neighborSystemElementIndices[centerSiteIndex][neighborIndex] = neighborSEIndex
-        
+                        neighborUnitCellIndices[index] -= \
+                                                        self.systemSize[index]
+                    neighborQuantumIndices = np.hstack((
+                        neighborUnitCellIndices,
+                        elementTypeIndex,
+                        neighborElementSiteIndices[centerSiteElementSiteIndex][
+                                                            neighborIndex]))
+                    neighborSEIndex = self.generateSystemElementIndex(
+                                                        self.systemSize,
+                                                        neighborQuantumIndices)
+                    neighborSystemElementIndices[
+                            centerSiteIndex][neighborIndex] = neighborSEIndex
+
         fileName = 'neighborSystemElementIndices.npy'
-        neighborSystemElementIndicesFilePath = dstPath + directorySeparator + fileName
-        np.save(neighborSystemElementIndicesFilePath, neighborSystemElementIndices)
+        neighborSystemElementIndicesFilePath = (dstPath
+                                                + directorySeparator
+                                                + fileName)
+        np.save(neighborSystemElementIndicesFilePath,
+                neighborSystemElementIndices)
         if report:
             self.generateHematiteNeighborSEIndicesReport(dstPath, startTime)
         return
 
     def generateHematiteNeighborSEIndicesReport(self, dstPath, startTime):
-        """Generates a neighbor list and prints out a report to the output directory"""
-        neighborSystemElementIndicesLogName = 'neighborSystemElementIndices.log' 
-        neighborSystemElementIndicesLogPath = dstPath + directorySeparator + neighborSystemElementIndicesLogName
+        """Generates a neighbor list and prints out a
+            report to the output directory"""
+        neighborSystemElementIndicesLogName = \
+            'neighborSystemElementIndices.log'
+        neighborSystemElementIndicesLogPath = (
+                                        dstPath
+                                        + directorySeparator
+                                        + neighborSystemElementIndicesLogName)
         report = open(neighborSystemElementIndicesLogPath, 'w')
         endTime = datetime.now()
         timeElapsed = endTime - startTime
-        report.write('Time elapsed: ' + ('%2d days, ' % timeElapsed.days if timeElapsed.days else '') +
-                     ('%2d hours' % ((timeElapsed.seconds // 3600) % 24)) + 
-                     (', %2d minutes' % ((timeElapsed.seconds // 60) % 60)) + 
-                     (', %2d seconds' % (timeElapsed.seconds % 60)))
+        report.write('Time elapsed: '
+                     + ('%2d days, '
+                        % timeElapsed.days if timeElapsed.days else '')
+                     + ('%2d hours' % ((timeElapsed.seconds // 3600) % 24))
+                     + (', %2d minutes' % ((timeElapsed.seconds // 60) % 60))
+                     + (', %2d seconds' % (timeElapsed.seconds % 60)))
         report.close()
 
-    def generateSpeciesSiteSDList(self, centerSiteQuantumIndices, dstPath, report=1):
+    def generateSpeciesSiteSDList(self, centerSiteQuantumIndices,
+                                  dstPath, report=1):
         startTime = datetime.now()
         elementTypeIndex = centerSiteQuantumIndices[3]
-        centerSiteSEIndex = self.generateSystemElementIndex(self.systemSize, centerSiteQuantumIndices)
-        systemElementIndexOffsetArray = (np.repeat(np.arange(0, self.material.totalElementsPerUnitCell * self.numCells, self.material.totalElementsPerUnitCell), 
-                                                   self.material.nElementsPerUnitCell[elementTypeIndex]))
-        neighborSiteSEIndices = (np.tile(self.material.nElementsPerUnitCell[:elementTypeIndex].sum() + 
-                                         np.arange(0, self.material.nElementsPerUnitCell[elementTypeIndex]), self.numCells) + systemElementIndexOffsetArray)
+        centerSiteSEIndex = self.generateSystemElementIndex(
+                                                    self.systemSize,
+                                                    centerSiteQuantumIndices)
+        systemElementIndexOffsetArray = np.repeat(
+                        np.arange(0,
+                                  (self.material.totalElementsPerUnitCell
+                                   * self.numCells),
+                                  self.material.totalElementsPerUnitCell),
+                        self.material.nElementsPerUnitCell[elementTypeIndex])
+        neighborSiteSEIndices = (
+            np.tile(self.material.nElementsPerUnitCell[:elementTypeIndex].sum()
+                    + np.arange(0,
+                                self.material.nElementsPerUnitCell[
+                                                            elementTypeIndex]),
+                    self.numCells)
+            + systemElementIndexOffsetArray)
         speciesSiteSDList = np.zeros(len(neighborSiteSEIndices))
-        for neighborSiteIndex, neighborSiteSEIndex in enumerate(neighborSiteSEIndices):
-            speciesSiteSDList[neighborSiteIndex] = self.computeDistance(self.systemSize, centerSiteSEIndex, neighborSiteSEIndex)**2
+        for neighborSiteIndex, neighborSiteSEIndex in enumerate(
+                                                        neighborSiteSEIndices):
+            speciesSiteSDList[neighborSiteIndex] = self.computeDistance(
+                                                        self.systemSize,
+                                                        centerSiteSEIndex,
+                                                        neighborSiteSEIndex)**2
         speciesSiteSDList /= self.material.ANG2BOHR**2
         fileName = 'speciesSiteSDList.npy'
         speciesSiteSDListFilePath = dstPath + directorySeparator + fileName
@@ -567,26 +745,32 @@ class neighbors(object):
         return
 
     def generateSpeciesSiteSDListReport(self, dstPath, startTime):
-        """Generates a neighbor list and prints out a report to the output directory"""
-        speciesSiteSDListLogName = 'speciesSiteSDList.log' 
-        speciesSiteSDListLogPath = dstPath + directorySeparator + speciesSiteSDListLogName
+        """Generates a neighbor list and prints out a
+            report to the output directory"""
+        speciesSiteSDListLogName = 'speciesSiteSDList.log'
+        speciesSiteSDListLogPath = (dstPath
+                                    + directorySeparator
+                                    + speciesSiteSDListLogName)
         report = open(speciesSiteSDListLogPath, 'w')
         endTime = datetime.now()
         timeElapsed = endTime - startTime
-        report.write('Time elapsed: ' + ('%2d days, ' % timeElapsed.days if timeElapsed.days else '') +
-                     ('%2d hours' % ((timeElapsed.seconds // 3600) % 24)) + 
-                     (', %2d minutes' % ((timeElapsed.seconds // 60) % 60)) + 
-                     (', %2d seconds' % (timeElapsed.seconds % 60)))
+        report.write('Time elapsed: '
+                     + ('%2d days, '
+                        % timeElapsed.days if timeElapsed.days else '')
+                     + ('%2d hours' % ((timeElapsed.seconds // 3600) % 24))
+                     + (', %2d minutes' % ((timeElapsed.seconds // 60) % 60))
+                     + (', %2d seconds' % (timeElapsed.seconds % 60)))
         report.close()
 
-    def generateTransitionProbMatrix(self, neighborSystemElementIndices, dstPath, report=1):
+    def generateTransitionProbMatrix(self, neighborSystemElementIndices,
+                                     dstPath, report=1):
         startTime = datetime.now()
         elementTypeIndex = 0
         numNeighbors = len(neighborSystemElementIndices[0])
         numBasalNeighbors = 3
         # numCNeighbors = 1
         T = 300 * self.material.K2AUTEMP
-        
+
         hopElementType = 'Fe:Fe'
         kList = np.zeros(numNeighbors)
         delG0 = 0
@@ -595,72 +779,107 @@ class neighbors(object):
                 hopDistType = 0
             else:
                 hopDistType = 1
-            lambdaValue = self.material.lambdaValues[hopElementType][hopDistType]
+            lambdaValue = self.material.lambdaValues[
+                                                hopElementType][hopDistType]
             VAB = self.material.VAB[hopElementType][hopDistType]
             delGs = ((lambdaValue + delG0) ** 2 / (4 * lambdaValue)) - VAB
             kList[neighborIndex] = self.material.vn * np.exp(-delGs / T)
-        
+
         kTotal = np.sum(kList)
         probList = kList / kTotal
 
-        systemElementIndexOffsetArray = (np.repeat(np.arange(0, self.material.totalElementsPerUnitCell * self.numCells, self.material.totalElementsPerUnitCell), 
-                                                   self.material.nElementsPerUnitCell[elementTypeIndex]))
-        neighborSiteSEIndices = (np.tile(self.material.nElementsPerUnitCell[:elementTypeIndex].sum() + 
-                                         np.arange(0, self.material.nElementsPerUnitCell[elementTypeIndex]), self.numCells) + systemElementIndexOffsetArray)
-        
+        systemElementIndexOffsetArray = np.repeat(
+                        np.arange(0,
+                                  (self.material.totalElementsPerUnitCell
+                                   * self.numCells),
+                                  self.material.totalElementsPerUnitCell),
+                        self.material.nElementsPerUnitCell[elementTypeIndex])
+        neighborSiteSEIndices = (
+            np.tile(self.material.nElementsPerUnitCell[:elementTypeIndex].sum()
+                    + np.arange(0,
+                                self.material.nElementsPerUnitCell[
+                                                            elementTypeIndex]),
+                    self.numCells)
+            + systemElementIndexOffsetArray)
+
         numElementTypeSites = len(neighborSystemElementIndices)
-        transitionProbMatrix = np.zeros((numElementTypeSites, numElementTypeSites))
+        transitionProbMatrix = np.zeros((numElementTypeSites,
+                                         numElementTypeSites))
         for centerSiteIndex in range(numElementTypeSites):
             for neighborIndex in range(numNeighbors):
-                neighborSiteIndex = np.where(neighborSiteSEIndices == neighborSystemElementIndices[centerSiteIndex][neighborIndex])[0][0]
-                transitionProbMatrix[centerSiteIndex][neighborSiteIndex] = probList[neighborIndex]
+                neighborSiteIndex = np.where(
+                            neighborSiteSEIndices
+                            == neighborSystemElementIndices[centerSiteIndex][
+                                                        neighborIndex])[0][0]
+                transitionProbMatrix[centerSiteIndex][neighborSiteIndex] = \
+                    probList[neighborIndex]
         fileName = 'transitionProbMatrix.npy'
         transitionProbMatrixFilePath = dstPath + directorySeparator + fileName
         np.save(transitionProbMatrixFilePath, transitionProbMatrix)
         if report:
             self.generateTransitionProbMatrixListReport(dstPath, startTime)
         return
-    
+
     def generateTransitionProbMatrixListReport(self, dstPath, startTime):
-        """Generates a neighbor list and prints out a report to the output directory"""
-        transitionProbMatrixLogName = 'transitionProbMatrix.log' 
-        transitionProbMatrixLogPath = dstPath + directorySeparator + transitionProbMatrixLogName
+        """Generates a neighbor list and prints out a report to the
+            output directory"""
+        transitionProbMatrixLogName = 'transitionProbMatrix.log'
+        transitionProbMatrixLogPath = (dstPath
+                                       + directorySeparator
+                                       + transitionProbMatrixLogName)
         report = open(transitionProbMatrixLogPath, 'w')
         endTime = datetime.now()
         timeElapsed = endTime - startTime
-        report.write('Time elapsed: ' + ('%2d days, ' % timeElapsed.days if timeElapsed.days else '') +
-                     ('%2d hours' % ((timeElapsed.seconds // 3600) % 24)) + 
-                     (', %2d minutes' % ((timeElapsed.seconds // 60) % 60)) + 
-                     (', %2d seconds' % (timeElapsed.seconds % 60)))
+        report.write('Time elapsed: '
+                     + ('%2d days, '
+                        % timeElapsed.days if timeElapsed.days else '')
+                     + ('%2d hours' % ((timeElapsed.seconds // 3600) % 24))
+                     + (', %2d minutes' % ((timeElapsed.seconds // 60) % 60))
+                     + (', %2d seconds' % (timeElapsed.seconds % 60)))
         report.close()
-    
-    def generateMSDAnalyticalData(self, transitionProbMatrix, speciesSiteSDList, centerSiteQuantumIndices, analyticalTFinal, analyticalTimeInterval, dstPath, report=1):
+
+    def generateMSDAnalyticalData(self, transitionProbMatrix,
+                                  speciesSiteSDList, centerSiteQuantumIndices,
+                                  analyticalTFinal, analyticalTimeInterval,
+                                  dstPath, report=1):
         startTime = datetime.now()
-        
+
         fileName = '%1.2Ens' % analyticalTFinal
         MSDAnalyticalDataFileName = 'MSD_Analytical_Data_' + fileName + '.dat'
-        MSDAnalyticalDataFilePath = dstPath + directorySeparator + MSDAnalyticalDataFileName
+        MSDAnalyticalDataFilePath = (dstPath
+                                     + directorySeparator
+                                     + MSDAnalyticalDataFileName)
         open(MSDAnalyticalDataFilePath, 'w').close()
 
         elementTypeIndex = 0
         numDataPoints = int(analyticalTFinal / analyticalTimeInterval) + 1
         msdData = np.zeros((numDataPoints, 2))
-        msdData[:, 0] = np.arange(0, analyticalTFinal + analyticalTimeInterval, analyticalTimeInterval)
+        msdData[:, 0] = np.arange(0,
+                                  analyticalTFinal + analyticalTimeInterval,
+                                  analyticalTimeInterval)
 
-        systemElementIndexOffsetArray = (np.repeat(np.arange(0, self.material.totalElementsPerUnitCell * self.numCells, self.material.totalElementsPerUnitCell), 
-                                                   self.material.nElementsPerUnitCell[elementTypeIndex]))
-        centerSiteSEIndices = (np.tile(self.material.nElementsPerUnitCell[:elementTypeIndex].sum() + 
-                                       np.arange(0, self.material.nElementsPerUnitCell[elementTypeIndex]), self.numCells) + systemElementIndexOffsetArray)
-        
-        centerSiteSEIndex = self.generateSystemElementIndex(self.systemSize, centerSiteQuantumIndices)
-        
-        
-        
+        systemElementIndexOffsetArray = np.repeat(
+                        np.arange(0,
+                                  (self.material.totalElementsPerUnitCell
+                                   * self.numCells),
+                                  self.material.totalElementsPerUnitCell),
+                        self.material.nElementsPerUnitCell[elementTypeIndex])
+        centerSiteSEIndices = (
+            np.tile(self.material.nElementsPerUnitCell[:elementTypeIndex].sum()
+                    + np.arange(0,
+                                self.material.nElementsPerUnitCell[
+                                                            elementTypeIndex]),
+                    self.numCells)
+            + systemElementIndexOffsetArray)
+
+        centerSiteSEIndex = self.generateSystemElementIndex(
+                                                    self.systemSize,
+                                                    centerSiteQuantumIndices)
         numBasalNeighbors = 3
         numCNeighbors = 1
         numNeighbors = numBasalNeighbors + numCNeighbors
         T = 300 * self.material.K2AUTEMP
-        
+
         hopElementType = 'Fe:Fe'
         kList = np.zeros(numNeighbors)
         delG0 = 0
@@ -669,14 +888,15 @@ class neighbors(object):
                 hopDistType = 0
             else:
                 hopDistType = 1
-            lambdaValue = self.material.lambdaValues[hopElementType][hopDistType]
+            lambdaValue = self.material.lambdaValues[hopElementType][
+                                                                hopDistType]
             VAB = self.material.VAB[hopElementType][hopDistType]
             delGs = ((lambdaValue + delG0) ** 2 / (4 * lambdaValue)) - VAB
             kList[neighborIndex] = self.material.vn * np.exp(-delGs / T)
-        
-        kTotal = np.sum(kList)        
-        timestep = (1 / kTotal) / self.material.SEC2AUTIME * self.material.SEC2NS
-        
+
+        kTotal = np.sum(kList)
+        timestep = self.material.SEC2NS / kTotal / self.material.SEC2AUTIME
+
         simTime = 0
         startIndex = 0
         rowIndex = np.where(centerSiteSEIndices == centerSiteSEIndex)
@@ -684,35 +904,46 @@ class neighbors(object):
         with open(MSDAnalyticalDataFilePath, 'a') as MSDAnalyticalDataFile:
             np.savetxt(MSDAnalyticalDataFile, msdData[startIndex, :][None, :])
         while True:
-            newTransitionProbMatrix = np.dot(newTransitionProbMatrix, transitionProbMatrix)
+            newTransitionProbMatrix = np.dot(newTransitionProbMatrix,
+                                             transitionProbMatrix)
             simTime += timestep
             endIndex = int(simTime / analyticalTimeInterval)
             if endIndex >= startIndex + 1:
-                msdData[endIndex, 1] = np.dot(newTransitionProbMatrix[rowIndex], speciesSiteSDList)
-                with open(MSDAnalyticalDataFilePath, 'a') as MSDAnalyticalDataFile:
-                    np.savetxt(MSDAnalyticalDataFile, msdData[endIndex, :][None, :])
+                msdData[endIndex, 1] = np.dot(
+                                            newTransitionProbMatrix[rowIndex],
+                                            speciesSiteSDList)
+                with open(MSDAnalyticalDataFilePath, 'a') as \
+                        MSDAnalyticalDataFile:
+                    np.savetxt(MSDAnalyticalDataFile,
+                               msdData[endIndex, :][None, :])
                 startIndex += 1
                 if endIndex == numDataPoints - 1:
                     break
-        
+
         if report:
             self.generateMSDAnalyticalDataReport(fileName, dstPath, startTime)
-        returnMSDData = returnValues(msdData = msdData)
+        returnMSDData = returnValues(msdData=msdData)
         return returnMSDData
-    
+
     def generateMSDAnalyticalDataReport(self, fileName, dstPath, startTime):
-        """Generates a neighbor list and prints out a report to the output directory"""
-        MSDAnalyticalDataLogName = 'MSD_Analytical_Data_' + fileName + '.log' 
-        MSDAnalyticalDataLogPath = dstPath + directorySeparator + MSDAnalyticalDataLogName
+        """Generates a neighbor list and prints out a report to the
+            output directory"""
+        MSDAnalyticalDataLogName = 'MSD_Analytical_Data_' + fileName + '.log'
+        MSDAnalyticalDataLogPath = (dstPath
+                                    + directorySeparator
+                                    + MSDAnalyticalDataLogName)
         report = open(MSDAnalyticalDataLogPath, 'w')
         endTime = datetime.now()
         timeElapsed = endTime - startTime
-        report.write('Time elapsed: ' + ('%2d days, ' % timeElapsed.days if timeElapsed.days else '') +
-                     ('%2d hours' % ((timeElapsed.seconds // 3600) % 24)) + 
-                     (', %2d minutes' % ((timeElapsed.seconds // 60) % 60)) + 
-                     (', %2d seconds' % (timeElapsed.seconds % 60)))
+        report.write('Time elapsed: '
+                     + ('%2d days, '
+                        % timeElapsed.days if timeElapsed.days else '')
+                     + ('%2d hours' % ((timeElapsed.seconds // 3600) % 24))
+                     + (', %2d minutes' % ((timeElapsed.seconds // 60) % 60))
+                     + (', %2d seconds' % (timeElapsed.seconds % 60)))
         report.close()
-        
+
+
 class system(object):
     """defines the system we are working on
     
