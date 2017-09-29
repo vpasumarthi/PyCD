@@ -1,18 +1,18 @@
 #!/usr/bin/env python
 """
-This is a setup script to install Kinetic Model
+This is a setup script to install PyCT
 """
 
 import setuptools
 
 if __name__ == "__main__":
     setuptools.setup(
-        name='KineticModel',
+        name='PyCT',
         version="0.1.1",
-        description='KMC Model to simulate charge transport in crystal lattice',
+        description='Python-based mesoscale model for Charge Transport',
         author='Viswanath Pasumarthi',
         author_email='pasumart@buffalo.edu',
-        url="https://github.com/vpasumarthi/KineticModel",
+        url="https://github.com/vpasumarthi/PyCT",
         license='BSD-3C',
         packages=setuptools.find_packages(),
         install_requires=[

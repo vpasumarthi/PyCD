@@ -3,12 +3,12 @@
 testing the math.py module.
 """
 
-import KineticModel as km
+import PyCT as pyct
 import pytest
 
 def test_add():
-    assert km.math.add(3, 4) == 7
-    assert km.math.add(4, 4) == 8
+    assert pyct.math.add(3, 4) == 7
+    assert pyct.math.add(4, 4) == 8
 
 testdata = [
     (2, 5, 10),
@@ -19,21 +19,21 @@ testdata = [
 ]
 @pytest.mark.parametrize("a,b,expected", testdata)
 def test_mult(a, b, expected):
-    assert km.math.mult(a, b) == expected
-    assert km.mult(b, a) == expected
+    assert pyct.math.mult(a, b) == expected
+    assert pyct.mult(b, a) == expected
 
 def test_mod():
-    assert km.math.mod(4, 3) == 1
-    assert km.math.mod(6, 3) == 0
+    assert pyct.math.mod(4, 3) == 1
+    assert pyct.math.mod(6, 3) == 0
 
 def test_power():
-    assert km.math.power(4, 2) == 16
-    assert km.power(2, 3) == 8
+    assert pyct.math.power(4, 2) == 16
+    assert pyct.power(2, 3) == 8
 
 def test_min():
-    assert km.math.min(2, 3) == 2
-    assert km.math.min(3, 3) == 3
+    assert pyct.math.min(2, 3) == 2
+    assert pyct.math.min(3, 3) == 3
 
 def test_max():
-    assert km.math.max(3, 4) == 4
-    assert km.math.max(4, 4) == 4
+    assert pyct.math.max(3, 4) == 4
+    assert pyct.math.max(4, 4) == 4
