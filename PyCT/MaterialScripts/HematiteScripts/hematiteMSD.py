@@ -3,7 +3,7 @@
 def hematiteMSD(systemSize, pbc, nDim, Temp, speciesCount, tFinal, nTraj, timeInterval, 
                 msdTFinal, trimLength, displayErrorBars, reprTime, reprDist, report, overWrite):
 
-    from KineticModel import analysis
+    from PyCT import analysis
     import numpy as np
     import os
     import platform
@@ -14,7 +14,7 @@ def hematiteMSD(systemSize, pbc, nDim, Temp, speciesCount, tFinal, nTraj, timeIn
     directorySeparator = '\\' if platform.uname()[0]=='Windows' else '/'
     nLevelUp = 3 if platform.uname()[0]=='Linux' else 4
     systemDirectoryPath = directorySeparator.join(cwd.split(directorySeparator)[:-nLevelUp] + 
-                                                  ['KineticModelSimulations', 'Hematite', ('PBC' if pbc else 'NoPBC'), 
+                                                  ['PyCTSimulations', 'Hematite', ('PBC' if pbc else 'NoPBC'), 
                                                    ('SystemSize' + str(systemSize).replace(' ', ''))])
 
     # Change to working directory

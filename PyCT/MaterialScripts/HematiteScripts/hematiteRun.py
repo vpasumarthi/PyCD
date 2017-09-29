@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 def hematiteRun(systemSize, pbc, Temp, speciesCount, tFinal, nTraj, 
                 timeInterval, randomSeed, report, overWrite, gui):
-    from KineticModel import system, run
+    from PyCT import system, run
     import os
     import platform
     import numpy as np
@@ -12,7 +12,7 @@ def hematiteRun(systemSize, pbc, Temp, speciesCount, tFinal, nTraj,
     directorySeparator = '\\' if platform.uname()[0]=='Windows' else '/'
     nLevelUp = 3 if platform.uname()[0]=='Linux' else 4
     systemDirectoryPath = directorySeparator.join(cwd.split(directorySeparator)[:-nLevelUp] + 
-                                                  ['KineticModelSimulations', 'Hematite', ('PBC' if pbc else 'NoPBC'), 
+                                                  ['PyCTSimulations', 'Hematite', ('PBC' if pbc else 'NoPBC'), 
                                                    ('SystemSize' + str(systemSize).replace(' ', ''))])
 
     # Change to working directory

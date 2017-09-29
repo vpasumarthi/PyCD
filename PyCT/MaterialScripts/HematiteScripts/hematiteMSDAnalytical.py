@@ -3,7 +3,7 @@
 def hematiteMSDAnalytical(systemSize, pbc, centerSiteQuantumIndices, analyticalTFinal, analyticalTimeInterval, nDim, 
                           speciesCount, nTraj, tFinal, timeInterval, msdTFinal, trimLength, displayErrorBars, reprTime, reprDist):
 
-    from KineticModel import material, neighbors, analysis
+    from PyCT import material, neighbors, analysis
     import numpy as np
     import os
     import platform
@@ -14,7 +14,7 @@ def hematiteMSDAnalytical(systemSize, pbc, centerSiteQuantumIndices, analyticalT
     directorySeparator = '\\' if platform.uname()[0]=='Windows' else '/'
     nLevelUp = 3 if platform.uname()[0]=='Linux' else 4
     systemDirectoryPath = directorySeparator.join(cwd.split(directorySeparator)[:-nLevelUp] + 
-                                                  ['KineticModelSimulations', 'Hematite', ('PBC' if np.all(pbc) else 'NoPBC'), 
+                                                  ['PyCTSimulations', 'Hematite', ('PBC' if np.all(pbc) else 'NoPBC'), 
                                                    ('SystemSize[' + ','.join(['%i' % systemSize[i] for i in range(len(systemSize))]) + ']')])
 
     # Determine path for neighbor list directories

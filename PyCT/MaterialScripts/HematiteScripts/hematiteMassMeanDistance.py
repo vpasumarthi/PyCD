@@ -11,7 +11,7 @@ def hematiteMassMeanDistance(pbc, systemSize, nTrajList, cutE_List, nSpeciesList
     cwd = os.path.dirname(os.path.realpath(__file__))
     nLevelUp = 3 if platform.uname()[0]=='Linux' else 4
     directorySeparator = '\\' if platform.uname()[0]=='Windows' else '/'
-    systemDirectoryPath = directorySeparator.join(cwd.split(directorySeparator)[:-nLevelUp] + ['KineticModelSimulations', 'Hematite', ('PBC' if pbc else 'NoPBC'), 
+    systemDirectoryPath = directorySeparator.join(cwd.split(directorySeparator)[:-nLevelUp] + ['PyCTSimulations', 'Hematite', ('PBC' if pbc else 'NoPBC'), 
                                                        ('SystemSize' + str(systemSize).replace(' ', ''))])
     for nTraj in nTrajList:
         for cutE in cutE_List:

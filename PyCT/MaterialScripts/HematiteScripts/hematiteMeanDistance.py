@@ -3,7 +3,7 @@
 def hematiteMeanDistance(trajectoryDataFileName, shellCharges, cutE, dirPath, systemSize, speciesCount, nTraj, kmcSteps, 
                         stepInterval, nStepsMSD, nDispMSD, binsize, reprTime, reprDist, outdir):
 
-    from KineticModel import analysis
+    from PyCT import analysis
     import numpy as np
     import pickle
     import platform

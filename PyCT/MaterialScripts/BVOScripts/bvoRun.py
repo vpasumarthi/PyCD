@@ -6,7 +6,7 @@ import pickle
 
 import numpy as np
 
-from KineticModel import system, run
+from PyCT import system, run
 
 directorySeparator = '\\' if platform.uname()[0] == 'Windows' else '/'
 
@@ -20,7 +20,7 @@ def bvoRun(systemSize, pbc, Temp, speciesCount, tFinal, nTraj,
     nLevelUp = 3 if platform.uname()[0] == 'Linux' else 4
     systemDirectoryPath = directorySeparator.join(
             cwd.split(directorySeparator)[:-nLevelUp]
-            + ['KineticModelSimulations', 'BVO', ('PBC' if pbc else 'NoPBC'),
+            + ['PyCTSimulations', 'BVO', ('PBC' if pbc else 'NoPBC'),
                ('SystemSize' + str(systemSize).replace(' ', ''))])
 
     # Change to working directory

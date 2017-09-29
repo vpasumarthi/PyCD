@@ -5,7 +5,7 @@ import platform
 
 import numpy as np
 
-from KineticModel import material, neighbors, system
+from PyCT import material, neighbors, system
 from bvoParameters import bvoParameters
 
 directorySeparator = '\\' if platform.uname()[0] == 'Windows' else '/'
@@ -22,7 +22,7 @@ def bvoSetup(systemSize, pbc, generateObjectFiles, generateHopNeighborList,
     nLevelUp = 3 if platform.uname()[0] == 'Linux' else 4
     systemDirectoryPath = directorySeparator.join(
         cwd.split(directorySeparator)[:-nLevelUp]
-        + ['KineticModelSimulations', 'BVO',
+        + ['PyCTSimulations', 'BVO',
            ('PBC' if np.all(pbc) else 'NoPBC'),
            ('SystemSize[' + ','.join(['%i' % systemSize[i]
                                       for i in range(len(systemSize))]) + ']')]

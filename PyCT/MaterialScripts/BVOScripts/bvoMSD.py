@@ -4,7 +4,7 @@ import os
 import platform
 import pickle
 
-from KineticModel import analysis
+from PyCT import analysis
 
 directorySeparator = '\\' if platform.uname()[0] == 'Windows' else '/'
 
@@ -18,7 +18,7 @@ def bvoMSD(systemSize, pbc, nDim, Temp, speciesCount, tFinal, nTraj,
     nLevelUp = 3 if platform.uname()[0] == 'Linux' else 4
     systemDirectoryPath = directorySeparator.join(
                         cwd.split(directorySeparator)[:-nLevelUp]
-                        + ['KineticModelSimulations', 'BVO',
+                        + ['PyCTSimulations', 'BVO',
                            ('PBC' if pbc else 'NoPBC'),
                            ('SystemSize' + str(systemSize).replace(' ', ''))])
 
