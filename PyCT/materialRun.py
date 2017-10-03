@@ -51,6 +51,7 @@ def materialRun(systemSize, pbc, Temp, speciesCount, tFinal, nTraj,
                                   + inputFileDirectoryName)
 
         # Build path for material and neighbors object files
+        # TODO: Obtain material name in generic sense
         materialName = 'bvo'
         tailName = '.obj'
         objectFileDirectoryName = 'ObjectFiles'

@@ -5,16 +5,25 @@ import platform
 
 import numpy as np
 
-from PyCT.materialParameters import materialParameters
+# from PyCT.materialParameters import materialParameters
 from PyCT.core import material, neighbors, system
 
 directorySeparator = '\\' if platform.uname()[0] == 'Windows' else '/'
 
 
-def materialSetup(systemSize, pbc, generateObjectFiles, generateHopNeighborList,
-             generateCumDispList, alpha, nmax, kmax, generatePrecomputedArray):
+def materialSetup(materialParameters, systemSize, pbc,
+                  generateObjectFiles, generateHopNeighborList,
+                  generateCumDispList, alpha, nmax, kmax,
+                  generatePrecomputedArray):
     """Prepare material class object file, neighborlist and \
         saves to the provided destination path"""
+
+    # Build material object files
+    bvo = material(materialParameters)
+    materialName = bvo.name
+
+    # Build neighbors object files
+    bvoNeighbors = neighbors(bvo, systemSize, pbc)
 
     # Determine path for system directory
     cwd = os.path.dirname(os.path.realpath(__file__))
@@ -22,7 +31,7 @@ def materialSetup(systemSize, pbc, generateObjectFiles, generateHopNeighborList,
     nLevelUp = 3 if platform.uname()[0] == 'Linux' else 3
     systemDirectoryPath = directorySeparator.join(
         cwd.split(directorySeparator)[:-nLevelUp]
-        + ['PyCTSimulations', 'BVO',
+        + ['PyCTSimulations', materialName,
            ('PBC' if np.all(pbc) else 'NoPBC'),
            ('SystemSize[' + ','.join(['%i' % systemSize[i]
                                       for i in range(len(systemSize))]) + ']')]
@@ -35,7 +44,6 @@ def materialSetup(systemSize, pbc, generateObjectFiles, generateHopNeighborList,
                               + inputFileDirectoryName)
 
     # Build path for material and neighbors object files
-    materialName = 'bvo'
     tailName = '.obj'
     objectFileDirectoryName = 'ObjectFiles'
     objectFileDirPath = (inputFileDirectoryPath
@@ -43,17 +51,11 @@ def materialSetup(systemSize, pbc, generateObjectFiles, generateHopNeighborList,
                          + objectFileDirectoryName)
     if not os.path.exists(objectFileDirPath):
         os.makedirs(objectFileDirPath)
-    
+
     materialFileName = (objectFileDirPath + directorySeparator
                         + materialName + tailName)
     neighborsFileName = (objectFileDirPath + directorySeparator + materialName
                          + 'Neighbors' + tailName)
-
-    # Build material object files
-    bvo = material(materialParameters())
-
-    # Build neighbors object files
-    bvoNeighbors = neighbors(bvo, systemSize, pbc)
 
     if generateObjectFiles:
         bvo.generateMaterialFile(bvo, materialFileName)

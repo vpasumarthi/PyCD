@@ -163,7 +163,7 @@ class material(object):
 
         siteList = [self.speciesToElementTypeMap[key]
                     for key in self.speciesToElementTypeMap
-                    if key is not self.emptySpeciesType]
+                    if key != self.emptySpeciesType]
         self.siteList = list(
                     set([item for sublist in siteList for item in sublist]))
         self.nonEmptySpeciesToElementTypeMap = deepcopy(
@@ -184,7 +184,8 @@ class material(object):
                           for comb in list(itertools.product(
                               self.speciesToElementTypeMap[key], repeat=2))]
                     for key in self.speciesToElementTypeMap
-                    if key is not self.emptySpeciesType}
+                    if key != self.emptySpeciesType}
+        
         [a, b, c, alpha, beta, gamma] = self.latticeParameters
         self.latticeMatrix = np.array(
                         [[a, 0, 0],
