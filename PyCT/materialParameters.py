@@ -11,7 +11,7 @@ inputCoordinateFileName = 'BVO_index_coord_Experimental.txt'
 inputCoordinateSourceType = 1  # 0: AFlow; 1: ms-BVO; 2: 9013437
 
 
-class bvoParameters(object):
+class materialParameters(object):
     """ """
     def __init__(self):
         self.name = 'BVO'

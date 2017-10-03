@@ -4,18 +4,18 @@ import os
 import platform
 import pickle
 
-from PyCT import analysis
+from PyCT.core import analysis
 
 directorySeparator = '\\' if platform.uname()[0] == 'Windows' else '/'
 
 
-def bvoMSD(systemSize, pbc, nDim, Temp, speciesCount, tFinal, nTraj,
-           timeInterval, msdTFinal, trimLength, displayErrorBars, reprTime,
-           reprDist, report):
+def materialMSD(systemSize, pbc, nDim, Temp, speciesCount, tFinal, nTraj,
+                timeInterval, msdTFinal, trimLength, displayErrorBars, reprTime,
+                reprDist, report):
 
     # Determine path for system directory
     cwd = os.path.dirname(os.path.realpath(__file__))
-    nLevelUp = 3 if platform.uname()[0] == 'Linux' else 4
+    nLevelUp = 3 if platform.uname()[0] == 'Linux' else 3
     systemDirectoryPath = directorySeparator.join(
                         cwd.split(directorySeparator)[:-nLevelUp]
                         + ['PyCTSimulations', 'BVO',

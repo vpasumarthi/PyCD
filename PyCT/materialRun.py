@@ -6,18 +6,18 @@ import pickle
 
 import numpy as np
 
-from PyCT import system, run
+from PyCT.core import system, run
 
 directorySeparator = '\\' if platform.uname()[0] == 'Windows' else '/'
 
 
-def bvoRun(systemSize, pbc, Temp, speciesCount, tFinal, nTraj,
-           timeInterval, randomSeed, report, overWrite, gui):
+def materialRun(systemSize, pbc, Temp, speciesCount, tFinal, nTraj,
+                timeInterval, randomSeed, report, overWrite, gui):
 
     # Determine path for system directory
     cwd = os.path.dirname(os.path.realpath(__file__))
     directorySeparator = '\\' if platform.uname()[0] == 'Windows' else '/'
-    nLevelUp = 3 if platform.uname()[0] == 'Linux' else 4
+    nLevelUp = 3 if platform.uname()[0] == 'Linux' else 3
     systemDirectoryPath = directorySeparator.join(
             cwd.split(directorySeparator)[:-nLevelUp]
             + ['PyCTSimulations', 'BVO', ('PBC' if pbc else 'NoPBC'),

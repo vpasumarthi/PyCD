@@ -5,13 +5,13 @@ import platform
 
 import numpy as np
 
-from PyCT import material, neighbors, system
-from bvoParameters import bvoParameters
+from PyCT.materialParameters import materialParameters
+from PyCT.core import material, neighbors, system
 
 directorySeparator = '\\' if platform.uname()[0] == 'Windows' else '/'
 
 
-def bvoSetup(systemSize, pbc, generateObjectFiles, generateHopNeighborList,
+def materialSetup(systemSize, pbc, generateObjectFiles, generateHopNeighborList,
              generateCumDispList, alpha, nmax, kmax, generatePrecomputedArray):
     """Prepare material class object file, neighborlist and \
         saves to the provided destination path"""
@@ -19,7 +19,7 @@ def bvoSetup(systemSize, pbc, generateObjectFiles, generateHopNeighborList,
     # Determine path for system directory
     cwd = os.path.dirname(os.path.realpath(__file__))
 
-    nLevelUp = 3 if platform.uname()[0] == 'Linux' else 4
+    nLevelUp = 3 if platform.uname()[0] == 'Linux' else 3
     systemDirectoryPath = directorySeparator.join(
         cwd.split(directorySeparator)[:-nLevelUp]
         + ['PyCTSimulations', 'BVO',
@@ -43,13 +43,14 @@ def bvoSetup(systemSize, pbc, generateObjectFiles, generateHopNeighborList,
                          + objectFileDirectoryName)
     if not os.path.exists(objectFileDirPath):
         os.makedirs(objectFileDirPath)
+    
     materialFileName = (objectFileDirPath + directorySeparator
                         + materialName + tailName)
     neighborsFileName = (objectFileDirPath + directorySeparator + materialName
                          + 'Neighbors' + tailName)
 
     # Build material object files
-    bvo = material(bvoParameters())
+    bvo = material(materialParameters())
 
     # Build neighbors object files
     bvoNeighbors = neighbors(bvo, systemSize, pbc)
