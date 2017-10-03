@@ -118,17 +118,17 @@ class material(object):
                         materialParameters.elementTypeIndexList.astype(int))
         self.chargeTypes = deepcopy(materialParameters.chargeTypes)
 
-        self.latticeParameters = [0] * len(
-            materialParameters.latticeParameters)
+        #self.latticeParameters = [0] * len(
+        #    materialParameters.latticeParameters)
         # lattice parameters being converted to atomic units
-        for index in range(len(materialParameters.latticeParameters)):
-            if index < 3:
-                self.latticeParameters[index] = (
-                    materialParameters.latticeParameters[index] * self.ANG2BOHR
-                    )
-            else:
-                self.latticeParameters[index] = (
-                                materialParameters.latticeParameters[index])
+        #for index in range(len(materialParameters.latticeParameters)):
+        #    if index < 3:
+        #        self.latticeParameters[index] = (
+        #            materialParameters.latticeParameters[index] * self.ANG2BOHR
+        #            )
+        #    else:
+        #        self.latticeParameters[index] = (
+        #                        materialParameters.latticeParameters[index])
 
         self.vn = materialParameters.vn / self.SEC2AUTIME
         self.lambdaValues = deepcopy(materialParameters.lambdaValues)
@@ -185,13 +185,14 @@ class material(object):
                               self.speciesToElementTypeMap[key], repeat=2))]
                     for key in self.speciesToElementTypeMap
                     if key != self.emptySpeciesType}
-        
-        [a, b, c, alpha, beta, gamma] = self.latticeParameters
-        self.latticeMatrix = np.array(
-                        [[a, 0, 0],
-                         [b * np.cos(gamma), b * np.sin(gamma), 0],
-                         [c * np.cos(alpha), c * np.cos(beta),
-                          c * np.sqrt(np.sin(alpha)**2 - np.cos(beta)**2)]])
+
+        #[a, b, c, alpha, beta, gamma] = self.latticeParameters
+        #self.latticeMatrix = np.array(
+        #                [[a, 0, 0],
+        #                 [b * np.cos(gamma), b * np.sin(gamma), 0],
+        #                 [c * np.cos(alpha), c * np.cos(beta),
+        #                  c * np.sqrt(np.sin(alpha)**2 - np.cos(beta)**2)]])
+        self.latticeMatrix = materialParameters.latticeMatrix * self.ANG2BOHR
 
     def generateMaterialFile(self, material, materialFileName):
         """ """
