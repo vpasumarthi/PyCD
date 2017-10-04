@@ -10,34 +10,6 @@ from PyCT.core import material, neighbors, system
 directorySeparator = '\\' if platform.uname()[0] == 'Windows' else '/'
 
 
-def readPOSCAR(inputFilePath):
-    latticeMatrix = np.zeros((3, 3))
-    latticeParameterIndex = 0
-    latticeParametersLineRange = range(3, 6)
-    inputFile = open(inputFilePath, 'r')
-    for lineIndex, line in enumerate(inputFile):
-        lineNumber = lineIndex + 1
-        if lineNumber in latticeParametersLineRange:
-            latticeMatrix[latticeParameterIndex, :] = np.fromstring(line,
-                                                                    sep=' ')
-            latticeParameterIndex += 1
-        elif lineNumber == 6:
-            elementTypes = line.split()
-        elif lineNumber == 7:
-            nElementsPerUnitCell = np.fromstring(line, dtype=int, sep=' ')
-            totalElementsPerUnitCell = nElementsPerUnitCell.sum()
-            fractionalUnitCellCoords = np.zeros((totalElementsPerUnitCell, 3))
-            elementIndex = 0
-        elif lineNumber > 8 and elementIndex < totalElementsPerUnitCell:
-            fractionalUnitCellCoords[elementIndex, :] = np.fromstring(line,
-                                                                      sep=' ')
-            elementIndex += 1
-    inputFile.close()
-    output = np.array([latticeMatrix, elementTypes, nElementsPerUnitCell,
-                       fractionalUnitCellCoords], dtype=object)
-    return output
-
-
 def materialSetup(inputCoorFileLocation, materialParameters, systemSize, pbc,
                   generateObjectFiles, generateHopNeighborList,
                   generateCumDispList, alpha, nmax, kmax,
@@ -45,24 +17,28 @@ def materialSetup(inputCoorFileLocation, materialParameters, systemSize, pbc,
     """Prepare material class object file, neighborlist and \
         saves to the provided destination path"""
 
-    [latticeMatrix, elementTypes, nElementsPerUnitCell,
-     fractionalUnitCellCoords] = readPOSCAR(inputCoorFileLocation)
-    nElementTypes = len(elementTypes)
-    elementTypeIndexList = np.repeat(np.arange(nElementTypes),
-                                     nElementsPerUnitCell)
-    unitcellCoords = np.dot(latticeMatrix, fractionalUnitCellCoords.T).T
-    materialParameters.__dict__.update({'latticeMatrix': latticeMatrix,
-                                        'elementTypes': elementTypes,
-                                        'nElementsPerUnitCell':
-                                        nElementsPerUnitCell,
-                                        'unitcellCoords':
-                                        unitcellCoords,
-                                        'elementTypeIndexList':
-                                        elementTypeIndexList})
+    # [latticeMatrix, elementTypes, nElementsPerUnitCell,
+    #  fractionalUnitCellCoords] = readPOSCAR(inputCoorFileLocation)
+    # nElementTypes = len(elementTypes)
+    # elementTypeIndexList = np.repeat(np.arange(nElementTypes),
+    #                                 nElementsPerUnitCell)
+    # unitcellCoords = np.dot(latticeMatrix, fractionalUnitCellCoords.T).T
+    # materialParameters.__dict__.update({'latticeMatrix': latticeMatrix,
+    #                                    'elementTypes': elementTypes,
+    #                                   'nElementsPerUnitCell':
+    #                                   nElementsPerUnitCell,
+    #                                   'unitcellCoords':
+    #                                   unitcellCoords,
+    #                                   'elementTypeIndexList':
+    #                                   elementTypeIndexList})
 
-
+    materialParameters.__dict__.update({'inputCoorFileLocation':
+                                        inputCoorFileLocation})
     # Build material object files
     bvo = material(materialParameters)
+    # sortedKeyList = sorted(bvo.__dict__.keys())
+    # print [(key, bvo.__dict__[key]) for key in sortedKeyList]
+    # import pdb; pdb.set_trace()
     materialName = bvo.name
 
     # Build neighbors object files

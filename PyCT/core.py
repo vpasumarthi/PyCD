@@ -87,48 +87,50 @@ class material(object):
         self.SEC2FS = 1.00E+15
         self.K2AUTEMP = 1 / self.AUTEMPERATURE
 
+        # Read Input POSCAR
+        [self.latticeMatrix, self.elementTypes, self.nElementsPerUnitCell,
+         self.totalElementsPerUnitCell, fractionalUnitCellCoords] = \
+            self.readPOSCAR(materialParameters.inputCoorFileLocation)
+        self.latticeMatrix *= self.ANG2BOHR
+        self.nElementTypes = len(self.elementTypes)
+        self.elementTypeIndexList = np.repeat(np.arange(self.nElementTypes),
+                                              self.nElementsPerUnitCell)
+
         # TODO: introduce a method to view the material using ase atoms or
         # other gui module
         self.name = materialParameters.name
-        self.elementTypes = materialParameters.elementTypes[:]
+        # self.elementTypes = materialParameters.elementTypes[:]
         self.speciesTypes = materialParameters.speciesTypes[:]
         self.numSpeciesTypes = len(self.speciesTypes)
         self.speciesChargeList = materialParameters.speciesChargeList[:]
         self.speciesToElementTypeMap = deepcopy(
                                     materialParameters.speciesToElementTypeMap)
-        # Initialization
-        self.unitcellCoords = np.zeros((
-                                    len(materialParameters.unitcellCoords), 3))
+
+        # self.unitcellCoords = np.zeros((
+        #                            len(materialParameters.unitcellCoords), 3))
         startIndex = 0
-        self.nElementTypes = len(self.elementTypes)
-        nElementsPerUnitCell = np.zeros(self.nElementTypes, int)
+        # self.nElementTypes = len(self.elementTypes)
+        # nElementsPerUnitCell = np.zeros(self.nElementTypes, int)
+        # Initialization
+        self.fractionalUnitCellCoords = np.zeros(
+                                                fractionalUnitCellCoords.shape)
         for elementIndex in range(self.nElementTypes):
-            elementUnitCellCoords = materialParameters.unitcellCoords[
-                    materialParameters.elementTypeIndexList == elementIndex]
-            nElementsPerUnitCell[elementIndex] = len(elementUnitCellCoords)
-            endIndex = startIndex + nElementsPerUnitCell[elementIndex]
-            self.unitcellCoords[startIndex:endIndex] = elementUnitCellCoords[
-                                        elementUnitCellCoords[:, 2].argsort()]
+            elementUnitCellCoords = fractionalUnitCellCoords[
+                                    self.elementTypeIndexList == elementIndex]
+            # nElementsPerUnitCell[elementIndex] = len(elementUnitCellCoords)
+            endIndex = startIndex + self.nElementsPerUnitCell[elementIndex]
+            self.fractionalUnitCellCoords[startIndex:endIndex] = \
+                elementUnitCellCoords[elementUnitCellCoords[:, 2].argsort()]
             startIndex = endIndex
 
-        self.unitcellCoords *= self.ANG2BOHR  # Unit cell coordinates in a.u.
-        self.nElementsPerUnitCell = np.copy(nElementsPerUnitCell)
-        self.totalElementsPerUnitCell = nElementsPerUnitCell.sum()
-        self.elementTypeIndexList = np.sort(
-                        materialParameters.elementTypeIndexList.astype(int))
+        self.unitcellCoords = (np.dot(self.latticeMatrix,
+                                      self.fractionalUnitCellCoords.T).T)
+        # self.unitcellCoords *= self.ANG2BOHR  # Unit cell coordinates in a.u.
+        # self.nElementsPerUnitCell = np.copy(nElementsPerUnitCell)
+        # self.totalElementsPerUnitCell = self.nElementsPerUnitCell.sum()
+        #self.elementTypeIndexList = np.sort(
+        #                materialParameters.elementTypeIndexList.astype(int))
         self.chargeTypes = deepcopy(materialParameters.chargeTypes)
-
-        #self.latticeParameters = [0] * len(
-        #    materialParameters.latticeParameters)
-        # lattice parameters being converted to atomic units
-        #for index in range(len(materialParameters.latticeParameters)):
-        #    if index < 3:
-        #        self.latticeParameters[index] = (
-        #            materialParameters.latticeParameters[index] * self.ANG2BOHR
-        #            )
-        #    else:
-        #        self.latticeParameters[index] = (
-        #                        materialParameters.latticeParameters[index])
 
         self.vn = materialParameters.vn / self.SEC2AUTIME
         self.lambdaValues = deepcopy(materialParameters.lambdaValues)
@@ -186,13 +188,36 @@ class material(object):
                     for key in self.speciesToElementTypeMap
                     if key != self.emptySpeciesType}
 
-        #[a, b, c, alpha, beta, gamma] = self.latticeParameters
-        #self.latticeMatrix = np.array(
-        #                [[a, 0, 0],
-        #                 [b * np.cos(gamma), b * np.sin(gamma), 0],
-        #                 [c * np.cos(alpha), c * np.cos(beta),
-        #                  c * np.sqrt(np.sin(alpha)**2 - np.cos(beta)**2)]])
-        self.latticeMatrix = materialParameters.latticeMatrix * self.ANG2BOHR
+        # self.latticeMatrix = materialParameters.latticeMatrix * self.ANG2BOHR
+
+    def readPOSCAR(self, inputFilePath):
+        latticeMatrix = np.zeros((3, 3))
+        latticeParameterIndex = 0
+        latticeParametersLineRange = range(3, 6)
+        inputFile = open(inputFilePath, 'r')
+        for lineIndex, line in enumerate(inputFile):
+            lineNumber = lineIndex + 1
+            if lineNumber in latticeParametersLineRange:
+                latticeMatrix[latticeParameterIndex, :] = np.fromstring(
+                                                                line, sep=' ')
+                latticeParameterIndex += 1
+            elif lineNumber == 6:
+                elementTypes = line.split()
+            elif lineNumber == 7:
+                nElementsPerUnitCell = np.fromstring(line, dtype=int, sep=' ')
+                totalElementsPerUnitCell = nElementsPerUnitCell.sum()
+                fractionalUnitCellCoords = np.zeros((totalElementsPerUnitCell,
+                                                     3))
+                elementIndex = 0
+            elif lineNumber > 8 and elementIndex < totalElementsPerUnitCell:
+                fractionalUnitCellCoords[elementIndex, :] = np.fromstring(
+                                                                line, sep=' ')
+                elementIndex += 1
+        inputFile.close()
+        output = np.array([latticeMatrix, elementTypes, nElementsPerUnitCell,
+                           totalElementsPerUnitCell, fractionalUnitCellCoords],
+                          dtype=object)
+        return output
 
     def generateMaterialFile(self, material, materialFileName):
         """ """
