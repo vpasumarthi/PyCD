@@ -1,26 +1,14 @@
 #!/usr/bin/env python
 
 import os
-import platform
 import pickle
 
 from PyCT.core import analysis
 
-directorySeparator = '\\' if platform.uname()[0] == 'Windows' else '/'
 
-
-def materialMSD(systemSize, pbc, nDim, Temp, speciesCount, tFinal, nTraj,
-                timeInterval, msdTFinal, trimLength, displayErrorBars, reprTime,
-                reprDist, report):
-
-    # Determine path for system directory
-    cwd = os.path.dirname(os.path.realpath(__file__))
-    nLevelUp = 3 if platform.uname()[0] == 'Linux' else 3
-    systemDirectoryPath = directorySeparator.join(
-                        cwd.split(directorySeparator)[:-nLevelUp]
-                        + ['PyCTSimulations', 'BVO',
-                           ('PBC' if pbc else 'NoPBC'),
-                           ('SystemSize' + str(systemSize).replace(' ', ''))])
+def materialMSD(systemDirectoryPath, systemSize, nDim, Temp, speciesCount,
+                tFinal, nTraj, timeInterval, msdTFinal, trimLength,
+                displayErrorBars, reprTime, reprDist, report):
 
     # Change to working directory
     parentDir1 = 'SimulationFiles'
@@ -32,29 +20,28 @@ def materialMSD(systemSize, pbc, nDim, Temp, speciesCount, tFinal, nTraj,
     parentDir3 = str(Temp) + 'K'
     workDir = (('%1.2E' % tFinal) + 'SEC,' + ('%1.2E' % timeInterval)
                + 'TimeInterval,' + ('%1.2E' % nTraj) + 'Traj')
-    workDirPath = (systemDirectoryPath + directorySeparator
-                   + directorySeparator.join([parentDir1, parentDir2,
-                                              parentDir3, workDir]))
+    workDirPath = os.path.join(systemDirectoryPath, parentDir1, parentDir2,
+                               parentDir3, workDir)
+
     if not os.path.exists(workDirPath):
         print 'Simulation files do not exist. Aborting.'
     else:
         os.chdir(workDirPath)
 
-        # Determine path for neighbor list directories
+        # Determine path for input files
         inputFileDirectoryName = 'InputFiles'
-        inputFileDirectoryPath = (systemDirectoryPath
-                                  + directorySeparator
-                                  + inputFileDirectoryName)
+        inputFileDirectoryPath = os.path.join(systemDirectoryPath,
+                                              inputFileDirectoryName)
 
         # Build path for material and neighbors object files
+        # TODO: Obtain material name in generic sense
         materialName = 'bvo'
         tailName = '.obj'
         objectFileDirectoryName = 'ObjectFiles'
-        objectFileDirPath = (inputFileDirectoryPath
-                             + directorySeparator
-                             + objectFileDirectoryName)
-        materialFileName = (objectFileDirPath + directorySeparator
-                            + materialName + tailName)
+        objectFileDirPath = os.path.join(inputFileDirectoryPath,
+                                         objectFileDirectoryName)
+        materialFileName = (os.path.join(objectFileDirPath, materialName)
+                            + tailName)
 
         # Load material object
         file_bvo = open(materialFileName, 'r')

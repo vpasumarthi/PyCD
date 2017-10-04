@@ -1,27 +1,16 @@
 #!/usr/bin/env python
 
 import os
-import platform
 import pickle
 
 import numpy as np
 
 from PyCT.core import system, run
 
-directorySeparator = '\\' if platform.uname()[0] == 'Windows' else '/'
 
-
-def materialRun(systemSize, pbc, Temp, speciesCount, tFinal, nTraj,
-                timeInterval, randomSeed, report, overWrite, gui):
-
-    # Determine path for system directory
-    cwd = os.path.dirname(os.path.realpath(__file__))
-    directorySeparator = '\\' if platform.uname()[0] == 'Windows' else '/'
-    nLevelUp = 3 if platform.uname()[0] == 'Linux' else 3
-    systemDirectoryPath = directorySeparator.join(
-            cwd.split(directorySeparator)[:-nLevelUp]
-            + ['PyCTSimulations', 'BVO', ('PBC' if pbc else 'NoPBC'),
-               ('SystemSize' + str(systemSize).replace(' ', ''))])
+def materialRun(systemDirectoryPath, systemSize, pbc, Temp, speciesCount,
+                tFinal, nTraj, timeInterval, randomSeed, report, overWrite,
+                gui):
 
     # Change to working directory
     parentDir1 = 'SimulationFiles'
@@ -33,9 +22,8 @@ def materialRun(systemSize, pbc, Temp, speciesCount, tFinal, nTraj,
     parentDir3 = str(Temp) + 'K'
     workDir = (('%1.2E' % tFinal) + 'SEC,' + ('%1.2E' % timeInterval)
                + 'TimeInterval,' + ('%1.2E' % nTraj) + 'Traj')
-    workDirPath = (systemDirectoryPath + directorySeparator
-                   + directorySeparator.join([parentDir1, parentDir2,
-                                              parentDir3, workDir]))
+    workDirPath = os.path.join(systemDirectoryPath, parentDir1, parentDir2,
+                               parentDir3, workDir)
     if not os.path.exists(workDirPath):
         os.makedirs(workDirPath)
     os.chdir(workDirPath)
@@ -46,22 +34,20 @@ def materialRun(systemSize, pbc, Temp, speciesCount, tFinal, nTraj,
     if not fileExists or overWrite:
         # Determine path for input files
         inputFileDirectoryName = 'InputFiles'
-        inputFileDirectoryPath = (systemDirectoryPath
-                                  + directorySeparator
-                                  + inputFileDirectoryName)
+        inputFileDirectoryPath = os.path.join(systemDirectoryPath,
+                                              inputFileDirectoryName)
 
         # Build path for material and neighbors object files
         # TODO: Obtain material name in generic sense
         materialName = 'bvo'
         tailName = '.obj'
         objectFileDirectoryName = 'ObjectFiles'
-        objectFileDirPath = (inputFileDirectoryPath
-                             + directorySeparator
-                             + objectFileDirectoryName)
-        materialFileName = (objectFileDirPath + directorySeparator
-                            + materialName + tailName)
-        neighborsFileName = (objectFileDirPath + directorySeparator
-                             + materialName + 'Neighbors' + tailName)
+        objectFileDirPath = os.path.join(inputFileDirectoryPath,
+                                         objectFileDirectoryName)
+        materialFileName = (os.path.join(objectFileDirPath, materialName)
+                            + tailName)
+        neighborsFileName = (os.path.join(objectFileDirPath, materialName)
+                             + 'Neighbors' + tailName)
 
         # Load material object
         file_bvo = open(materialFileName, 'r')
@@ -75,19 +61,16 @@ def materialRun(systemSize, pbc, Temp, speciesCount, tFinal, nTraj,
 
         # Load input files to instantiate system class
         os.chdir(inputFileDirectoryPath)
-        hopNeighborListFileName = (inputFileDirectoryPath
-                                   + directorySeparator
-                                   + 'hopNeighborList.npy')
+        hopNeighborListFileName = os.path.join(inputFileDirectoryPath,
+                                               'hopNeighborList.npy')
         hopNeighborList = np.load(hopNeighborListFileName)[()]
-        cumulativeDisplacementListFilePath = (
-                                            inputFileDirectoryPath
-                                            + directorySeparator
-                                            + 'cumulativeDisplacementList.npy')
+        cumulativeDisplacementListFilePath = os.path.join(
+                                            inputFileDirectoryPath,
+                                            'cumulativeDisplacementList.npy')
         cumulativeDisplacementList = np.load(
                                             cumulativeDisplacementListFilePath)
-        ewaldParametersFilePath = (inputFileDirectoryPath
-                                   + directorySeparator
-                                   + 'ewaldParameters.npy')
+        ewaldParametersFilePath = os.path.join(inputFileDirectoryPath,
+                                               'ewaldParameters.npy')
         ewaldParameters = np.load(ewaldParametersFilePath)[()]
         alpha = ewaldParameters['alpha']
         nmax = ewaldParameters['nmax']
@@ -97,9 +80,8 @@ def materialRun(systemSize, pbc, Temp, speciesCount, tFinal, nTraj,
                            alpha, nmax, kmax)
 
         # Load precomputed array to instantiate run class
-        precomputedArrayFilePath = (inputFileDirectoryPath
-                                    + directorySeparator
-                                    + 'precomputedArray.npy')
+        precomputedArrayFilePath = os.path.join(inputFileDirectoryPath,
+                                                'precomputedArray.npy')
         precomputedArray = np.load(precomputedArrayFilePath)
         bvoRun = run(bvoSystem, precomputedArray, Temp, nTraj,
                      tFinal, timeInterval, gui)
