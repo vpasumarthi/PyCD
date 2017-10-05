@@ -15,6 +15,6 @@ $ git clone https://github.com/vpasumarthi/PyCT.git
 # Navigate to root directory
 $ cd PyCT
 
-# Perform a local installation of package with Pip
+# Perform a local installation of package with [Pip](https://pypi.python.org/pypi/pip) 
 $ pip install -e .
 ```
