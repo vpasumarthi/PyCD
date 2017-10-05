@@ -13,7 +13,6 @@ if __name__ == "__main__":
         author='Viswanath Pasumarthi',
         author_email='pasumart@buffalo.edu',
         url="https://github.com/vpasumarthi/PyCT",
-        license='BSD-3C',
         packages=setuptools.find_packages(),
         install_requires=[
             'numpy>=1.7',
