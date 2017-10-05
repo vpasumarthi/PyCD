@@ -11,8 +11,10 @@ From the command line:
 ```bash
 # Clone this repository
 $ git clone https://github.com/vpasumarthi/PyCT.git
+
 # Navigate to root directory
 $ cd PyCT
+
 # Perform a local installation of package with Pip
 $ pip install -e .
 ```
