@@ -15,6 +15,8 @@ msdTFinal = 60  # in units of reprTime
 trimLength = 1
 
 # Input parameters:
+systemSize = np.array([2, 2, 1])
+pbc = np.array([1, 1, 1])
 nDim = 3
 Temp = 300  # K
 nHoles = 0
@@ -26,6 +28,6 @@ report = 1
 systemDirectoryPath = os.path.dirname(
                                 os.path.dirname(os.path.realpath(__file__)))
 
-materialMSD(systemDirectoryPath, nDim, Temp, speciesCount,
+materialMSD(systemDirectoryPath, systemSize, pbc, nDim, Temp, speciesCount,
             tFinal, nTraj, timeInterval, msdTFinal, trimLength,
             displayErrorBars, reprTime, reprDist, report)

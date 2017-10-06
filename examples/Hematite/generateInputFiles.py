@@ -18,6 +18,5 @@ kmax = 4
 generatePrecomputedArray = 1
 systemDirectoryPath = os.path.dirname(os.path.realpath(__file__))
 
-materialSetup(systemDirectoryPath, systemSize, pbc, generateObjectFiles,
-              generateHopNeighborList, generateCumDispList, alpha, nmax, kmax,
-              generatePrecomputedArray)
+materialSetup(systemDirectoryPath, systemSize, pbc, generateHopNeighborList,
+              generateCumDispList, alpha, nmax, kmax, generatePrecomputedArray)
