@@ -256,12 +256,10 @@ class material(object):
                     startIndex = iUnitCell * nSitesPerUnitCell
                     endIndex = startIndex + nSitesPerUnitCell
                     # TODO: Any reason to use fractional coordinates?
-                    unitcellTranslationalCoords = np.dot(
-                                                    [xIndex, yIndex, zIndex],
-                                                    self.latticeMatrix)
-                    newCellSiteCoords = (unitcellElementCoords
-                                         + unitcellTranslationalCoords)
-                    cellCoordinates[startIndex:endIndex] = newCellSiteCoords
+                    translationVector = np.dot([xIndex, yIndex, zIndex],
+                                               self.latticeMatrix)
+                    cellCoordinates[startIndex:endIndex] = (
+                                    unitcellElementCoords + translationVector)
                     systemElementIndexList[startIndex:endIndex] = (
                                                 iUnitCell * nSitesPerUnitCell
                                                 + unitcellElementIndexList)
@@ -306,12 +304,12 @@ class neighbors(object):
         yRange = range(-1, 2) if self.pbc[1] == 1 else [0]
         zRange = range(-1, 2) if self.pbc[2] == 1 else [0]
         # Initialization
-        self.unitcellTranslationalCoords = np.zeros((3**sum(self.pbc), 3))
+        self.systemTranslationalVectorList = np.zeros((3**sum(self.pbc), 3))
         index = 0
         for xOffset in xRange:
             for yOffset in yRange:
                 for zOffset in zRange:
-                    self.unitcellTranslationalCoords[index] = np.dot(
+                    self.systemTranslationalVectorList[index] = np.dot(
                         np.multiply(np.array([xOffset, yOffset, zOffset]),
                                     systemSize),
                         self.material.latticeMatrix)
@@ -384,9 +382,9 @@ class neighbors(object):
             system element index for a given system size"""
         quantumIndices = self.generateQuantumIndices(systemSize,
                                                      systemElementIndex)
-        unitcellTranslationalCoords = np.dot(quantumIndices[:3],
-                                             self.material.latticeMatrix)
-        coordinates = (unitcellTranslationalCoords
+        unitcellTranslationVector = np.dot(quantumIndices[:3],
+                                           self.material.latticeMatrix)
+        coordinates = (unitcellTranslationVector
                        + self.material.unitcellCoords[
                            quantumIndices[4]
                            + self.material.nElementsPerUnitCell[
@@ -401,7 +399,8 @@ class neighbors(object):
         neighborCoord = self.computeCoordinates(systemSize,
                                                 systemElementindex2)
 
-        neighborImageCoords = self.unitcellTranslationalCoords + neighborCoord
+        neighborImageCoords = (self.systemTranslationalVectorList
+                               + neighborCoord)
         neighborImageDisplacementVectors = neighborImageCoords - centerCoord
         neighborImageDisplacements = np.linalg.norm(
                                     neighborImageDisplacementVectors, axis=1)
@@ -435,7 +434,7 @@ class neighbors(object):
                 displacementList = np.zeros(len(neighborSiteCoords))
             for neighborSiteIndex, neighborCoord in enumerate(
                                                         neighborSiteCoords):
-                neighborImageCoords = (self.unitcellTranslationalCoords
+                neighborImageCoords = (self.systemTranslationalVectorList
                                        + neighborCoord)
                 neighborImageDisplacementVectors = (neighborImageCoords
                                                     - centerCoord)
@@ -500,13 +499,13 @@ class neighbors(object):
                                                self.numSystemElements, 3))
         for centerSiteIndex, centerCoord in enumerate(
                                             self.bulkSites.cellCoordinates):
-            cumulativeUnitCellTranslationalCoords = np.tile(
-                                            self.unitcellTranslationalCoords,
+            cumulativeSystemTranslationalVectorList = np.tile(
+                                            self.systemTranslationalVectorList,
                                             (self.numSystemElements, 1, 1))
             cumulativeNeighborImageCoords = (
-                    cumulativeUnitCellTranslationalCoords
+                    cumulativeSystemTranslationalVectorList
                     + np.tile(self.bulkSites.cellCoordinates[:, np.newaxis, :],
-                              (1, len(self.unitcellTranslationalCoords), 1)))
+                              (1, len(self.systemTranslationalVectorList), 1)))
             cumulativeNeighborImageDisplacementVectors = (
                                                 cumulativeNeighborImageCoords
                                                 - centerCoord)
@@ -1678,12 +1677,12 @@ class analysis(object):
         yRange = range(-1, 2) if pbc[1] == 1 else [0]
         zRange = range(-1, 2) if pbc[2] == 1 else [0]
         # Initialization
-        unitcellTranslationalCoords = np.zeros((3**sum(pbc), 3))
+        systemTranslationalVectorList = np.zeros((3**sum(pbc), 3))
         index = 0
         for xOffset in xRange:
             for yOffset in yRange:
                 for zOffset in zRange:
-                    unitcellTranslationalCoords[index] = np.dot(
+                    systemTranslationalVectorList[index] = np.dot(
                         np.multiply(np.array([xOffset, yOffset, zOffset]),
                                     self.systemSize),
                         (self.material.latticeMatrix * self.distConversion))
@@ -1700,7 +1699,7 @@ class analysis(object):
                 index = 0
                 for i in range(nElectrons):
                     for j in range(i + 1, nElectrons):
-                        neighborImageCoords = (unitcellTranslationalCoords
+                        neighborImageCoords = (systemTranslationalVectorList
                                                + positionArray[
                                                         headStart + step, j])
                         neighborImageDisplacementVectors = (
