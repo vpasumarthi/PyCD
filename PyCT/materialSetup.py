@@ -8,7 +8,7 @@ import yaml
 from PyCT.core import material, neighbors, system
 
 
-def materialSetup(systemDirectoryPath, systemSize, pbc, generateObjectFiles,
+def materialSetup(systemDirectoryPath, systemSize, pbc,
                   generateHopNeighborList, generateCumDispList, alpha, nmax,
                   kmax, generatePrecomputedArray):
     """Prepare material class object file, neighborlist and \
@@ -42,23 +42,6 @@ def materialSetup(systemDirectoryPath, systemSize, pbc, generateObjectFiles,
     inputFileDirectoryPath = os.path.join(systemDirectoryPath,
                                           inputFileDirectoryName)
 
-    # Build path for material and neighbors object files
-    tailName = '.obj'
-    objectFileDirectoryName = 'ObjectFiles'
-    objectFileDirPath = os.path.join(inputFileDirectoryPath,
-                                     objectFileDirectoryName)
-
-    if not os.path.exists(objectFileDirPath):
-        os.makedirs(objectFileDirPath)
-
-    materialFilePath = os.path.join(objectFileDirPath, 'material') + tailName
-    neighborsFilePath = os.path.join(objectFileDirPath, 'neighbors') + tailName
-
-    if generateObjectFiles:
-        materialInfo.generateMaterialFile(materialInfo, materialFilePath)
-        materialNeighbors.generateNeighborsFile(materialNeighbors,
-                                                neighborsFilePath)
-
     # generate neighbor list
     if generateHopNeighborList:
         materialNeighbors.generateNeighborList(inputFileDirectoryPath,
@@ -86,7 +69,7 @@ def materialSetup(systemDirectoryPath, systemSize, pbc, generateObjectFiles,
         nHoles = 0
         speciesCount = np.array([nElectrons, nHoles])
 
-        materialSystem = system(materialFilePath, neighborsFilePath,
+        materialSystem = system(materialInfo, materialNeighbors,
                                 hopNeighborList, cumulativeDisplacementList,
                                 speciesCount, alpha, nmax, kmax)
         precomputedArray = materialSystem.ewaldSumSetup(inputFileDirectoryPath)

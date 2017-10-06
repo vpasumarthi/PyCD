@@ -2,12 +2,34 @@
 
 import os
 
-from PyCT.core import analysis
+import yaml
+
+from PyCT.core import material, analysis
 
 
-def materialMSD(systemDirectoryPath, nDim, Temp, speciesCount,
+def materialMSD(systemDirectoryPath, systemSize, pbc, nDim, Temp, speciesCount,
                 tFinal, nTraj, timeInterval, msdTFinal, trimLength,
                 displayErrorBars, reprTime, reprDist, report):
+
+    # Load material parameters
+    configDirName = 'ConfigurationFiles'
+    configFileName = 'sysconfig.yml'
+    configFilePath = os.path.join(systemDirectoryPath, configDirName,
+                                  configFileName)
+    with open(configFilePath, 'r') as stream:
+        try:
+            params = yaml.load(stream)
+        except yaml.YAMLError as exc:
+            print exc
+
+    inputCoordinateFileName = 'POSCAR'
+    inputCoorFileLocation = os.path.join(systemDirectoryPath, configDirName,
+                                         inputCoordinateFileName)
+    params.update({'inputCoorFileLocation': inputCoorFileLocation})
+    materialParameters = returnValues(params)
+
+    # Build material object files
+    materialInfo = material(materialParameters)
 
     # Change to working directory
     parentDir1 = 'SimulationFiles'
@@ -27,20 +49,7 @@ def materialMSD(systemDirectoryPath, nDim, Temp, speciesCount,
     else:
         os.chdir(workDirPath)
 
-        # Determine path for input files
-        inputFileDirectoryName = 'InputFiles'
-        inputFileDirectoryPath = os.path.join(systemDirectoryPath,
-                                              inputFileDirectoryName)
-
-        # Build path for material and neighbors object files
-        tailName = '.obj'
-        objectFileDirectoryName = 'ObjectFiles'
-        objectFileDirPath = os.path.join(inputFileDirectoryPath,
-                                         objectFileDirectoryName)
-        materialFilePath = (os.path.join(objectFileDirPath, 'material')
-                            + tailName)
-
-        materialAnalysis = analysis(materialFilePath, nDim, speciesCount,
+        materialAnalysis = analysis(materialInfo, nDim, speciesCount,
                                     nTraj, tFinal, timeInterval, msdTFinal,
                                     trimLength, reprTime, reprDist)
 
@@ -51,3 +60,11 @@ def materialMSD(systemDirectoryPath, nDim, Temp, speciesCount,
         fileName = msdAnalysisData.fileName
         materialAnalysis.generateMSDPlot(msdData, stdData, displayErrorBars,
                                          speciesTypes, fileName, workDirPath)
+
+
+class returnValues(object):
+    """dummy class to return objects from methods \
+        defined inside other classes"""
+    def __init__(self, inputdict):
+        for key, value in inputdict.items():
+            setattr(self, key, value)

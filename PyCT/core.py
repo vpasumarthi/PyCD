@@ -5,7 +5,6 @@ displacement of random walk of charge carriers on 3D lattice systems
 """
 import os
 from datetime import datetime
-import pickle
 import random as rnd
 import itertools
 from copy import deepcopy
@@ -202,11 +201,6 @@ class material(object):
                           dtype=object)
         return output
 
-    def generateMaterialFile(self, material, materialFileName):
-        """ """
-        with open(materialFileName, 'w') as file_material:
-            pickle.dump(material, file_material)
-
     def generateSites(self, elementTypeIndices, cellSize=np.array([1, 1, 1])):
         """Returns systemElementIndices and coordinates of specified elements
         in a cell of size *cellSize*
@@ -313,11 +307,6 @@ class neighbors(object):
                                     systemSize),
                         self.material.latticeMatrix)
                     index += 1
-
-    def generateNeighborsFile(self, materialNeighbors, neighborsFileName):
-        """ """
-        with open(neighborsFileName, 'w') as file_Neighbors:
-            pickle.dump(materialNeighbors, file_Neighbors)
 
     def generateSystemElementIndex(self, systemSize, quantumIndices):
         """Returns the systemElementIndex of the element"""
@@ -946,21 +935,13 @@ class system(object):
     size: An array (3 x 1) defining the system size in multiple of unit cells
     """
     # @profile
-    def __init__(self, materialFilePath, neighborsFilePath, hopNeighborList,
+    def __init__(self, materialInfo, materialNeighbors, hopNeighborList,
                  cumulativeDisplacementList, speciesCount, alpha, nmax, kmax):
         """Return a system object whose size is *size*"""
         self.startTime = datetime.now()
 
-        # Load material object
-        with open(materialFilePath, 'r') as file_material:
-            self.material = pickle.load(file_material)
-
-        # Load neighbors object
-        with open(neighborsFilePath, 'r') as file_materialNeighbors:
-            self.neighbors = pickle.load(file_materialNeighbors)
-
-        #self.material = material
-        #self.neighbors = neighbors
+        self.material = materialInfo
+        self.neighbors = materialNeighbors
         self.hopNeighborList = hopNeighborList
 
         self.pbc = self.neighbors.pbc
@@ -1440,17 +1421,13 @@ class run(object):
 
 class analysis(object):
     """Post-simulation analysis methods"""
-    def __init__(self, materialFilePath, nDim, speciesCount, nTraj, tFinal,
+    def __init__(self, materialInfo, nDim, speciesCount, nTraj, tFinal,
                  timeInterval, msdTFinal, trimLength, reprTime='ns',
                  reprDist='Angstrom'):
         """"""
         self.startTime = datetime.now()
 
-        # Load material object
-        with open(materialFilePath, 'r') as file_material:
-            self.material = pickle.load(file_material)
-        
-        #self.material = material
+        self.material = materialInfo
         self.nDim = nDim
         self.speciesCount = speciesCount
         self.totalSpecies = self.speciesCount.sum()

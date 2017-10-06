@@ -3,12 +3,36 @@
 import os
 
 import numpy as np
+import yaml
 
-from PyCT.core import system, run
+from PyCT.core import material, neighbors, system, run
 
 
-def materialRun(systemDirectoryPath, Temp, speciesCount, tFinal, nTraj,
-                timeInterval, randomSeed, report, overWrite):
+def materialRun(systemDirectoryPath, systemSize, pbc, Temp, speciesCount,
+                tFinal, nTraj, timeInterval, randomSeed, report, overWrite):
+
+    # Load material parameters
+    configDirName = 'ConfigurationFiles'
+    configFileName = 'sysconfig.yml'
+    configFilePath = os.path.join(systemDirectoryPath, configDirName,
+                                  configFileName)
+    with open(configFilePath, 'r') as stream:
+        try:
+            params = yaml.load(stream)
+        except yaml.YAMLError as exc:
+            print exc
+
+    inputCoordinateFileName = 'POSCAR'
+    inputCoorFileLocation = os.path.join(systemDirectoryPath, configDirName,
+                                         inputCoordinateFileName)
+    params.update({'inputCoorFileLocation': inputCoorFileLocation})
+    materialParameters = returnValues(params)
+
+    # Build material object files
+    materialInfo = material(materialParameters)
+
+    # Build neighbors object files
+    materialNeighbors = neighbors(materialInfo, systemSize, pbc)
 
     # Change to working directory
     parentDir1 = 'SimulationFiles'
@@ -35,16 +59,6 @@ def materialRun(systemDirectoryPath, Temp, speciesCount, tFinal, nTraj,
         inputFileDirectoryPath = os.path.join(systemDirectoryPath,
                                               inputFileDirectoryName)
 
-        # Build path for material and neighbors object files
-        tailName = '.obj'
-        objectFileDirectoryName = 'ObjectFiles'
-        objectFileDirPath = os.path.join(inputFileDirectoryPath,
-                                         objectFileDirectoryName)
-        materialFilePath = (os.path.join(objectFileDirPath, 'material')
-                            + tailName)
-        neighborsFilePath = (os.path.join(objectFileDirPath, 'neighbors')
-                             + tailName)
-
         # Load input files to instantiate system class
         os.chdir(inputFileDirectoryPath)
         hopNeighborListFileName = os.path.join(inputFileDirectoryPath,
@@ -61,7 +75,7 @@ def materialRun(systemDirectoryPath, Temp, speciesCount, tFinal, nTraj,
         alpha = ewaldParameters['alpha']
         nmax = ewaldParameters['nmax']
         kmax = ewaldParameters['kmax']
-        materialSystem = system(materialFilePath, neighborsFilePath,
+        materialSystem = system(materialInfo, materialNeighbors,
                                 hopNeighborList, cumulativeDisplacementList,
                                 speciesCount, alpha, nmax, kmax)
 
@@ -76,3 +90,11 @@ def materialRun(systemDirectoryPath, Temp, speciesCount, tFinal, nTraj,
     else:
         print ('Simulation files already exists in '
                + 'the destination directory')
+
+
+class returnValues(object):
+    """dummy class to return objects from methods \
+        defined inside other classes"""
+    def __init__(self, inputdict):
+        for key, value in inputdict.items():
+            setattr(self, key, value)
