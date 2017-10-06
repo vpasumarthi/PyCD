@@ -204,9 +204,8 @@ class material(object):
 
     def generateMaterialFile(self, material, materialFileName):
         """ """
-        file_material = open(materialFileName, 'w')
-        pickle.dump(material, file_material)
-        file_material.close()
+        with open(materialFileName, 'w') as file_material:
+            pickle.dump(material, file_material)
 
     def generateSites(self, elementTypeIndices, cellSize=np.array([1, 1, 1])):
         """Returns systemElementIndices and coordinates of specified elements
@@ -256,7 +255,6 @@ class material(object):
                 for zIndex in range(cellSize[2]):
                     startIndex = iUnitCell * nSitesPerUnitCell
                     endIndex = startIndex + nSitesPerUnitCell
-                    # TODO: Any reason to use fractional coordinates?
                     translationVector = np.dot([xIndex, yIndex, zIndex],
                                                self.latticeMatrix)
                     cellCoordinates[startIndex:endIndex] = (
@@ -318,9 +316,8 @@ class neighbors(object):
 
     def generateNeighborsFile(self, materialNeighbors, neighborsFileName):
         """ """
-        file_Neighbors = open(neighborsFileName, 'w')
-        pickle.dump(materialNeighbors, file_Neighbors)
-        file_Neighbors.close()
+        with open(neighborsFileName, 'w') as file_Neighbors:
+            pickle.dump(materialNeighbors, file_Neighbors)
 
     def generateSystemElementIndex(self, systemSize, quantumIndices):
         """Returns the systemElementIndex of the element"""
@@ -949,13 +946,21 @@ class system(object):
     size: An array (3 x 1) defining the system size in multiple of unit cells
     """
     # @profile
-    def __init__(self, material, neighbors, hopNeighborList,
+    def __init__(self, materialFilePath, neighborsFilePath, hopNeighborList,
                  cumulativeDisplacementList, speciesCount, alpha, nmax, kmax):
         """Return a system object whose size is *size*"""
         self.startTime = datetime.now()
 
-        self.material = material
-        self.neighbors = neighbors
+        # Load material object
+        with open(materialFilePath, 'r') as file_material:
+            self.material = pickle.load(file_material)
+
+        # Load neighbors object
+        with open(neighborsFilePath, 'r') as file_materialNeighbors:
+            self.neighbors = pickle.load(file_materialNeighbors)
+
+        #self.material = material
+        #self.neighbors = neighbors
         self.hopNeighborList = hopNeighborList
 
         self.pbc = self.neighbors.pbc
@@ -1435,12 +1440,17 @@ class run(object):
 
 class analysis(object):
     """Post-simulation analysis methods"""
-    def __init__(self, material, nDim, speciesCount, nTraj, tFinal,
+    def __init__(self, materialFilePath, nDim, speciesCount, nTraj, tFinal,
                  timeInterval, msdTFinal, trimLength, reprTime='ns',
                  reprDist='Angstrom'):
         """"""
         self.startTime = datetime.now()
-        self.material = material
+
+        # Load material object
+        with open(materialFilePath, 'r') as file_material:
+            self.material = pickle.load(file_material)
+        
+        #self.material = material
         self.nDim = nDim
         self.speciesCount = speciesCount
         self.totalSpecies = self.speciesCount.sum()

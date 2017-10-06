@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import os
-import pickle
 
 from PyCT.core import analysis
 
@@ -38,16 +37,11 @@ def materialMSD(systemDirectoryPath, nDim, Temp, speciesCount,
         objectFileDirectoryName = 'ObjectFiles'
         objectFileDirPath = os.path.join(inputFileDirectoryPath,
                                          objectFileDirectoryName)
-        materialFileName = (os.path.join(objectFileDirPath, 'material')
+        materialFilePath = (os.path.join(objectFileDirPath, 'material')
                             + tailName)
 
-        # Load material object
-        file_material = open(materialFileName, 'r')
-        materialInfo = pickle.load(file_material)
-        file_material.close()
-
-        materialAnalysis = analysis(materialInfo, nDim, speciesCount, nTraj,
-                                    tFinal, timeInterval, msdTFinal,
+        materialAnalysis = analysis(materialFilePath, nDim, speciesCount,
+                                    nTraj, tFinal, timeInterval, msdTFinal,
                                     trimLength, reprTime, reprDist)
 
         msdAnalysisData = materialAnalysis.computeMSD(workDirPath, report)

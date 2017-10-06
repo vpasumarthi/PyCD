@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import os
-import pickle
 
 import numpy as np
 
@@ -41,20 +40,10 @@ def materialRun(systemDirectoryPath, Temp, speciesCount, tFinal, nTraj,
         objectFileDirectoryName = 'ObjectFiles'
         objectFileDirPath = os.path.join(inputFileDirectoryPath,
                                          objectFileDirectoryName)
-        materialFileName = (os.path.join(objectFileDirPath, 'material')
+        materialFilePath = (os.path.join(objectFileDirPath, 'material')
                             + tailName)
-        neighborsFileName = (os.path.join(objectFileDirPath, 'neighbors')
+        neighborsFilePath = (os.path.join(objectFileDirPath, 'neighbors')
                              + tailName)
-
-        # Load material object
-        file_material = open(materialFileName, 'r')
-        materialInfo = pickle.load(file_material)
-        file_material.close()
-
-        # Load neighbors object
-        file_materialNeighbors = open(neighborsFileName, 'r')
-        materialNeighbors = pickle.load(file_materialNeighbors)
-        file_materialNeighbors.close()
 
         # Load input files to instantiate system class
         os.chdir(inputFileDirectoryPath)
@@ -72,7 +61,7 @@ def materialRun(systemDirectoryPath, Temp, speciesCount, tFinal, nTraj,
         alpha = ewaldParameters['alpha']
         nmax = ewaldParameters['nmax']
         kmax = ewaldParameters['kmax']
-        materialSystem = system(materialInfo, materialNeighbors,
+        materialSystem = system(materialFilePath, neighborsFilePath,
                                 hopNeighborList, cumulativeDisplacementList,
                                 speciesCount, alpha, nmax, kmax)
 

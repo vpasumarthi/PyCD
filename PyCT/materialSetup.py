@@ -86,7 +86,7 @@ def materialSetup(systemDirectoryPath, systemSize, pbc, generateObjectFiles,
         nHoles = 0
         speciesCount = np.array([nElectrons, nHoles])
 
-        materialSystem = system(materialInfo, materialNeighbors,
+        materialSystem = system(materialFilePath, neighborsFilePath,
                                 hopNeighborList, cumulativeDisplacementList,
                                 speciesCount, alpha, nmax, kmax)
         precomputedArray = materialSystem.ewaldSumSetup(inputFileDirectoryPath)
