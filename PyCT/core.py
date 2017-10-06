@@ -105,11 +105,12 @@ class material(object):
                                                 fractionalUnitCellCoords.shape)
         startIndex = 0
         for elementIndex in range(self.nElementTypes):
-            elementUnitCellCoords = fractionalUnitCellCoords[
+            elementFractUnitCellCoords = fractionalUnitCellCoords[
                                     self.elementTypeIndexList == elementIndex]
             endIndex = startIndex + self.nElementsPerUnitCell[elementIndex]
-            self.fractionalUnitCellCoords[startIndex:endIndex] = \
-                elementUnitCellCoords[elementUnitCellCoords[:, 2].argsort()]
+            self.fractionalUnitCellCoords[startIndex:endIndex] = (
+                            elementFractUnitCellCoords[
+                                elementFractUnitCellCoords[:, 2].argsort()])
             startIndex = endIndex
 
         self.unitcellCoords = np.dot(self.fractionalUnitCellCoords,
