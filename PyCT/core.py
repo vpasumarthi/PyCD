@@ -120,8 +120,8 @@ class material(object):
                 elementUnitCellCoords[elementUnitCellCoords[:, 2].argsort()]
             startIndex = endIndex
 
-        self.unitcellCoords = (np.dot(self.latticeMatrix,
-                                      self.fractionalUnitCellCoords.T).T)
+        self.unitcellCoords = np.dot(self.fractionalUnitCellCoords,
+                                     self.latticeMatrix)
         # self.unitcellCoords *= self.ANG2BOHR  # Unit cell coordinates in a.u.
         # self.nElementsPerUnitCell = np.copy(nElementsPerUnitCell)
         # self.totalElementsPerUnitCell = self.nElementsPerUnitCell.sum()
@@ -437,7 +437,7 @@ class neighbors(object):
         displacementVectorList = np.empty(len(centerSiteCoords), dtype=object)
         numNeighbors = np.array([], dtype=int)
 
-        if cutoffDistKey == 'O:O':
+        if cutoffDistKey == 'Fe:Fe':
             quickTest = 0  # commit reference: 1472bb4
         else:
             quickTest = 0
@@ -472,8 +472,10 @@ class neighbors(object):
             displacementVectorList[centerSiteIndex] = \
                 np.asarray(iDisplacementVectors)
             numNeighbors = np.append(numNeighbors, iNumNeighbors)
-            if quickTest:
-                # print np.sort(displacementList)[:10] / self.material.ANG2BOHR
+            if quickTest == 1:
+                print np.sort(displacementList)[:10] / self.material.ANG2BOHR
+                pdb.set_trace()
+            elif quickTest == 2:
                 for cutoffDist in range(2, 7):
                     cutoff = cutoffDist * self.material.ANG2BOHR
                     print cutoffDist
@@ -1449,14 +1451,13 @@ class run(object):
 
 class analysis(object):
     """Post-simulation analysis methods"""
-    def __init__(self, material, nDim, systemSize, speciesCount, nTraj, tFinal,
+    def __init__(self, material, nDim, speciesCount, nTraj, tFinal,
                  timeInterval, msdTFinal, trimLength, reprTime='ns',
                  reprDist='Angstrom'):
         """"""
         self.startTime = datetime.now()
         self.material = material
         self.nDim = nDim
-        self.systemSize = systemSize
         self.speciesCount = speciesCount
         self.totalSpecies = self.speciesCount.sum()
         self.nTraj = int(nTraj)
