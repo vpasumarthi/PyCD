@@ -8,9 +8,8 @@ import numpy as np
 from PyCT.core import system, run
 
 
-def materialRun(systemDirectoryPath, systemSize, pbc, Temp, speciesCount,
-                tFinal, nTraj, timeInterval, randomSeed, report, overWrite,
-                gui):
+def materialRun(systemDirectoryPath, Temp, speciesCount, tFinal, nTraj,
+                timeInterval, randomSeed, report, overWrite, gui):
 
     # Change to working directory
     parentDir1 = 'SimulationFiles'
@@ -38,26 +37,24 @@ def materialRun(systemDirectoryPath, systemSize, pbc, Temp, speciesCount,
                                               inputFileDirectoryName)
 
         # Build path for material and neighbors object files
-        # TODO: Obtain material name in generic sense
-        materialName = 'bvo'
         tailName = '.obj'
         objectFileDirectoryName = 'ObjectFiles'
         objectFileDirPath = os.path.join(inputFileDirectoryPath,
                                          objectFileDirectoryName)
-        materialFileName = (os.path.join(objectFileDirPath, materialName)
+        materialFileName = (os.path.join(objectFileDirPath, 'material')
                             + tailName)
-        neighborsFileName = (os.path.join(objectFileDirPath, materialName)
-                             + 'Neighbors' + tailName)
+        neighborsFileName = (os.path.join(objectFileDirPath, 'neighbors')
+                             + tailName)
 
         # Load material object
-        file_bvo = open(materialFileName, 'r')
-        bvo = pickle.load(file_bvo)
-        file_bvo.close()
+        file_material = open(materialFileName, 'r')
+        materialInfo = pickle.load(file_material)
+        file_material.close()
 
         # Load neighbors object
-        file_bvoNeighbors = open(neighborsFileName, 'r')
-        bvoNeighbors = pickle.load(file_bvoNeighbors)
-        file_bvoNeighbors.close()
+        file_materialNeighbors = open(neighborsFileName, 'r')
+        materialNeighbors = pickle.load(file_materialNeighbors)
+        file_materialNeighbors.close()
 
         # Load input files to instantiate system class
         os.chdir(inputFileDirectoryPath)
@@ -75,18 +72,18 @@ def materialRun(systemDirectoryPath, systemSize, pbc, Temp, speciesCount,
         alpha = ewaldParameters['alpha']
         nmax = ewaldParameters['nmax']
         kmax = ewaldParameters['kmax']
-        bvoSystem = system(bvo, bvoNeighbors, hopNeighborList,
-                           cumulativeDisplacementList, speciesCount,
-                           alpha, nmax, kmax)
+        materialSystem = system(materialInfo, materialNeighbors,
+                                hopNeighborList, cumulativeDisplacementList,
+                                speciesCount, alpha, nmax, kmax)
 
         # Load precomputed array to instantiate run class
         precomputedArrayFilePath = os.path.join(inputFileDirectoryPath,
                                                 'precomputedArray.npy')
         precomputedArray = np.load(precomputedArrayFilePath)
-        bvoRun = run(bvoSystem, precomputedArray, Temp, nTraj,
-                     tFinal, timeInterval, gui)
+        materialRun = run(materialSystem, precomputedArray, Temp, nTraj,
+                          tFinal, timeInterval, gui)
 
-        bvoRun.doKMCSteps(workDirPath, report, randomSeed)
+        materialRun.doKMCSteps(workDirPath, report, randomSeed)
     else:
         print ('Simulation files already exists in '
                + 'the destination directory')

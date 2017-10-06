@@ -6,7 +6,7 @@ import pickle
 from PyCT.core import analysis
 
 
-def materialMSD(systemDirectoryPath, systemSize, nDim, Temp, speciesCount,
+def materialMSD(systemDirectoryPath, nDim, Temp, speciesCount,
                 tFinal, nTraj, timeInterval, msdTFinal, trimLength,
                 displayErrorBars, reprTime, reprDist, report):
 
@@ -34,28 +34,26 @@ def materialMSD(systemDirectoryPath, systemSize, nDim, Temp, speciesCount,
                                               inputFileDirectoryName)
 
         # Build path for material and neighbors object files
-        # TODO: Obtain material name in generic sense
-        materialName = 'bvo'
         tailName = '.obj'
         objectFileDirectoryName = 'ObjectFiles'
         objectFileDirPath = os.path.join(inputFileDirectoryPath,
                                          objectFileDirectoryName)
-        materialFileName = (os.path.join(objectFileDirPath, materialName)
+        materialFileName = (os.path.join(objectFileDirPath, 'material')
                             + tailName)
 
         # Load material object
-        file_bvo = open(materialFileName, 'r')
-        bvo = pickle.load(file_bvo)
-        file_bvo.close()
+        file_material = open(materialFileName, 'r')
+        materialInfo = pickle.load(file_material)
+        file_material.close()
 
-        bvoAnalysis = analysis(bvo, nDim, systemSize, speciesCount, nTraj,
-                               tFinal, timeInterval, msdTFinal, trimLength,
-                               reprTime, reprDist)
+        materialAnalysis = analysis(materialInfo, nDim, speciesCount, nTraj,
+                                    tFinal, timeInterval, msdTFinal,
+                                    trimLength, reprTime, reprDist)
 
-        msdAnalysisData = bvoAnalysis.computeMSD(workDirPath, report)
+        msdAnalysisData = materialAnalysis.computeMSD(workDirPath, report)
         msdData = msdAnalysisData.msdData
         stdData = msdAnalysisData.stdData
         speciesTypes = msdAnalysisData.speciesTypes
         fileName = msdAnalysisData.fileName
-        bvoAnalysis.generateMSDPlot(msdData, stdData, displayErrorBars,
-                                    speciesTypes, fileName, workDirPath)
+        materialAnalysis.generateMSDPlot(msdData, stdData, displayErrorBars,
+                                         speciesTypes, fileName, workDirPath)

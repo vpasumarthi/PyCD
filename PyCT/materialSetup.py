@@ -32,11 +32,10 @@ def materialSetup(systemDirectoryPath, systemSize, pbc, generateObjectFiles,
     materialParameters = returnValues(params)
 
     # Build material object files
-    bvo = material(materialParameters)
-    materialName = bvo.name
+    materialInfo = material(materialParameters)
 
     # Build neighbors object files
-    bvoNeighbors = neighbors(bvo, systemSize, pbc)
+    materialNeighbors = neighbors(materialInfo, systemSize, pbc)
 
     # Determine path for input files
     inputFileDirectoryName = 'InputFiles'
@@ -48,21 +47,22 @@ def materialSetup(systemDirectoryPath, systemSize, pbc, generateObjectFiles,
     objectFileDirectoryName = 'ObjectFiles'
     objectFileDirPath = os.path.join(inputFileDirectoryPath,
                                      objectFileDirectoryName)
+
     if not os.path.exists(objectFileDirPath):
         os.makedirs(objectFileDirPath)
 
-    materialFilePath = os.path.join(objectFileDirPath, materialName) + tailName
-    neighborsFilePath = (os.path.join(objectFileDirPath, materialName)
-                         + 'Neighbors' + tailName)
+    materialFilePath = os.path.join(objectFileDirPath, 'material') + tailName
+    neighborsFilePath = os.path.join(objectFileDirPath, 'neighbors') + tailName
 
     if generateObjectFiles:
-        bvo.generateMaterialFile(bvo, materialFilePath)
-        bvoNeighbors.generateNeighborsFile(bvoNeighbors, neighborsFilePath)
+        materialInfo.generateMaterialFile(materialInfo, materialFilePath)
+        materialNeighbors.generateNeighborsFile(materialNeighbors,
+                                                neighborsFilePath)
 
     # generate neighbor list
     if generateHopNeighborList:
-        bvoNeighbors.generateNeighborList(inputFileDirectoryPath,
-                                          generateCumDispList)
+        materialNeighbors.generateNeighborList(inputFileDirectoryPath,
+                                               generateCumDispList)
 
     # Build precomputed array and save to disk
     precomputedArrayFilePath = os.path.join(inputFileDirectoryPath,
@@ -86,10 +86,10 @@ def materialSetup(systemDirectoryPath, systemSize, pbc, generateObjectFiles,
         nHoles = 0
         speciesCount = np.array([nElectrons, nHoles])
 
-        bvoSystem = system(bvo, bvoNeighbors, hopNeighborList,
-                           cumulativeDisplacementList, speciesCount,
-                           alpha, nmax, kmax)
-        precomputedArray = bvoSystem.ewaldSumSetup(inputFileDirectoryPath)
+        materialSystem = system(materialInfo, materialNeighbors,
+                                hopNeighborList, cumulativeDisplacementList,
+                                speciesCount, alpha, nmax, kmax)
+        precomputedArray = materialSystem.ewaldSumSetup(inputFileDirectoryPath)
         np.save(precomputedArrayFilePath, precomputedArray)
 
         ewaldParametersFilePath = os.path.join(inputFileDirectoryPath,
