@@ -9,7 +9,7 @@ from PyCT.core import system, run
 
 
 def materialRun(systemDirectoryPath, Temp, speciesCount, tFinal, nTraj,
-                timeInterval, randomSeed, report, overWrite, gui):
+                timeInterval, randomSeed, report, overWrite):
 
     # Change to working directory
     parentDir1 = 'SimulationFiles'
@@ -81,7 +81,7 @@ def materialRun(systemDirectoryPath, Temp, speciesCount, tFinal, nTraj,
                                                 'precomputedArray.npy')
         precomputedArray = np.load(precomputedArrayFilePath)
         materialRun = run(materialSystem, precomputedArray, Temp, nTraj,
-                          tFinal, timeInterval, gui)
+                          tFinal, timeInterval)
 
         materialRun.doKMCSteps(workDirPath, report, randomSeed)
     else:

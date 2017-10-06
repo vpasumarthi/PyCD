@@ -93,28 +93,20 @@ class material(object):
         self.elementTypeIndexList = np.repeat(np.arange(self.nElementTypes),
                                               self.nElementsPerUnitCell)
 
-        # TODO: introduce a method to view the material using ase atoms or
-        # other gui module
         self.name = materialParameters.name
-        # self.elementTypes = materialParameters.elementTypes[:]
         self.speciesTypes = materialParameters.speciesTypes[:]
         self.numSpeciesTypes = len(self.speciesTypes)
         self.speciesChargeList = materialParameters.speciesChargeList[:]
         self.speciesToElementTypeMap = deepcopy(
                                     materialParameters.speciesToElementTypeMap)
 
-        # self.unitcellCoords = np.zeros((
-        #                            len(materialParameters.unitcellCoords), 3))
-        startIndex = 0
-        # self.nElementTypes = len(self.elementTypes)
-        # nElementsPerUnitCell = np.zeros(self.nElementTypes, int)
         # Initialization
         self.fractionalUnitCellCoords = np.zeros(
                                                 fractionalUnitCellCoords.shape)
+        startIndex = 0
         for elementIndex in range(self.nElementTypes):
             elementUnitCellCoords = fractionalUnitCellCoords[
                                     self.elementTypeIndexList == elementIndex]
-            # nElementsPerUnitCell[elementIndex] = len(elementUnitCellCoords)
             endIndex = startIndex + self.nElementsPerUnitCell[elementIndex]
             self.fractionalUnitCellCoords[startIndex:endIndex] = \
                 elementUnitCellCoords[elementUnitCellCoords[:, 2].argsort()]
@@ -122,11 +114,6 @@ class material(object):
 
         self.unitcellCoords = np.dot(self.fractionalUnitCellCoords,
                                      self.latticeMatrix)
-        # self.unitcellCoords *= self.ANG2BOHR  # Unit cell coordinates in a.u.
-        # self.nElementsPerUnitCell = np.copy(nElementsPerUnitCell)
-        # self.totalElementsPerUnitCell = self.nElementsPerUnitCell.sum()
-        #self.elementTypeIndexList = np.sort(
-        #                materialParameters.elementTypeIndexList.astype(int))
         self.chargeTypes = deepcopy(materialParameters.chargeTypes)
 
         self.vn = materialParameters.vn / self.SEC2AUTIME
@@ -184,8 +171,6 @@ class material(object):
                               self.speciesToElementTypeMap[key], repeat=2))]
                     for key in self.speciesToElementTypeMap
                     if key != self.emptySpeciesType}
-
-        # self.latticeMatrix = materialParameters.latticeMatrix * self.ANG2BOHR
 
     def readPOSCAR(self, inputFilePath):
         latticeMatrix = np.zeros((3, 3))
@@ -1143,7 +1128,7 @@ class run(object):
     """defines the subroutines for running Kinetic Monte Carlo and
         computing electrostatic interaction energies"""
     def __init__(self, system, precomputedArray, T, nTraj,
-                 tFinal, timeInterval, gui):
+                 tFinal, timeInterval):
         """Returns the PBC condition of the system"""
         self.startTime = datetime.now()
 
@@ -1155,7 +1140,6 @@ class run(object):
         self.nTraj = int(nTraj)
         self.tFinal = tFinal * self.material.SEC2AUTIME
         self.timeInterval = timeInterval * self.material.SEC2AUTIME
-        self.gui = gui
 
         self.systemSize = self.system.systemSize
 
