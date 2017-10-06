@@ -1,0 +1,39 @@
+name: 'Fe2O3'
+speciesTypes: ['electron', 'hole']
+speciesChargeList: [-1, +1]
+speciesToElementTypeMap:
+    'electron': ['Fe']
+    'empty': ['Fe', 'O']
+    'hole': ['O']
+# multiples of elementary charge
+chargeTypes:
+    'Fe': +3.0
+    'O': -2.0
+    'Fe0': +2.0
+# Basal: 2.971, C: 2.901 # Experimental
+neighborCutoffDist:
+    'Fe:Fe': [2.971, 2.901]
+neighborCutoffDistTol:
+    'Fe:Fe': [0.002, 0.002]
+# Source: Kerisit et al., GCA 2006. DOI: 10.1016/j.gca.2005.12.021
+vn: 1.85E+13  # typical frequency for nuclear motion in (1/sec)
+# reorganization energy in eV
+lambdaValues:
+    'Fe:Fe': [1.74533, 1.88683]
+# electronic coupling matrix element in eV
+VAB:
+    'Fe:Fe': [0.184, 0.028]
+elementTypeDelimiter: ':'
+emptySpeciesType: 'empty'
+siteIdentifier: '0'
+# Direction-averaged value of the static dielectric constant of the potential 
+# model used in KMC paper. Dielectric constant tensor obtained from METADISE.
+# Source: Kerisit et al., The Journal of Chemical Physics 127, 124706 (2007); 
+# DOI: 10.1063/1.2768522
+dielectricConstant: 9.355
+
+# Coordinates source:
+# http://rruff.geo.arizona.edu/AMS/download.php?id=00230.cif&down=cif
+# Source article:
+# Blake, R. L., et al. "Refinement of hematite structure."
+# American Mineralogist 51.1-2 (1966): 123-129.
