@@ -1588,15 +1588,14 @@ class analysis(object):
         ax = fig.add_subplot(111)
         from scipy.stats import linregress
         for speciesIndex, speciesType in enumerate(speciesTypes):
+            ax.plot(msdData[:, 0], msdData[:, speciesIndex + 1], 'o',
+                    markerfacecolor='blue', markeredgecolor='black',
+                    label=speciesType)
             if displayErrorBars:
                 ax.errorbar(msdData[:, 0], msdData[:, speciesIndex + 1],
                             yerr=stdData[:, speciesIndex], fmt='o', capsize=3,
-                            color='blue', markerfacecolor='blue',
-                            markeredgecolor='black', label=speciesType)
-            else:
-                ax.plot(msdData[:, 0], msdData[:, speciesIndex + 1], 'o',
-                        markerfacecolor='blue', markeredgecolor='black',
-                        label=speciesType)
+                            color='blue', markerfacecolor='none',
+                            markeredgecolor='none')
             slope, intercept, rValue, _, _ = linregress(
                 msdData[self.trimLength:-self.trimLength, 0],
                 msdData[self.trimLength:-self.trimLength, speciesIndex + 1])
