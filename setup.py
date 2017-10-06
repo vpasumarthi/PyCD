@@ -42,7 +42,6 @@ if __name__ == "__main__":
         classifiers=[
             'Development Status :: 4 - Beta',
             'Intended Audience :: Science/Research',
-            'Programming Language :: Python :: 2.7',
             'Programming Language :: Python :: 3',
         ],
         zip_safe=True)

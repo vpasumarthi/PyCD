@@ -20,7 +20,7 @@ def materialMSD(systemDirectoryPath, systemSize, pbc, nDim, Temp, speciesCount,
         try:
             params = yaml.load(stream)
         except yaml.YAMLError as exc:
-            print exc
+            print(exc)
 
     inputCoordinateFileName = 'POSCAR'
     inputCoorFileLocation = os.path.join(systemDirectoryPath, configDirName,
@@ -45,7 +45,7 @@ def materialMSD(systemDirectoryPath, systemSize, pbc, nDim, Temp, speciesCount,
                                parentDir3, workDir)
 
     if not os.path.exists(workDirPath):
-        print 'Simulation files do not exist. Aborting.'
+        print('Simulation files do not exist. Aborting.')
     else:
         os.chdir(workDirPath)
 

@@ -20,7 +20,7 @@ def materialRun(systemDirectoryPath, systemSize, pbc, Temp, speciesCount,
         try:
             params = yaml.load(stream)
         except yaml.YAMLError as exc:
-            print exc
+            print(exc)
 
     inputCoordinateFileName = 'POSCAR'
     inputCoorFileLocation = os.path.join(systemDirectoryPath, configDirName,

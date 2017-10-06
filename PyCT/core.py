@@ -444,33 +444,33 @@ class neighbors(object):
                 np.asarray(iDisplacementVectors)
             numNeighbors = np.append(numNeighbors, iNumNeighbors)
             if quickTest == 1:
-                print np.sort(displacementList)[:10] / self.material.ANG2BOHR
+                print(np.sort(displacementList)[:10] / self.material.ANG2BOHR)
                 pdb.set_trace()
             elif quickTest == 2:
                 for cutoffDist in range(2, 7):
                     cutoff = cutoffDist * self.material.ANG2BOHR
-                    print cutoffDist
-                    print displacementList[displacementList < cutoff].shape
-                    print np.unique(
+                    print(cutoffDist)
+                    print(displacementList[displacementList < cutoff].shape)
+                    print(np.unique(
                         np.sort(np.round(displacementList[displacementList
                                                           < cutoff]
-                                         / self.material.ANG2BOHR, 4))).shape
-                    print np.unique(
+                                         / self.material.ANG2BOHR, 4))).shape)
+                    print(np.unique(
                         np.sort(np.round(displacementList[displacementList
                                                           < cutoff]
-                                         / self.material.ANG2BOHR, 3))).shape
-                    print np.unique(
+                                         / self.material.ANG2BOHR, 3))).shape)
+                    print(np.unique(
                         np.sort(np.round(displacementList[displacementList
                                                           < cutoff]
-                                         / self.material.ANG2BOHR, 2))).shape
-                    print np.unique(
+                                         / self.material.ANG2BOHR, 2))).shape)
+                    print(np.unique(
                         np.sort(np.round(displacementList[displacementList
                                                           < cutoff]
-                                         / self.material.ANG2BOHR, 1))).shape
-                    print np.unique(
+                                         / self.material.ANG2BOHR, 1))).shape)
+                    print(np.unique(
                         np.sort(np.round(displacementList[displacementList
                                                           < cutoff]
-                                         / self.material.ANG2BOHR, 0))).shape
+                                         / self.material.ANG2BOHR, 0))).shape)
                 pdb.set_trace()
 
         returnNeighbors = returnValues(
@@ -1012,7 +1012,7 @@ class system(object):
                                                 centerSiteElementTypeIndex]),
                                 self.numCells)
                         + systemElementIndexOffsetArray)
-            occupancy.extend(rnd.sample(siteIndices, numSpecies)[:])
+            occupancy.extend(rnd.sample(list(siteIndices), numSpecies)[:])
         return occupancy
 
     def chargeConfig(self, occupancy):
@@ -1207,18 +1207,18 @@ class run(object):
         excess = 0
         energy = 1
         unwrappedTrajFileName = os.path.join(outdir, 'unwrappedTraj.dat')
-        open(unwrappedTrajFileName, 'w').close()
+        open(unwrappedTrajFileName, 'wb').close()
         if energy:
             energyTrajFileName = os.path.join(outdir, 'energyTraj.dat')
-            open(energyTrajFileName, 'w').close()
+            open(energyTrajFileName, 'wb').close()
 
         if excess:
             wrappedTrajFileName = os.path.join(outdir, 'wrappedTraj.dat')
             delG0TrajFileName = os.path.join(outdir, 'delG0Traj.dat')
             potentialTrajFileName = os.path.join(outdir, 'potentialTraj.dat')
-            open(wrappedTrajFileName, 'w').close()
-            open(delG0TrajFileName, 'w').close()
-            open(potentialTrajFileName, 'w').close()
+            open(wrappedTrajFileName, 'wb').close()
+            open(delG0TrajFileName, 'wb').close()
+            open(potentialTrajFileName, 'wb').close()
 
         rnd.seed(randomSeed)
         nTraj = self.nTraj
@@ -1281,7 +1281,7 @@ class run(object):
                     siteElementTypeIndex = self.nProcSiteElementTypeIndexList[
                                                                         iProc]
                     rowIndex = (speciesSiteSystemElementIndex
-                                / self.material.totalElementsPerUnitCell
+                                // self.material.totalElementsPerUnitCell
                                 * self.material.nElementsPerUnitCell[
                                                         siteElementTypeIndex]
                                 + speciesSiteSystemElementIndex
@@ -1387,17 +1387,16 @@ class run(object):
                     #     wrappedPositionArray[pathIndex] \
                     #         = self.systemCoordinates[
                     #                         currentStateOccupancy].flatten()
-
-            with open(unwrappedTrajFileName, 'a') as unwrappedTrajFile:
+            with open(unwrappedTrajFileName, 'ab') as unwrappedTrajFile:
                 np.savetxt(unwrappedTrajFile, unwrappedPositionArray)
-            with open(energyTrajFileName, 'a') as energyTrajFile:
+            with open(energyTrajFileName, 'ab') as energyTrajFile:
                 np.savetxt(energyTrajFile, energyArray)
             if excess:
-                with open(wrappedTrajFileName, 'a') as wrappedTrajFile:
+                with open(wrappedTrajFileName, 'ab') as wrappedTrajFile:
                     np.savetxt(wrappedTrajFile, wrappedPositionArray)
-                with open(delG0TrajFileName, 'a') as delG0TrajFile:
+                with open(delG0TrajFileName, 'ab') as delG0TrajFile:
                     np.savetxt(delG0TrajFile, delG0Array)
-                with open(potentialTrajFileName, 'a') as potentialTrajFile:
+                with open(potentialTrajFileName, 'ab') as potentialTrajFile:
                     np.savetxt(potentialTrajFile, potentialArray)
         if report:
             self.generateSimulationLogReport(outdir)
@@ -1606,7 +1605,7 @@ class analysis(object):
         plt.legend()
         plt.show()  # Temp change
         figureName = ('MSD_Plot_' + fileName + '_Trim='
-                      + str(self.trimLength) + '.jpg')
+                      + str(self.trimLength) + '.png')
         figurePath = os.path.join(outdir, figureName)
         plt.savefig(figurePath)
 
