@@ -993,26 +993,32 @@ class system(object):
         """generates initial occupancy list based on species count"""
         occupancy = []
         for speciesTypeIndex, numSpecies in enumerate(speciesCount):
-            centerSiteElementTypeIndex = np.in1d(
-                                    self.material.elementTypes,
-                                    self.material.speciesToElementTypeMap[
-                                        self.material.speciesTypes[
-                                            speciesTypeIndex]]).nonzero()[0][0]
-            systemElementIndexOffsetArray = np.repeat(
-                np.arange(0,
-                          (self.material.totalElementsPerUnitCell
-                           * self.numCells),
-                          self.material.totalElementsPerUnitCell),
-                self.material.nElementsPerUnitCell[centerSiteElementTypeIndex])
-            siteIndices = (
-                        np.tile(self.material.nElementsPerUnitCell[
-                                    :centerSiteElementTypeIndex].sum()
-                                + np.arange(0,
-                                            self.material.nElementsPerUnitCell[
-                                                centerSiteElementTypeIndex]),
-                                self.numCells)
-                        + systemElementIndexOffsetArray)
-            occupancy.extend(rnd.sample(list(siteIndices), numSpecies)[:])
+            speciesType = self.material.speciesTypes[speciesTypeIndex]
+            speciesSiteElementList = self.material.speciesToElementTypeMap[
+                                                                speciesType]
+            speciesSiteElementTypeIndexList = [
+                        self.material.elementTypes.index(speciesSiteElement)
+                        for speciesSiteElement in speciesSiteElementList]
+            speciesSiteIndices = []
+            for speciesSiteElementTypeIndex in speciesSiteElementTypeIndexList:
+                systemElementIndexOffsetArray = np.repeat(
+                    np.arange(0,
+                              (self.material.totalElementsPerUnitCell
+                               * self.numCells),
+                              self.material.totalElementsPerUnitCell),
+                    self.material.nElementsPerUnitCell[
+                                                speciesSiteElementTypeIndex])
+                siteIndices = (
+                    np.tile(self.material.nElementsPerUnitCell[
+                                            :speciesSiteElementTypeIndex].sum()
+                            + np.arange(0,
+                                        self.material.nElementsPerUnitCell[
+                                            speciesSiteElementTypeIndex]),
+                            self.numCells)
+                    + systemElementIndexOffsetArray)
+                speciesSiteIndices.extend(list(siteIndices))
+            occupancy.extend(rnd.sample(speciesSiteIndices,
+                                        numSpecies)[:])
         return occupancy
 
     def chargeConfig(self, occupancy):
