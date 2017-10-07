@@ -9,7 +9,6 @@ speciesToElementTypeMap:
 chargeTypes:
     'Fe': +3.0
     'O': -2.0
-    'Fe0': +2.0
 # Basal: 2.971, C: 2.901 # Experimental
 neighborCutoffDist:
     'Fe:Fe': [2.971, 2.901]
@@ -25,7 +24,6 @@ VAB:
     'Fe:Fe': [0.184, 0.028]
 elementTypeDelimiter: ':'
 emptySpeciesType: 'empty'
-siteIdentifier: '0'
 # Direction-averaged value of the static dielectric constant of the potential 
 # model used in KMC paper. Dielectric constant tensor obtained from METADISE.
 # Source: Kerisit et al., The Journal of Chemical Physics 127, 124706 (2007); 
