@@ -36,7 +36,6 @@ class material(object):
                                         neighbor cutoff distance
     :param str elementTypeDelimiter: Delimiter between element types
     :param str emptySpeciesType: name of the empty species type
-    :param str siteIdentifier: suffix to the chargeType to identify site
     :param float epsilon: Dielectric constant of the material
 
     The additional attributes are:
@@ -144,7 +143,6 @@ class material(object):
 
         self.elementTypeDelimiter = materialParameters.elementTypeDelimiter
         self.emptySpeciesType = materialParameters.emptySpeciesType
-        self.siteIdentifier = materialParameters.siteIdentifier
         self.dielectricConstant = materialParameters.dielectricConstant
 
         siteList = [self.speciesToElementTypeMap[key]
@@ -948,7 +946,6 @@ class system(object):
         self.speciesCount = speciesCount
         self.systemCharge = np.dot(speciesCount,
                                    self.material.speciesChargeList)
-        self.speciesCountCumSum = speciesCount.cumsum()
 
         # total number of unit cells
         self.systemSize = self.neighbors.systemSize
@@ -959,7 +956,8 @@ class system(object):
                 [self.material.chargeTypes[
                     self.material.elementTypes[elementTypeIndex]]
                  for elementTypeIndex in self.material.elementTypeIndexList])
-        self.latticeChargeList = np.tile(unitcellChargeList, self.numCells)
+        self.latticeChargeList = np.tile(
+                            unitcellChargeList, self.numCells)[:, np.newaxis]
 
         self.cumulativeDisplacementList = cumulativeDisplacementList
 
@@ -1024,30 +1022,14 @@ class system(object):
     def chargeConfig(self, occupancy):
         """Returns charge distribution of the current configuration"""
         chargeList = np.copy(self.latticeChargeList)
-        chargeList = chargeList[:, np.newaxis]
-        chargeTypeKeys = self.material.chargeTypes.keys()
 
-        siteChargeTypeKeys = [key for key in chargeTypeKeys
-                              if key not in self.material.siteList
-                              if self.material.siteIdentifier in key]
-        for chargeKeyType in siteChargeTypeKeys:
-            centerSiteElementType = chargeKeyType.replace(
-                                                self.material.siteIdentifier,
-                                                '')
-            for speciesType in self.material.elementTypeToSpeciesMap[
-                                                        centerSiteElementType]:
-                assert speciesType in self.material.speciesTypes, \
-                    ('Invalid definition of charge type \''
-                     + str(chargeKeyType) + '\', \'' + str(speciesType)
-                     + '\' species does not exist in this configuration')
-                speciesTypeIndex = self.material.speciesTypes.index(
-                                                                speciesType)
-                startIndex = 0 + self.speciesCount[:speciesTypeIndex].sum()
-                endIndex = self.speciesCountCumSum[speciesTypeIndex]
-                centerSiteSystemElementIndices = occupancy[
-                                                        startIndex:endIndex][:]
-                chargeList[centerSiteSystemElementIndices] = \
-                    self.material.chargeTypes[chargeKeyType]
+        for speciesTypeIndex in range(self.material.numSpeciesTypes):
+            startIndex = 0 + self.speciesCount[:speciesTypeIndex].sum()
+            endIndex = startIndex + self.speciesCount[speciesTypeIndex]
+            centerSiteSystemElementIndices = occupancy[
+                                                    startIndex:endIndex][:]
+            chargeList[centerSiteSystemElementIndices] += \
+                self.material.speciesChargeList[speciesTypeIndex]
         return chargeList
 
     def ewaldSumSetup(self, outdir=None):
