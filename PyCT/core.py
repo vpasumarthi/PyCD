@@ -85,7 +85,8 @@ class material(object):
         # Read Input POSCAR
         [self.latticeMatrix, self.elementTypes, self.nElementsPerUnitCell,
          self.totalElementsPerUnitCell, fractionalUnitCellCoords] = \
-            self.readPOSCAR(materialParameters.inputCoorFileLocation)
+            self.readPOSCAR(materialParameters.inputCoorFileLocation,
+                            materialParameters.fileFormatIndex)
         self.latticeMatrix *= self.ANG2BOHR
         self.nElementTypes = len(self.elementTypes)
         self.elementTypeIndexList = np.repeat(np.arange(self.nElementTypes),
@@ -170,34 +171,42 @@ class material(object):
                     for key in self.speciesToElementTypeMap
                     if key != self.emptySpeciesType}
 
-    def readPOSCAR(self, inputFilePath):
+    def readPOSCAR(self, inputFilePath, fileFormatIndex):
+        # fileFormatIndex: 0=VASP; 1=VESTA
         latticeMatrix = np.zeros((3, 3))
         latticeParameterIndex = 0
         latticeParametersLineRange = range(3, 6)
+        elementTypesLineNumber = 6 * fileFormatIndex
+        numElementsLineNumber = 6 + fileFormatIndex
+        coordStartLineNumber = 8 + fileFormatIndex
         inputFile = open(inputFilePath, 'r')
         for lineIndex, line in enumerate(inputFile):
             lineNumber = lineIndex + 1
-            if lineNumber in latticeParametersLineRange:
+            if lineNumber == 1 and not fileFormatIndex:
+                elementTypes = line[:-1].split()
+            elif lineNumber in latticeParametersLineRange:
                 latticeMatrix[latticeParameterIndex, :] = np.fromstring(
                                                                 line, sep=' ')
                 latticeParameterIndex += 1
-            elif lineNumber == 6:
+            elif (lineNumber == elementTypesLineNumber
+                  and 'elementTypes' not in locals()):
                 elementTypes = line.split()
-            elif lineNumber == 7:
+            elif lineNumber == numElementsLineNumber:
                 nElementsPerUnitCell = np.fromstring(line, dtype=int, sep=' ')
                 totalElementsPerUnitCell = nElementsPerUnitCell.sum()
                 fractionalUnitCellCoords = np.zeros((totalElementsPerUnitCell,
                                                      3))
                 elementIndex = 0
-            elif lineNumber > 8 and elementIndex < totalElementsPerUnitCell:
+            elif ((lineNumber >= coordStartLineNumber)
+                  and (elementIndex < totalElementsPerUnitCell)):
                 fractionalUnitCellCoords[elementIndex, :] = np.fromstring(
                                                                 line, sep=' ')
                 elementIndex += 1
         inputFile.close()
-        output = np.array([latticeMatrix, elementTypes, nElementsPerUnitCell,
-                           totalElementsPerUnitCell, fractionalUnitCellCoords],
-                          dtype=object)
-        return output
+        POSCAR_INFO = np.array([latticeMatrix, elementTypes,
+                                nElementsPerUnitCell, totalElementsPerUnitCell,
+                                fractionalUnitCellCoords], dtype=object)
+        return POSCAR_INFO
 
     def generateSites(self, elementTypeIndices, cellSize=np.array([1, 1, 1])):
         """Returns systemElementIndices and coordinates of specified elements

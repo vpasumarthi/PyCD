@@ -8,7 +8,7 @@ import yaml
 from PyCT.core import material, neighbors, system
 
 
-def materialSetup(systemDirectoryPath, systemSize, pbc,
+def materialSetup(systemDirectoryPath, fileFormatIndex, systemSize, pbc,
                   generateHopNeighborList, generateCumDispList, alpha, nmax,
                   kmax, generatePrecomputedArray):
     """Prepare material class object file, neighborlist and \
@@ -29,6 +29,7 @@ def materialSetup(systemDirectoryPath, systemSize, pbc,
     inputCoorFileLocation = os.path.join(systemDirectoryPath, configDirName,
                                          inputCoordinateFileName)
     params.update({'inputCoorFileLocation': inputCoorFileLocation})
+    params.update({'fileFormatIndex': fileFormatIndex})
     materialParameters = returnValues(params)
 
     # Build material object files
