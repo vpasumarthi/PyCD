@@ -17,6 +17,9 @@ nmax = 0
 kmax = 4
 generatePrecomputedArray = 1
 systemDirectoryPath = os.path.dirname(os.path.realpath(__file__))
+# fileFormatIndex: 0=VASP; 1=VESTA
+fileFormatIndex = 1
 
-materialSetup(systemDirectoryPath, systemSize, pbc, generateHopNeighborList,
-              generateCumDispList, alpha, nmax, kmax, generatePrecomputedArray)
+materialSetup(systemDirectoryPath, fileFormatIndex, systemSize, pbc,
+              generateHopNeighborList, generateCumDispList, alpha, nmax, kmax,
+              generatePrecomputedArray)

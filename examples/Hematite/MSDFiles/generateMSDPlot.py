@@ -28,6 +28,9 @@ report = 1
 systemDirectoryPath = os.path.dirname(
                                 os.path.dirname(os.path.realpath(__file__)))
 
-materialMSD(systemDirectoryPath, systemSize, pbc, nDim, Temp, speciesCount,
-            tFinal, nTraj, timeInterval, msdTFinal, trimLength,
+# fileFormatIndex: 0=VASP; 1=VESTA
+fileFormatIndex = 1
+
+materialMSD(systemDirectoryPath, fileFormatIndex, systemSize, pbc, nDim, Temp,
+            speciesCount, tFinal, nTraj, timeInterval, msdTFinal, trimLength,
             displayErrorBars, reprTime, reprDist, report)

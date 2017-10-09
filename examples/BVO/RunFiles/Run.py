@@ -23,5 +23,9 @@ report = 1
 overWrite = 1
 systemDirectoryPath = os.path.dirname(
                                 os.path.dirname(os.path.realpath(__file__)))
-materialRun(systemDirectoryPath, systemSize, pbc, Temp, speciesCount, tFinal,
-            nTraj, timeInterval, randomSeed, report, overWrite)
+# fileFormatIndex: 0=VASP; 1=VESTA
+fileFormatIndex = 1
+
+materialRun(systemDirectoryPath, fileFormatIndex, systemSize, pbc, Temp,
+            speciesCount, tFinal, nTraj, timeInterval, randomSeed, report,
+            overWrite)

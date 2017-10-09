@@ -21,13 +21,15 @@ nDim = 3
 Temp = 300  # K
 nHoles = 0
 speciesCount = np.array([nElectrons, nHoles])
-displayErrorBars = 1
+displayErrorBars = 0
 reprTime = 'ns'
 reprDist = 'angstrom'
 report = 1
 systemDirectoryPath = os.path.dirname(
                                 os.path.dirname(os.path.realpath(__file__)))
+# fileFormatIndex: 0=VASP; 1=VESTA
+fileFormatIndex = 1
 
-materialMSD(systemDirectoryPath, systemSize, pbc, nDim, Temp, speciesCount,
-            tFinal, nTraj, timeInterval, msdTFinal, trimLength,
+materialMSD(systemDirectoryPath, fileFormatIndex, systemSize, pbc, nDim, Temp,
+            speciesCount, tFinal, nTraj, timeInterval, msdTFinal, trimLength,
             displayErrorBars, reprTime, reprDist, report)
