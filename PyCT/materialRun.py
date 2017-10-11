@@ -28,10 +28,10 @@ def materialRun(systemDirectoryPath, fileFormatIndex, systemSize, pbc, Temp,
                                          inputCoordinateFileName)
     params.update({'inputCoorFileLocation': inputCoorFileLocation})
     params.update({'fileFormatIndex': fileFormatIndex})
-    materialParameters = returnValues(params)
+    configParams = returnValues(params)
 
     # Build material object files
-    materialInfo = material(materialParameters)
+    materialInfo = material(configParams)
 
     # Build neighbors object files
     materialNeighbors = neighbors(materialInfo, systemSize, pbc)
@@ -73,12 +73,10 @@ def materialRun(systemDirectoryPath, fileFormatIndex, systemSize, pbc, Temp,
                                             'cumulativeDisplacementList.npy')
         cumulativeDisplacementList = np.load(
                                             cumulativeDisplacementListFilePath)
-        ewaldParametersFilePath = os.path.join(inputFileDirectoryPath,
-                                               'ewaldParameters.npy')
-        ewaldParameters = np.load(ewaldParametersFilePath)[()]
-        alpha = ewaldParameters['alpha']
-        nmax = ewaldParameters['nmax']
-        kmax = ewaldParameters['kmax']
+        alpha = configParams.alpha
+        nmax = configParams.nmax
+        kmax = configParams.kmax
+
         materialSystem = system(materialInfo, materialNeighbors,
                                 hopNeighborList, cumulativeDisplacementList,
                                 speciesCount, alpha, nmax, kmax)

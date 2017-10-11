@@ -9,8 +9,8 @@ from PyCT.core import material, neighbors, system
 
 
 def materialSetup(systemDirectoryPath, fileFormatIndex, systemSize, pbc,
-                  generateHopNeighborList, generateCumDispList, alpha, nmax,
-                  kmax, generatePrecomputedArray):
+                  generateHopNeighborList, generateCumDispList,
+                  generatePrecomputedArray):
     """Prepare material class object file, neighborlist and \
         saves to the provided destination path"""
 
@@ -30,10 +30,10 @@ def materialSetup(systemDirectoryPath, fileFormatIndex, systemSize, pbc,
                                          inputCoordinateFileName)
     params.update({'inputCoorFileLocation': inputCoorFileLocation})
     params.update({'fileFormatIndex': fileFormatIndex})
-    materialParameters = returnValues(params)
+    configParams = returnValues(params)
 
     # Build material object files
-    materialInfo = material(materialParameters)
+    materialInfo = material(configParams)
 
     # Build neighbors object files
     materialNeighbors = neighbors(materialInfo, systemSize, pbc)
@@ -70,18 +70,15 @@ def materialSetup(systemDirectoryPath, fileFormatIndex, systemSize, pbc,
         nHoles = 0
         speciesCount = np.array([nElectrons, nHoles])
 
+        alpha = configParams.alpha
+        nmax = configParams.nmax
+        kmax = configParams.kmax
+
         materialSystem = system(materialInfo, materialNeighbors,
                                 hopNeighborList, cumulativeDisplacementList,
                                 speciesCount, alpha, nmax, kmax)
         precomputedArray = materialSystem.ewaldSumSetup(inputFileDirectoryPath)
         np.save(precomputedArrayFilePath, precomputedArray)
-
-        ewaldParametersFilePath = os.path.join(inputFileDirectoryPath,
-                                               'ewaldParameters.npy')
-        ewaldParameters = {'alpha': alpha,
-                           'nmax': nmax,
-                           'kmax': kmax}
-        np.save(ewaldParametersFilePath, ewaldParameters)
 
 
 class returnValues(object):
