@@ -9,8 +9,8 @@ from PyCT.core import material, neighbors, system, run
 
 
 def materialRun(systemDirectoryPath, fileFormatIndex, systemSize, pbc, Temp,
-                speciesCount, tFinal, nTraj, timeInterval, randomSeed, report,
-                overWrite):
+                ionChargeType, speciesChargeType, speciesCount, tFinal, nTraj,
+                timeInterval, randomSeed, report, overWrite):
 
     # Load material parameters
     configDirName = 'ConfigurationFiles'
@@ -38,16 +38,18 @@ def materialRun(systemDirectoryPath, fileFormatIndex, systemSize, pbc, Temp,
 
     # Change to working directory
     parentDir1 = 'SimulationFiles'
+    parentDir2 = ('ionChargeType=' + ionChargeType
+                  + '; speciesChargeType=' + speciesChargeType)
     nElectrons = speciesCount[0]
     nHoles = speciesCount[1]
-    parentDir2 = (str(nElectrons)
+    parentDir3 = (str(nElectrons)
                   + ('electron' if nElectrons == 1 else 'electrons') + ', '
                   + str(nHoles) + ('hole' if nHoles == 1 else 'holes'))
-    parentDir3 = str(Temp) + 'K'
+    parentDir4 = str(Temp) + 'K'
     workDir = (('%1.2E' % tFinal) + 'SEC,' + ('%1.2E' % timeInterval)
                + 'TimeInterval,' + ('%1.2E' % nTraj) + 'Traj')
     workDirPath = os.path.join(systemDirectoryPath, parentDir1, parentDir2,
-                               parentDir3, workDir)
+                               parentDir3, parentDir4, workDir)
     if not os.path.exists(workDirPath):
         os.makedirs(workDirPath)
     os.chdir(workDirPath)
@@ -85,8 +87,9 @@ def materialRun(systemDirectoryPath, fileFormatIndex, systemSize, pbc, Temp,
         precomputedArrayFilePath = os.path.join(inputFileDirectoryPath,
                                                 'precomputedArray.npy')
         precomputedArray = np.load(precomputedArrayFilePath)
-        materialRun = run(materialSystem, precomputedArray, Temp, nTraj,
-                          tFinal, timeInterval)
+        materialRun = run(materialSystem, precomputedArray, Temp,
+                          ionChargeType, speciesChargeType, nTraj, tFinal,
+                          timeInterval)
 
         materialRun.doKMCSteps(workDirPath, report, randomSeed)
     else:

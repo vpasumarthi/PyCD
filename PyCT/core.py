@@ -95,7 +95,7 @@ class material(object):
         self.name = materialParameters.name
         self.speciesTypes = materialParameters.speciesTypes[:]
         self.numSpeciesTypes = len(self.speciesTypes)
-        self.speciesChargeList = materialParameters.speciesChargeList[:]
+        self.speciesChargeList = deepcopy(materialParameters.speciesChargeList)
         self.speciesToElementTypeMap = deepcopy(
                                     materialParameters.speciesToElementTypeMap)
 
@@ -953,20 +953,10 @@ class system(object):
 
         self.pbc = self.neighbors.pbc
         self.speciesCount = speciesCount
-        self.systemCharge = np.dot(speciesCount,
-                                   self.material.speciesChargeList)
 
         # total number of unit cells
         self.systemSize = self.neighbors.systemSize
         self.numCells = self.systemSize.prod()
-
-        # generate lattice charge list
-        unitcellChargeList = np.array(
-                [self.material.chargeTypes[
-                    self.material.elementTypes[elementTypeIndex]]
-                 for elementTypeIndex in self.material.elementTypeIndexList])
-        self.latticeChargeList = np.tile(
-                            unitcellChargeList, self.numCells)[:, np.newaxis]
 
         self.cumulativeDisplacementList = cumulativeDisplacementList
 
@@ -1028,17 +1018,24 @@ class system(object):
                                         numSpecies)[:])
         return occupancy
 
-    def chargeConfig(self, occupancy):
+    def chargeConfig(self, occupancy, ionChargeType, speciesChargeType):
         """Returns charge distribution of the current configuration"""
-        chargeList = np.copy(self.latticeChargeList)
+
+        # generate lattice charge list
+        unitcellChargeList = np.array(
+                [self.material.chargeTypes[ionChargeType][
+                    self.material.elementTypes[elementTypeIndex]]
+                 for elementTypeIndex in self.material.elementTypeIndexList])
+        chargeList = np.tile(unitcellChargeList, self.numCells)[:, np.newaxis]
 
         for speciesTypeIndex in range(self.material.numSpeciesTypes):
             startIndex = 0 + self.speciesCount[:speciesTypeIndex].sum()
             endIndex = startIndex + self.speciesCount[speciesTypeIndex]
             centerSiteSystemElementIndices = occupancy[
                                                     startIndex:endIndex][:]
-            chargeList[centerSiteSystemElementIndices] += \
-                self.material.speciesChargeList[speciesTypeIndex]
+            chargeList[centerSiteSystemElementIndices] += (
+                        self.material.speciesChargeList[speciesChargeType][
+                                                            speciesTypeIndex])
         return chargeList
 
     def ewaldSumSetup(self, outdir=None):
@@ -1110,8 +1107,8 @@ class system(object):
 class run(object):
     """defines the subroutines for running Kinetic Monte Carlo and
         computing electrostatic interaction energies"""
-    def __init__(self, system, precomputedArray, T, nTraj,
-                 tFinal, timeInterval):
+    def __init__(self, system, precomputedArray, T, ionChargeType,
+                 speciesChargeType, nTraj, tFinal, timeInterval):
         """Returns the PBC condition of the system"""
         self.startTime = datetime.now()
 
@@ -1120,6 +1117,8 @@ class run(object):
         self.neighbors = self.system.neighbors
         self.precomputedArray = precomputedArray
         self.T = T * self.material.K2AUTEMP
+        self.ionChargeType = ionChargeType
+        self.speciesChargeType = speciesChargeType
         self.nTraj = int(nTraj)
         self.tFinal = tFinal * self.material.SEC2AUTIME
         self.timeInterval = timeInterval * self.material.SEC2AUTIME
@@ -1140,8 +1139,9 @@ class run(object):
                         index
                         for index, value in enumerate(self.system.speciesCount)
                         for _ in range(value)]
-        self.speciesChargeList = [self.material.speciesChargeList[index]
-                                  for index in self.speciesTypeIndexList]
+        self.speciesChargeList = [
+                self.material.speciesChargeList[self.speciesChargeType][index]
+                for index in self.speciesTypeIndexList]
         self.hopElementTypeList = [
                                 self.material.hopElementTypes[speciesType][0]
                                 for speciesType in self.speciesTypeList]
@@ -1235,16 +1235,21 @@ class run(object):
         neighborSiteSystemElementIndexList = np.zeros(self.nProc, dtype=int)
         rowIndexList = np.zeros(self.nProc, dtype=int)
         neighborIndexList = np.zeros(self.nProc, dtype=int)
+        systemCharge = np.dot(
+                    self.system.speciesCount,
+                    self.material.speciesChargeList[self.speciesChargeType])
 
         ewaldNeut = - (np.pi
-                       * (self.system.systemCharge**2)
+                       * (systemCharge**2)
                        / (2 * self.system.systemVolume * self.system.alpha))
         precomputedArray = self.precomputedArray
         for _ in range(nTraj):
             currentStateOccupancy = self.system.generateRandomOccupancy(
                                                     self.system.speciesCount)
             currentStateChargeConfig = self.system.chargeConfig(
-                                                        currentStateOccupancy)
+                                                        currentStateOccupancy,
+                                                        self.ionChargeType,
+                                                        self.speciesChargeType)
             currentStateChargeConfigProd = np.multiply(
                                         currentStateChargeConfig.transpose(),
                                         currentStateChargeConfig)

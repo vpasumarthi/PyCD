@@ -8,8 +8,9 @@ from PyCT.core import material, analysis
 
 
 def materialMSD(systemDirectoryPath, fileFormatIndex, systemSize, pbc, nDim,
-                Temp, speciesCount, tFinal, nTraj, timeInterval, msdTFinal,
-                trimLength, displayErrorBars, reprTime, reprDist, report):
+                Temp, ionChargeType, speciesChargeType, speciesCount, tFinal,
+                nTraj, timeInterval, msdTFinal, trimLength, displayErrorBars,
+                reprTime, reprDist, report):
 
     # Load material parameters
     configDirName = 'ConfigurationFiles'
@@ -34,16 +35,18 @@ def materialMSD(systemDirectoryPath, fileFormatIndex, systemSize, pbc, nDim,
 
     # Change to working directory
     parentDir1 = 'SimulationFiles'
+    parentDir2 = ('ionChargeType=' + ionChargeType
+                  + '; speciesChargeType=' + speciesChargeType)
     nElectrons = speciesCount[0]
     nHoles = speciesCount[1]
-    parentDir2 = (str(nElectrons)
+    parentDir3 = (str(nElectrons)
                   + ('electron' if nElectrons == 1 else 'electrons') + ', '
                   + str(nHoles) + ('hole' if nHoles == 1 else 'holes'))
-    parentDir3 = str(Temp) + 'K'
+    parentDir4 = str(Temp) + 'K'
     workDir = (('%1.2E' % tFinal) + 'SEC,' + ('%1.2E' % timeInterval)
                + 'TimeInterval,' + ('%1.2E' % nTraj) + 'Traj')
     workDirPath = os.path.join(systemDirectoryPath, parentDir1, parentDir2,
-                               parentDir3, workDir)
+                               parentDir3, parentDir4, workDir)
 
     if not os.path.exists(workDirPath):
         print('Simulation files do not exist. Aborting.')
