@@ -1611,6 +1611,132 @@ class analysis(object):
         figurePath = os.path.join(outdir, figureName)
         plt.savefig(figurePath)
 
+    def generateCOCPlot(self, msdData, stdData, displayErrorBars,
+                        speciesTypes, fileName, outdir):
+        """Returns a line plot of the MSD data"""
+        assert outdir, 'Please provide the destination path \
+                            where MSD Plot files needs to be saved'
+        import matplotlib
+        matplotlib.use('Agg')
+        import matplotlib.pyplot as plt
+        from matplotlib.offsetbox import AnchoredText
+        from textwrap import wrap
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        from scipy.stats import linregress
+        for speciesIndex, speciesType in enumerate(speciesTypes):
+            ax.plot(msdData[:, 0], msdData[:, speciesIndex + 1], 'o',
+                    markerfacecolor='blue', markeredgecolor='black',
+                    label=speciesType)
+            if displayErrorBars:
+                ax.errorbar(msdData[:, 0], msdData[:, speciesIndex + 1],
+                            yerr=stdData[:, speciesIndex], fmt='o', capsize=3,
+                            color='blue', markerfacecolor='none',
+                            markeredgecolor='none')
+            slope, intercept, rValue, _, _ = linregress(
+                msdData[self.trimLength:-self.trimLength, 0],
+                msdData[self.trimLength:-self.trimLength, speciesIndex + 1])
+            speciesDiff = (slope * self.material.ANG2UM**2
+                           * self.material.SEC2NS / (2 * self.nDim))
+            ax.add_artist(AnchoredText('Est. $D_{{%s}}$ = %4.3f'
+                                       % (speciesType, speciesDiff)
+                                       + '  ${{\mu}}m^2/s$; $r^2$=%4.3e'
+                                       % (rValue**2),
+                                       loc=4))
+            ax.plot(msdData[self.trimLength:-self.trimLength, 0], intercept
+                    + slope * msdData[self.trimLength:-self.trimLength, 0],
+                    'r', label=speciesType+'-fitted')
+        ax.set_xlabel('Time (' + self.reprTime + ')')
+        ax.set_ylabel('MSD ('
+                      + ('$\AA^2$'
+                         if self.reprDist == 'angstrom'
+                         else (self.reprDist + '^2')) + ')')
+        figureTitle = 'MSD_' + fileName
+        ax.set_title('\n'.join(wrap(figureTitle, 60)))
+        plt.legend()
+        plt.show()  # Temp change
+        figureName = ('COC_MSD_Plot_' + fileName + '_Trim='
+                      + str(self.trimLength) + '.png')
+        figurePath = os.path.join(outdir, figureName)
+        plt.savefig(figurePath)
+
+    def generateCOCMSDPlot(self, msdData, stdData, displayErrorBars,
+                           speciesTypes, fileName, outdir):
+        """Returns a line plot of the MSD data"""
+        assert outdir, 'Please provide the destination path \
+                            where MSD Plot files needs to be saved'
+        import matplotlib
+        matplotlib.use('Agg')
+        import matplotlib.pyplot as plt
+        from matplotlib.offsetbox import AnchoredText
+        from textwrap import wrap
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        from scipy.stats import linregress
+        for speciesIndex, speciesType in enumerate(speciesTypes):
+            ax.plot(msdData[:, 0], msdData[:, speciesIndex + 1], 'o',
+                    markerfacecolor='blue', markeredgecolor='black',
+                    label=speciesType)
+            if displayErrorBars:
+                ax.errorbar(msdData[:, 0], msdData[:, speciesIndex + 1],
+                            yerr=stdData[:, speciesIndex], fmt='o', capsize=3,
+                            color='blue', markerfacecolor='none',
+                            markeredgecolor='none')
+            slope, intercept, rValue, _, _ = linregress(
+                msdData[self.trimLength:-self.trimLength, 0],
+                msdData[self.trimLength:-self.trimLength, speciesIndex + 1])
+            speciesDiff = (slope * self.material.ANG2UM**2
+                           * self.material.SEC2NS / (2 * self.nDim))
+            ax.add_artist(AnchoredText('Est. $D_{{%s}}$ = %4.3f'
+                                       % (speciesType, speciesDiff)
+                                       + '  ${{\mu}}m^2/s$; $r^2$=%4.3e'
+                                       % (rValue**2),
+                                       loc=4))
+            ax.plot(msdData[self.trimLength:-self.trimLength, 0], intercept
+                    + slope * msdData[self.trimLength:-self.trimLength, 0],
+                    'r', label=speciesType+'-fitted')
+        ax.set_xlabel('Time (' + self.reprTime + ')')
+        ax.set_ylabel('MSD ('
+                      + ('$\AA^2$'
+                         if self.reprDist == 'angstrom'
+                         else (self.reprDist + '^2')) + ')')
+        figureTitle = 'MSD_' + fileName
+        ax.set_title('\n'.join(wrap(figureTitle, 60)))
+        plt.legend()
+        plt.show()  # Temp change
+        figureName = ('COC_MSD_Plot_' + fileName + '_Trim='
+                      + str(self.trimLength) + '.png')
+        figurePath = os.path.join(outdir, figureName)
+        plt.savefig(figurePath)
+
+    def generateCOCMSDAnalysisLogReport(self, msdData, speciesTypes,
+                                        fileName, outdir):
+        """Generates an log report of the MSD Analysis and
+            outputs to the working directory"""
+        msdAnalysisLogFileName = ('COC_MSD_Analysis'
+                                  + ('_' if fileName else '')
+                                  + fileName + '.log')
+        msdLogFilePath = os.path.join(outdir, msdAnalysisLogFileName)
+        report = open(msdLogFilePath, 'w')
+        endTime = datetime.now()
+        timeElapsed = endTime - self.startTime
+        from scipy.stats import linregress
+        for speciesIndex, speciesType in enumerate(speciesTypes):
+            slope, _, _, _, _ = linregress(
+                msdData[self.trimLength:-self.trimLength, 0],
+                msdData[self.trimLength:-self.trimLength, speciesIndex + 1])
+            speciesDiff = (slope * self.material.ANG2UM**2
+                           * self.material.SEC2NS / (2 * self.nDim))
+            report.write('Estimated value of {:s} diffusivity is: \
+                            {:4.3f} um2/s\n'.format(speciesType, speciesDiff))
+        report.write('Time elapsed: '
+                     + ('%2d days, '
+                        % timeElapsed.days if timeElapsed.days else '')
+                     + ('%2d hours' % ((timeElapsed.seconds // 3600) % 24))
+                     + (', %2d minutes' % ((timeElapsed.seconds // 60) % 60))
+                     + (', %2d seconds' % (timeElapsed.seconds % 60)))
+        report.close()
+
     # TODO: Finish writing the method soon.
     # def displayCollectiveMSDPlot(self, msdData, speciesTypes,
     #                              fileName, outdir=None):
