@@ -1611,52 +1611,132 @@ class analysis(object):
         figurePath = os.path.join(outdir, figureName)
         plt.savefig(figurePath)
 
-    def generateCOCPlot(self, msdData, stdData, displayErrorBars,
-                        speciesTypes, fileName, outdir):
+    def computeCOCMSD(self, outdir, report=1):
+        """Returns the squared displacement of the trajectories"""
+        assert outdir, 'Please provide the destination path where \
+                                MSD output files needs to be saved'
+        numExistentSpecies = 0
+        for speciesTypeIndex in range(self.material.numSpeciesTypes):
+            if self.speciesCount[speciesTypeIndex] != 0:
+                numExistentSpecies += 1
+
+        positionArray = np.loadtxt(os.path.join(outdir, 'unwrappedTraj.dat'))
+        numTrajRecorded = int(len(positionArray) / self.numPathStepsPerTraj)
+        positionArray = (
+            positionArray[:numTrajRecorded
+                          * self.numPathStepsPerTraj + 1].reshape((
+                                  numTrajRecorded * self.numPathStepsPerTraj,
+                                  self.totalSpecies, 3))
+            * self.distConversion)
+        cocPositionArray = np.mean(positionArray, axis=1)
+        np.savetxt('cocPositionArray.txt', cocPositionArray)
+        fileName = 'center_of_charge'
+        self.plot_coc_dispvector(cocPositionArray, fileName, outdir)
+        cocPositionArray = cocPositionArray[:, np.newaxis, :]
+        sdArray = np.zeros((numTrajRecorded,
+                            self.numMSDStepsPerTraj,
+                            numExistentSpecies))
+        for trajIndex in range(numTrajRecorded):
+            headStart = trajIndex * self.numPathStepsPerTraj
+            for timestep in range(1, self.numMSDStepsPerTraj):
+                numDisp = self.numPathStepsPerTraj - timestep
+                addOn = np.arange(numDisp)
+                posDiff = (cocPositionArray[headStart + timestep + addOn]
+                           - cocPositionArray[headStart + addOn])
+                sdArray[trajIndex, timestep, :] = np.mean(
+                            np.einsum('ijk,ijk->ij', posDiff, posDiff), axis=0)
+        speciesAvgSDArray = np.zeros((numTrajRecorded,
+                                      self.numMSDStepsPerTraj,
+                                      self.material.numSpeciesTypes
+                                      - list(self.speciesCount).count(0)))
+        startIndex = 0
+        numNonExistentSpecies = 0
+        nonExistentSpeciesIndices = []
+        for speciesTypeIndex in range(self.material.numSpeciesTypes):
+            if self.speciesCount[speciesTypeIndex] != 0:
+                endIndex = startIndex + self.speciesCount[speciesTypeIndex]
+                speciesAvgSDArray[:, :, (speciesTypeIndex
+                                         - numNonExistentSpecies)] \
+                    = np.mean(sdArray[:, :, startIndex:endIndex], axis=2)
+                startIndex = endIndex
+            else:
+                numNonExistentSpecies += 1
+                nonExistentSpeciesIndices.append(speciesTypeIndex)
+
+        msdData = np.zeros((self.numMSDStepsPerTraj,
+                            (self.material.numSpeciesTypes
+                             + 1 - list(self.speciesCount).count(0))))
+        timeArray = (np.arange(self.numMSDStepsPerTraj)
+                     * self.timeInterval
+                     * self.timeConversion)
+        msdData[:, 0] = timeArray
+        msdData[:, 1:] = np.mean(speciesAvgSDArray, axis=0)
+        stdData = np.std(speciesAvgSDArray, axis=0)
+        fileName = (('%1.2E' % (self.msdTFinal * self.timeConversion))
+                    + str(self.reprTime)
+                    + (',nTraj: %1.2E' % numTrajRecorded
+                        if numTrajRecorded != self.nTraj else ''))
+        msdFileName = 'COC_MSD_Data_' + fileName + '.npy'
+        msdFilePath = os.path.join(outdir, msdFileName)
+        speciesTypes = [
+                speciesType
+                for index, speciesType in enumerate(self.material.speciesTypes)
+                if index not in nonExistentSpeciesIndices]
+        np.save(msdFilePath, msdData)
+
+        if report:
+            self.generateCOCMSDAnalysisLogReport(msdData, speciesTypes,
+                                                 fileName, outdir)
+
+        returnMSDData = returnValues(msdData=msdData,
+                                     stdData=stdData,
+                                     speciesTypes=speciesTypes,
+                                     fileName=fileName)
+        return returnMSDData
+
+    def plot_coc_dispvector(self, cocPositionArray, fileName, outdir):
         """Returns a line plot of the MSD data"""
         assert outdir, 'Please provide the destination path \
                             where MSD Plot files needs to be saved'
         import matplotlib
         matplotlib.use('Agg')
         import matplotlib.pyplot as plt
-        from matplotlib.offsetbox import AnchoredText
-        from textwrap import wrap
+        import importlib
+        importlib.import_module('mpl_toolkits.mplot3d').Axes3D
         fig = plt.figure()
-        ax = fig.add_subplot(111)
-        from scipy.stats import linregress
-        for speciesIndex, speciesType in enumerate(speciesTypes):
-            ax.plot(msdData[:, 0], msdData[:, speciesIndex + 1], 'o',
-                    markerfacecolor='blue', markeredgecolor='black',
-                    label=speciesType)
-            if displayErrorBars:
-                ax.errorbar(msdData[:, 0], msdData[:, speciesIndex + 1],
-                            yerr=stdData[:, speciesIndex], fmt='o', capsize=3,
-                            color='blue', markerfacecolor='none',
-                            markeredgecolor='none')
-            slope, intercept, rValue, _, _ = linregress(
-                msdData[self.trimLength:-self.trimLength, 0],
-                msdData[self.trimLength:-self.trimLength, speciesIndex + 1])
-            speciesDiff = (slope * self.material.ANG2UM**2
-                           * self.material.SEC2NS / (2 * self.nDim))
-            ax.add_artist(AnchoredText('Est. $D_{{%s}}$ = %4.3f'
-                                       % (speciesType, speciesDiff)
-                                       + '  ${{\mu}}m^2/s$; $r^2$=%4.3e'
-                                       % (rValue**2),
-                                       loc=4))
-            ax.plot(msdData[self.trimLength:-self.trimLength, 0], intercept
-                    + slope * msdData[self.trimLength:-self.trimLength, 0],
-                    'r', label=speciesType+'-fitted')
-        ax.set_xlabel('Time (' + self.reprTime + ')')
-        ax.set_ylabel('MSD ('
-                      + ('$\AA^2$'
-                         if self.reprDist == 'angstrom'
-                         else (self.reprDist + '^2')) + ')')
-        figureTitle = 'MSD_' + fileName
-        ax.set_title('\n'.join(wrap(figureTitle, 60)))
-        plt.legend()
+        ax = fig.add_subplot(111, projection='3d')
+        numTrajRecorded = int(len(cocPositionArray) / self.numPathStepsPerTraj)
+        xmin = ymin = zmin = 10
+        xmax = ymax = zmax = -10
+        cmap = plt.get_cmap('gnuplot')
+        colors = [cmap(i) for i in np.linspace(0, 1, numTrajRecorded)]
+        dispVectorList = np.zeros((numTrajRecorded, 6))
+        for trajIndex in range(numTrajRecorded):
+            startPos = cocPositionArray[trajIndex * self.numPathStepsPerTraj]
+            endPos = cocPositionArray[(trajIndex + 1)
+                                      * self.numPathStepsPerTraj - 1]
+            dispVectorList[trajIndex, :3] = startPos
+            dispVectorList[trajIndex, 3:] = endPos
+            posStack = np.vstack((startPos, endPos))
+            ax.plot(posStack[:, 0], posStack[:, 1], posStack[:, 2],
+                    color=colors[trajIndex])
+            xmin = min(xmin, startPos[0], endPos[0])
+            ymin = min(ymin, startPos[1], endPos[1])
+            zmin = min(zmin, startPos[2], endPos[2])
+            xmax = max(xmax, startPos[0], endPos[0])
+            ymax = max(ymax, startPos[1], endPos[1])
+            zmax = max(zmax, startPos[2], endPos[2])
+        np.savetxt('displacement_vector_list.txt', dispVectorList)
+        ax.set_xlabel('x')
+        ax.set_ylabel('y')
+        ax.set_zlabel('z')
+        ax.set_xlim([xmin - 0.2 * abs(xmin), xmax + 0.2 * abs(xmax)])
+        ax.set_ylim([ymin - 0.2 * abs(ymin), ymax + 0.2 * abs(ymax)])
+        ax.set_zlim([zmin - 0.2 * abs(zmin), zmax + 0.2 * abs(zmax)])
+        ax.set_title(('trajectory-wise center of charge displacement vectors')
+                     + ' \n$N_{{%s}}$=' % ('species') + str(self.totalSpecies))
         plt.show()  # Temp change
-        figureName = ('COC_MSD_Plot_' + fileName + '_Trim='
-                      + str(self.trimLength) + '.png')
+        figureName = ('COC_DispVectors_' + fileName + '.png')
         figurePath = os.path.join(outdir, figureName)
         plt.savefig(figurePath)
 
