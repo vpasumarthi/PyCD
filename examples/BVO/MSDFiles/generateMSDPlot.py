@@ -13,6 +13,8 @@ nTraj = 1.00E+02
 timeInterval = 1.00E-08
 msdTFinal = 60  # in units of reprTime
 trimLength = 1
+ionChargeType = 'full'
+speciesChargeType = 'full'
 
 # Input parameters:
 systemSize = np.array([2, 2, 1])
@@ -21,7 +23,7 @@ nDim = 3
 Temp = 300  # K
 nHoles = 0
 speciesCount = np.array([nElectrons, nHoles])
-displayErrorBars = 0
+displayErrorBars = 1
 reprTime = 'ns'
 reprDist = 'angstrom'
 report = 1
@@ -31,5 +33,6 @@ systemDirectoryPath = os.path.dirname(
 fileFormatIndex = 1
 
 materialMSD(systemDirectoryPath, fileFormatIndex, systemSize, pbc, nDim, Temp,
-            speciesCount, tFinal, nTraj, timeInterval, msdTFinal, trimLength,
-            displayErrorBars, reprTime, reprDist, report)
+            ionChargeType, speciesChargeType, speciesCount, tFinal, nTraj,
+            timeInterval, msdTFinal, trimLength, displayErrorBars, reprTime,
+            reprDist, report)

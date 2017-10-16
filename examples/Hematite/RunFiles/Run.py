@@ -11,6 +11,8 @@ nElectrons = 1
 tFinal = 1.00E-08
 nTraj = 1.00E+02
 timeInterval = 1.00E-10
+ionChargeType = 'full'
+speciesChargeType = 'full'
 
 # Input parameters:
 systemSize = np.array([2, 2, 1])
@@ -27,5 +29,5 @@ systemDirectoryPath = os.path.dirname(
 fileFormatIndex = 1
 
 materialRun(systemDirectoryPath, fileFormatIndex, systemSize, pbc, Temp,
-            speciesCount, tFinal, nTraj, timeInterval, randomSeed, report,
-            overWrite)
+            ionChargeType, speciesChargeType, speciesCount, tFinal, nTraj,
+            timeInterval, randomSeed, report, overWrite)

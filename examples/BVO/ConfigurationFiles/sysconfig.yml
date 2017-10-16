@@ -1,15 +1,22 @@
 name: 'BVO'
 speciesTypes: ['electron', 'hole']
-speciesChargeList: [-1, +1]
+speciesChargeList:
+    'full': [-1, +1]
+    'partial': [-0.5, +0.5]
 speciesToElementTypeMap:
     'electron': ['V']
     'empty': ['Bi', 'O', 'V']
     'hole': ['O']
 # multiples of elementary charge
 chargeTypes:
-    'Bi': +3.0
-    'O': -2.0
-    'V': +5.0
+    'full':
+        'Bi': +3.0
+        'O': -2.0
+        'V': +5.0
+    'partial':
+        'Bi': +2.0311
+        'O': -1.0352
+        'V': +2.1098
 neighborCutoffDist:
     'V:V': [3.8474, 3.9447, 5.0935, 5.1956]
     'O:O': [2.7450, 2.8600, 2.9723, 3.0076, 3.0473]
@@ -32,6 +39,59 @@ emptySpeciesType: 'empty'
 # Source: Shannon et al. JAP 1993. DOI: 10.1063/1.353856
 dielectricConstant: 38.299
 
+# Ewald parameters
+alpha: 0.18
+nmax: 0
+kmax: 4
+
 # 9013437 Coordinates source:
 # http://www.crystallography.net/cod/9013437.html
 # Source article DOI: 10.1016/0025-5408(72)90227-9
+
+#elementTypes: {'AFlow': ['Bi', 'O', 'V'],
+#               'ms-BVO': ['O', 'V', 'Bi'],
+#               '9013437': ['Bi', 'V', 'O']}
+#elementTypes: ['O', 'V', 'Bi']
+# lattice constant along x-axis
+#a: {'AFlow': 5.1893210411,
+#    'ms-BVO': 5.19560,
+#    '9013437': 5.193500}
+#a: 5.19560
+# lattice constant along y-axis
+#b: {'AFlow': 5.1893210411,
+#    'ms-BVO': 5.09350,
+#    '9013437': 5.089800}
+#b: 5.09350
+# lattice constant along z-axis
+#c: {'AFlow': 11.7714366913,
+#    'ms-BVO': 11.70450,
+#    '9013437': 11.69720}
+#c: 11.70450
+#neighborCutoffDist: {'AFlow': {'V:V': [3.92335, 5.18932],
+#                               'O:O': [2.808, 2.815, 2.984, 3.002, 3.117]},
+#                     'ms-BVO': {'V:V': [3.8474, 3.9447, 5.0935, 5.1956],
+#                                'O:O': [2.7450, 2.8600, 2.9723, 3.0076, 3.0473]},
+#                     '9013437': {'V:V': [3.8242, 3.9656, 5.0898, 5.1935],
+#                                 'O:O': [2.7945, 2.8077, 2.8296, 3.0028, 3.1179]}}
+#neighborCutoffDistTol: {'AFlow': {'V:V': [0.002, 0.002],
+#                                  'O:O': [0.002, 0.002, 0.002, 0.002, 0.002]},
+#                        'ms-BVO': {'V:V': [0.002, 0.002, 0.002, 0.002],
+#                                   'O:O': [0.002, 0.002, 0.002, 0.002, 0.002]},
+#                        '9013437': {'V:V': [0.002, 0.002, 0.002, 0.002],
+#                                    'O:O': [0.002, 0.002, 0.002, 0.002, 0.002]}}
+# interaxial angle between b-c
+#alpha: {'AFlow': 90,
+#        'ms-BVO': 90,
+#        '9013437': 90}
+#alpha: 90
+# interaxial angle between a-c
+#beta: {'AFlow': 90,
+#       'ms-BVO': 90,
+#       '9013437': 90}
+#beta: 90
+# interaxial angle between a-b
+#gamma: {'AFlow': 90,
+#        'ms-BVO': 90.383,
+#        '9013437': 90.387}
+#gamma: 90.383
+#latticeParameters: [5.19560, 5.09350, 11.70450, 90, 90, 90.383]
