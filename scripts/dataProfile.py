@@ -60,9 +60,9 @@ def diffusionProfile(outdir, systemDirectoryPath, profilingSpeciesTypeIndex,
     figureTitle = ('Diffusion coefficient as a function of number of '
                    + speciesType + 's')
     ax.set_title('\n'.join(wrap(figureTitle, 60)))
-    filename = (str(speciesType) + 'DiffusionProfile_'
-                + str(profilingSpeciesList[0]) + '-'
-                + str(profilingSpeciesList[-1]))
+    filename = (str(speciesType) + 'DiffusionProfile_' + ionChargeType[0]
+                + speciesChargeType[0] + '_' + str(profilingSpeciesList[0])
+                + '-' + str(profilingSpeciesList[-1]))
     figureName = filename + '.png'
     figurePath = os.path.join(outdir, figureName)
     plt.savefig(figurePath)
@@ -74,7 +74,7 @@ def diffusionProfile(outdir, systemDirectoryPath, profilingSpeciesTypeIndex,
 
 def runtimeProfile(outdir, systemDirectoryPath, profilingSpeciesTypeIndex,
                    speciesCountList, ionChargeType, speciesChargeType, Temp,
-                   tFinal, timeInterval, nTraj, msdTFinal, reprTime):
+                   tFinal, timeInterval, nTraj):
     profilingSpeciesList = speciesCountList[profilingSpeciesTypeIndex]
     profileLength = len(profilingSpeciesList)
     elapsedSecondsData = np.zeros((profileLength, 2))
@@ -133,9 +133,9 @@ def runtimeProfile(outdir, systemDirectoryPath, profilingSpeciesTypeIndex,
     figureTitle = ('Simulation run time as a function of number of '
                    + speciesType + 's')
     ax.set_title('\n'.join(wrap(figureTitle, 60)))
-    filename = (str(speciesType) + 'RunTimeProfile_'
-                + str(profilingSpeciesList[0]) + '-'
-                + str(profilingSpeciesList[-1]))
+    filename = (str(speciesType) + 'RunTimeProfile_' + ionChargeType[0]
+                + speciesChargeType[0] + '_' + str(profilingSpeciesList[0])
+                + '-' + str(profilingSpeciesList[-1]))
     figureName = filename + '.png'
     figurePath = os.path.join(outdir, figureName)
     plt.savefig(figurePath)
