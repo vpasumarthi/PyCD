@@ -1167,28 +1167,25 @@ class run(object):
             for hopDistTypeIndex in range(self.lenHopDistTypeList[
                                                         hopElementTypeIndex]):
                 if self.system.speciesCount[speciesTypeIndex] != 0:
-                    numNeighbors = np.unique(self.system.hopNeighborList[
-                                hopElementType][hopDistTypeIndex].numNeighbors)
-                    # TODO: What if it is not equal to 1
-                    if len(numNeighbors) == 1:
-                        # * self.system.speciesCount[speciesTypeIndex]
-                        self.nProc += numNeighbors[0]
-                        self.nProcHopElementTypeList.extend([hopElementType]
-                                                            * numNeighbors[0])
-                        self.nProcHopDistTypeList.extend([hopDistTypeIndex]
-                                                         * numNeighbors[0])
-                        self.nProcSpeciesIndexList.extend([hopElementTypeIndex]
-                                                          * numNeighbors[0])
-                        self.nProcSiteElementTypeIndexList.extend(
-                                [centerSiteElementTypeIndex] * numNeighbors[0])
-                        self.nProcLambdaValueList.extend(
-                                [self.material.lambdaValues[hopElementType][
-                                                            hopDistTypeIndex]]
-                                * numNeighbors[0])
-                        self.nProcVABList.extend(
-                                        [self.material.VAB[hopElementType][
-                                                            hopDistTypeIndex]]
-                                        * numNeighbors[0])
+                    numNeighbors = self.system.hopNeighborList[hopElementType][
+                                                hopDistTypeIndex].numNeighbors
+                    self.nProc += numNeighbors[0]
+                    self.nProcHopElementTypeList.extend([hopElementType]
+                                                        * numNeighbors[0])
+                    self.nProcHopDistTypeList.extend([hopDistTypeIndex]
+                                                     * numNeighbors[0])
+                    self.nProcSpeciesIndexList.extend([hopElementTypeIndex]
+                                                      * numNeighbors[0])
+                    self.nProcSiteElementTypeIndexList.extend(
+                            [centerSiteElementTypeIndex] * numNeighbors[0])
+                    self.nProcLambdaValueList.extend(
+                            [self.material.lambdaValues[hopElementType][
+                                                        hopDistTypeIndex]]
+                            * numNeighbors[0])
+                    self.nProcVABList.extend(
+                                    [self.material.VAB[hopElementType][
+                                                        hopDistTypeIndex]]
+                                    * numNeighbors[0])
 
         # system coordinates
         self.systemCoordinates = self.neighbors.bulkSites.cellCoordinates
