@@ -1151,7 +1151,6 @@ class run(object):
         # number of kinetic processes
         self.nProc = 0
         self.nProcHopElementTypeList = []
-        self.nProcHopDistTypeList = []
         self.nProcSpeciesIndexList = []
         self.nProcSiteElementTypeIndexList = []
         self.nProcLambdaValueList = []
@@ -1172,8 +1171,6 @@ class run(object):
                     self.nProc += numNeighbors[0]
                     self.nProcHopElementTypeList.extend([hopElementType]
                                                         * numNeighbors[0])
-                    self.nProcHopDistTypeList.extend([hopDistTypeIndex]
-                                                     * numNeighbors[0])
                     self.nProcSpeciesIndexList.extend([hopElementTypeIndex]
                                                       * numNeighbors[0])
                     self.nProcSiteElementTypeIndexList.extend(
@@ -1230,6 +1227,7 @@ class run(object):
                                        self.totalSpecies))
         kList = np.zeros(self.nProc)
         neighborSiteSystemElementIndexList = np.zeros(self.nProc, dtype=int)
+        nProcHopDistTypeList = np.zeros(self.nProc, dtype=int)
         rowIndexList = np.zeros(self.nProc, dtype=int)
         neighborIndexList = np.zeros(self.nProc, dtype=int)
         systemCharge = np.dot(
@@ -1301,6 +1299,7 @@ class run(object):
                             # currentStateOccupancy: commit 898baa8
                             neighborSiteSystemElementIndexList[iProc] = \
                                 neighborSiteSystemElementIndex
+                            nProcHopDistTypeList[iProc] = hopDistType
                             rowIndexList[iProc] = rowIndex
                             neighborIndexList[iProc] = neighborIndex
                             # TODO: Print out a prompt about the assumption;
@@ -1347,7 +1346,7 @@ class run(object):
                 #    delG0Array[step] = delG0List[procIndex]
                 speciesIndex = self.nProcSpeciesIndexList[procIndex]
                 hopElementType = self.nProcHopElementTypeList[procIndex]
-                hopDistType = self.nProcHopDistTypeList[procIndex]
+                hopDistType = nProcHopDistTypeList[procIndex]
                 rowIndex = rowIndexList[procIndex]
                 neighborIndex = neighborIndexList[procIndex]
                 oldSiteSystemElementIndex = currentStateOccupancy[speciesIndex]
