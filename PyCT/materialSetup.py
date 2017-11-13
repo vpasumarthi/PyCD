@@ -8,17 +8,15 @@ import yaml
 from PyCT.core import material, neighbors, system
 
 
-def materialSetup(systemDirectoryPath, fileFormatIndex, systemSize, pbc,
+def materialSetup(inputDirectoryPath, fileFormatIndex, systemSize, pbc,
                   generateHopNeighborList, generateCumDispList,
                   generatePrecomputedArray):
     """Prepare material class object file, neighborlist and \
         saves to the provided destination path"""
 
     # Load material parameters
-    configDirName = 'ConfigurationFiles'
     configFileName = 'sysconfig.yml'
-    configFilePath = os.path.join(systemDirectoryPath, configDirName,
-                                  configFileName)
+    configFilePath = os.path.join(inputDirectoryPath, configFileName)
     with open(configFilePath, 'r') as stream:
         try:
             params = yaml.load(stream)
@@ -26,7 +24,7 @@ def materialSetup(systemDirectoryPath, fileFormatIndex, systemSize, pbc,
             print(exc)
 
     inputCoordinateFileName = 'POSCAR'
-    inputCoorFileLocation = os.path.join(systemDirectoryPath, configDirName,
+    inputCoorFileLocation = os.path.join(inputDirectoryPath,
                                          inputCoordinateFileName)
     params.update({'inputCoorFileLocation': inputCoorFileLocation})
     params.update({'fileFormatIndex': fileFormatIndex})
@@ -38,27 +36,22 @@ def materialSetup(systemDirectoryPath, fileFormatIndex, systemSize, pbc,
     # Build neighbors object files
     materialNeighbors = neighbors(materialInfo, systemSize, pbc)
 
-    # Determine path for input files
-    inputFileDirectoryName = 'InputFiles'
-    inputFileDirectoryPath = os.path.join(systemDirectoryPath,
-                                          inputFileDirectoryName)
-
     # generate neighbor list
     if generateHopNeighborList:
-        materialNeighbors.generateNeighborList(inputFileDirectoryPath,
+        materialNeighbors.generateNeighborList(inputDirectoryPath,
                                                generateCumDispList)
 
     # Build precomputed array and save to disk
-    precomputedArrayFilePath = os.path.join(inputFileDirectoryPath,
+    precomputedArrayFilePath = os.path.join(inputDirectoryPath,
                                             'precomputedArray.npy')
     if generatePrecomputedArray:
         # Load input files to instantiate system class
-        os.chdir(inputFileDirectoryPath)
-        hopNeighborListFileName = os.path.join(inputFileDirectoryPath,
+        os.chdir(inputDirectoryPath)
+        hopNeighborListFileName = os.path.join(inputDirectoryPath,
                                                'hopNeighborList.npy')
         hopNeighborList = np.load(hopNeighborListFileName)[()]
         cumulativeDisplacementListFilePath = os.path.join(
-                                            inputFileDirectoryPath,
+                                            inputDirectoryPath,
                                             'cumulativeDisplacementList.npy')
         cumulativeDisplacementList = np.load(
                                             cumulativeDisplacementListFilePath)
@@ -77,7 +70,7 @@ def materialSetup(systemDirectoryPath, fileFormatIndex, systemSize, pbc,
         materialSystem = system(materialInfo, materialNeighbors,
                                 hopNeighborList, cumulativeDisplacementList,
                                 speciesCount, alpha, nmax, kmax)
-        precomputedArray = materialSystem.ewaldSumSetup(inputFileDirectoryPath)
+        precomputedArray = materialSystem.ewaldSumSetup(inputDirectoryPath)
         np.save(precomputedArrayFilePath, precomputedArray)
 
 
