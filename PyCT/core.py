@@ -103,6 +103,8 @@ class material(object):
         self.fractionalUnitCellCoords = np.zeros(
                                                 fractionalUnitCellCoords.shape)
         startIndex = 0
+        # Reorder element-wise unitcell coordinates in ascending order
+        # of z-coordinate
         for elementIndex in range(self.nElementTypes):
             elementFractUnitCellCoords = fractionalUnitCellCoords[
                                     self.elementTypeIndexList == elementIndex]
@@ -141,10 +143,25 @@ class material(object):
                                                for index in range(len(y))])
                                           for x, y in (
                                         self.neighborCutoffDistTol.items()))
+        self.numUniqueHoppingDistances = {key: len(value)
+                                          for key, value in (
+                                              self.neighborCutoffDist.items())}
 
         self.elementTypeDelimiter = materialParameters.elementTypeDelimiter
         self.emptySpeciesType = materialParameters.emptySpeciesType
         self.dielectricConstant = materialParameters.dielectricConstant
+
+        self.classList = deepcopy(materialParameters.classList)
+        self.numClasses = [len(set(self.classList[elementType]))
+                           for elementType in self.elementTypes]
+        self.delG0ShiftList = {key: [[(value[centerSiteClassIndex][index]
+                                       * self.EV2J * self.J2HARTREE)
+                                      for index in range(
+                                          self.numUniqueHoppingDistances[key])]
+                                     for centerSiteClassIndex in range(
+                                                                len(value))]
+                               for key, value in (
+                                   materialParameters.delG0ShiftList.items())}
 
         siteList = [self.speciesToElementTypeMap[key]
                     for key in self.speciesToElementTypeMap
@@ -981,6 +998,16 @@ class system(object):
                                                 self.reciprocalLatticeMatrix,
                                                 axis=1)
 
+        # class list
+        self.classIndexList = [
+            self.material.classList[elementType][index]
+            for elementTypeIndex, elementType in enumerate(
+                                                    self.material.elementTypes)
+            for index in range(self.material.nElementsPerUnitCell[
+                                                            elementTypeIndex])]
+        self.systemClassIndexList = (
+                            np.tile(self.classIndexList, self.numCells) - 1)
+
         # ewald parameters:
         self.alpha = alpha
         self.nmax = nmax
@@ -1305,7 +1332,7 @@ class run(object):
                             # TODO: Print out a prompt about the assumption;
                             # detailed comment here. <Using species charge to
                             # compute change in energy> May be print log report
-                            delG0 = (
+                            delG0Ewald = (
                                 self.speciesChargeList[speciesIndex]
                                 * (2
                                    * np.dot(currentStateChargeConfig[:, 0],
@@ -1325,6 +1352,13 @@ class run(object):
                                       - 2 * precomputedArray[
                                           speciesSiteSystemElementIndex,
                                           neighborSiteSystemElementIndex])))
+                            classIndex = (self.system.systemClassIndexList[
+                                                speciesSiteSystemElementIndex])
+                            delG0 = (
+                                delG0Ewald
+                                + self.material.delG0ShiftList[
+                                    self.nProcHopElementTypeList[iProc]][
+                                        classIndex][hopDistType])
                             delG0List.append(delG0)
                             lambdaValue = self.nProcLambdaValueList[iProc]
                             VAB = self.nProcVABList[iProc]
@@ -1341,6 +1375,7 @@ class run(object):
                 rand2 = rnd.random()
                 simTime -= np.log(rand2) / kTotal
 
+                pdb.set_trace()
                 # TODO: Address pre-defining excess data arrays
                 # if excess:
                 #    delG0Array[step] = delG0List[procIndex]
