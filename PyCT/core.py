@@ -102,16 +102,21 @@ class material(object):
         # Initialization
         self.fractionalUnitCellCoords = np.zeros(
                                                 fractionalUnitCellCoords.shape)
+        self.unitcellClassList = []
         startIndex = 0
         # Reorder element-wise unitcell coordinates in ascending order
         # of z-coordinate
-        for elementIndex in range(self.nElementTypes):
+        for elementTypeIndex in range(self.nElementTypes):
             elementFractUnitCellCoords = fractionalUnitCellCoords[
-                                    self.elementTypeIndexList == elementIndex]
-            endIndex = startIndex + self.nElementsPerUnitCell[elementIndex]
+                                self.elementTypeIndexList == elementTypeIndex]
+            endIndex = startIndex + self.nElementsPerUnitCell[elementTypeIndex]
             self.fractionalUnitCellCoords[startIndex:endIndex] = (
                             elementFractUnitCellCoords[
                                 elementFractUnitCellCoords[:, 2].argsort()])
+            elementType = self.elementTypes[elementTypeIndex]
+            self.unitcellClassList.extend(
+                    [materialParameters.classList[elementType][index]
+                     for index in elementFractUnitCellCoords[:, 2].argsort()])
             startIndex = endIndex
 
         self.unitcellCoords = np.dot(self.fractionalUnitCellCoords,
@@ -151,8 +156,7 @@ class material(object):
         self.emptySpeciesType = materialParameters.emptySpeciesType
         self.dielectricConstant = materialParameters.dielectricConstant
 
-        self.classList = deepcopy(materialParameters.classList)
-        self.numClasses = [len(set(self.classList[elementType]))
+        self.numClasses = [len(set(materialParameters.classList[elementType]))
                            for elementType in self.elementTypes]
         self.delG0ShiftList = {key: [[(value[centerSiteClassIndex][index]
                                        * self.EV2J * self.J2HARTREE)
@@ -999,14 +1003,8 @@ class system(object):
                                                 axis=1)
 
         # class list
-        self.classIndexList = [
-            self.material.classList[elementType][index]
-            for elementTypeIndex, elementType in enumerate(
-                                                    self.material.elementTypes)
-            for index in range(self.material.nElementsPerUnitCell[
-                                                            elementTypeIndex])]
         self.systemClassIndexList = (
-                            np.tile(self.classIndexList, self.numCells) - 1)
+                np.tile(self.material.unitcellClassList, self.numCells) - 1)
 
         # ewald parameters:
         self.alpha = alpha
@@ -1375,7 +1373,6 @@ class run(object):
                 rand2 = rnd.random()
                 simTime -= np.log(rand2) / kTotal
 
-                pdb.set_trace()
                 # TODO: Address pre-defining excess data arrays
                 # if excess:
                 #    delG0Array[step] = delG0List[procIndex]
