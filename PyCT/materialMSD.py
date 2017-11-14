@@ -7,16 +7,14 @@ import yaml
 from PyCT.core import material, analysis
 
 
-def materialMSD(systemDirectoryPath, fileFormatIndex, systemSize, pbc, nDim,
+def materialMSD(inputDirectoryPath, fileFormatIndex, systemSize, pbc, nDim,
                 Temp, ionChargeType, speciesChargeType, speciesCount, tFinal,
                 nTraj, timeInterval, msdTFinal, trimLength, displayErrorBars,
                 reprTime, reprDist, report):
 
     # Load material parameters
-    configDirName = 'ConfigurationFiles'
     configFileName = 'sysconfig.yml'
-    configFilePath = os.path.join(systemDirectoryPath, configDirName,
-                                  configFileName)
+    configFilePath = os.path.join(inputDirectoryPath, configFileName)
     with open(configFilePath, 'r') as stream:
         try:
             params = yaml.load(stream)
@@ -24,7 +22,7 @@ def materialMSD(systemDirectoryPath, fileFormatIndex, systemSize, pbc, nDim,
             print(exc)
 
     inputCoordinateFileName = 'POSCAR'
-    inputCoorFileLocation = os.path.join(systemDirectoryPath, configDirName,
+    inputCoorFileLocation = os.path.join(inputDirectoryPath,
                                          inputCoordinateFileName)
     params.update({'inputCoorFileLocation': inputCoorFileLocation})
     params.update({'fileFormatIndex': fileFormatIndex})
@@ -45,7 +43,7 @@ def materialMSD(systemDirectoryPath, fileFormatIndex, systemSize, pbc, nDim,
     parentDir4 = str(Temp) + 'K'
     workDir = (('%1.2E' % tFinal) + 'SEC,' + ('%1.2E' % timeInterval)
                + 'TimeInterval,' + ('%1.2E' % nTraj) + 'Traj')
-    workDirPath = os.path.join(systemDirectoryPath, parentDir1, parentDir2,
+    workDirPath = os.path.join(inputDirectoryPath, '..', parentDir1, parentDir2,
                                parentDir3, parentDir4, workDir)
 
     if not os.path.exists(workDirPath):
