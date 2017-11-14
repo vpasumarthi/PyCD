@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-import os
-
 import yaml
 
 from PyCT.core import material, analysis
@@ -14,7 +12,7 @@ def materialMSD(inputDirectoryPath, fileFormatIndex, systemSize, pbc, nDim,
 
     # Load material parameters
     configFileName = 'sysconfig.yml'
-    configFilePath = os.path.join(inputDirectoryPath, configFileName)
+    configFilePath = inputDirectoryPath.joinpath(configFileName)
     with open(configFilePath, 'r') as stream:
         try:
             params = yaml.load(stream)
@@ -22,8 +20,8 @@ def materialMSD(inputDirectoryPath, fileFormatIndex, systemSize, pbc, nDim,
             print(exc)
 
     inputCoordinateFileName = 'POSCAR'
-    inputCoorFileLocation = os.path.join(inputDirectoryPath,
-                                         inputCoordinateFileName)
+    inputCoorFileLocation = inputDirectoryPath.joinpath(
+                                                    inputCoordinateFileName)
     params.update({'inputCoorFileLocation': inputCoorFileLocation})
     params.update({'fileFormatIndex': fileFormatIndex})
     materialParameters = returnValues(params)
@@ -43,14 +41,13 @@ def materialMSD(inputDirectoryPath, fileFormatIndex, systemSize, pbc, nDim,
     parentDir4 = str(Temp) + 'K'
     workDir = (('%1.2E' % tFinal) + 'SEC,' + ('%1.2E' % timeInterval)
                + 'TimeInterval,' + ('%1.2E' % nTraj) + 'Traj')
-    workDirPath = os.path.join(inputDirectoryPath, '..', parentDir1, parentDir2,
-                               parentDir3, parentDir4, workDir)
+    systemDirectoryPath = inputDirectoryPath.resolve().parent
+    workDirPath = systemDirectoryPath.joinpath(parentDir1, parentDir2,
+                                               parentDir3, parentDir4, workDir)
 
-    if not os.path.exists(workDirPath):
+    if not workDirPath.exists():
         print('Simulation files do not exist. Aborting.')
     else:
-        os.chdir(workDirPath)
-
         materialAnalysis = analysis(materialInfo, nDim, speciesCount,
                                     nTraj, tFinal, timeInterval, msdTFinal,
                                     trimLength, reprTime, reprDist)

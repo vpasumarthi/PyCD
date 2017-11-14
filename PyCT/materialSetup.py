@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-import os
-
 import numpy as np
 import yaml
 
@@ -16,7 +14,7 @@ def materialSetup(inputDirectoryPath, fileFormatIndex, systemSize, pbc,
 
     # Load material parameters
     configFileName = 'sysconfig.yml'
-    configFilePath = os.path.join(inputDirectoryPath, configFileName)
+    configFilePath = inputDirectoryPath.joinpath(configFileName)
     with open(configFilePath, 'r') as stream:
         try:
             params = yaml.load(stream)
@@ -24,8 +22,8 @@ def materialSetup(inputDirectoryPath, fileFormatIndex, systemSize, pbc,
             print(exc)
 
     inputCoordinateFileName = 'POSCAR'
-    inputCoorFileLocation = os.path.join(inputDirectoryPath,
-                                         inputCoordinateFileName)
+    inputCoorFileLocation = inputDirectoryPath.joinpath(
+                                                    inputCoordinateFileName)
     params.update({'inputCoorFileLocation': inputCoorFileLocation})
     params.update({'fileFormatIndex': fileFormatIndex})
     configParams = returnValues(params)
@@ -42,16 +40,14 @@ def materialSetup(inputDirectoryPath, fileFormatIndex, systemSize, pbc,
                                                generateCumDispList)
 
     # Build precomputed array and save to disk
-    precomputedArrayFilePath = os.path.join(inputDirectoryPath,
-                                            'precomputedArray.npy')
+    precomputedArrayFilePath = inputDirectoryPath.joinpath(
+                                                        'precomputedArray.npy')
     if generatePrecomputedArray:
         # Load input files to instantiate system class
-        os.chdir(inputDirectoryPath)
-        hopNeighborListFileName = os.path.join(inputDirectoryPath,
-                                               'hopNeighborList.npy')
+        hopNeighborListFileName = inputDirectoryPath.joinpath(
+                                                        'hopNeighborList.npy')
         hopNeighborList = np.load(hopNeighborListFileName)[()]
-        cumulativeDisplacementListFilePath = os.path.join(
-                                            inputDirectoryPath,
+        cumulativeDisplacementListFilePath = inputDirectoryPath.joinpath(
                                             'cumulativeDisplacementList.npy')
         cumulativeDisplacementList = np.load(
                                             cumulativeDisplacementListFilePath)

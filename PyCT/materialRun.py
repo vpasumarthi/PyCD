@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import os
+from pathlib import Path
 
 import numpy as np
 import yaml
@@ -14,7 +14,7 @@ def materialRun(inputDirectoryPath, fileFormatIndex, systemSize, pbc, Temp,
 
     # Load material parameters
     configFileName = 'sysconfig.yml'
-    configFilePath = os.path.join(inputDirectoryPath, configFileName)
+    configFilePath = inputDirectoryPath.joinpath(configFileName)
     with open(configFilePath, 'r') as stream:
         try:
             params = yaml.load(stream)
@@ -22,8 +22,8 @@ def materialRun(inputDirectoryPath, fileFormatIndex, systemSize, pbc, Temp,
             print(exc)
 
     inputCoordinateFileName = 'POSCAR'
-    inputCoorFileLocation = os.path.join(inputDirectoryPath,
-                                         inputCoordinateFileName)
+    inputCoorFileLocation = inputDirectoryPath.joinpath(
+                                                    inputCoordinateFileName)
     params.update({'inputCoorFileLocation': inputCoorFileLocation})
     params.update({'fileFormatIndex': fileFormatIndex})
     configParams = returnValues(params)
@@ -46,23 +46,20 @@ def materialRun(inputDirectoryPath, fileFormatIndex, systemSize, pbc, Temp,
     parentDir4 = str(Temp) + 'K'
     workDir = (('%1.2E' % tFinal) + 'SEC,' + ('%1.2E' % timeInterval)
                + 'TimeInterval,' + ('%1.2E' % nTraj) + 'Traj')
-    workDirPath = os.path.join(inputDirectoryPath, '..', parentDir1, parentDir2,
-                               parentDir3, parentDir4, workDir)
-    if not os.path.exists(workDirPath):
-        os.makedirs(workDirPath)
-    os.chdir(workDirPath)
+    systemDirectoryPath = inputDirectoryPath.resolve().parent
+    workDirPath = systemDirectoryPath.joinpath(parentDir1, parentDir2,
+                                               parentDir3, parentDir4, workDir)
+    Path.mkdir(workDirPath, parents=True, exist_ok=True)
 
     fileExists = 0
-    if os.path.exists('Run.log') and os.path.exists('Time.dat'):
+    if workDirPath.joinpath('Run.log').exists():
         fileExists = 1
     if not fileExists or overWrite:
         # Load input files to instantiate system class
-        os.chdir(inputDirectoryPath)
-        hopNeighborListFileName = os.path.join(inputDirectoryPath,
-                                               'hopNeighborList.npy')
+        hopNeighborListFileName = inputDirectoryPath.joinpath(
+                                                        'hopNeighborList.npy')
         hopNeighborList = np.load(hopNeighborListFileName)[()]
-        cumulativeDisplacementListFilePath = os.path.join(
-                                            inputDirectoryPath,
+        cumulativeDisplacementListFilePath = inputDirectoryPath.joinpath(
                                             'cumulativeDisplacementList.npy')
         cumulativeDisplacementList = np.load(
                                             cumulativeDisplacementListFilePath)
@@ -75,14 +72,12 @@ def materialRun(inputDirectoryPath, fileFormatIndex, systemSize, pbc, Temp,
                                 speciesCount, alpha, nmax, kmax)
 
         # Load precomputed array to instantiate run class
-        precomputedArrayFilePath = os.path.join(inputDirectoryPath,
-                                                'precomputedArray.npy')
+        precomputedArrayFilePath = inputDirectoryPath.joinpath(
+                                                        'precomputedArray.npy')
         precomputedArray = np.load(precomputedArrayFilePath)
         materialRun = run(materialSystem, precomputedArray, Temp,
                           ionChargeType, speciesChargeType, nTraj, tFinal,
                           timeInterval)
-        #print(workDirPath)
-        #import pdb; pdb.set_trace()
         materialRun.doKMCSteps(workDirPath, report, randomSeed)
     else:
         print ('Simulation files already exists in '
