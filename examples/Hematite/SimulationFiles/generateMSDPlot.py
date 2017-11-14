@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import os.path
+from pathlib import Path
 
 import numpy as np
 
@@ -17,8 +17,6 @@ ionChargeType = 'full'
 speciesChargeType = 'full'
 
 # Input parameters:
-systemSize = np.array([2, 2, 1])
-pbc = np.array([1, 1, 1])
 nDim = 3
 Temp = 300  # K
 nHoles = 0
@@ -27,12 +25,13 @@ displayErrorBars = 1
 reprTime = 'ns'
 reprDist = 'angstrom'
 report = 1
-systemDirectoryPath = os.path.dirname(
-                                os.path.dirname(os.path.realpath(__file__)))
-# fileFormatIndex: 0=VASP; 1=VESTA
-fileFormatIndex = 1
+dstPath = Path.cwd()
+nLevelUp = 0
+systemDirectoryPath = dstPath.resolve().parents[nLevelUp]
+inputFileDirectoryName = 'InputFiles'
+inputDirectoryPath = systemDirectoryPath.joinpath(inputFileDirectoryName)
 
-materialMSD(systemDirectoryPath, fileFormatIndex, systemSize, pbc, nDim, Temp,
-            ionChargeType, speciesChargeType, speciesCount, tFinal, nTraj,
+
+materialMSD(inputDirectoryPath, dstPath, nDim, speciesCount, tFinal, nTraj,
             timeInterval, msdTFinal, trimLength, displayErrorBars, reprTime,
             reprDist, report)

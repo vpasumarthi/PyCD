@@ -28,6 +28,12 @@ lambdaValues:
 # electronic coupling matrix element in eV
 VAB:
     'Fe:Fe': [0.184, 0.028]
+classList:
+    'Fe': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+    'O': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+# delG0_shift in eV
+delG0ShiftList:
+    'Fe:Fe': [[+0.0000, +0.0000, +0.0000, +0.0000]]
 elementTypeDelimiter: ':'
 emptySpeciesType: 'empty'
 siteIdentifier: '0'
