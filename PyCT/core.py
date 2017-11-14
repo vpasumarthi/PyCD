@@ -507,7 +507,7 @@ class neighbors(object):
                     numNeighbors=numNeighbors)
         return returnNeighbors
 
-    def cumulativeDisplacementList(self):
+    def generateCumulativeDisplacementList(self, dstPath):
         """Returns cumulative displacement list for the given system size
             printed out to disk"""
         cumulativeDisplacementList = np.zeros((self.numSystemElements,
@@ -531,10 +531,14 @@ class neighbors(object):
                 cumulativeNeighborImageDisplacementVectors[
                     np.arange(self.numSystemElements),
                     np.argmin(cumulativeNeighborImageDisplacements, axis=1)]
-        return cumulativeDisplacementList
+        cumulativeDisplacementListFilePath = dstPath.joinpath(
+                                        'cumulativeDisplacementList.npy')
+        np.save(cumulativeDisplacementListFilePath,
+                cumulativeDisplacementList)
+        return None
 
-    def generateNeighborList(self, dstPath, generateCumDispList=0,
-                             report=1, localSystemSize=np.array([3, 3, 3])):
+    def generateNeighborList(self, dstPath, report=1,
+                             localSystemSize=np.array([3, 3, 3])):
         """Adds the neighbor list to the system object and
             returns the neighbor list"""
         assert dstPath, \
@@ -587,15 +591,6 @@ class neighbors(object):
                                           cutoffDistLimits, cutoffDistKey))
             hopNeighborList[cutoffDistKey] = neighborListCutoffDistKey[:]
         np.save(hopNeighborListFilePath, hopNeighborList)
-
-        if generateCumDispList:
-            cumulativeDisplacementListFilePath = dstPath.joinpath(
-                                            'cumulativeDisplacementList.npy')
-            # TODO: Is it necessary to define cumulativeDisplacementList
-            # as a function?
-            cumulativeDisplacementList = self.cumulativeDisplacementList()
-            np.save(cumulativeDisplacementListFilePath,
-                    cumulativeDisplacementList)
 
         if report:
             self.generateNeighborListReport(dstPath)

@@ -36,12 +36,14 @@ def materialSetup(inputDirectoryPath, fileFormatIndex, systemSize, pbc,
 
     # generate neighbor list
     if generateHopNeighborList:
-        materialNeighbors.generateNeighborList(inputDirectoryPath,
-                                               generateCumDispList)
+        materialNeighbors.generateNeighborList(inputDirectoryPath)
+
+    # generate cumulative displacement list
+    if generateCumDispList:
+        materialNeighbors.generateCumulativeDisplacementList(
+                                                            inputDirectoryPath)
 
     # Build precomputed array and save to disk
-    precomputedArrayFilePath = inputDirectoryPath.joinpath(
-                                                        'precomputedArray.npy')
     if generatePrecomputedArray:
         # Load input files to instantiate system class
         hopNeighborListFileName = inputDirectoryPath.joinpath(
@@ -67,6 +69,8 @@ def materialSetup(inputDirectoryPath, fileFormatIndex, systemSize, pbc,
                                 hopNeighborList, cumulativeDisplacementList,
                                 speciesCount, alpha, nmax, kmax)
         precomputedArray = materialSystem.ewaldSumSetup(inputDirectoryPath)
+        precomputedArrayFilePath = inputDirectoryPath.joinpath(
+                                                        'precomputedArray.npy')
         np.save(precomputedArrayFilePath, precomputedArray)
 
 
