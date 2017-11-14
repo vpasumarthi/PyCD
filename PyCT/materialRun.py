@@ -8,9 +8,9 @@ import yaml
 from PyCT.core import material, neighbors, system, run
 
 
-def materialRun(inputDirectoryPath, fileFormatIndex, systemSize, pbc, Temp,
-                ionChargeType, speciesChargeType, speciesCount, tFinal, nTraj,
-                timeInterval, randomSeed, report, overWrite):
+def materialRun(inputDirectoryPath, systemSize, pbc, Temp, ionChargeType,
+                speciesChargeType, speciesCount, tFinal, nTraj, timeInterval,
+                randomSeed, report, overWrite):
 
     # Load material parameters
     configFileName = 'sysconfig.yml'
@@ -25,7 +25,6 @@ def materialRun(inputDirectoryPath, fileFormatIndex, systemSize, pbc, Temp,
     inputCoorFileLocation = inputDirectoryPath.joinpath(
                                                     inputCoordinateFileName)
     params.update({'inputCoorFileLocation': inputCoorFileLocation})
-    params.update({'fileFormatIndex': fileFormatIndex})
     configParams = returnValues(params)
 
     # Build material object files

@@ -85,8 +85,7 @@ class material(object):
         # Read Input POSCAR
         [self.latticeMatrix, self.elementTypes, self.nElementsPerUnitCell,
          self.totalElementsPerUnitCell, fractionalUnitCellCoords] = \
-            self.readPOSCAR(materialParameters.inputCoorFileLocation,
-                            materialParameters.fileFormatIndex)
+            self.readPOSCAR(materialParameters.inputCoorFileLocation)
         self.latticeMatrix *= self.ANG2BOHR
         self.nElementTypes = len(self.elementTypes)
         self.elementTypeIndexList = np.repeat(np.arange(self.nElementTypes),
@@ -192,34 +191,26 @@ class material(object):
                     for key in self.speciesToElementTypeMap
                     if key != self.emptySpeciesType}
 
-    def readPOSCAR(self, inputFilePath, fileFormatIndex):
-        # fileFormatIndex: 0=VASP; 1=VESTA
+    def readPOSCAR(self, inputFilePath):
         latticeMatrix = np.zeros((3, 3))
         latticeParameterIndex = 0
         latticeParametersLineRange = range(3, 6)
-        elementTypesLineNumber = 6 * fileFormatIndex
-        numElementsLineNumber = 6 + fileFormatIndex
-        coordStartLineNumber = 8 + fileFormatIndex
         inputFile = open(inputFilePath, 'r')
         for lineIndex, line in enumerate(inputFile):
             lineNumber = lineIndex + 1
-            if lineNumber == 1 and not fileFormatIndex:
-                elementTypes = line[:-1].split()
-            elif lineNumber in latticeParametersLineRange:
+            if lineNumber in latticeParametersLineRange:
                 latticeMatrix[latticeParameterIndex, :] = np.fromstring(
                                                                 line, sep=' ')
                 latticeParameterIndex += 1
-            elif (lineNumber == elementTypesLineNumber
-                  and 'elementTypes' not in locals()):
+            elif lineNumber == 6:
                 elementTypes = line.split()
-            elif lineNumber == numElementsLineNumber:
+            elif lineNumber == 7:
                 nElementsPerUnitCell = np.fromstring(line, dtype=int, sep=' ')
                 totalElementsPerUnitCell = nElementsPerUnitCell.sum()
                 fractionalUnitCellCoords = np.zeros((totalElementsPerUnitCell,
                                                      3))
                 elementIndex = 0
-            elif ((lineNumber >= coordStartLineNumber)
-                  and (elementIndex < totalElementsPerUnitCell)):
+            elif lineNumber > 8 and elementIndex < totalElementsPerUnitCell:
                 fractionalUnitCellCoords[elementIndex, :] = np.fromstring(
                                                                 line, sep=' ')
                 elementIndex += 1

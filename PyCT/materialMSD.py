@@ -5,10 +5,10 @@ import yaml
 from PyCT.core import material, analysis
 
 
-def materialMSD(inputDirectoryPath, fileFormatIndex, systemSize, pbc, nDim,
-                Temp, ionChargeType, speciesChargeType, speciesCount, tFinal,
-                nTraj, timeInterval, msdTFinal, trimLength, displayErrorBars,
-                reprTime, reprDist, report):
+def materialMSD(inputDirectoryPath, systemSize, pbc, nDim, Temp, ionChargeType,
+                speciesChargeType, speciesCount, tFinal, nTraj, timeInterval,
+                msdTFinal, trimLength, displayErrorBars, reprTime, reprDist,
+                report):
 
     # Load material parameters
     configFileName = 'sysconfig.yml'
@@ -23,7 +23,6 @@ def materialMSD(inputDirectoryPath, fileFormatIndex, systemSize, pbc, nDim,
     inputCoorFileLocation = inputDirectoryPath.joinpath(
                                                     inputCoordinateFileName)
     params.update({'inputCoorFileLocation': inputCoorFileLocation})
-    params.update({'fileFormatIndex': fileFormatIndex})
     materialParameters = returnValues(params)
 
     # Build material object files
