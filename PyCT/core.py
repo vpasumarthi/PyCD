@@ -3,7 +3,7 @@
 kMC model to run kinetic Monte Carlo simulations and compute mean square
 displacement of random walk of charge carriers on 3D lattice systems
 """
-import os
+from pathlib import Path
 from datetime import datetime
 import random as rnd
 import itertools
@@ -533,21 +533,19 @@ class neighbors(object):
                     np.argmin(cumulativeNeighborImageDisplacements, axis=1)]
         return cumulativeDisplacementList
 
-    def generateNeighborList(self, neighborListDirPath, generateCumDispList=0,
+    def generateNeighborList(self, dstPath, generateCumDispList=0,
                              report=1, localSystemSize=np.array([3, 3, 3])):
         """Adds the neighbor list to the system object and
             returns the neighbor list"""
-        assert neighborListDirPath, \
+        assert dstPath, \
             'Please provide the path to the parent directory of \
                 neighbor list files'
         assert all(size >= 3 for size in localSystemSize), \
             'Local system size in all dimensions should always be \
                 greater than or equal to 3'
 
-        dstPath = neighborListDirPath
-        if not os.path.exists(dstPath):
-            os.makedirs(dstPath)
-        hopNeighborListFilePath = os.path.join(dstPath, 'hopNeighborList.npy')
+        Path.mkdir(dstPath, parents=True, exist_ok=True)
+        hopNeighborListFilePath = dstPath.joinpath('hopNeighborList.npy')
 
         hopNeighborList = {}
         tolDist = self.material.neighborCutoffDistTol
@@ -591,8 +589,8 @@ class neighbors(object):
         np.save(hopNeighborListFilePath, hopNeighborList)
 
         if generateCumDispList:
-            cumulativeDisplacementListFilePath = os.path.join(
-                                    dstPath, 'cumulativeDisplacementList.npy')
+            cumulativeDisplacementListFilePath = dstPath.joinpath(
+                                            'cumulativeDisplacementList.npy')
             # TODO: Is it necessary to define cumulativeDisplacementList
             # as a function?
             cumulativeDisplacementList = self.cumulativeDisplacementList()
@@ -606,7 +604,7 @@ class neighbors(object):
         """Generates a neighbor list and prints out a
             report to the output directory"""
         neighborListLogName = 'NeighborList.log'
-        neighborListLogPath = os.path.join(dstPath, neighborListLogName)
+        neighborListLogPath = dstPath.joinpath(neighborListLogName)
         report = open(neighborListLogPath, 'w')
         endTime = datetime.now()
         timeElapsed = endTime - self.startTime
@@ -700,7 +698,7 @@ class neighbors(object):
                             centerSiteIndex][neighborIndex] = neighborSEIndex
 
         fileName = 'neighborSystemElementIndices.npy'
-        neighborSystemElementIndicesFilePath = os.path.join(dstPath, fileName)
+        neighborSystemElementIndicesFilePath = dstPath.joinpath(fileName)
         np.save(neighborSystemElementIndicesFilePath,
                 neighborSystemElementIndices)
         if report:
@@ -712,8 +710,8 @@ class neighbors(object):
             report to the output directory"""
         neighborSystemElementIndicesLogName = \
             'neighborSystemElementIndices.log'
-        neighborSystemElementIndicesLogPath = os.path.join(
-                                dstPath, neighborSystemElementIndicesLogName)
+        neighborSystemElementIndicesLogPath = dstPath.joinpath(
+                                        neighborSystemElementIndicesLogName)
         report = open(neighborSystemElementIndicesLogPath, 'w')
         endTime = datetime.now()
         timeElapsed = endTime - startTime
@@ -754,7 +752,7 @@ class neighbors(object):
                                                         neighborSiteSEIndex)**2
         speciesSiteSDList /= self.material.ANG2BOHR**2
         fileName = 'speciesSiteSDList.npy'
-        speciesSiteSDListFilePath = os.path.join(dstPath, fileName)
+        speciesSiteSDListFilePath = dstPath.joinpath(fileName)
         np.save(speciesSiteSDListFilePath, speciesSiteSDList)
         if report:
             self.generateSpeciesSiteSDListReport(dstPath, startTime)
@@ -764,8 +762,7 @@ class neighbors(object):
         """Generates a neighbor list and prints out a
             report to the output directory"""
         speciesSiteSDListLogName = 'speciesSiteSDList.log'
-        speciesSiteSDListLogPath = os.path.join(dstPath,
-                                                speciesSiteSDListLogName)
+        speciesSiteSDListLogPath = dstPath.joinpath(speciesSiteSDListLogName)
         report = open(speciesSiteSDListLogPath, 'w')
         endTime = datetime.now()
         timeElapsed = endTime - startTime
@@ -829,7 +826,7 @@ class neighbors(object):
                 transitionProbMatrix[centerSiteIndex][neighborSiteIndex] = \
                     probList[neighborIndex]
         fileName = 'transitionProbMatrix.npy'
-        transitionProbMatrixFilePath = os.path.join(dstPath, fileName)
+        transitionProbMatrixFilePath = dstPath.joinpath(fileName)
         np.save(transitionProbMatrixFilePath, transitionProbMatrix)
         if report:
             self.generateTransitionProbMatrixListReport(dstPath, startTime)
@@ -839,8 +836,8 @@ class neighbors(object):
         """Generates a neighbor list and prints out a report to the
             output directory"""
         transitionProbMatrixLogName = 'transitionProbMatrix.log'
-        transitionProbMatrixLogPath = os.path.join(dstPath,
-                                                   transitionProbMatrixLogName)
+        transitionProbMatrixLogPath = dstPath.joinpath(
+                                                transitionProbMatrixLogName)
         report = open(transitionProbMatrixLogPath, 'w')
         endTime = datetime.now()
         timeElapsed = endTime - startTime
@@ -860,8 +857,7 @@ class neighbors(object):
 
         fileName = '%1.2Ens' % analyticalTFinal
         MSDAnalyticalDataFileName = 'MSD_Analytical_Data_' + fileName + '.dat'
-        MSDAnalyticalDataFilePath = os.path.join(dstPath,
-                                                 MSDAnalyticalDataFileName)
+        MSDAnalyticalDataFilePath = dstPath.joinpath(MSDAnalyticalDataFileName)
         open(MSDAnalyticalDataFilePath, 'w').close()
 
         elementTypeIndex = 0
@@ -942,8 +938,7 @@ class neighbors(object):
         """Generates a neighbor list and prints out a report to the
             output directory"""
         MSDAnalyticalDataLogName = 'MSD_Analytical_Data_' + fileName + '.log'
-        MSDAnalyticalDataLogPath = os.path.join(dstPath,
-                                                MSDAnalyticalDataLogName)
+        MSDAnalyticalDataLogPath = dstPath.joinpath(MSDAnalyticalDataLogName)
         report = open(MSDAnalyticalDataLogPath, 'w')
         endTime = datetime.now()
         timeElapsed = endTime - startTime
@@ -1115,8 +1110,8 @@ class system(object):
         """Generates an log report of the simulation and outputs
             to the working directory"""
         precomputedArrayLogFileName = 'precomputedArray.log'
-        precomputedArrayLogFilePath = os.path.join(outdir,
-                                                   precomputedArrayLogFileName)
+        precomputedArrayLogFilePath = outdir.joinpath(
+                                                precomputedArrayLogFileName)
         report = open(precomputedArrayLogFilePath, 'w')
         endTime = datetime.now()
         timeElapsed = endTime - self.startTime
@@ -1222,16 +1217,16 @@ class run(object):
 
         excess = 0
         energy = 1
-        unwrappedTrajFileName = os.path.join(outdir, 'unwrappedTraj.dat')
+        unwrappedTrajFileName = outdir.joinpath('unwrappedTraj.dat')
         open(unwrappedTrajFileName, 'wb').close()
         if energy:
-            energyTrajFileName = os.path.join(outdir, 'energyTraj.dat')
+            energyTrajFileName = outdir.joinpath('energyTraj.dat')
             open(energyTrajFileName, 'wb').close()
 
         if excess:
-            wrappedTrajFileName = os.path.join(outdir, 'wrappedTraj.dat')
-            delG0TrajFileName = os.path.join(outdir, 'delG0Traj.dat')
-            potentialTrajFileName = os.path.join(outdir, 'potentialTraj.dat')
+            wrappedTrajFileName = outdir.joinpath('wrappedTraj.dat')
+            delG0TrajFileName = outdir.joinpath('delG0Traj.dat')
+            potentialTrajFileName = outdir.joinpath('potentialTraj.dat')
             open(wrappedTrajFileName, 'wb').close()
             open(delG0TrajFileName, 'wb').close()
             open(potentialTrajFileName, 'wb').close()
@@ -1435,7 +1430,7 @@ class run(object):
         """Generates an log report of the simulation and
             outputs to the working directory"""
         simulationLogFileName = 'Run.log'
-        simulationLogFilePath = os.path.join(outdir, simulationLogFileName)
+        simulationLogFilePath = outdir.joinpath(simulationLogFileName)
         report = open(simulationLogFilePath, 'w')
         endTime = datetime.now()
         timeElapsed = endTime - self.startTime
@@ -1494,7 +1489,7 @@ class analysis(object):
         """Returns the squared displacement of the trajectories"""
         assert outdir, 'Please provide the destination path where \
                                 MSD output files needs to be saved'
-        positionArray = np.loadtxt(os.path.join(outdir, 'unwrappedTraj.dat'))
+        positionArray = np.loadtxt(outdir.joinpath('unwrappedTraj.dat'))
         numTrajRecorded = int(len(positionArray) / self.numPathStepsPerTraj)
         positionArray = (
             positionArray[:numTrajRecorded
@@ -1546,7 +1541,7 @@ class analysis(object):
                     + (',nTraj: %1.2E' % numTrajRecorded
                         if numTrajRecorded != self.nTraj else ''))
         msdFileName = 'MSD_Data_' + fileName + '.npy'
-        msdFilePath = os.path.join(outdir, msdFileName)
+        msdFilePath = outdir.joinpath(msdFileName)
         speciesTypes = [
                 speciesType
                 for index, speciesType in enumerate(self.material.speciesTypes)
@@ -1569,7 +1564,7 @@ class analysis(object):
             outputs to the working directory"""
         msdAnalysisLogFileName = ('MSD_Analysis' + ('_' if fileName else '')
                                   + fileName + '.log')
-        msdLogFilePath = os.path.join(outdir, msdAnalysisLogFileName)
+        msdLogFilePath = outdir.joinpath(msdAnalysisLogFileName)
         report = open(msdLogFilePath, 'w')
         endTime = datetime.now()
         timeElapsed = endTime - self.startTime
@@ -1636,8 +1631,8 @@ class analysis(object):
         plt.show()  # Temp change
         figureName = ('MSD_Plot_' + fileName + '_Trim='
                       + str(self.trimLength) + '.png')
-        figurePath = os.path.join(outdir, figureName)
-        plt.savefig(figurePath)
+        figurePath = outdir.joinpath(figureName)
+        plt.savefig(str(figurePath))
 
     def computeCOCMSD(self, outdir, report=1):
         """Returns the squared displacement of the trajectories"""
@@ -1648,7 +1643,7 @@ class analysis(object):
             if self.speciesCount[speciesTypeIndex] != 0:
                 numExistentSpecies += 1
 
-        positionArray = np.loadtxt(os.path.join(outdir, 'unwrappedTraj.dat'))
+        positionArray = np.loadtxt(outdir.joinpath('unwrappedTraj.dat'))
         numTrajRecorded = int(len(positionArray) / self.numPathStepsPerTraj)
         positionArray = (
             positionArray[:numTrajRecorded
@@ -1705,7 +1700,7 @@ class analysis(object):
                     + (',nTraj: %1.2E' % numTrajRecorded
                         if numTrajRecorded != self.nTraj else ''))
         msdFileName = 'COC_MSD_Data_' + fileName + '.npy'
-        msdFilePath = os.path.join(outdir, msdFileName)
+        msdFilePath = outdir.joinpath(msdFileName)
         speciesTypes = [
                 speciesType
                 for index, speciesType in enumerate(self.material.speciesTypes)
@@ -1765,7 +1760,7 @@ class analysis(object):
                      + ' \n$N_{{%s}}$=' % ('species') + str(self.totalSpecies))
         plt.show()  # Temp change
         figureName = ('COC_DispVectors_' + fileName + '.png')
-        figurePath = os.path.join(outdir, figureName)
+        figurePath = outdir.joinpath(figureName)
         plt.savefig(figurePath)
 
     def generateCOCMSDPlot(self, msdData, stdData, displayErrorBars,
@@ -1814,7 +1809,7 @@ class analysis(object):
         plt.show()  # Temp change
         figureName = ('COC_MSD_Plot_' + fileName + '_Trim='
                       + str(self.trimLength) + '.png')
-        figurePath = os.path.join(outdir, figureName)
+        figurePath = outdir.joinpath(figureName)
         plt.savefig(figurePath)
 
     def generateCOCMSDAnalysisLogReport(self, msdData, speciesTypes,
@@ -1824,7 +1819,7 @@ class analysis(object):
         msdAnalysisLogFileName = ('COC_MSD_Analysis'
                                   + ('_' if fileName else '')
                                   + fileName + '.log')
-        msdLogFilePath = os.path.join(outdir, msdAnalysisLogFileName)
+        msdLogFilePath = outdir.joinpath(msdAnalysisLogFileName)
         report = open(msdLogFilePath, 'w')
         endTime = datetime.now()
         timeElapsed = endTime - self.startTime
@@ -1957,12 +1952,12 @@ class analysis(object):
             interSpeciesDistanceArray[:, 1:] = interDistanceArrayOverTraj
         if mean:
             meanDistanceFileName = 'MeanDistanceData.npy'
-            meanDistanceFilePath = os.path.join(outdir, meanDistanceFileName)
+            meanDistanceFilePath = outdir.joinpath(meanDistanceFileName)
             np.save(meanDistanceFilePath, meanDistanceArray)
         else:
             interSpeciesDistanceFileName = 'InterSpeciesDistance.npy'
-            interSpeciesDistanceFilePath = os.path.join(
-                                        outdir, interSpeciesDistanceFileName)
+            interSpeciesDistanceFilePath = outdir.joinpath(
+                                                interSpeciesDistanceFileName)
             np.save(interSpeciesDistanceFilePath, interSpeciesDistanceArray)
 
         if plot:
@@ -1977,7 +1972,7 @@ class analysis(object):
                 plt.xlabel('KMC Step')
                 plt.ylabel('Distance (' + self.reprDist + ')')
                 figureName = 'MeanDistanceOverTraj.jpg'
-                figurePath = os.path.join(outdir, figureName)
+                figurePath = outdir.joinpath(figureName)
                 plt.savefig(figurePath)
             else:
                 legendList = []
@@ -1992,7 +1987,7 @@ class analysis(object):
                 lgd = plt.legend(lineObjects, legendList, loc='center left',
                                  bbox_to_anchor=(1, 0.5))
                 figureName = 'Inter-SpeciesDistance.jpg'
-                figurePath = os.path.join(outdir, figureName)
+                figurePath = outdir.joinpath(figureName)
                 plt.savefig(figurePath, bbox_extra_artists=(lgd,),
                             bbox_inches='tight')
         if report:
@@ -2004,8 +1999,8 @@ class analysis(object):
         """Generates an log report of the MSD Analysis and \
                 outputs to the working directory"""
         meanDisplacementAnalysisLogFileName = 'MeanDisplacement_Analysis.log'
-        meanDisplacementAnalysisLogFilePath = os.path.join(
-                                outdir, meanDisplacementAnalysisLogFileName)
+        meanDisplacementAnalysisLogFilePath = outdir.joinpath(
+                                        meanDisplacementAnalysisLogFileName)
         report = open(meanDisplacementAnalysisLogFilePath, 'w')
         endTime = datetime.now()
         timeElapsed = endTime - self.startTime
