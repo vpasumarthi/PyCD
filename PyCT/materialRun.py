@@ -82,6 +82,7 @@ def materialRun(inputDirectoryPath, fileFormatIndex, systemSize, pbc, Temp,
     else:
         print ('Simulation files already exists in '
                + 'the destination directory')
+    return None
 
 
 class returnValues(object):

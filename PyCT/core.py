@@ -594,6 +594,7 @@ class neighbors(object):
 
         if report:
             self.generateNeighborListReport(dstPath)
+        return None
 
     def generateNeighborListReport(self, dstPath):
         """Generates a neighbor list and prints out a
@@ -610,6 +611,7 @@ class neighbors(object):
                      + (', %2d minutes' % ((timeElapsed.seconds // 60) % 60))
                      + (', %2d seconds' % (timeElapsed.seconds % 60)))
         report.close()
+        return None
 
     # TODO: remove the function
     def generateHematiteNeighborSEIndices(self, dstPath, report=1):
@@ -698,7 +700,7 @@ class neighbors(object):
                 neighborSystemElementIndices)
         if report:
             self.generateHematiteNeighborSEIndicesReport(dstPath, startTime)
-        return
+        return None
 
     def generateHematiteNeighborSEIndicesReport(self, dstPath, startTime):
         """Generates a neighbor list and prints out a
@@ -717,6 +719,7 @@ class neighbors(object):
                      + (', %2d minutes' % ((timeElapsed.seconds // 60) % 60))
                      + (', %2d seconds' % (timeElapsed.seconds % 60)))
         report.close()
+        return None
 
     def generateSpeciesSiteSDList(self, centerSiteQuantumIndices,
                                   dstPath, report=1):
@@ -751,7 +754,7 @@ class neighbors(object):
         np.save(speciesSiteSDListFilePath, speciesSiteSDList)
         if report:
             self.generateSpeciesSiteSDListReport(dstPath, startTime)
-        return
+        return None
 
     def generateSpeciesSiteSDListReport(self, dstPath, startTime):
         """Generates a neighbor list and prints out a
@@ -768,6 +771,7 @@ class neighbors(object):
                      + (', %2d minutes' % ((timeElapsed.seconds // 60) % 60))
                      + (', %2d seconds' % (timeElapsed.seconds % 60)))
         report.close()
+        return None
 
     def generateTransitionProbMatrix(self, neighborSystemElementIndices,
                                      dstPath, report=1):
@@ -825,7 +829,7 @@ class neighbors(object):
         np.save(transitionProbMatrixFilePath, transitionProbMatrix)
         if report:
             self.generateTransitionProbMatrixListReport(dstPath, startTime)
-        return
+        return None
 
     def generateTransitionProbMatrixListReport(self, dstPath, startTime):
         """Generates a neighbor list and prints out a report to the
@@ -843,6 +847,7 @@ class neighbors(object):
                      + (', %2d minutes' % ((timeElapsed.seconds // 60) % 60))
                      + (', %2d seconds' % (timeElapsed.seconds % 60)))
         report.close()
+        return None
 
     def generateMSDAnalyticalData(self, transitionProbMatrix,
                                   speciesSiteSDList, centerSiteQuantumIndices,
@@ -944,6 +949,7 @@ class neighbors(object):
                      + (', %2d minutes' % ((timeElapsed.seconds // 60) % 60))
                      + (', %2d seconds' % (timeElapsed.seconds % 60)))
         report.close()
+        return None
 
 
 class system(object):
@@ -1117,6 +1123,7 @@ class system(object):
                      + (', %2d minutes' % ((timeElapsed.seconds // 60) % 60))
                      + (', %2d seconds' % (timeElapsed.seconds % 60)))
         report.close()
+        return None
 
 
 class run(object):
@@ -1420,6 +1427,7 @@ class run(object):
                     np.savetxt(potentialTrajFile, potentialArray)
         if report:
             self.generateSimulationLogReport(outdir)
+        return None
 
     def generateSimulationLogReport(self, outdir):
         """Generates an log report of the simulation and
@@ -1436,6 +1444,7 @@ class run(object):
                      + (', %2d minutes' % ((timeElapsed.seconds // 60) % 60))
                      + (', %2d seconds' % (timeElapsed.seconds % 60)))
         report.close()
+        return None
 
 
 class analysis(object):
@@ -1579,6 +1588,7 @@ class analysis(object):
                      + (', %2d minutes' % ((timeElapsed.seconds // 60) % 60))
                      + (', %2d seconds' % (timeElapsed.seconds % 60)))
         report.close()
+        return None
 
     def generateMSDPlot(self, msdData, stdData, displayErrorBars,
                         speciesTypes, fileName, outdir):
@@ -1628,6 +1638,7 @@ class analysis(object):
                       + str(self.trimLength) + '.png')
         figurePath = outdir.joinpath(figureName)
         plt.savefig(str(figurePath))
+        return None
 
     def computeCOCMSD(self, outdir, report=1):
         """Returns the squared displacement of the trajectories"""
@@ -1757,6 +1768,7 @@ class analysis(object):
         figureName = ('COC_DispVectors_' + fileName + '.png')
         figurePath = outdir.joinpath(figureName)
         plt.savefig(figurePath)
+        return None
 
     def generateCOCMSDPlot(self, msdData, stdData, displayErrorBars,
                            speciesTypes, fileName, outdir):
@@ -1806,6 +1818,7 @@ class analysis(object):
                       + str(self.trimLength) + '.png')
         figurePath = outdir.joinpath(figureName)
         plt.savefig(figurePath)
+        return None
 
     def generateCOCMSDAnalysisLogReport(self, msdData, speciesTypes,
                                         fileName, outdir):
@@ -1834,6 +1847,7 @@ class analysis(object):
                      + (', %2d minutes' % ((timeElapsed.seconds // 60) % 60))
                      + (', %2d seconds' % (timeElapsed.seconds % 60)))
         report.close()
+        return None
 
     # TODO: Finish writing the method soon.
     # def displayCollectiveMSDPlot(self, msdData, speciesTypes,
@@ -2006,18 +2020,19 @@ class analysis(object):
                      + (', %2d minutes' % ((timeElapsed.seconds // 60) % 60))
                      + (', %2d seconds' % (timeElapsed.seconds % 60)))
         report.close()
+        return None
 
     def displayWrappedTrajectories(self):
         """ """
-        pass
+        return None
 
     def displayUnwrappedTrajectories(self):
         """ """
-        pass
+        return None
 
     def trajectoryToDCD(self):
         """Convert trajectory data and outputs dcd file"""
-        pass
+        return None
 
 
 class returnValues(object):

@@ -59,6 +59,7 @@ def materialMSD(inputDirectoryPath, fileFormatIndex, systemSize, pbc, nDim,
         fileName = msdAnalysisData.fileName
         materialAnalysis.generateMSDPlot(msdData, stdData, displayErrorBars,
                                          speciesTypes, fileName, workDirPath)
+    return None
 
 
 class returnValues(object):

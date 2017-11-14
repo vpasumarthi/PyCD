@@ -72,6 +72,7 @@ def materialSetup(inputDirectoryPath, fileFormatIndex, systemSize, pbc,
         precomputedArrayFilePath = inputDirectoryPath.joinpath(
                                                         'precomputedArray.npy')
         np.save(precomputedArrayFilePath, precomputedArray)
+    return None
 
 
 class returnValues(object):
