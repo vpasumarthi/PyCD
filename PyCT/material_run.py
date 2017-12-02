@@ -3,7 +3,7 @@
 import numpy as np
 import yaml
 
-from PyCT.core import material, neighbors, system, run
+from PyCT.core import Material, Neighbors, System, Run
 
 
 def materialRun(dstPath):
@@ -37,13 +37,13 @@ def materialRun(dstPath):
     inputCoorFileLocation = inputDirectoryPath.joinpath(
                                                     inputCoordinateFileName)
     params.update({'inputCoorFileLocation': inputCoorFileLocation})
-    configParams = returnValues(params)
+    configParams = ReturnValues(params)
 
     # Build material object files
-    materialInfo = material(configParams)
+    materialInfo = Material(configParams)
 
     # Build neighbors object files
-    materialNeighbors = neighbors(materialInfo, simParams['systemSize'],
+    materialNeighbors = Neighbors(materialInfo, simParams['systemSize'],
                                   simParams['pbc'])
 
     fileExists = 0
@@ -62,7 +62,7 @@ def materialRun(dstPath):
         nmax = configParams.nmax
         kmax = configParams.kmax
 
-        materialSystem = system(materialInfo, materialNeighbors,
+        materialSystem = System(materialInfo, materialNeighbors,
                                 hopNeighborList, cumulativeDisplacementList,
                                 simParams['speciesCount'], alpha, nmax, kmax)
 
@@ -70,7 +70,7 @@ def materialRun(dstPath):
         precomputedArrayFilePath = inputDirectoryPath.joinpath(
                                                         'precomputedArray.npy')
         precomputedArray = np.load(precomputedArrayFilePath)
-        materialRun = run(materialSystem, precomputedArray, simParams['Temp'],
+        materialRun = Run(materialSystem, precomputedArray, simParams['Temp'],
                           simParams['ionChargeType'],
                           simParams['speciesChargeType'], simParams['nTraj'],
                           simParams['tFinal'], simParams['timeInterval'])
@@ -82,7 +82,7 @@ def materialRun(dstPath):
     return None
 
 
-class returnValues(object):
+class ReturnValues(object):
     """dummy class to return objects from methods \
         defined inside other classes"""
     def __init__(self, inputdict):

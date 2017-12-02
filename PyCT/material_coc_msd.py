@@ -4,7 +4,7 @@ import os
 
 import yaml
 
-from PyCT.core import material, analysis
+from PyCT.core import Material, Analysis
 
 
 def materialCOCMSD(systemDirectoryPath, fileFormatIndex, systemSize, pbc, nDim,
@@ -28,10 +28,10 @@ def materialCOCMSD(systemDirectoryPath, fileFormatIndex, systemSize, pbc, nDim,
                                          inputCoordinateFileName)
     params.update({'inputCoorFileLocation': inputCoorFileLocation})
     params.update({'fileFormatIndex': fileFormatIndex})
-    materialParameters = returnValues(params)
+    materialParameters = ReturnValues(params)
 
     # Build material object files
-    materialInfo = material(materialParameters)
+    materialInfo = Material(materialParameters)
 
     # Change to working directory
     parentDir1 = 'SimulationFiles'
@@ -53,7 +53,7 @@ def materialCOCMSD(systemDirectoryPath, fileFormatIndex, systemSize, pbc, nDim,
     else:
         os.chdir(workDirPath)
 
-        materialAnalysis = analysis(materialInfo, nDim, speciesCount,
+        materialAnalysis = Analysis(materialInfo, nDim, speciesCount,
                                     nTraj, tFinal, timeInterval, msdTFinal,
                                     trimLength, reprTime, reprDist)
 
@@ -67,7 +67,7 @@ def materialCOCMSD(systemDirectoryPath, fileFormatIndex, systemSize, pbc, nDim,
                                             workDirPath)
 
 
-class returnValues(object):
+class ReturnValues(object):
     """dummy class to return objects from methods \
         defined inside other classes"""
     def __init__(self, inputdict):

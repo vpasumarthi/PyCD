@@ -15,7 +15,7 @@ import numpy as np
 from PyCT.io import readPOSCAR
 
 
-class material(object):
+class Material(object):
     """Defines the properties and structure of working material
     :param str name: A string representing the material name
     :param list elementTypes: list of chemical elements
@@ -255,14 +255,14 @@ class material(object):
                                     unitCellElementTypeElementIndexList))
                     iUnitCell += 1
 
-        returnSites = returnValues(
+        returnSites = ReturnValues(
                                 cellCoordinates=cellCoordinates,
                                 quantumIndexList=quantumIndexList,
                                 systemElementIndexList=systemElementIndexList)
         return returnSites
 
 
-class neighbors(object):
+class Neighbors(object):
     """Returns the neighbor list file
     :param systemSize: size of the super cell in terms of number of
                         unit cell in three dimensions
@@ -465,7 +465,7 @@ class neighbors(object):
                                          / self.material.ANG2BOHR, 0))).shape)
                 pdb.set_trace()
 
-        returnNeighbors = returnValues(
+        returnNeighbors = ReturnValues(
                     neighborSystemElementIndices=neighborSystemElementIndices,
                     displacementVectorList=displacementVectorList,
                     numNeighbors=numNeighbors)
@@ -895,7 +895,7 @@ class neighbors(object):
 
         if report:
             self.generateMSDAnalyticalDataReport(fileName, dstPath, startTime)
-        returnMSDData = returnValues(msdData=msdData)
+        returnMSDData = ReturnValues(msdData=msdData)
         return returnMSDData
 
     def generateMSDAnalyticalDataReport(self, fileName, dstPath, startTime):
@@ -916,7 +916,7 @@ class neighbors(object):
         return None
 
 
-class system(object):
+class System(object):
     """defines the system we are working on
 
     Attributes:
@@ -1090,7 +1090,7 @@ class system(object):
         return None
 
 
-class run(object):
+class Run(object):
     """defines the subroutines for running Kinetic Monte Carlo and
         computing electrostatic interaction energies"""
     def __init__(self, system, precomputedArray, T, ionChargeType,
@@ -1411,7 +1411,7 @@ class run(object):
         return None
 
 
-class analysis(object):
+class Analysis(object):
     """Post-simulation analysis methods"""
     def __init__(self, materialInfo, nDim, speciesCount, nTraj, tFinal,
                  timeInterval, msdTFinal, trimLength, reprTime='ns',
@@ -1520,7 +1520,7 @@ class analysis(object):
             self.generateMSDAnalysisLogReport(msdData, speciesTypes,
                                               fileName, outdir)
 
-        returnMSDData = returnValues(msdData=msdData,
+        returnMSDData = ReturnValues(msdData=msdData,
                                      stdData=stdData,
                                      speciesTypes=speciesTypes,
                                      fileName=fileName)
@@ -1681,7 +1681,7 @@ class analysis(object):
             self.generateCOCMSDAnalysisLogReport(msdData, speciesTypes,
                                                  fileName, outdir)
 
-        returnMSDData = returnValues(msdData=msdData,
+        returnMSDData = ReturnValues(msdData=msdData,
                                      stdData=stdData,
                                      speciesTypes=speciesTypes,
                                      fileName=fileName)
@@ -1999,7 +1999,7 @@ class analysis(object):
         return None
 
 
-class returnValues(object):
+class ReturnValues(object):
     """dummy class to return objects from methods \
         defined inside other classes"""
     def __init__(self, **kwargs):

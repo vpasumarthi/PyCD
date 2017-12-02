@@ -3,7 +3,7 @@
 import numpy as np
 import yaml
 
-from PyCT.core import material, neighbors, system
+from PyCT.core import Material, Neighbors, System
 
 
 def materialSetup(inputDirectoryPath, systemSize, pbc, generateHopNeighborList,
@@ -24,13 +24,13 @@ def materialSetup(inputDirectoryPath, systemSize, pbc, generateHopNeighborList,
     inputCoorFileLocation = inputDirectoryPath.joinpath(
                                                     inputCoordinateFileName)
     params.update({'inputCoorFileLocation': inputCoorFileLocation})
-    configParams = returnValues(params)
+    configParams = ReturnValues(params)
 
     # Build material object files
-    materialInfo = material(configParams)
+    materialInfo = Material(configParams)
 
     # Build neighbors object files
-    materialNeighbors = neighbors(materialInfo, systemSize, pbc)
+    materialNeighbors = Neighbors(materialInfo, systemSize, pbc)
 
     # generate neighbor list
     if generateHopNeighborList:
@@ -63,7 +63,7 @@ def materialSetup(inputDirectoryPath, systemSize, pbc, generateHopNeighborList,
         nmax = configParams.nmax
         kmax = configParams.kmax
 
-        materialSystem = system(materialInfo, materialNeighbors,
+        materialSystem = System(materialInfo, materialNeighbors,
                                 hopNeighborList, cumulativeDisplacementList,
                                 speciesCount, alpha, nmax, kmax)
         precomputedArray = materialSystem.ewaldSumSetup(inputDirectoryPath)
@@ -73,7 +73,7 @@ def materialSetup(inputDirectoryPath, systemSize, pbc, generateHopNeighborList,
     return None
 
 
-class returnValues(object):
+class ReturnValues(object):
     """dummy class to return objects from methods \
         defined inside other classes"""
     def __init__(self, inputdict):

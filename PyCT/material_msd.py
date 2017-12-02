@@ -3,7 +3,7 @@
 import numpy as np
 import yaml
 
-from PyCT.core import material, analysis
+from PyCT.core import Material, Analysis
 
 
 def materialMSD(dstPath):
@@ -35,12 +35,12 @@ def materialMSD(dstPath):
     inputCoorFileLocation = inputDirectoryPath.joinpath(
                                                     inputCoordinateFileName)
     params.update({'inputCoorFileLocation': inputCoorFileLocation})
-    materialParameters = returnValues(params)
+    materialParameters = ReturnValues(params)
 
     # Build material object files
-    materialInfo = material(materialParameters)
+    materialInfo = Material(materialParameters)
 
-    materialAnalysis = analysis(
+    materialAnalysis = Analysis(
         materialInfo, simParams['nDim'], simParams['speciesCount'],
         simParams['nTraj'], simParams['tFinal'], simParams['timeInterval'],
         simParams['msdTFinal'], simParams['trimLength'], simParams['reprTime'],
@@ -57,7 +57,7 @@ def materialMSD(dstPath):
     return None
 
 
-class returnValues(object):
+class ReturnValues(object):
     """dummy class to return objects from methods \
         defined inside other classes"""
     def __init__(self, inputdict):
