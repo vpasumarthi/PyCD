@@ -5,46 +5,46 @@ import os
 import numpy as np
 
 
-def readPOSCAR(inputFilePath):
-    latticeMatrix = np.zeros((3, 3))
-    latticeParameterIndex = 0
-    latticeParametersLineRange = range(3, 6)
-    inputFile = open(inputFilePath, 'r')
-    for lineIndex, line in enumerate(inputFile):
-        lineNumber = lineIndex + 1
-        if lineNumber in latticeParametersLineRange:
-            latticeMatrix[latticeParameterIndex, :] = np.fromstring(line,
+def read_poscar(input_file_path):
+    lattice_matrix = np.zeros((3, 3))
+    lattice_parameter_index = 0
+    lattice_parameters_line_range = range(3, 6)
+    input_file = open(input_file_path, 'r')
+    for line_index, line in enumerate(input_file):
+        line_number = line_index + 1
+        if line_number in lattice_parameters_line_range:
+            lattice_matrix[lattice_parameter_index, :] = np.fromstring(line,
                                                                     sep=' ')
-            latticeParameterIndex += 1
-        elif lineNumber == 6:
-            elementTypes = line.split()
-        elif lineNumber == 7:
-            nElementsPerUnitCell = np.fromstring(line, dtype=int, sep=' ')
-            totalElementsPerUnitCell = nElementsPerUnitCell.sum()
-            fractionalUnitCellCoords = np.zeros((totalElementsPerUnitCell, 3))
-            elementIndex = 0
-        elif lineNumber > 8 and elementIndex < totalElementsPerUnitCell:
-            fractionalUnitCellCoords[elementIndex, :] = np.fromstring(line,
+            lattice_parameter_index += 1
+        elif line_number == 6:
+            element_types = line.split()
+        elif line_number == 7:
+            n_elements_per_unit_cell = np.fromstring(line, dtype=int, sep=' ')
+            total_elements_per_unit_cell = n_elements_per_unit_cell.sum()
+            fractional_unit_cell_coords = np.zeros((total_elements_per_unit_cell, 3))
+            element_index = 0
+        elif line_number > 8 and element_index < total_elements_per_unit_cell:
+            fractional_unit_cell_coords[element_index, :] = np.fromstring(line,
                                                                       sep=' ')
-            elementIndex += 1
-    inputFile.close()
-    output = np.array([latticeMatrix, elementTypes, nElementsPerUnitCell,
-                       fractionalUnitCellCoords], dtype=object)
+            element_index += 1
+    input_file.close()
+    output = np.array([lattice_matrix, element_types, n_elements_per_unit_cell,
+                       fractional_unit_cell_coords], dtype=object)
     return output
 
 
 def generateQuantumIndices(system_size, systemElementIndex,
-                           nElementsPerUnitCell):
+                           n_elements_per_unit_cell):
     """Returns the quantum indices of the element"""
     quantumIndices = np.zeros(5, dtype=int)  # [0] * 5
-    totalElementsPerUnitCell = nElementsPerUnitCell.sum()
-    unitcellElementIndex = systemElementIndex % totalElementsPerUnitCell
-    quantumIndices[3] = np.where(np.cumsum(nElementsPerUnitCell)
+    total_elements_per_unit_cell = n_elements_per_unit_cell.sum()
+    unitcellElementIndex = systemElementIndex % total_elements_per_unit_cell
+    quantumIndices[3] = np.where(np.cumsum(n_elements_per_unit_cell)
                                  >= (unitcellElementIndex + 1))[0][0]
     quantumIndices[4] = (unitcellElementIndex
-                         - nElementsPerUnitCell[:quantumIndices[3]].sum())
+                         - n_elements_per_unit_cell[:quantumIndices[3]].sum())
     nFilledUnitCells = ((systemElementIndex - unitcellElementIndex)
-                        / totalElementsPerUnitCell)
+                        / total_elements_per_unit_cell)
     for index in range(3):
         quantumIndices[index] = nFilledUnitCells / system_size[index+1:].prod()
         nFilledUnitCells -= quantumIndices[index] * system_size[index+1:].prod()
@@ -58,14 +58,14 @@ def generateUniquePathways(inputFileLocation, cutoffDistKey, neighborCutoff,
                            printEquivalency=0, desiredCoordinateParameters={}):
     """ generate unique pathways for the given set of element types"""
     # define input parameters
-    [latticeMatrix, elementTypes, nElementsPerUnitCell,
-     fractionalUnitCellCoords] = readPOSCAR(inputFileLocation)
-    nElementTypes = len(elementTypes)
-    totalElementsPerUnitCell = nElementsPerUnitCell.sum()
+    [lattice_matrix, element_types, n_elements_per_unit_cell,
+     fractional_unit_cell_coords] = read_poscar(inputFileLocation)
+    nElementTypes = len(element_types)
+    total_elements_per_unit_cell = n_elements_per_unit_cell.sum()
     elementTypeIndexList = np.repeat(np.arange(nElementTypes),
-                                     nElementsPerUnitCell)
+                                     n_elements_per_unit_cell)
     [centerElementType, neighborElementType] = cutoffDistKey.split(':')
-    centerSiteElementTypeIndex = elementTypes.index(centerElementType)
+    centerSiteElementTypeIndex = element_types.index(centerElementType)
     neighborCutoffDistLimits = [0, neighborCutoff]
     bridgeCutoffDistLimits = [0, bridgeCutoff]
     if roundLatticeParameters:
@@ -74,11 +74,11 @@ def generateUniquePathways(inputFileLocation, cutoffDistKey, neighborCutoff,
 
     # sort element wise coordinates in ascending order of z-coordinate
     startIndex = 0
-    for elementIndex in range(nElementTypes):
-        endIndex = startIndex + nElementsPerUnitCell[elementIndex]
-        elementUnitCellCoords = fractionalUnitCellCoords[elementTypeIndexList
-                                                         == elementIndex]
-        fractionalUnitCellCoords[startIndex:endIndex] = elementUnitCellCoords[
+    for element_index in range(nElementTypes):
+        endIndex = startIndex + n_elements_per_unit_cell[element_index]
+        elementUnitCellCoords = fractional_unit_cell_coords[elementTypeIndexList
+                                                         == element_index]
+        fractional_unit_cell_coords[startIndex:endIndex] = elementUnitCellCoords[
                                         elementUnitCellCoords[:, 2].argsort()]
         startIndex = endIndex
 
@@ -101,38 +101,38 @@ def generateUniquePathways(inputFileLocation, cutoffDistKey, neighborCutoff,
 
     # generate list of element indices to avoid during bridge calculations
     if avoidElementType:
-        avoidElementTypeIndex = elementTypes.index(avoidElementType)
+        avoidElementTypeIndex = element_types.index(avoidElementType)
         systemElementIndexOffsetArray = np.repeat(
-                            np.arange(0, totalElementsPerUnitCell * numCells,
-                                      totalElementsPerUnitCell),
-                            nElementsPerUnitCell[centerSiteElementTypeIndex])
+                            np.arange(0, total_elements_per_unit_cell * numCells,
+                                      total_elements_per_unit_cell),
+                            n_elements_per_unit_cell[centerSiteElementTypeIndex])
         avoidElementIndices = (
-            np.tile(nElementsPerUnitCell[:avoidElementTypeIndex].sum()
+            np.tile(n_elements_per_unit_cell[:avoidElementTypeIndex].sum()
                     + np.arange(0,
-                                nElementsPerUnitCell[avoidElementTypeIndex]),
+                                n_elements_per_unit_cell[avoidElementTypeIndex]),
                     numCells)
             + systemElementIndexOffsetArray)
     else:
         avoidElementIndices = []
 
     # extract center site fractional coordinates
-    numCenterElements = nElementsPerUnitCell[centerSiteElementTypeIndex]
-    centerSiteIndices = (nElementsPerUnitCell[
+    numCenterElements = n_elements_per_unit_cell[centerSiteElementTypeIndex]
+    centerSiteIndices = (n_elements_per_unit_cell[
                                             :centerSiteElementTypeIndex].sum()
                          + np.arange(numCenterElements))
-    centerSiteFractCoords = fractionalUnitCellCoords[centerSiteIndices]
+    centerSiteFractCoords = fractional_unit_cell_coords[centerSiteIndices]
 
     # generate fractional coordinates for neighbor sites
     # and all system elements
     neighborSiteFractCoords = np.zeros((numCells * numCenterElements, 3))
-    systemFractCoords = np.zeros((numCells * totalElementsPerUnitCell, 3))
+    systemFractCoords = np.zeros((numCells * total_elements_per_unit_cell, 3))
     for iCell in range(numCells):
         neighborSiteFractCoords[(iCell * numCenterElements):(
                                         (iCell + 1) * numCenterElements)] \
             = (centerSiteFractCoords + unitcellTranslationalCoords[iCell])
-        systemFractCoords[(iCell * totalElementsPerUnitCell):(
-                                    (iCell + 1) * totalElementsPerUnitCell)] \
-            = (fractionalUnitCellCoords + unitcellTranslationalCoords[iCell])
+        systemFractCoords[(iCell * total_elements_per_unit_cell):(
+                                    (iCell + 1) * total_elements_per_unit_cell)] \
+            = (fractional_unit_cell_coords + unitcellTranslationalCoords[iCell])
 
     # generate bridge neighbor list
     bridgeNeighborList = np.empty(numCenterElements, dtype=object)
@@ -145,7 +145,7 @@ def generateUniquePathways(inputFileLocation, cutoffDistKey, neighborCutoff,
                 latticeDirection = (neighborSiteFractCoord
                                     - centerSiteFractCoord)
                 neighborDisplacementVector = np.dot(latticeDirection[None, :],
-                                                    latticeMatrix)
+                                                    lattice_matrix)
                 displacement = np.linalg.norm(neighborDisplacementVector)
                 if (bridgeCutoffDistLimits[0]
                         < displacement
@@ -176,7 +176,7 @@ def generateUniquePathways(inputFileLocation, cutoffDistKey, neighborCutoff,
                                                     neighborSiteFractCoords):
             latticeDirection = neighborSiteFractCoord - centerSiteFractCoord
             neighborDisplacementVector = np.dot(latticeDirection[None, :],
-                                                latticeMatrix)
+                                                lattice_matrix)
             displacement = np.linalg.norm(neighborDisplacementVector)
             if (neighborCutoffDistLimits[0]
                     < displacement
@@ -228,7 +228,7 @@ def generateUniquePathways(inputFileLocation, cutoffDistKey, neighborCutoff,
                                               - iCenterNeighborFractCoord)
                     bridgeneighborDisplacementVector = np.dot(
                                             bridgelatticeDirection[None, :],
-                                            latticeMatrix)
+                                            lattice_matrix)
                     bridgedisplacement = np.linalg.norm(
                                             bridgeneighborDisplacementVector)
                     if (bridgeCutoffDistLimits[0]
@@ -239,10 +239,10 @@ def generateUniquePathways(inputFileLocation, cutoffDistKey, neighborCutoff,
                         bridgeSiteQuantumIndices = (
                                 generateQuantumIndices(system_size,
                                                        bridgeSiteIndex,
-                                                       nElementsPerUnitCell))
+                                                       n_elements_per_unit_cell))
                         bridgeSiteType += (
                                 (', ' if bridgeSiteType != '' else '')
-                                + elementTypes[bridgeSiteQuantumIndices[3]])
+                                + element_types[bridgeSiteQuantumIndices[3]])
                 if not bridgeSiteExists:
                     bridgeSiteType = 'space'
                 iBridgeList.append(bridgeSiteType)

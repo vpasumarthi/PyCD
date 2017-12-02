@@ -12,13 +12,13 @@ import pdb
 
 import numpy as np
 
-from PyCT.io import readPOSCAR
+from PyCT.io import read_poscar
 
 
 class Material(object):
     """Defines the properties and structure of working material
     :param str name: A string representing the material name
-    :param list elementTypes: list of chemical elements
+    :param list element_types: list of chemical elements
     :param dict species_to_element_type_map: list of charge carrier species
     :param unitcellCoords: positions of all elements in the unit cell
     :type unitcellCoords: np.array (nx3)
@@ -41,7 +41,7 @@ class Material(object):
     :param float epsilon: Dielectric constant of the material
 
     The additional attributes are:
-        * **nElementsPerUnitCell** (np.array (n)): element-type wise
+        * **n_elements_per_unit_cell** (np.array (n)): element-type wise
                             total number of elements in a unit cell
         * **siteList** (list): list of elements that act as sites
         * **elementTypeToSpeciesMap** (dict): dictionary of element
@@ -50,7 +50,7 @@ class Material(object):
                       element mapping with elements excluding empty_species_type
         * **hopElementTypes** (dict): dictionary of species to hopping element
                                       types separated by element_type_delimiter
-        * **latticeMatrix** (np.array (3x3): lattice cell matrix
+        * **lattice_matrix** (np.array (3x3): lattice cell matrix
     """
     def __init__(self, material_parameters):
         # CONSTANTS
@@ -85,13 +85,13 @@ class Material(object):
         self.K2AUTEMP = 1 / self.AUTEMPERATURE
 
         # Read Input POSCAR
-        [self.latticeMatrix, self.elementTypes, self.nElementsPerUnitCell,
-         self.totalElementsPerUnitCell, fractionalUnitCellCoords] = (
-                        readPOSCAR(material_parameters.input_coord_file_location))
-        self.latticeMatrix *= self.ANG2BOHR
-        self.nElementTypes = len(self.elementTypes)
+        [self.lattice_matrix, self.element_types, self.n_elements_per_unit_cell,
+         self.total_elements_per_unit_cell, fractional_unit_cell_coords] = (
+                        read_poscar(material_parameters.input_coord_file_location))
+        self.lattice_matrix *= self.ANG2BOHR
+        self.nElementTypes = len(self.element_types)
         self.elementTypeIndexList = np.repeat(np.arange(self.nElementTypes),
-                                              self.nElementsPerUnitCell)
+                                              self.n_elements_per_unit_cell)
 
         self.name = material_parameters.name
         self.species_types = material_parameters.species_types[:]
@@ -101,27 +101,27 @@ class Material(object):
                                     material_parameters.species_to_element_type_map)
 
         # Initialization
-        self.fractionalUnitCellCoords = np.zeros(
-                                                fractionalUnitCellCoords.shape)
+        self.fractional_unit_cell_coords = np.zeros(
+                                                fractional_unit_cell_coords.shape)
         self.unitcellClassList = []
         startIndex = 0
         # Reorder element-wise unitcell coordinates in ascending order
         # of z-coordinate
         for elementTypeIndex in range(self.nElementTypes):
-            elementFractUnitCellCoords = fractionalUnitCellCoords[
+            elementFractUnitCellCoords = fractional_unit_cell_coords[
                                 self.elementTypeIndexList == elementTypeIndex]
-            endIndex = startIndex + self.nElementsPerUnitCell[elementTypeIndex]
-            self.fractionalUnitCellCoords[startIndex:endIndex] = (
+            endIndex = startIndex + self.n_elements_per_unit_cell[elementTypeIndex]
+            self.fractional_unit_cell_coords[startIndex:endIndex] = (
                             elementFractUnitCellCoords[
                                 elementFractUnitCellCoords[:, 2].argsort()])
-            elementType = self.elementTypes[elementTypeIndex]
+            elementType = self.element_types[elementTypeIndex]
             self.unitcellClassList.extend(
                     [material_parameters.class_list[elementType][index]
                      for index in elementFractUnitCellCoords[:, 2].argsort()])
             startIndex = endIndex
 
-        self.unitcellCoords = np.dot(self.fractionalUnitCellCoords,
-                                     self.latticeMatrix)
+        self.unitcellCoords = np.dot(self.fractional_unit_cell_coords,
+                                     self.lattice_matrix)
         self.charge_types = deepcopy(material_parameters.charge_types)
 
         self.vn = material_parameters.vn / self.SEC2AUTIME
@@ -158,7 +158,7 @@ class Material(object):
         self.dielectric_constant = material_parameters.dielectric_constant
 
         self.numClasses = [len(set(material_parameters.class_list[elementType]))
-                           for elementType in self.elementTypes]
+                           for elementType in self.element_types]
         self.delG0_shift_list = {key: [[(value[centerSiteClassIndex][index]
                                        * self.EV2J * self.J2HARTREE)
                                       for index in range(
@@ -178,7 +178,7 @@ class Material(object):
         del self.nonEmptySpeciesToElementTypeMap[self.empty_species_type]
 
         self.elementTypeToSpeciesMap = {}
-        for elementType in self.elementTypes:
+        for elementType in self.element_types:
             speciesList = []
             for speciesTypeKey in self.nonEmptySpeciesToElementTypeMap.keys():
                 if elementType in (
@@ -214,23 +214,23 @@ class Material(object):
                                  elementTypeIndices).nonzero()[0]
         unitcellElementCoords = self.unitcellCoords[extractIndices]
         numCells = cellSize.prod()
-        nSitesPerUnitCell = self.nElementsPerUnitCell[elementTypeIndices].sum()
+        nSitesPerUnitCell = self.n_elements_per_unit_cell[elementTypeIndices].sum()
         unitcellElementIndexList = np.arange(nSitesPerUnitCell)
         unitcellElementTypeIndex = np.reshape(
                 np.concatenate((
                     np.asarray([[elementTypeIndex] *
-                                self.nElementsPerUnitCell[elementTypeIndex]
+                                self.n_elements_per_unit_cell[elementTypeIndex]
                                 for elementTypeIndex in elementTypeIndices]))),
                 (nSitesPerUnitCell, 1))
         unitCellElementTypeElementIndexList = np.reshape(
                     np.concatenate((
-                        [np.arange(self.nElementsPerUnitCell[elementTypeIndex])
+                        [np.arange(self.n_elements_per_unit_cell[elementTypeIndex])
                          for elementTypeIndex in elementTypeIndices])),
                     (nSitesPerUnitCell, 1))
         # Initialization
         cellCoordinates = np.zeros((numCells * nSitesPerUnitCell, 3))
         # Definition format of Quantum Indices
-        # quantumIndex = [unitCellIndex, elementTypeIndex, elementIndex]
+        # quantumIndex = [unitCellIndex, elementTypeIndex, element_index]
         quantumIndexList = np.zeros((numCells * nSitesPerUnitCell, 5),
                                     dtype=int)
         systemElementIndexList = np.zeros(numCells * nSitesPerUnitCell,
@@ -242,7 +242,7 @@ class Material(object):
                     startIndex = iUnitCell * nSitesPerUnitCell
                     endIndex = startIndex + nSitesPerUnitCell
                     translationVector = np.dot([xIndex, yIndex, zIndex],
-                                               self.latticeMatrix)
+                                               self.lattice_matrix)
                     cellCoordinates[startIndex:endIndex] = (
                                     unitcellElementCoords + translationVector)
                     systemElementIndexList[startIndex:endIndex] = (
@@ -278,7 +278,7 @@ class Neighbors(object):
         # total number of unit cells
         self.numCells = self.system_size.prod()
         self.numSystemElements = (self.numCells
-                                  * self.material.totalElementsPerUnitCell)
+                                  * self.material.total_elements_per_unit_cell)
 
         # generate all sites in the system
         self.elementTypeIndices = range(self.material.nElementTypes)
@@ -297,7 +297,7 @@ class Neighbors(object):
                     self.systemTranslationalVectorList[index] = np.dot(
                         np.multiply(np.array([xOffset, yOffset, zOffset]),
                                     system_size),
-                        self.material.latticeMatrix)
+                        self.material.lattice_matrix)
                     index += 1
 
     def generateSystemElementIndex(self, system_size, quantumIndices):
@@ -310,23 +310,23 @@ class Neighbors(object):
         #     'System size should be positive in all dimensions'
         # assert all(quantumIndex >= 0 for quantumIndex in quantumIndices), \
         #     'Quantum Indices cannot be negative'
-        # assert quantumIndices[-1] < self.material.nElementsPerUnitCell[
+        # assert quantumIndices[-1] < self.material.n_elements_per_unit_cell[
         #                                             quantumIndices[-2]], \
         #                     'Element Index exceed number of elements of the \
         #                     specified element type'
         # assert np.all(quantumIndices[:3] < system_size), \
         #                     'Unit cell indices exceed the given system size'
         unitCellIndex = np.copy(quantumIndices[:3])
-        [elementTypeIndex, elementIndex] = quantumIndices[-2:]
-        systemElementIndex = elementIndex + self.material.nElementsPerUnitCell[
+        [elementTypeIndex, element_index] = quantumIndices[-2:]
+        systemElementIndex = element_index + self.material.n_elements_per_unit_cell[
                                                     :elementTypeIndex].sum()
         n_dim = len(system_size)
         for index in range(n_dim):
             if index == 0:
-                systemElementIndex += (self.material.totalElementsPerUnitCell
+                systemElementIndex += (self.material.total_elements_per_unit_cell
                                        * unitCellIndex[n_dim-1-index])
             else:
-                systemElementIndex += (self.material.totalElementsPerUnitCell
+                systemElementIndex += (self.material.total_elements_per_unit_cell
                                        * unitCellIndex[n_dim-1-index]
                                        * system_size[-index:].prod())
         return systemElementIndex
@@ -336,19 +336,19 @@ class Neighbors(object):
         # assert systemElementIndex >= 0, \
         #     'System Element Index cannot be negative'
         # assert systemElementIndex < (
-        #     system_size.prod() * self.material.totalElementsPerUnitCell), \
+        #     system_size.prod() * self.material.total_elements_per_unit_cell), \
         #     'System Element Index out of range for the given system size'
         quantumIndices = np.zeros(5, dtype=int)  # [0] * 5
         unitcellElementIndex = (systemElementIndex
-                                % self.material.totalElementsPerUnitCell)
+                                % self.material.total_elements_per_unit_cell)
         quantumIndices[3] = np.where(
-                                    self.material.nElementsPerUnitCell.cumsum()
+                                    self.material.n_elements_per_unit_cell.cumsum()
                                     >= (unitcellElementIndex + 1))[0][0]
         quantumIndices[4] = (unitcellElementIndex
-                             - self.material.nElementsPerUnitCell[
+                             - self.material.n_elements_per_unit_cell[
                                                     :quantumIndices[3]].sum())
         nFilledUnitCells = ((systemElementIndex - unitcellElementIndex)
-                            / self.material.totalElementsPerUnitCell)
+                            / self.material.total_elements_per_unit_cell)
         for index in range(3):
             quantumIndices[index] = (nFilledUnitCells
                                      / system_size[index+1:].prod())
@@ -362,11 +362,11 @@ class Neighbors(object):
         quantumIndices = self.generateQuantumIndices(system_size,
                                                      systemElementIndex)
         unitcellTranslationVector = np.dot(quantumIndices[:3],
-                                           self.material.latticeMatrix)
+                                           self.material.lattice_matrix)
         coordinates = (unitcellTranslationVector
                        + self.material.unitcellCoords[
                            quantumIndices[4]
-                           + self.material.nElementsPerUnitCell[
+                           + self.material.n_elements_per_unit_cell[
                                                 :quantumIndices[3]].sum()])
         return coordinates
 
@@ -517,28 +517,28 @@ class Neighbors(object):
 
         hop_neighbor_list = {}
         tolDist = self.material.neighbor_cutoff_dist_tol
-        elementTypes = self.material.elementTypes[:]
+        element_types = self.material.element_types[:]
 
         for cutoffDistKey in self.material.neighbor_cutoff_dist.keys():
             cutoffDistList = self.material.neighbor_cutoff_dist[cutoffDistKey][:]
             neighborListCutoffDistKey = []
             [centerElementType, _] = cutoffDistKey.split(
                                             self.material.element_type_delimiter)
-            centerSiteElementTypeIndex = elementTypes.index(centerElementType)
+            centerSiteElementTypeIndex = element_types.index(centerElementType)
             localBulkSites = self.material.generateSites(
                                                     self.elementTypeIndices,
                                                     self.system_size)
             systemElementIndexOffsetArray = (
                 np.repeat(np.arange(0,
-                                    (self.material.totalElementsPerUnitCell
+                                    (self.material.total_elements_per_unit_cell
                                      * self.numCells),
-                                    self.material.totalElementsPerUnitCell),
-                          self.material.nElementsPerUnitCell[
+                                    self.material.total_elements_per_unit_cell),
+                          self.material.n_elements_per_unit_cell[
                                                 centerSiteElementTypeIndex]))
             centerSiteIndices = neighborSiteIndices = (
-                np.tile((self.material.nElementsPerUnitCell[
+                np.tile((self.material.n_elements_per_unit_cell[
                                             :centerSiteElementTypeIndex].sum()
-                         + np.arange(0, self.material.nElementsPerUnitCell[
+                         + np.arange(0, self.material.n_elements_per_unit_cell[
                                                 centerSiteElementTypeIndex])),
                         self.numCells)
                 + systemElementIndexOffsetArray)
@@ -601,9 +601,9 @@ class Neighbors(object):
         numBasalNeighbors = 3
         numCNeighbors = 1
         numNeighbors = numBasalNeighbors + numCNeighbors
-        nElementsPerUnitCell = self.material.nElementsPerUnitCell[
+        n_elements_per_unit_cell = self.material.n_elements_per_unit_cell[
                                                             elementTypeIndex]
-        neighborElementSiteIndices = np.zeros((nElementsPerUnitCell, 4), int)
+        neighborElementSiteIndices = np.zeros((n_elements_per_unit_cell, 4), int)
         for iNeighbor in range(numNeighbors):
             if iNeighbor < numBasalNeighbors:
                 neighborElementSiteIndices[:, iNeighbor] = \
@@ -613,14 +613,14 @@ class Neighbors(object):
                                                     cNeighborElementSiteIndices
         systemElementIndexOffsetArray = (
             np.repeat(np.arange(0,
-                                (self.material.totalElementsPerUnitCell
+                                (self.material.total_elements_per_unit_cell
                                  * self.numCells),
-                                self.material.totalElementsPerUnitCell),
-                      self.material.nElementsPerUnitCell[elementTypeIndex]))
+                                self.material.total_elements_per_unit_cell),
+                      self.material.n_elements_per_unit_cell[elementTypeIndex]))
         centerSiteSEIndices = (
-            np.tile(self.material.nElementsPerUnitCell[:elementTypeIndex].sum()
+            np.tile(self.material.n_elements_per_unit_cell[:elementTypeIndex].sum()
                     + np.arange(0,
-                                self.material.nElementsPerUnitCell[
+                                self.material.n_elements_per_unit_cell[
                                                             elementTypeIndex]),
                     self.numCells)
             + systemElementIndexOffsetArray)
@@ -694,14 +694,14 @@ class Neighbors(object):
                                                     centerSiteQuantumIndices)
         systemElementIndexOffsetArray = np.repeat(
                         np.arange(0,
-                                  (self.material.totalElementsPerUnitCell
+                                  (self.material.total_elements_per_unit_cell
                                    * self.numCells),
-                                  self.material.totalElementsPerUnitCell),
-                        self.material.nElementsPerUnitCell[elementTypeIndex])
+                                  self.material.total_elements_per_unit_cell),
+                        self.material.n_elements_per_unit_cell[elementTypeIndex])
         neighborSiteSEIndices = (
-            np.tile(self.material.nElementsPerUnitCell[:elementTypeIndex].sum()
+            np.tile(self.material.n_elements_per_unit_cell[:elementTypeIndex].sum()
                     + np.arange(0,
-                                self.material.nElementsPerUnitCell[
+                                self.material.n_elements_per_unit_cell[
                                                             elementTypeIndex]),
                     self.numCells)
             + systemElementIndexOffsetArray)
@@ -765,14 +765,14 @@ class Neighbors(object):
 
         systemElementIndexOffsetArray = np.repeat(
                         np.arange(0,
-                                  (self.material.totalElementsPerUnitCell
+                                  (self.material.total_elements_per_unit_cell
                                    * self.numCells),
-                                  self.material.totalElementsPerUnitCell),
-                        self.material.nElementsPerUnitCell[elementTypeIndex])
+                                  self.material.total_elements_per_unit_cell),
+                        self.material.n_elements_per_unit_cell[elementTypeIndex])
         neighborSiteSEIndices = (
-            np.tile(self.material.nElementsPerUnitCell[:elementTypeIndex].sum()
+            np.tile(self.material.n_elements_per_unit_cell[:elementTypeIndex].sum()
                     + np.arange(0,
-                                self.material.nElementsPerUnitCell[
+                                self.material.n_elements_per_unit_cell[
                                                             elementTypeIndex]),
                     self.numCells)
             + systemElementIndexOffsetArray)
@@ -833,14 +833,14 @@ class Neighbors(object):
 
         systemElementIndexOffsetArray = np.repeat(
                         np.arange(0,
-                                  (self.material.totalElementsPerUnitCell
+                                  (self.material.total_elements_per_unit_cell
                                    * self.numCells),
-                                  self.material.totalElementsPerUnitCell),
-                        self.material.nElementsPerUnitCell[elementTypeIndex])
+                                  self.material.total_elements_per_unit_cell),
+                        self.material.n_elements_per_unit_cell[elementTypeIndex])
         centerSiteSEIndices = (
-            np.tile(self.material.nElementsPerUnitCell[:elementTypeIndex].sum()
+            np.tile(self.material.n_elements_per_unit_cell[:elementTypeIndex].sum()
                     + np.arange(0,
-                                self.material.nElementsPerUnitCell[
+                                self.material.n_elements_per_unit_cell[
                                                             elementTypeIndex]),
                     self.numCells)
             + systemElementIndexOffsetArray)
@@ -943,7 +943,7 @@ class System(object):
 
         # variables for ewald sum
         self.translationalMatrix = np.multiply(self.system_size,
-                                               self.material.latticeMatrix)
+                                               self.material.lattice_matrix)
         self.systemVolume = abs(np.dot(self.translationalMatrix[0],
                                        np.cross(self.translationalMatrix[1],
                                                 self.translationalMatrix[2])))
@@ -979,22 +979,22 @@ class System(object):
             speciesSiteElementList = self.material.species_to_element_type_map[
                                                                 speciesType]
             speciesSiteElementTypeIndexList = [
-                        self.material.elementTypes.index(speciesSiteElement)
+                        self.material.element_types.index(speciesSiteElement)
                         for speciesSiteElement in speciesSiteElementList]
             speciesSiteIndices = []
             for speciesSiteElementTypeIndex in speciesSiteElementTypeIndexList:
                 systemElementIndexOffsetArray = np.repeat(
                     np.arange(0,
-                              (self.material.totalElementsPerUnitCell
+                              (self.material.total_elements_per_unit_cell
                                * self.numCells),
-                              self.material.totalElementsPerUnitCell),
-                    self.material.nElementsPerUnitCell[
+                              self.material.total_elements_per_unit_cell),
+                    self.material.n_elements_per_unit_cell[
                                                 speciesSiteElementTypeIndex])
                 siteIndices = (
-                    np.tile(self.material.nElementsPerUnitCell[
+                    np.tile(self.material.n_elements_per_unit_cell[
                                             :speciesSiteElementTypeIndex].sum()
                             + np.arange(0,
-                                        self.material.nElementsPerUnitCell[
+                                        self.material.n_elements_per_unit_cell[
                                             speciesSiteElementTypeIndex]),
                             self.numCells)
                     + systemElementIndexOffsetArray)
@@ -1009,7 +1009,7 @@ class System(object):
         # generate lattice charge list
         unitcellChargeList = np.array(
                 [self.material.charge_types[ion_charge_type][
-                    self.material.elementTypes[elementTypeIndex]]
+                    self.material.element_types[elementTypeIndex]]
                  for elementTypeIndex in self.material.elementTypeIndexList])
         chargeList = np.tile(unitcellChargeList, self.numCells)[:, np.newaxis]
 
@@ -1111,9 +1111,9 @@ class Run(object):
 
         self.system_size = self.system.system_size
 
-        # nElementsPerUnitCell
+        # n_elements_per_unit_cell
         self.headStart_nElementsPerUnitCellCumSum = [
-                self.material.nElementsPerUnitCell[:siteElementTypeIndex].sum()
+                self.material.n_elements_per_unit_cell[:siteElementTypeIndex].sum()
                 for siteElementTypeIndex in self.neighbors.elementTypeIndices]
 
         # speciesTypeList
@@ -1147,7 +1147,7 @@ class Run(object):
                                         self.material.element_type_delimiter)[0]
             speciesTypeIndex = self.material.species_types.index(
                 self.material.elementTypeToSpeciesMap[centerElementType][0])
-            centerSiteElementTypeIndex = self.material.elementTypes.index(
+            centerSiteElementTypeIndex = self.material.element_types.index(
                                                             centerElementType)
             for hopDistTypeIndex in range(self.lenHopDistTypeList[
                                                         hopElementTypeIndex]):
@@ -1264,11 +1264,11 @@ class Run(object):
                     siteElementTypeIndex = self.nProcSiteElementTypeIndexList[
                                                                         iProc]
                     rowIndex = (speciesSiteSystemElementIndex
-                                // self.material.totalElementsPerUnitCell
-                                * self.material.nElementsPerUnitCell[
+                                // self.material.total_elements_per_unit_cell
+                                * self.material.n_elements_per_unit_cell[
                                                         siteElementTypeIndex]
                                 + speciesSiteSystemElementIndex
-                                % self.material.totalElementsPerUnitCell
+                                % self.material.total_elements_per_unit_cell
                                 - self.headStart_nElementsPerUnitCellCumSum[
                                                         siteElementTypeIndex])
                     for hopDistType in range(self.lenHopDistTypeList[
@@ -1876,7 +1876,7 @@ class Analysis(object):
                     systemTranslationalVectorList[index] = np.dot(
                         np.multiply(np.array([xOffset, yOffset, zOffset]),
                                     self.system_size),
-                        (self.material.latticeMatrix * self.distConversion))
+                        (self.material.lattice_matrix * self.distConversion))
                     index += 1
         if mean:
             meanDistance = np.zeros((self.n_traj, numPathStepsPerTraj))
