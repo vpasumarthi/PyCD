@@ -20,11 +20,11 @@ t_final: 1.0e-08
 time_interval: 1.0e-10
 
 # MSD parameters:
-displayErrorBars: 1
+display_error_bars: 1
 dstFileName: MSD.py
-msdTFinal: 10
-nDim: 3
+msd_t_final: 10
+n_dim: 3
 report: 1
-reprDist: angstrom
-reprTime: ns
-trimLength: 1
+repr_dist: angstrom
+repr_time: ns
+trim_length: 1

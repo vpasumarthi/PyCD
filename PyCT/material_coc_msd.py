@@ -7,10 +7,10 @@ import yaml
 from PyCT.core import Material, Analysis
 
 
-def materialCOCMSD(systemDirectoryPath, fileFormatIndex, system_size, pbc, nDim,
+def materialCOCMSD(systemDirectoryPath, fileFormatIndex, system_size, pbc, n_dim,
                    temp, ion_charge_type, species_charge_type, species_count,
-                   t_final, n_traj, time_interval, msdTFinal, trimLength,
-                   displayErrorBars, reprTime, reprDist, report):
+                   t_final, n_traj, time_interval, msd_t_final, trim_length,
+                   display_error_bars, repr_time, repr_dist, report):
 
     # Load material parameters
     configDirName = 'ConfigurationFiles'
@@ -28,10 +28,10 @@ def materialCOCMSD(systemDirectoryPath, fileFormatIndex, system_size, pbc, nDim,
                                          input_coordinate_file_name)
     params.update({'input_coord_file_location': input_coord_file_location})
     params.update({'fileFormatIndex': fileFormatIndex})
-    materialParameters = ReturnValues(params)
+    material_parameters = ReturnValues(params)
 
     # Build material object files
-    material_info = Material(materialParameters)
+    material_info = Material(material_parameters)
 
     # Change to working directory
     parentDir1 = 'SimulationFiles'
@@ -53,17 +53,17 @@ def materialCOCMSD(systemDirectoryPath, fileFormatIndex, system_size, pbc, nDim,
     else:
         os.chdir(workDirPath)
 
-        materialAnalysis = Analysis(material_info, nDim, species_count,
-                                    n_traj, t_final, time_interval, msdTFinal,
-                                    trimLength, reprTime, reprDist)
+        material_analysis = Analysis(material_info, n_dim, species_count,
+                                    n_traj, t_final, time_interval, msd_t_final,
+                                    trim_length, repr_time, repr_dist)
 
-        msdAnalysisData = materialAnalysis.computeCOCMSD(workDirPath, report)
-        msdData = msdAnalysisData.msdData
-        stdData = msdAnalysisData.stdData
-        speciesTypes = msdAnalysisData.speciesTypes
-        fileName = msdAnalysisData.fileName
-        materialAnalysis.generateCOCMSDPlot(msdData, stdData, displayErrorBars,
-                                            speciesTypes, fileName,
+        msd_analysis_data = material_analysis.computeCOCMSD(workDirPath, report)
+        msd_data = msd_analysis_data.msd_data
+        std_data = msd_analysis_data.std_data
+        species_types = msd_analysis_data.species_types
+        file_name = msd_analysis_data.file_name
+        material_analysis.generateCOCMSDPlot(msd_data, std_data, display_error_bars,
+                                            species_types, file_name,
                                             workDirPath)
 
 

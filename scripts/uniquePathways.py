@@ -53,7 +53,7 @@ def generateQuantumIndices(system_size, systemElementIndex,
 
 def generateUniquePathways(inputFileLocation, cutoffDistKey, neighborCutoff,
                            bridgeCutoff, outdir, pathwayPrec, equivalencyPrec,
-                           classList=[], avoidElementType='',
+                           class_list=[], avoidElementType='',
                            roundLatticeParameters={}, printPathwayList=0,
                            printEquivalency=0, desiredCoordinateParameters={}):
     """ generate unique pathways for the given set of element types"""
@@ -154,9 +154,9 @@ def generateUniquePathways(inputFileLocation, cutoffDistKey, neighborCutoff,
         bridgeNeighborList[centerSiteIndex] = np.asarray(iBridgeNeighborList)
 
     # initialize class pair list
-    if classList:
-        centerSiteClassList = classList[0]
-        neighborSiteClassList = np.tile(classList[1], numCells)
+    if class_list:
+        centerSiteClassList = class_list[0]
+        neighborSiteClassList = np.tile(class_list[1], numCells)
         classPairList = np.empty(numCenterElements, dtype=object)
 
     displacementVectorList = np.empty(numCenterElements, dtype=object)
@@ -170,7 +170,7 @@ def generateUniquePathways(inputFileLocation, cutoffDistKey, neighborCutoff,
         iLatticeDirectionList = []
         iDisplacements = []
         iBridgeList = []
-        if classList:
+        if class_list:
             iClassPairList = []
         for neighborSiteIndex, neighborSiteFractCoord in enumerate(
                                                     neighborSiteFractCoords):
@@ -212,7 +212,7 @@ def generateUniquePathways(inputFileLocation, cutoffDistKey, neighborCutoff,
                                                   desiredSystemSize), 3))
 
                 # determine class pair list
-                if classList:
+                if class_list:
                     iClassPairList.append(
                         str(centerSiteClassList[centerSiteIndex])
                         + ':' + str(neighborSiteClassList[neighborSiteIndex]))
@@ -253,14 +253,14 @@ def generateUniquePathways(inputFileLocation, cutoffDistKey, neighborCutoff,
         latticeDirectionList[centerSiteIndex] = np.asarray(
                                                         iLatticeDirectionList)
         displacementList[centerSiteIndex] = np.asarray(iDisplacements)
-        if classList:
+        if class_list:
             classPairList[centerSiteIndex] = np.asarray(iClassPairList)
 
     # determine irreducible form of lattice directions
     from fractions import gcd
     sortedLatticeDirectionList = np.empty(numCenterElements, dtype=object)
     sortedDisplacementList = np.empty(numCenterElements, dtype=object)
-    if classList:
+    if class_list:
         sortedClassPairList = np.empty(numCenterElements, dtype=object)
     sortedBridgeList = np.empty(numCenterElements, dtype=object)
     pathwayList = np.empty(numCenterElements, dtype=object)
@@ -271,7 +271,7 @@ def generateUniquePathways(inputFileLocation, cutoffDistKey, neighborCutoff,
         sortedBridgeList[iCenterElementIndex] = (
                         bridgeList[iCenterElementIndex][
                             displacementList[iCenterElementIndex].argsort()])
-        if classList:
+        if class_list:
             sortedClassPairList[iCenterElementIndex] = (
                         classPairList[iCenterElementIndex][
                             displacementList[iCenterElementIndex].argsort()])
@@ -303,7 +303,7 @@ def generateUniquePathways(inputFileLocation, cutoffDistKey, neighborCutoff,
         # print equivalency of all center sites with their
         # respective class reference site
         if printEquivalency:
-            if classList:
+            if class_list:
                 refIndex = (
                         np.argmax(centerSiteClassList
                                   == centerSiteClassList[iCenterElementIndex]))
@@ -315,7 +315,7 @@ def generateUniquePathways(inputFileLocation, cutoffDistKey, neighborCutoff,
                          equivalencyPrec))
 
         # generate center site pathway list
-        if classList:
+        if class_list:
             centerSitePathwayList = np.hstack((
                     np.round(sortedLatticeDirectionList[iCenterElementIndex],
                              pathwayPrec),

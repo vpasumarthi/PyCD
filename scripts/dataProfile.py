@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 
 def diffusionProfile(outdir, systemDirectoryPath, profilingSpeciesTypeIndex,
                      speciesCountList, ion_charge_type, species_charge_type, temp,
-                     t_final, time_interval, n_traj, msdTFinal, reprTime):
+                     t_final, time_interval, n_traj, msd_t_final, repr_time):
     profilingSpeciesList = speciesCountList[profilingSpeciesTypeIndex]
     profileLength = len(profilingSpeciesList)
     diffusivityProfileData = np.zeros((profileLength, 2))
@@ -26,9 +26,9 @@ def diffusionProfile(outdir, systemDirectoryPath, profilingSpeciesTypeIndex,
     parentDir2 = ('ion_charge_type=' + ion_charge_type
                   + '; species_charge_type=' + species_charge_type)
 
-    fileName = '%1.2E%s' % (msdTFinal, reprTime)
-    msdAnalysisLogFileName = ('MSD_Analysis' + ('_' if fileName else '')
-                              + fileName + '.log')
+    file_name = '%1.2E%s' % (msd_t_final, repr_time)
+    msdAnalysisLogFileName = ('MSD_Analysis' + ('_' if file_name else '')
+                              + file_name + '.log')
 
     for speciesIndex, nSpecies in enumerate(profilingSpeciesList):
         # Change to working directory

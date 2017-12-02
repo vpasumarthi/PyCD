@@ -1,14 +1,14 @@
 name: 'Fe2O3'
-speciesTypes: ['electron', 'hole']
-speciesChargeList:
+species_types: ['electron', 'hole']
+species_charge_list:
     'full': [-1, +1]
     'partial': [-0.5, +0.5]
-speciesToElementTypeMap:
+species_to_element_type_map:
     'electron': ['Fe']
     'empty': ['Fe', 'O']
     'hole': ['O']
 # multiples of elementary charge
-chargeTypes:
+charge_types:
     'full':
         'Fe': +3.0
         'O': -2.0
@@ -16,32 +16,32 @@ chargeTypes:
         'Fe': +1.6349
         'O': -1.0899
 # Basal: 2.971, C: 2.901 # Experimental
-neighborCutoffDist:
+neighbor_cutoff_dist:
     'Fe:Fe': [2.971, 2.901]
-neighborCutoffDistTol:
+neighbor_cutoff_dist_tol:
     'Fe:Fe': [0.002, 0.002]
 # Source: Kerisit et al., GCA 2006. DOI: 10.1016/j.gca.2005.12.021
 vn: 1.85E+13  # typical frequency for nuclear motion in (1/sec)
 # reorganization energy in eV
-lambdaValues:
+lambda_values:
     'Fe:Fe': [1.74533, 1.88683]
 # electronic coupling matrix element in eV
 VAB:
     'Fe:Fe': [0.184, 0.028]
-classList:
+class_list:
     'Fe': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
     'O': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
 # delG0_shift in eV
-delG0ShiftList:
+delG0_shift_list:
     'Fe:Fe': [[+0.0000, +0.0000, +0.0000, +0.0000]]
-elementTypeDelimiter: ':'
-emptySpeciesType: 'empty'
+element_type_delimiter: ':'
+empty_species_type: 'empty'
 siteIdentifier: '0'
 # Direction-averaged value of the static dielectric constant of the potential 
 # model used in KMC paper. Dielectric constant tensor obtained from METADISE.
 # Source: Kerisit et al., The Journal of Chemical Physics 127, 124706 (2007); 
 # DOI: 10.1063/1.2768522
-dielectricConstant: 9.355
+dielectric_constant: 9.355
 
 # Ewald parameters
 alpha: 0.18

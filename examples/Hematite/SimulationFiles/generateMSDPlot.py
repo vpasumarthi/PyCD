@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from PyCT.materialMSD import materialMSD
+from PyCT.material_msd import material_msd
 
 dst_path = Path.cwd()
-materialMSD(dst_path)
+material_msd(dst_path)
