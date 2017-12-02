@@ -81,7 +81,7 @@ def material_run(dst_path):
             sim_params['species_charge_type'], sim_params['n_traj'],
             sim_params['t_final'], sim_params['time_interval'])
         material_run.do_kmc_steps(dst_path, sim_params['report'],
-                                  sim_params['randomSeed'])
+                                  sim_params['random_seed'])
     else:
         print('Simulation files already exists in '
               + 'the destination directory')

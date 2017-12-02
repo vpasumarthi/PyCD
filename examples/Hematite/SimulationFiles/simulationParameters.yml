@@ -1,23 +1,23 @@
 # System parameters:
-Temp: 300
-dstFileName: simulationParameters.yml
-inputFileDirectoryName: InputFiles
-ionChargeType: full
+temp: 300
+dstFileName: simulation_parameters.yml
+input_file_directory_name: InputFiles
+ion_charge_type: full
 material: Hematite
 pbc: [1, 1, 1]
-speciesChargeType: full
+species_charge_type: full
 species_count: [1, 0]
 system_size: [2, 2, 1]
-workDirDepth: 1
+work_dir_depth: 1
 
 # Run parameters:
 dstFileName: Run.py
-nTraj: 100.0
-overWrite: 1
+n_traj: 100.0
+over_write: 1
 randomSeed: 2
 report: 1
-tFinal: 1.0e-08
-timeInterval: 1.0e-10
+t_final: 1.0e-08
+time_interval: 1.0e-10
 
 # MSD parameters:
 displayErrorBars: 1
