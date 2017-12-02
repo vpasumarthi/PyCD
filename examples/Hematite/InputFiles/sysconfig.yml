@@ -45,8 +45,8 @@ dielectricConstant: 9.355
 
 # Ewald parameters
 alpha: 0.18
-nmax: 0
-kmax: 4
+n_max: 0
+k_max: 4
 
 # Coordinates source:
 # http://rruff.geo.arizona.edu/AMS/download.php?id=00230.cif&down=cif

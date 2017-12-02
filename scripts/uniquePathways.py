@@ -33,7 +33,7 @@ def readPOSCAR(inputFilePath):
     return output
 
 
-def generateQuantumIndices(systemSize, systemElementIndex,
+def generateQuantumIndices(system_size, systemElementIndex,
                            nElementsPerUnitCell):
     """Returns the quantum indices of the element"""
     quantumIndices = np.zeros(5, dtype=int)  # [0] * 5
@@ -46,8 +46,8 @@ def generateQuantumIndices(systemSize, systemElementIndex,
     nFilledUnitCells = ((systemElementIndex - unitcellElementIndex)
                         / totalElementsPerUnitCell)
     for index in range(3):
-        quantumIndices[index] = nFilledUnitCells / systemSize[index+1:].prod()
-        nFilledUnitCells -= quantumIndices[index] * systemSize[index+1:].prod()
+        quantumIndices[index] = nFilledUnitCells / system_size[index+1:].prod()
+        nFilledUnitCells -= quantumIndices[index] * system_size[index+1:].prod()
     return quantumIndices
 
 
@@ -88,7 +88,7 @@ def generateUniquePathways(inputFileLocation, cutoffDistKey, neighborCutoff,
     xRange = range(-1, 2) if pbc[0] == 1 else [0]
     yRange = range(-1, 2) if pbc[1] == 1 else [0]
     zRange = range(-1, 2) if pbc[2] == 1 else [0]
-    systemSize = np.array([len(xRange), len(yRange), len(zRange)])
+    system_size = np.array([len(xRange), len(yRange), len(zRange)])
     unitcellTranslationalCoords = np.zeros((numCells, 3))  # Initialization
     index = 0
     for xOffset in xRange:
@@ -237,7 +237,7 @@ def generateUniquePathways(inputFileLocation, cutoffDistKey, neighborCutoff,
                         bridgeSiteExists = 1
                         bridgeSiteIndex = iCenterNeighborSEIndex
                         bridgeSiteQuantumIndices = (
-                                generateQuantumIndices(systemSize,
+                                generateQuantumIndices(system_size,
                                                        bridgeSiteIndex,
                                                        nElementsPerUnitCell))
                         bridgeSiteType += (

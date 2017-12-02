@@ -17,33 +17,33 @@ def materialRun(dstPath):
             print(exc)
 
     # data type conversion:
-    simParams['systemSize'] = np.asarray(simParams['systemSize'])
+    simParams['system_size'] = np.asarray(simParams['system_size'])
     simParams['pbc'] = np.asarray(simParams['pbc'])
-    simParams['speciesCount'] = np.asarray(simParams['speciesCount'])
+    simParams['species_count'] = np.asarray(simParams['species_count'])
 
     # Load material parameters
-    configFileName = 'sysconfig.yml'
-    inputDirectoryPath = (
+    config_file_name = 'sysconfig.yml'
+    input_directory_path = (
                     dstPath.resolve().parents[simParams['workDirDepth'] - 1]
                     / simParams['inputFileDirectoryName'])
-    configFilePath = inputDirectoryPath / configFileName
-    with open(configFilePath, 'r') as stream:
+    config_file_path = input_directory_path / config_file_name
+    with open(config_file_path, 'r') as stream:
         try:
             params = yaml.load(stream)
         except yaml.YAMLError as exc:
             print(exc)
 
-    inputCoordinateFileName = 'POSCAR'
-    inputCoorFileLocation = inputDirectoryPath.joinpath(
-                                                    inputCoordinateFileName)
-    params.update({'inputCoorFileLocation': inputCoorFileLocation})
-    configParams = ReturnValues(params)
+    input_coordinate_file_name = 'POSCAR'
+    input_coord_file_location = input_directory_path.joinpath(
+                                                    input_coordinate_file_name)
+    params.update({'input_coord_file_location': input_coord_file_location})
+    config_params = ReturnValues(params)
 
     # Build material object files
-    materialInfo = Material(configParams)
+    material_info = Material(config_params)
 
     # Build neighbors object files
-    materialNeighbors = Neighbors(materialInfo, simParams['systemSize'],
+    material_neighbors = Neighbors(material_info, simParams['system_size'],
                                   simParams['pbc'])
 
     fileExists = 0
@@ -51,26 +51,26 @@ def materialRun(dstPath):
         fileExists = 1
     if not fileExists or simParams['overWrite']:
         # Load input files to instantiate system class
-        hopNeighborListFileName = inputDirectoryPath.joinpath(
-                                                        'hopNeighborList.npy')
-        hopNeighborList = np.load(hopNeighborListFileName)[()]
-        cumulativeDisplacementListFilePath = inputDirectoryPath.joinpath(
-                                            'cumulativeDisplacementList.npy')
-        cumulativeDisplacementList = np.load(
-                                            cumulativeDisplacementListFilePath)
-        alpha = configParams.alpha
-        nmax = configParams.nmax
-        kmax = configParams.kmax
+        hop_neighbor_list_file_name = input_directory_path.joinpath(
+                                                        'hop_neighbor_list.npy')
+        hop_neighbor_list = np.load(hop_neighbor_list_file_name)[()]
+        cumulative_displacement_list_file_path = input_directory_path.joinpath(
+                                            'cumulative_displacement_list.npy')
+        cumulative_displacement_list = np.load(
+                                            cumulative_displacement_list_file_path)
+        alpha = config_params.alpha
+        n_max = config_params.n_max
+        k_max = config_params.k_max
 
-        materialSystem = System(materialInfo, materialNeighbors,
-                                hopNeighborList, cumulativeDisplacementList,
-                                simParams['speciesCount'], alpha, nmax, kmax)
+        material_system = System(material_info, material_neighbors,
+                                hop_neighbor_list, cumulative_displacement_list,
+                                simParams['species_count'], alpha, n_max, k_max)
 
         # Load precomputed array to instantiate run class
-        precomputedArrayFilePath = inputDirectoryPath.joinpath(
-                                                        'precomputedArray.npy')
-        precomputedArray = np.load(precomputedArrayFilePath)
-        materialRun = Run(materialSystem, precomputedArray, simParams['Temp'],
+        precomputed_array_file_path = input_directory_path.joinpath(
+                                                        'precomputed_array.npy')
+        precomputed_array = np.load(precomputed_array_file_path)
+        materialRun = Run(material_system, precomputed_array, simParams['Temp'],
                           simParams['ionChargeType'],
                           simParams['speciesChargeType'], simParams['nTraj'],
                           simParams['tFinal'], simParams['timeInterval'])
@@ -85,6 +85,6 @@ def materialRun(dstPath):
 class ReturnValues(object):
     """dummy class to return objects from methods \
         defined inside other classes"""
-    def __init__(self, inputdict):
-        for key, value in inputdict.items():
+    def __init__(self, input_dict):
+        for key, value in input_dict.items():
             setattr(self, key, value)

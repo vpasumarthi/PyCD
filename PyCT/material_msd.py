@@ -17,31 +17,31 @@ def materialMSD(dstPath):
             print(exc)
 
     # data type conversion:
-    simParams['speciesCount'] = np.asarray(simParams['speciesCount'])
+    simParams['species_count'] = np.asarray(simParams['species_count'])
 
     # Load material parameters
-    configFileName = 'sysconfig.yml'
-    inputDirectoryPath = (
+    config_file_name = 'sysconfig.yml'
+    input_directory_path = (
                     dstPath.resolve().parents[simParams['workDirDepth'] - 1]
                     / simParams['inputFileDirectoryName'])
-    configFilePath = inputDirectoryPath.joinpath(configFileName)
-    with open(configFilePath, 'r') as stream:
+    config_file_path = input_directory_path.joinpath(config_file_name)
+    with open(config_file_path, 'r') as stream:
         try:
             params = yaml.load(stream)
         except yaml.YAMLError as exc:
             print(exc)
 
-    inputCoordinateFileName = 'POSCAR'
-    inputCoorFileLocation = inputDirectoryPath.joinpath(
-                                                    inputCoordinateFileName)
-    params.update({'inputCoorFileLocation': inputCoorFileLocation})
+    input_coordinate_file_name = 'POSCAR'
+    input_coord_file_location = input_directory_path.joinpath(
+                                                    input_coordinate_file_name)
+    params.update({'input_coord_file_location': input_coord_file_location})
     materialParameters = ReturnValues(params)
 
     # Build material object files
-    materialInfo = Material(materialParameters)
+    material_info = Material(materialParameters)
 
     materialAnalysis = Analysis(
-        materialInfo, simParams['nDim'], simParams['speciesCount'],
+        material_info, simParams['nDim'], simParams['species_count'],
         simParams['nTraj'], simParams['tFinal'], simParams['timeInterval'],
         simParams['msdTFinal'], simParams['trimLength'], simParams['reprTime'],
         simParams['reprDist'])
@@ -60,6 +60,6 @@ def materialMSD(dstPath):
 class ReturnValues(object):
     """dummy class to return objects from methods \
         defined inside other classes"""
-    def __init__(self, inputdict):
-        for key, value in inputdict.items():
+    def __init__(self, input_dict):
+        for key, value in input_dict.items():
             setattr(self, key, value)

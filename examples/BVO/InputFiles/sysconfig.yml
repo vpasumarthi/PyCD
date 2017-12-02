@@ -58,5 +58,5 @@ dielectricConstant: 38.299
 
 # Ewald parameters
 alpha: 0.18
-nmax: 0
-kmax: 4
+n_max: 0
+k_max: 4

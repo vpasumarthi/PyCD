@@ -6,8 +6,8 @@ ionChargeType: full
 material: Hematite
 pbc: [1, 1, 1]
 speciesChargeType: full
-speciesCount: [1, 0]
-systemSize: [2, 2, 1]
+species_count: [1, 0]
+system_size: [2, 2, 1]
 workDirDepth: 1
 
 # Run parameters:

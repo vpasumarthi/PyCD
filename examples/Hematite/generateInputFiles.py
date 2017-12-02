@@ -7,14 +7,14 @@ import numpy as np
 from PyCT.materialSetup import materialSetup
 
 # Input parameters:
-systemSize = np.array([2, 2, 1])
+system_size = np.array([2, 2, 1])
 pbc = np.array([1, 1, 1])
-generateHopNeighborList = 1
-generateCumDispList = 1
-generatePrecomputedArray = 1
+generate_hop_neighbor_list = 1
+generate_cum_disp_list = 1
+generate_precomputed_array = 1
 systemDirectoryPath = Path.cwd()
 inputFileDirectoryName = 'InputFiles'
-inputDirectoryPath = systemDirectoryPath.joinpath(inputFileDirectoryName)
+input_directory_path = systemDirectoryPath.joinpath(inputFileDirectoryName)
 
-materialSetup(inputDirectoryPath, systemSize, pbc, generateHopNeighborList,
-              generateCumDispList, generatePrecomputedArray)
+materialSetup(input_directory_path, system_size, pbc, generate_hop_neighbor_list,
+              generate_cum_disp_list, generate_precomputed_array)

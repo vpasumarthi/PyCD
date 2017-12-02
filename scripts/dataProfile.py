@@ -18,9 +18,9 @@ def diffusionProfile(outdir, systemDirectoryPath, profilingSpeciesTypeIndex,
     speciesType = 'electron' if profilingSpeciesTypeIndex == 0 else 'hole'
 
     if profilingSpeciesTypeIndex == 0:
-        nHoles = speciesCountList[1][0]
+        n_holes = speciesCountList[1][0]
     else:
-        nElectrons = speciesCountList[0][0]
+        n_electrons = speciesCountList[0][0]
 
     parentDir1 = 'SimulationFiles'
     parentDir2 = ('ionChargeType=' + ionChargeType
@@ -33,12 +33,12 @@ def diffusionProfile(outdir, systemDirectoryPath, profilingSpeciesTypeIndex,
     for speciesIndex, nSpecies in enumerate(profilingSpeciesList):
         # Change to working directory
         if profilingSpeciesTypeIndex == 0:
-            nElectrons = nSpecies
+            n_electrons = nSpecies
         else:
-            nHoles = nSpecies
-        parentDir3 = (str(nElectrons)
-                      + ('electron' if nElectrons == 1 else 'electrons') + ', '
-                      + str(nHoles) + ('hole' if nHoles == 1 else 'holes'))
+            n_holes = nSpecies
+        parentDir3 = (str(n_electrons)
+                      + ('electron' if n_electrons == 1 else 'electrons') + ', '
+                      + str(n_holes) + ('hole' if n_holes == 1 else 'holes'))
         parentDir4 = str(Temp) + 'K'
         workDir = (('%1.2E' % tFinal) + 'SEC,' + ('%1.2E' % timeInterval)
                    + 'TimeInterval,' + ('%1.2E' % nTraj) + 'Traj')
@@ -82,9 +82,9 @@ def runtimeProfile(outdir, systemDirectoryPath, profilingSpeciesTypeIndex,
     speciesType = 'electron' if profilingSpeciesTypeIndex == 0 else 'hole'
 
     if profilingSpeciesTypeIndex == 0:
-        nHoles = speciesCountList[1][0]
+        n_holes = speciesCountList[1][0]
     else:
-        nElectrons = speciesCountList[0][0]
+        n_electrons = speciesCountList[0][0]
 
     parentDir1 = 'SimulationFiles'
     parentDir2 = ('ionChargeType=' + ionChargeType
@@ -94,12 +94,12 @@ def runtimeProfile(outdir, systemDirectoryPath, profilingSpeciesTypeIndex,
     for speciesIndex, nSpecies in enumerate(profilingSpeciesList):
         # Change to working directory
         if profilingSpeciesTypeIndex == 0:
-            nElectrons = nSpecies
+            n_electrons = nSpecies
         else:
-            nHoles = nSpecies
-        parentDir3 = (str(nElectrons)
-                      + ('electron' if nElectrons == 1 else 'electrons') + ', '
-                      + str(nHoles) + ('hole' if nHoles == 1 else 'holes'))
+            n_holes = nSpecies
+        parentDir3 = (str(n_electrons)
+                      + ('electron' if n_electrons == 1 else 'electrons') + ', '
+                      + str(n_holes) + ('hole' if n_holes == 1 else 'holes'))
         parentDir4 = str(Temp) + 'K'
         workDir = (('%1.2E' % tFinal) + 'SEC,' + ('%1.2E' % timeInterval)
                    + 'TimeInterval,' + ('%1.2E' % nTraj) + 'Traj')
