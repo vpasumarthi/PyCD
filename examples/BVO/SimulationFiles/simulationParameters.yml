@@ -1,0 +1,30 @@
+# System parameters:
+Temp: 300
+dstFileName: simulationParameters.yml
+inputFileDirectoryName: InputFiles
+ionChargeType: full
+material: BVO
+pbc: [1, 1, 1]
+speciesChargeType: full
+speciesCount: [0, 1]
+systemSize: [2, 2, 1]
+workDirDepth: 1
+
+# Run parameters:
+dstFileName: Run.py
+nTraj: 100.0
+overWrite: 1
+randomSeed: 2
+report: 1
+tFinal: 1.0e-07
+timeInterval: 1.0e-08
+
+# MSD parameters:
+displayErrorBars: 1
+dstFileName: MSD.py
+msdTFinal: 60
+nDim: 3
+report: 1
+reprDist: angstrom
+reprTime: ns
+trimLength: 1
