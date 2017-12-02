@@ -13,7 +13,7 @@ def material_setup(input_directory_path, system_size, pbc,
         saves to the provided destination path"""
 
     # Load material parameters
-    config_file_name = 'sysconfig.yml'
+    config_file_name = 'sys_config.yml'
     config_file_path = input_directory_path.joinpath(config_file_name)
     with open(config_file_path, 'r') as stream:
         try:

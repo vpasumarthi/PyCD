@@ -9,8 +9,8 @@ import matplotlib.pyplot as plt
 
 
 def diffusionProfile(outdir, systemDirectoryPath, profilingSpeciesTypeIndex,
-                     speciesCountList, ionChargeType, speciesChargeType, Temp,
-                     tFinal, timeInterval, nTraj, msdTFinal, reprTime):
+                     speciesCountList, ion_charge_type, species_charge_type, temp,
+                     t_final, time_interval, n_traj, msdTFinal, reprTime):
     profilingSpeciesList = speciesCountList[profilingSpeciesTypeIndex]
     profileLength = len(profilingSpeciesList)
     diffusivityProfileData = np.zeros((profileLength, 2))
@@ -23,8 +23,8 @@ def diffusionProfile(outdir, systemDirectoryPath, profilingSpeciesTypeIndex,
         n_electrons = speciesCountList[0][0]
 
     parentDir1 = 'SimulationFiles'
-    parentDir2 = ('ionChargeType=' + ionChargeType
-                  + '; speciesChargeType=' + speciesChargeType)
+    parentDir2 = ('ion_charge_type=' + ion_charge_type
+                  + '; species_charge_type=' + species_charge_type)
 
     fileName = '%1.2E%s' % (msdTFinal, reprTime)
     msdAnalysisLogFileName = ('MSD_Analysis' + ('_' if fileName else '')
@@ -39,9 +39,9 @@ def diffusionProfile(outdir, systemDirectoryPath, profilingSpeciesTypeIndex,
         parentDir3 = (str(n_electrons)
                       + ('electron' if n_electrons == 1 else 'electrons') + ', '
                       + str(n_holes) + ('hole' if n_holes == 1 else 'holes'))
-        parentDir4 = str(Temp) + 'K'
-        workDir = (('%1.2E' % tFinal) + 'SEC,' + ('%1.2E' % timeInterval)
-                   + 'TimeInterval,' + ('%1.2E' % nTraj) + 'Traj')
+        parentDir4 = str(temp) + 'K'
+        workDir = (('%1.2E' % t_final) + 'SEC,' + ('%1.2E' % time_interval)
+                   + 'TimeInterval,' + ('%1.2E' % n_traj) + 'Traj')
         msdAnalysisLogFilePath = os.path.join(
                     systemDirectoryPath, parentDir1, parentDir2, parentDir3,
                     parentDir4, workDir, msdAnalysisLogFileName)
@@ -60,8 +60,8 @@ def diffusionProfile(outdir, systemDirectoryPath, profilingSpeciesTypeIndex,
     figureTitle = ('Diffusion coefficient as a function of number of '
                    + speciesType + 's')
     ax.set_title('\n'.join(wrap(figureTitle, 60)))
-    filename = (str(speciesType) + 'DiffusionProfile_' + ionChargeType[0]
-                + speciesChargeType[0] + '_' + str(profilingSpeciesList[0])
+    filename = (str(speciesType) + 'DiffusionProfile_' + ion_charge_type[0]
+                + species_charge_type[0] + '_' + str(profilingSpeciesList[0])
                 + '-' + str(profilingSpeciesList[-1]))
     figureName = filename + '.png'
     figurePath = os.path.join(outdir, figureName)
@@ -73,8 +73,8 @@ def diffusionProfile(outdir, systemDirectoryPath, profilingSpeciesTypeIndex,
 
 
 def runtimeProfile(outdir, systemDirectoryPath, profilingSpeciesTypeIndex,
-                   speciesCountList, ionChargeType, speciesChargeType, Temp,
-                   tFinal, timeInterval, nTraj):
+                   speciesCountList, ion_charge_type, species_charge_type, temp,
+                   t_final, time_interval, n_traj):
     profilingSpeciesList = speciesCountList[profilingSpeciesTypeIndex]
     profileLength = len(profilingSpeciesList)
     elapsedSecondsData = np.zeros((profileLength, 2))
@@ -87,8 +87,8 @@ def runtimeProfile(outdir, systemDirectoryPath, profilingSpeciesTypeIndex,
         n_electrons = speciesCountList[0][0]
 
     parentDir1 = 'SimulationFiles'
-    parentDir2 = ('ionChargeType=' + ionChargeType
-                  + '; speciesChargeType=' + speciesChargeType)
+    parentDir2 = ('ion_charge_type=' + ion_charge_type
+                  + '; species_charge_type=' + species_charge_type)
     runLogFileName = 'Run.log'
 
     for speciesIndex, nSpecies in enumerate(profilingSpeciesList):
@@ -100,9 +100,9 @@ def runtimeProfile(outdir, systemDirectoryPath, profilingSpeciesTypeIndex,
         parentDir3 = (str(n_electrons)
                       + ('electron' if n_electrons == 1 else 'electrons') + ', '
                       + str(n_holes) + ('hole' if n_holes == 1 else 'holes'))
-        parentDir4 = str(Temp) + 'K'
-        workDir = (('%1.2E' % tFinal) + 'SEC,' + ('%1.2E' % timeInterval)
-                   + 'TimeInterval,' + ('%1.2E' % nTraj) + 'Traj')
+        parentDir4 = str(temp) + 'K'
+        workDir = (('%1.2E' % t_final) + 'SEC,' + ('%1.2E' % time_interval)
+                   + 'TimeInterval,' + ('%1.2E' % n_traj) + 'Traj')
         runLogFilePath = os.path.join(
                     systemDirectoryPath, parentDir1, parentDir2, parentDir3,
                     parentDir4, workDir, runLogFileName)
@@ -133,8 +133,8 @@ def runtimeProfile(outdir, systemDirectoryPath, profilingSpeciesTypeIndex,
     figureTitle = ('Simulation run time as a function of number of '
                    + speciesType + 's')
     ax.set_title('\n'.join(wrap(figureTitle, 60)))
-    filename = (str(speciesType) + 'RunTimeProfile_' + ionChargeType[0]
-                + speciesChargeType[0] + '_' + str(profilingSpeciesList[0])
+    filename = (str(speciesType) + 'RunTimeProfile_' + ion_charge_type[0]
+                + species_charge_type[0] + '_' + str(profilingSpeciesList[0])
                 + '-' + str(profilingSpeciesList[-1]))
     figureName = filename + '.png'
     figurePath = os.path.join(outdir, figureName)

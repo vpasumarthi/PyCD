@@ -8,13 +8,13 @@ from PyCT.core import Material, Analysis
 
 
 def materialCOCMSD(systemDirectoryPath, fileFormatIndex, system_size, pbc, nDim,
-                   Temp, ionChargeType, speciesChargeType, species_count,
-                   tFinal, nTraj, timeInterval, msdTFinal, trimLength,
+                   temp, ion_charge_type, species_charge_type, species_count,
+                   t_final, n_traj, time_interval, msdTFinal, trimLength,
                    displayErrorBars, reprTime, reprDist, report):
 
     # Load material parameters
     configDirName = 'ConfigurationFiles'
-    config_file_name = 'sysconfig.yml'
+    config_file_name = 'sys_config.yml'
     config_file_path = os.path.join(systemDirectoryPath, configDirName,
                                   config_file_name)
     with open(config_file_path, 'r') as stream:
@@ -35,16 +35,16 @@ def materialCOCMSD(systemDirectoryPath, fileFormatIndex, system_size, pbc, nDim,
 
     # Change to working directory
     parentDir1 = 'SimulationFiles'
-    parentDir2 = ('ionChargeType=' + ionChargeType
-                  + '; speciesChargeType=' + speciesChargeType)
+    parentDir2 = ('ion_charge_type=' + ion_charge_type
+                  + '; species_charge_type=' + species_charge_type)
     n_electrons = species_count[0]
     n_holes = species_count[1]
     parentDir3 = (str(n_electrons)
                   + ('electron' if n_electrons == 1 else 'electrons') + ', '
                   + str(n_holes) + ('hole' if n_holes == 1 else 'holes'))
-    parentDir4 = str(Temp) + 'K'
-    workDir = (('%1.2E' % tFinal) + 'SEC,' + ('%1.2E' % timeInterval)
-               + 'TimeInterval,' + ('%1.2E' % nTraj) + 'Traj')
+    parentDir4 = str(temp) + 'K'
+    workDir = (('%1.2E' % t_final) + 'SEC,' + ('%1.2E' % time_interval)
+               + 'TimeInterval,' + ('%1.2E' % n_traj) + 'Traj')
     workDirPath = os.path.join(systemDirectoryPath, parentDir1, parentDir2,
                                parentDir3, parentDir4, workDir)
 
@@ -54,7 +54,7 @@ def materialCOCMSD(systemDirectoryPath, fileFormatIndex, system_size, pbc, nDim,
         os.chdir(workDirPath)
 
         materialAnalysis = Analysis(material_info, nDim, species_count,
-                                    nTraj, tFinal, timeInterval, msdTFinal,
+                                    n_traj, t_final, time_interval, msdTFinal,
                                     trimLength, reprTime, reprDist)
 
         msdAnalysisData = materialAnalysis.computeCOCMSD(workDirPath, report)

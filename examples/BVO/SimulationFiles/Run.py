@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from PyCT.materialRun import materialRun
+from PyCT.material_run import material_run
 
-dstPath = Path.cwd()
-materialRun(dstPath)
+dst_path = Path.cwd()
+material_run(dst_path)

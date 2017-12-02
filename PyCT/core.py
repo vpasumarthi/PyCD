@@ -471,7 +471,7 @@ class Neighbors(object):
                     numNeighbors=numNeighbors)
         return returnNeighbors
 
-    def generate_cumulative_displacement_list(self, dstPath):
+    def generate_cumulative_displacement_list(self, dst_path):
         """Returns cumulative displacement list for the given system size
             printed out to disk"""
         cumulative_displacement_list = np.zeros((self.numSystemElements,
@@ -495,25 +495,25 @@ class Neighbors(object):
                 cumulativeNeighborImageDisplacementVectors[
                     np.arange(self.numSystemElements),
                     np.argmin(cumulativeNeighborImageDisplacements, axis=1)]
-        cumulative_displacement_list_file_path = dstPath.joinpath(
+        cumulative_displacement_list_file_path = dst_path.joinpath(
                                         'cumulative_displacement_list.npy')
         np.save(cumulative_displacement_list_file_path,
                 cumulative_displacement_list)
         return None
 
-    def generate_neighbor_list(self, dstPath, report=1,
+    def generate_neighbor_list(self, dst_path, report=1,
                              localSystemSize=np.array([3, 3, 3])):
         """Adds the neighbor list to the system object and
             returns the neighbor list"""
-        assert dstPath, \
+        assert dst_path, \
             'Please provide the path to the parent directory of \
                 neighbor list files'
         assert all(size >= 3 for size in localSystemSize), \
             'Local system size in all dimensions should always be \
                 greater than or equal to 3'
 
-        Path.mkdir(dstPath, parents=True, exist_ok=True)
-        hopNeighborListFilePath = dstPath.joinpath('hop_neighbor_list.npy')
+        Path.mkdir(dst_path, parents=True, exist_ok=True)
+        hopNeighborListFilePath = dst_path.joinpath('hop_neighbor_list.npy')
 
         hop_neighbor_list = {}
         tolDist = self.material.neighborCutoffDistTol
@@ -557,14 +557,14 @@ class Neighbors(object):
         np.save(hopNeighborListFilePath, hop_neighbor_list)
 
         if report:
-            self.generate_neighbor_listReport(dstPath)
+            self.generate_neighbor_listReport(dst_path)
         return None
 
-    def generate_neighbor_listReport(self, dstPath):
+    def generate_neighbor_listReport(self, dst_path):
         """Generates a neighbor list and prints out a
             report to the output directory"""
         neighborListLogName = 'NeighborList.log'
-        neighborListLogPath = dstPath.joinpath(neighborListLogName)
+        neighborListLogPath = dst_path.joinpath(neighborListLogName)
         report = open(neighborListLogPath, 'w')
         endTime = datetime.now()
         timeElapsed = endTime - self.startTime
@@ -578,7 +578,7 @@ class Neighbors(object):
         return None
 
     # TODO: remove the function
-    def generateHematiteNeighborSEIndices(self, dstPath, report=1):
+    def generateHematiteNeighborSEIndices(self, dst_path, report=1):
         startTime = datetime.now()
         offsetList = np.array(
             [[[-1, 0, -1], [0, 0, -1], [0, 1, -1], [0, 0, -1]],
@@ -659,19 +659,19 @@ class Neighbors(object):
                             centerSiteIndex][neighborIndex] = neighborSEIndex
 
         fileName = 'neighborSystemElementIndices.npy'
-        neighborSystemElementIndicesFilePath = dstPath.joinpath(fileName)
+        neighborSystemElementIndicesFilePath = dst_path.joinpath(fileName)
         np.save(neighborSystemElementIndicesFilePath,
                 neighborSystemElementIndices)
         if report:
-            self.generateHematiteNeighborSEIndicesReport(dstPath, startTime)
+            self.generateHematiteNeighborSEIndicesReport(dst_path, startTime)
         return None
 
-    def generateHematiteNeighborSEIndicesReport(self, dstPath, startTime):
+    def generateHematiteNeighborSEIndicesReport(self, dst_path, startTime):
         """Generates a neighbor list and prints out a
             report to the output directory"""
         neighborSystemElementIndicesLogName = \
             'neighborSystemElementIndices.log'
-        neighborSystemElementIndicesLogPath = dstPath.joinpath(
+        neighborSystemElementIndicesLogPath = dst_path.joinpath(
                                         neighborSystemElementIndicesLogName)
         report = open(neighborSystemElementIndicesLogPath, 'w')
         endTime = datetime.now()
@@ -686,7 +686,7 @@ class Neighbors(object):
         return None
 
     def generateSpeciesSiteSDList(self, centerSiteQuantumIndices,
-                                  dstPath, report=1):
+                                  dst_path, report=1):
         startTime = datetime.now()
         elementTypeIndex = centerSiteQuantumIndices[3]
         centerSiteSEIndex = self.generateSystemElementIndex(
@@ -714,17 +714,17 @@ class Neighbors(object):
                                                         neighborSiteSEIndex)**2
         speciesSiteSDList /= self.material.ANG2BOHR**2
         fileName = 'speciesSiteSDList.npy'
-        speciesSiteSDListFilePath = dstPath.joinpath(fileName)
+        speciesSiteSDListFilePath = dst_path.joinpath(fileName)
         np.save(speciesSiteSDListFilePath, speciesSiteSDList)
         if report:
-            self.generateSpeciesSiteSDListReport(dstPath, startTime)
+            self.generateSpeciesSiteSDListReport(dst_path, startTime)
         return None
 
-    def generateSpeciesSiteSDListReport(self, dstPath, startTime):
+    def generateSpeciesSiteSDListReport(self, dst_path, startTime):
         """Generates a neighbor list and prints out a
             report to the output directory"""
         speciesSiteSDListLogName = 'speciesSiteSDList.log'
-        speciesSiteSDListLogPath = dstPath.joinpath(speciesSiteSDListLogName)
+        speciesSiteSDListLogPath = dst_path.joinpath(speciesSiteSDListLogName)
         report = open(speciesSiteSDListLogPath, 'w')
         endTime = datetime.now()
         timeElapsed = endTime - startTime
@@ -738,7 +738,7 @@ class Neighbors(object):
         return None
 
     def generateTransitionProbMatrix(self, neighborSystemElementIndices,
-                                     dstPath, report=1):
+                                     dst_path, report=1):
         startTime = datetime.now()
         elementTypeIndex = 0
         numNeighbors = len(neighborSystemElementIndices[0])
@@ -789,17 +789,17 @@ class Neighbors(object):
                 transitionProbMatrix[centerSiteIndex][neighborSiteIndex] = \
                     probList[neighborIndex]
         fileName = 'transitionProbMatrix.npy'
-        transitionProbMatrixFilePath = dstPath.joinpath(fileName)
+        transitionProbMatrixFilePath = dst_path.joinpath(fileName)
         np.save(transitionProbMatrixFilePath, transitionProbMatrix)
         if report:
-            self.generateTransitionProbMatrixListReport(dstPath, startTime)
+            self.generateTransitionProbMatrixListReport(dst_path, startTime)
         return None
 
-    def generateTransitionProbMatrixListReport(self, dstPath, startTime):
+    def generateTransitionProbMatrixListReport(self, dst_path, startTime):
         """Generates a neighbor list and prints out a report to the
             output directory"""
         transitionProbMatrixLogName = 'transitionProbMatrix.log'
-        transitionProbMatrixLogPath = dstPath.joinpath(
+        transitionProbMatrixLogPath = dst_path.joinpath(
                                                 transitionProbMatrixLogName)
         report = open(transitionProbMatrixLogPath, 'w')
         endTime = datetime.now()
@@ -816,12 +816,12 @@ class Neighbors(object):
     def generateMSDAnalyticalData(self, transitionProbMatrix,
                                   speciesSiteSDList, centerSiteQuantumIndices,
                                   analyticalTFinal, analyticalTimeInterval,
-                                  dstPath, report=1):
+                                  dst_path, report=1):
         startTime = datetime.now()
 
         fileName = '%1.2Ens' % analyticalTFinal
         MSDAnalyticalDataFileName = 'MSD_Analytical_Data_' + fileName + '.dat'
-        MSDAnalyticalDataFilePath = dstPath.joinpath(MSDAnalyticalDataFileName)
+        MSDAnalyticalDataFilePath = dst_path.joinpath(MSDAnalyticalDataFileName)
         open(MSDAnalyticalDataFilePath, 'w').close()
 
         elementTypeIndex = 0
@@ -894,15 +894,15 @@ class Neighbors(object):
                     break
 
         if report:
-            self.generateMSDAnalyticalDataReport(fileName, dstPath, startTime)
+            self.generateMSDAnalyticalDataReport(fileName, dst_path, startTime)
         returnMSDData = ReturnValues(msdData=msdData)
         return returnMSDData
 
-    def generateMSDAnalyticalDataReport(self, fileName, dstPath, startTime):
+    def generateMSDAnalyticalDataReport(self, fileName, dst_path, startTime):
         """Generates a neighbor list and prints out a report to the
             output directory"""
         MSDAnalyticalDataLogName = 'MSD_Analytical_Data_' + fileName + '.log'
-        MSDAnalyticalDataLogPath = dstPath.joinpath(MSDAnalyticalDataLogName)
+        MSDAnalyticalDataLogPath = dst_path.joinpath(MSDAnalyticalDataLogName)
         report = open(MSDAnalyticalDataLogPath, 'w')
         endTime = datetime.now()
         timeElapsed = endTime - startTime
@@ -1003,12 +1003,12 @@ class System(object):
                                         numSpecies)[:])
         return occupancy
 
-    def chargeConfig(self, occupancy, ionChargeType, speciesChargeType):
+    def chargeConfig(self, occupancy, ion_charge_type, species_charge_type):
         """Returns charge distribution of the current configuration"""
 
         # generate lattice charge list
         unitcellChargeList = np.array(
-                [self.material.chargeTypes[ionChargeType][
+                [self.material.chargeTypes[ion_charge_type][
                     self.material.elementTypes[elementTypeIndex]]
                  for elementTypeIndex in self.material.elementTypeIndexList])
         chargeList = np.tile(unitcellChargeList, self.numCells)[:, np.newaxis]
@@ -1019,7 +1019,7 @@ class System(object):
             centerSiteSystemElementIndices = occupancy[
                                                     startIndex:endIndex][:]
             chargeList[centerSiteSystemElementIndices] += (
-                        self.material.speciesChargeList[speciesChargeType][
+                        self.material.speciesChargeList[species_charge_type][
                                                             speciesTypeIndex])
         return chargeList
 
@@ -1093,8 +1093,8 @@ class System(object):
 class Run(object):
     """defines the subroutines for running Kinetic Monte Carlo and
         computing electrostatic interaction energies"""
-    def __init__(self, system, precomputed_array, T, ionChargeType,
-                 speciesChargeType, nTraj, tFinal, timeInterval):
+    def __init__(self, system, precomputed_array, T, ion_charge_type,
+                 species_charge_type, n_traj, t_final, time_interval):
         """Returns the PBC condition of the system"""
         self.startTime = datetime.now()
 
@@ -1103,11 +1103,11 @@ class Run(object):
         self.neighbors = self.system.neighbors
         self.precomputed_array = precomputed_array
         self.T = T * self.material.K2AUTEMP
-        self.ionChargeType = ionChargeType
-        self.speciesChargeType = speciesChargeType
-        self.nTraj = int(nTraj)
-        self.tFinal = tFinal * self.material.SEC2AUTIME
-        self.timeInterval = timeInterval * self.material.SEC2AUTIME
+        self.ion_charge_type = ion_charge_type
+        self.species_charge_type = species_charge_type
+        self.n_traj = int(n_traj)
+        self.t_final = t_final * self.material.SEC2AUTIME
+        self.time_interval = time_interval * self.material.SEC2AUTIME
 
         self.system_size = self.system.system_size
 
@@ -1126,7 +1126,7 @@ class Run(object):
                         for index, value in enumerate(self.system.species_count)
                         for _ in range(value)]
         self.speciesChargeList = [
-                self.material.speciesChargeList[self.speciesChargeType][index]
+                self.material.speciesChargeList[self.species_charge_type][index]
                 for index in self.speciesTypeIndexList]
         self.hopElementTypeList = [
                                 self.material.hopElementTypes[speciesType][0]
@@ -1176,7 +1176,7 @@ class Run(object):
         # total number of species
         self.totalSpecies = self.system.species_count.sum()
 
-    def doKMCSteps(self, outdir, report=1, randomSeed=1):
+    def do_kmc_steps(self, outdir, report=1, randomSeed=1):
         """Subroutine to run the KMC simulation by specified number of steps"""
         assert outdir, 'Please provide the destination path where \
                         simulation output files needs to be saved'
@@ -1198,8 +1198,8 @@ class Run(object):
             open(potentialTrajFileName, 'wb').close()
 
         rnd.seed(randomSeed)
-        nTraj = self.nTraj
-        numPathStepsPerTraj = int(self.tFinal / self.timeInterval) + 1
+        n_traj = self.n_traj
+        numPathStepsPerTraj = int(self.t_final / self.time_interval) + 1
         unwrappedPositionArray = np.zeros((numPathStepsPerTraj,
                                            self.totalSpecies * 3))
         if energy:
@@ -1218,19 +1218,19 @@ class Run(object):
         neighborIndexList = np.zeros(self.nProc, dtype=int)
         systemCharge = np.dot(
                     self.system.species_count,
-                    self.material.speciesChargeList[self.speciesChargeType])
+                    self.material.speciesChargeList[self.species_charge_type])
 
         ewaldNeut = - (np.pi
                        * (systemCharge**2)
                        / (2 * self.system.systemVolume * self.system.alpha))
         precomputed_array = self.precomputed_array
-        for _ in range(nTraj):
+        for _ in range(n_traj):
             currentStateOccupancy = self.system.generateRandomOccupancy(
                                                     self.system.species_count)
             currentStateChargeConfig = self.system.chargeConfig(
                                                         currentStateOccupancy,
-                                                        self.ionChargeType,
-                                                        self.speciesChargeType)
+                                                        self.ion_charge_type,
+                                                        self.species_charge_type)
             currentStateChargeConfigProd = np.multiply(
                                         currentStateChargeConfig.transpose(),
                                         currentStateChargeConfig)
@@ -1357,7 +1357,7 @@ class Run(object):
                     -= self.speciesChargeList[speciesIndex]
                 currentStateChargeConfig[newSiteSystemElementIndex] \
                     += self.speciesChargeList[speciesIndex]
-                endPathIndex = int(simTime / self.timeInterval)
+                endPathIndex = int(simTime / self.time_interval)
                 if endPathIndex >= startPathIndex + 1:
                     if endPathIndex >= numPathStepsPerTraj:
                         endPathIndex = numPathStepsPerTraj
@@ -1413,8 +1413,8 @@ class Run(object):
 
 class Analysis(object):
     """Post-simulation analysis methods"""
-    def __init__(self, material_info, nDim, species_count, nTraj, tFinal,
-                 timeInterval, msdTFinal, trimLength, reprTime='ns',
+    def __init__(self, material_info, nDim, species_count, n_traj, t_final,
+                 time_interval, msdTFinal, trimLength, reprTime='ns',
                  reprDist='Angstrom'):
         """"""
         self.startTime = datetime.now()
@@ -1423,11 +1423,11 @@ class Analysis(object):
         self.nDim = nDim
         self.species_count = species_count
         self.totalSpecies = self.species_count.sum()
-        self.nTraj = int(nTraj)
-        self.tFinal = tFinal * self.material.SEC2AUTIME
-        self.timeInterval = timeInterval * self.material.SEC2AUTIME
+        self.n_traj = int(n_traj)
+        self.t_final = t_final * self.material.SEC2AUTIME
+        self.time_interval = time_interval * self.material.SEC2AUTIME
         self.trimLength = trimLength
-        self.numPathStepsPerTraj = int(self.tFinal / self.timeInterval) + 1
+        self.numPathStepsPerTraj = int(self.t_final / self.time_interval) + 1
         self.reprTime = reprTime
         self.reprDist = reprDist
 
@@ -1451,7 +1451,7 @@ class Analysis(object):
             self.distConversion = 1E+00 / self.material.ANG2BOHR
 
         self.msdTFinal = msdTFinal / self.timeConversion
-        self.numMSDStepsPerTraj = int(self.msdTFinal / self.timeInterval) + 1
+        self.numMSDStepsPerTraj = int(self.msdTFinal / self.time_interval) + 1
 
     def computeMSD(self, outdir, report=1):
         """Returns the squared displacement of the trajectories"""
@@ -1499,15 +1499,15 @@ class Analysis(object):
                             (self.material.numSpeciesTypes
                              + 1 - list(self.species_count).count(0))))
         timeArray = (np.arange(self.numMSDStepsPerTraj)
-                     * self.timeInterval
+                     * self.time_interval
                      * self.timeConversion)
         msdData[:, 0] = timeArray
         msdData[:, 1:] = np.mean(speciesAvgSDArray, axis=0)
         stdData = np.std(speciesAvgSDArray, axis=0)
         fileName = (('%1.2E' % (self.msdTFinal * self.timeConversion))
                     + str(self.reprTime)
-                    + (',nTraj: %1.2E' % numTrajRecorded
-                        if numTrajRecorded != self.nTraj else ''))
+                    + (',n_traj: %1.2E' % numTrajRecorded
+                        if numTrajRecorded != self.n_traj else ''))
         msdFileName = 'MSD_Data_' + fileName + '.npy'
         msdFilePath = outdir.joinpath(msdFileName)
         speciesTypes = [
@@ -1597,7 +1597,7 @@ class Analysis(object):
         figureTitle = 'MSD_' + fileName
         ax.set_title('\n'.join(wrap(figureTitle, 60)))
         plt.legend()
-        plt.show()  # Temp change
+        plt.show()  # temp change
         figureName = ('MSD_Plot_' + fileName + '_Trim='
                       + str(self.trimLength) + '.png')
         figurePath = outdir.joinpath(figureName)
@@ -1660,15 +1660,15 @@ class Analysis(object):
                             (self.material.numSpeciesTypes
                              + 1 - list(self.species_count).count(0))))
         timeArray = (np.arange(self.numMSDStepsPerTraj)
-                     * self.timeInterval
+                     * self.time_interval
                      * self.timeConversion)
         msdData[:, 0] = timeArray
         msdData[:, 1:] = np.mean(speciesAvgSDArray, axis=0)
         stdData = np.std(speciesAvgSDArray, axis=0)
         fileName = (('%1.2E' % (self.msdTFinal * self.timeConversion))
                     + str(self.reprTime)
-                    + (',nTraj: %1.2E' % numTrajRecorded
-                        if numTrajRecorded != self.nTraj else ''))
+                    + (',n_traj: %1.2E' % numTrajRecorded
+                        if numTrajRecorded != self.n_traj else ''))
         msdFileName = 'COC_MSD_Data_' + fileName + '.npy'
         msdFilePath = outdir.joinpath(msdFileName)
         speciesTypes = [
@@ -1728,7 +1728,7 @@ class Analysis(object):
         ax.set_zlim([zmin - 0.2 * abs(zmin), zmax + 0.2 * abs(zmax)])
         ax.set_title(('trajectory-wise center of charge displacement vectors')
                      + ' \n$N_{{%s}}$=' % ('species') + str(self.totalSpecies))
-        plt.show()  # Temp change
+        plt.show()  # temp change
         figureName = ('COC_DispVectors_' + fileName + '.png')
         figurePath = outdir.joinpath(figureName)
         plt.savefig(figurePath)
@@ -1777,7 +1777,7 @@ class Analysis(object):
         figureTitle = 'MSD_' + fileName
         ax.set_title('\n'.join(wrap(figureTitle, 60)))
         plt.legend()
-        plt.show()  # Temp change
+        plt.show()  # temp change
         figureName = ('COC_MSD_Plot_' + fileName + '_Trim='
                       + str(self.trimLength) + '.png')
         figurePath = outdir.joinpath(figureName)
@@ -1879,12 +1879,12 @@ class Analysis(object):
                         (self.material.latticeMatrix * self.distConversion))
                     index += 1
         if mean:
-            meanDistance = np.zeros((self.nTraj, numPathStepsPerTraj))
+            meanDistance = np.zeros((self.n_traj, numPathStepsPerTraj))
         else:
-            interDistanceArray = np.zeros((self.nTraj, numPathStepsPerTraj,
+            interDistanceArray = np.zeros((self.n_traj, numPathStepsPerTraj,
                                            n_electrons * (n_electrons - 1) / 2))
         interDistanceList = np.zeros(n_electrons * (n_electrons - 1) / 2)
-        for trajIndex in range(self.nTraj):
+        for trajIndex in range(self.n_traj):
             headStart = trajIndex * numPathStepsPerTraj
             for step in range(numPathStepsPerTraj):
                 index = 0

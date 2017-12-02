@@ -4,5 +4,5 @@ from pathlib import Path
 
 from PyCT.materialMSD import materialMSD
 
-dstPath = Path.cwd()
-materialMSD(dstPath)
+dst_path = Path.cwd()
+materialMSD(dst_path)

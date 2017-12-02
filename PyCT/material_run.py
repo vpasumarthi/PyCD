@@ -6,26 +6,27 @@ import yaml
 from PyCT.core import Material, Neighbors, System, Run
 
 
-def materialRun(dstPath):
+def material_run(dst_path):
     # Load simulation parameters
-    simParamFileName = 'simulationParameters.yml'
-    simParamFilePath = dstPath / simParamFileName
-    with open(simParamFilePath, 'r') as stream:
+    sim_param_file_name = 'simulation_parameters.yml'
+    sim_param_file_path = dst_path / sim_param_file_name
+    with open(sim_param_file_path, 'r') as stream:
         try:
-            simParams = yaml.load(stream)
+            sim_params = yaml.load(stream)
         except yaml.YAMLError as exc:
             print(exc)
 
     # data type conversion:
-    simParams['system_size'] = np.asarray(simParams['system_size'])
-    simParams['pbc'] = np.asarray(simParams['pbc'])
-    simParams['species_count'] = np.asarray(simParams['species_count'])
+    sim_params['system_size'] = np.asarray(sim_params['system_size'])
+    sim_params['pbc'] = np.asarray(sim_params['pbc'])
+    sim_params['species_count'] = np.asarray(sim_params[
+                                                    'species_count'])
 
     # Load material parameters
-    config_file_name = 'sysconfig.yml'
+    config_file_name = 'sys_config.yml'
     input_directory_path = (
-                    dstPath.resolve().parents[simParams['workDirDepth'] - 1]
-                    / simParams['inputFileDirectoryName'])
+        dst_path.resolve().parents[sim_params['work_dir_depth'] - 1]
+        / sim_params['input_file_directory_name'])
     config_file_path = input_directory_path / config_file_name
     with open(config_file_path, 'r') as stream:
         try:
@@ -35,50 +36,55 @@ def materialRun(dstPath):
 
     input_coordinate_file_name = 'POSCAR'
     input_coord_file_location = input_directory_path.joinpath(
-                                                    input_coordinate_file_name)
-    params.update({'input_coord_file_location': input_coord_file_location})
+                                            input_coordinate_file_name)
+    params.update({'input_coord_file_location':
+                   input_coord_file_location})
     config_params = ReturnValues(params)
 
     # Build material object files
     material_info = Material(config_params)
 
     # Build neighbors object files
-    material_neighbors = Neighbors(material_info, simParams['system_size'],
-                                  simParams['pbc'])
+    material_neighbors = Neighbors(material_info,
+                                   sim_params['system_size'],
+                                   sim_params['pbc'])
 
-    fileExists = 0
-    if dstPath.joinpath('Run.log').exists():
-        fileExists = 1
-    if not fileExists or simParams['overWrite']:
+    file_exists = 0
+    if dst_path.joinpath('Run.log').exists():
+        file_exists = 1
+    if not file_exists or sim_params['over_write']:
         # Load input files to instantiate system class
         hop_neighbor_list_file_name = input_directory_path.joinpath(
-                                                        'hop_neighbor_list.npy')
+                                            'hop_neighbor_list.npy')
         hop_neighbor_list = np.load(hop_neighbor_list_file_name)[()]
-        cumulative_displacement_list_file_path = input_directory_path.joinpath(
-                                            'cumulative_displacement_list.npy')
+        cumulative_displacement_list_file_path = (
+                            input_directory_path.joinpath(
+                                'cumulative_displacement_list.npy'))
         cumulative_displacement_list = np.load(
-                                            cumulative_displacement_list_file_path)
+                                cumulative_displacement_list_file_path)
         alpha = config_params.alpha
         n_max = config_params.n_max
         k_max = config_params.k_max
 
-        material_system = System(material_info, material_neighbors,
-                                hop_neighbor_list, cumulative_displacement_list,
-                                simParams['species_count'], alpha, n_max, k_max)
+        material_system = System(
+            material_info, material_neighbors, hop_neighbor_list,
+            cumulative_displacement_list, sim_params['species_count'],
+            alpha, n_max, k_max)
 
         # Load precomputed array to instantiate run class
         precomputed_array_file_path = input_directory_path.joinpath(
-                                                        'precomputed_array.npy')
+                                            'precomputed_array.npy')
         precomputed_array = np.load(precomputed_array_file_path)
-        materialRun = Run(material_system, precomputed_array, simParams['Temp'],
-                          simParams['ionChargeType'],
-                          simParams['speciesChargeType'], simParams['nTraj'],
-                          simParams['tFinal'], simParams['timeInterval'])
-        materialRun.doKMCSteps(dstPath, simParams['report'],
-                               simParams['randomSeed'])
+        material_run = Run(
+            material_system, precomputed_array, sim_params['temp'],
+            sim_params['ion_charge_type'],
+            sim_params['species_charge_type'], sim_params['n_traj'],
+            sim_params['t_final'], sim_params['time_interval'])
+        material_run.do_kmc_steps(dst_path, sim_params['report'],
+                                  sim_params['randomSeed'])
     else:
-        print ('Simulation files already exists in '
-               + 'the destination directory')
+        print('Simulation files already exists in '
+              + 'the destination directory')
     return None
 
 

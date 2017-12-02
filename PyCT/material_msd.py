@@ -6,24 +6,24 @@ import yaml
 from PyCT.core import Material, Analysis
 
 
-def materialMSD(dstPath):
+def materialMSD(dst_path):
     # Load simulation parameters
-    simParamFileName = 'simulationParameters.yml'
-    simParamFilePath = dstPath / simParamFileName
-    with open(simParamFilePath, 'r') as stream:
+    sim_param_file_name = 'simulation_parameters.yml'
+    sim_param_file_path = dst_path / sim_param_file_name
+    with open(sim_param_file_path, 'r') as stream:
         try:
-            simParams = yaml.load(stream)
+            sim_params = yaml.load(stream)
         except yaml.YAMLError as exc:
             print(exc)
 
     # data type conversion:
-    simParams['species_count'] = np.asarray(simParams['species_count'])
+    sim_params['species_count'] = np.asarray(sim_params['species_count'])
 
     # Load material parameters
-    config_file_name = 'sysconfig.yml'
+    config_file_name = 'sys_config.yml'
     input_directory_path = (
-                    dstPath.resolve().parents[simParams['workDirDepth'] - 1]
-                    / simParams['inputFileDirectoryName'])
+                    dst_path.resolve().parents[sim_params['work_dir_depth'] - 1]
+                    / sim_params['input_file_directory_name'])
     config_file_path = input_directory_path.joinpath(config_file_name)
     with open(config_file_path, 'r') as stream:
         try:
@@ -41,19 +41,19 @@ def materialMSD(dstPath):
     material_info = Material(materialParameters)
 
     materialAnalysis = Analysis(
-        material_info, simParams['nDim'], simParams['species_count'],
-        simParams['nTraj'], simParams['tFinal'], simParams['timeInterval'],
-        simParams['msdTFinal'], simParams['trimLength'], simParams['reprTime'],
-        simParams['reprDist'])
+        material_info, sim_params['nDim'], sim_params['species_count'],
+        sim_params['n_traj'], sim_params['t_final'], sim_params['time_interval'],
+        sim_params['msdTFinal'], sim_params['trimLength'], sim_params['reprTime'],
+        sim_params['reprDist'])
 
-    msdAnalysisData = materialAnalysis.computeMSD(dstPath, simParams['report'])
+    msdAnalysisData = materialAnalysis.computeMSD(dst_path, sim_params['report'])
     msdData = msdAnalysisData.msdData
     stdData = msdAnalysisData.stdData
     speciesTypes = msdAnalysisData.speciesTypes
     fileName = msdAnalysisData.fileName
     materialAnalysis.generateMSDPlot(msdData, stdData,
-                                     simParams['displayErrorBars'],
-                                     speciesTypes, fileName, dstPath)
+                                     sim_params['displayErrorBars'],
+                                     speciesTypes, fileName, dst_path)
     return None
 
 
