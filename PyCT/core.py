@@ -106,7 +106,7 @@ class Material(object):
 
         self.name = material_parameters.name
         self.species_types = material_parameters.species_types[:]
-        self.numSpeciesTypes = len(self.species_types)
+        self.num_species_types = len(self.species_types)
         self.species_charge_list = deepcopy(
                             material_parameters.species_charge_list)
         self.species_to_element_type_map = deepcopy(
@@ -1035,11 +1035,13 @@ class System(object):
     """defines the system we are working on
 
     Attributes:
-    size: An array (3 x 1) defining the system size in multiple of unit cells
+    size: An array (3 x 1) defining the system size in multiple of
+    unit cells
     """
     # @profile
-    def __init__(self, material_info, material_neighbors, hop_neighbor_list,
-                 cumulative_displacement_list, species_count, alpha, n_max, k_max):
+    def __init__(self, material_info, material_neighbors,
+                 hop_neighbor_list, cumulative_displacement_list,
+                 species_count, alpha, n_max, k_max):
         """Return a system object whose size is *size*"""
         self.start_time = datetime.now()
 
@@ -1054,153 +1056,171 @@ class System(object):
         self.system_size = self.neighbors.system_size
         self.num_cells = self.system_size.prod()
 
-        self.cumulative_displacement_list = cumulative_displacement_list
+        self.cumulative_displacement_list = \
+                                        cumulative_displacement_list
 
         # variables for ewald sum
-        self.translationalMatrix = np.multiply(self.system_size,
-                                               self.material.lattice_matrix)
-        self.systemVolume = abs(np.dot(self.translationalMatrix[0],
-                                       np.cross(self.translationalMatrix[1],
-                                                self.translationalMatrix[2])))
-        self.reciprocalLatticeMatrix = (
-                        2 * np.pi / self.systemVolume
-                        * np.array([np.cross(self.translationalMatrix[1],
-                                             self.translationalMatrix[2]),
-                                    np.cross(self.translationalMatrix[2],
-                                             self.translationalMatrix[0]),
-                                    np.cross(self.translationalMatrix[0],
-                                             self.translationalMatrix[1])]))
-        self.translationalVectorLength = np.linalg.norm(
-                                                    self.translationalMatrix,
-                                                    axis=1)
-        self.reciprocalLatticeVectorLength = np.linalg.norm(
-                                                self.reciprocalLatticeMatrix,
-                                                axis=1)
+        self.translational_matrix = np.multiply(
+                        self.system_size, self.material.lattice_matrix)
+        self.system_volume = abs(
+                        np.dot(self.translational_matrix[0],
+                               np.cross(self.translational_matrix[1],
+                                        self.translational_matrix[2])))
+        self.reciprocal_lattice_matrix = (
+                2 * np.pi / self.system_volume
+                * np.array([np.cross(self.translational_matrix[1],
+                                     self.translational_matrix[2]),
+                            np.cross(self.translational_matrix[2],
+                                     self.translational_matrix[0]),
+                            np.cross(self.translational_matrix[0],
+                                     self.translational_matrix[1])]))
+        self.translational_vector_length = np.linalg.norm(
+                                    self.translational_matrix, axis=1)
+        self.reciprocal_lattice_vector_length = np.linalg.norm(
+                                self.reciprocal_lattice_matrix, axis=1)
 
         # class list
-        self.systemClassIndexList = (
-                np.tile(self.material.unit_cell_class_list, self.num_cells) - 1)
+        self.system_class_index_list = (
+            np.tile(self.material.unit_cell_class_list, self.num_cells)
+            - 1)
 
         # ewald parameters:
         self.alpha = alpha
         self.n_max = n_max
         self.k_max = k_max
 
-    def generateRandomOccupancy(self, species_count):
+    def generate_random_occupancy(self, species_count):
         """generates initial occupancy list based on species count"""
         occupancy = []
-        for speciesTypeIndex, numSpecies in enumerate(species_count):
-            speciesType = self.material.species_types[speciesTypeIndex]
-            speciesSiteElementList = self.material.species_to_element_type_map[
-                                                                speciesType]
-            speciesSiteElementTypeIndexList = [
-                        self.material.element_types.index(speciesSiteElement)
-                        for speciesSiteElement in speciesSiteElementList]
-            speciesSiteIndices = []
-            for speciesSiteElementTypeIndex in speciesSiteElementTypeIndexList:
+        for species_type_index, num_species in enumerate(
+                                                        species_count):
+            species_type = self.material.species_types[
+                                                    species_type_index]
+            species_site_element_list = (
+                            self.material.species_to_element_type_map[
+                                                        species_type])
+            species_site_element_type_index_list = [
+                self.material.element_types.index(species_site_element)
+                for species_site_element in species_site_element_list]
+            species_site_indices = []
+            for species_site_element_type_index in (
+                                species_site_element_type_index_list):
                 system_element_index_offset_array = np.repeat(
-                    np.arange(0,
-                              (self.material.total_elements_per_unit_cell
-                               * self.num_cells),
-                              self.material.total_elements_per_unit_cell),
+                    np.arange(
+                        0, (self.material.total_elements_per_unit_cell
+                            * self.num_cells),
+                        self.material.total_elements_per_unit_cell),
                     self.material.n_elements_per_unit_cell[
-                                                speciesSiteElementTypeIndex])
-                siteIndices = (
+                                    species_site_element_type_index])
+                site_indices = (
                     np.tile(self.material.n_elements_per_unit_cell[
-                                            :speciesSiteElementTypeIndex].sum()
-                            + np.arange(0,
-                                        self.material.n_elements_per_unit_cell[
-                                            speciesSiteElementTypeIndex]),
+                                :species_site_element_type_index].sum()
+                            + np.arange(
+                                0,
+                                self.material.n_elements_per_unit_cell[
+                                    species_site_element_type_index]),
                             self.num_cells)
-                    + system_element_index_offset_array)
-                speciesSiteIndices.extend(list(siteIndices))
-            occupancy.extend(rnd.sample(speciesSiteIndices,
-                                        numSpecies)[:])
+                                + system_element_index_offset_array)
+                species_site_indices.extend(list(site_indices))
+            occupancy.extend(rnd.sample(species_site_indices,
+                                        num_species)[:])
         return occupancy
 
-    def chargeConfig(self, occupancy, ion_charge_type, species_charge_type):
+    def charge_config(self, occupancy, ion_charge_type,
+                      species_charge_type):
         """Returns charge distribution of the current configuration"""
 
         # generate lattice charge list
-        unitcellChargeList = np.array(
-                [self.material.charge_types[ion_charge_type][
+        unit_cell_charge_list = np.array(
+            [self.material.charge_types[ion_charge_type][
                     self.material.element_types[element_type_index]]
-                 for element_type_index in self.material.element_type_index_list])
-        chargeList = np.tile(unitcellChargeList, self.num_cells)[:, np.newaxis]
+             for element_type_index in (
+                            self.material.element_type_index_list)])
+        charge_list = np.tile(unit_cell_charge_list, self.num_cells)[
+                                                        :, np.newaxis]
 
-        for speciesTypeIndex in range(self.material.numSpeciesTypes):
-            start_index = 0 + self.species_count[:speciesTypeIndex].sum()
-            end_index = start_index + self.species_count[speciesTypeIndex]
-            centerSiteSystemElementIndices = occupancy[
-                                                    start_index:end_index][:]
-            chargeList[centerSiteSystemElementIndices] += (
-                        self.material.species_charge_list[species_charge_type][
-                                                            speciesTypeIndex])
-        return chargeList
+        for species_type_index in range(
+                                    self.material.num_species_types):
+            start_index = 0 + self.species_count[
+                                            :species_type_index].sum()
+            end_index = start_index + self.species_count[
+                                                    species_type_index]
+            center_site_system_element_indices = occupancy[
+                                            start_index:end_index][:]
+            charge_list[center_site_system_element_indices] += (
+                self.material.species_charge_list[species_charge_type][
+                                                species_type_index])
+        return charge_list
 
     def ewald_sum_setup(self, outdir=None):
         from scipy.special import erfc
-        sqrtalpha = np.sqrt(self.alpha)
+        sqrt_alpha = np.sqrt(self.alpha)
         alpha4 = 4 * self.alpha
-        fourierSumCoeff = (2 * np.pi) / self.systemVolume
-        precomputed_array = np.zeros((self.neighbors.num_system_elements,
-                                     self.neighbors.num_system_elements))
+        fourier_sum_coeff = (2 * np.pi) / self.system_volume
+        precomputed_array = np.zeros((
+                                self.neighbors.num_system_elements,
+                                self.neighbors.num_system_elements))
 
         for i in range(-self.n_max, self.n_max+1):
             for j in range(-self.n_max, self.n_max+1):
                 for k in range(-self.n_max, self.n_max+1):
-                    tempArray = np.linalg.norm(
-                                        (self.cumulative_displacement_list
-                                         + np.dot(np.array([i, j, k]),
-                                                  self.translationalMatrix)),
-                                        axis=2)
-                    precomputed_array += erfc(sqrtalpha * tempArray) / 2
+                    temp_array = (
+                            np.linalg.norm(
+                                (self.cumulative_displacement_list
+                                 + np.dot(np.array([i, j, k]),
+                                          self.translational_matrix)),
+                                           axis=2))
+                    precomputed_array += erfc(sqrt_alpha
+                                              * temp_array) / 2
 
                     if np.all(np.array([i, j, k]) == 0):
-                        for a in range(self.neighbors.num_system_elements):
-                            for b in range(self.neighbors.num_system_elements):
+                        for a in range(
+                                self.neighbors.num_system_elements):
+                            for b in range(
+                                self.neighbors.num_system_elements):
                                 if a != b:
-                                    precomputed_array[a][b] /= tempArray[a][b]
+                                    precomputed_array[a][b] /= (
+                                                    temp_array[a][b])
                     else:
-                        precomputed_array /= tempArray
+                        precomputed_array /= temp_array
 
         for i in range(-self.k_max, self.k_max+1):
             for j in range(-self.k_max, self.k_max+1):
                 for k in range(-self.k_max, self.k_max+1):
                     if not np.all(np.array([i, j, k]) == 0):
-                        kVector = np.dot(np.array([i, j, k]),
-                                         self.reciprocalLatticeMatrix)
-                        kVector2 = np.dot(kVector, kVector)
+                        k_vector = np.dot(
+                                        np.array([i, j, k]),
+                                        self.reciprocal_lattice_matrix)
+                        k_vector_2 = np.dot(k_vector, k_vector)
                         precomputed_array += (
-                            fourierSumCoeff
-                            * np.exp(-kVector2 / alpha4)
+                            fourier_sum_coeff
+                            * np.exp(-k_vector_2 / alpha4)
                             * np.cos(np.tensordot(
-                                            self.cumulative_displacement_list,
-                                            kVector,
-                                            axes=([2], [0])))
-                            / kVector2)
+                                    self.cumulative_displacement_list,
+                                    k_vector, axes=([2], [0])))
+                                              / k_vector_2)
 
         precomputed_array /= self.material.dielectric_constant
 
         if outdir:
-            self.generatePreComputedArrayLogReport(outdir)
+            self.generate_precomputed_array_log_report(outdir)
         return precomputed_array
 
-    def generatePreComputedArrayLogReport(self, outdir):
+    def generate_precomputed_array_log_report(self, outdir):
         """Generates an log report of the simulation and outputs
             to the working directory"""
-        precomputedArrayLogFileName = 'precomputed_array.log'
-        precomputedArrayLogFilePath = outdir.joinpath(
-                                                precomputedArrayLogFileName)
-        report = open(precomputedArrayLogFilePath, 'w')
+        precomputed_array_log_file_name = 'precomputed_array.log'
+        precomputed_array_log_file_path = outdir.joinpath(
+                                    precomputed_array_log_file_name)
+        report = open(precomputed_array_log_file_path, 'w')
         end_time = datetime.now()
         time_elapsed = end_time - self.start_time
-        report.write('Time elapsed: '
-                     + ('%2d days, '
-                        % time_elapsed.days if time_elapsed.days else '')
-                     + ('%2d hours' % ((time_elapsed.seconds // 3600) % 24))
-                     + (', %2d minutes' % ((time_elapsed.seconds // 60) % 60))
-                     + (', %2d seconds' % (time_elapsed.seconds % 60)))
+        report.write(
+            'Time elapsed: ' + ('%2d days, ' % time_elapsed.days
+                                if time_elapsed.days else '')
+            + ('%2d hours' % ((time_elapsed.seconds // 3600) % 24))
+            + (', %2d minutes' % ((time_elapsed.seconds // 60) % 60))
+            + (', %2d seconds' % (time_elapsed.seconds % 60)))
         report.close()
         return None
 
@@ -1244,8 +1264,8 @@ class Run(object):
                 self.material.species_charge_list[self.species_charge_type][index]
                 for index in self.speciesTypeIndexList]
         self.hopElementTypeList = [
-                                self.material.hop_element_types[speciesType][0]
-                                for speciesType in self.speciesTypeList]
+                                self.material.hop_element_types[species_type][0]
+                                for species_type in self.speciesTypeList]
         self.lenHopDistTypeList = [
                         len(self.material.neighbor_cutoff_dist[hop_element_type])
                         for hop_element_type in self.hopElementTypeList]
@@ -1260,13 +1280,13 @@ class Run(object):
                                                     self.hopElementTypeList):
             center_element_type = hop_element_type.split(
                                         self.material.element_type_delimiter)[0]
-            speciesTypeIndex = self.material.species_types.index(
+            species_type_index = self.material.species_types.index(
                 self.material.element_type_to_species_map[center_element_type][0])
             center_site_element_type_index = self.material.element_types.index(
                                                             center_element_type)
             for hopDistTypeIndex in range(self.lenHopDistTypeList[
                                                         hopElementTypeIndex]):
-                if self.system.species_count[speciesTypeIndex] != 0:
+                if self.system.species_count[species_type_index] != 0:
                     num_neighbors = self.system.hop_neighbor_list[hop_element_type][
                                                 hopDistTypeIndex].num_neighbors
                     self.nProc += num_neighbors[0]
@@ -1337,12 +1357,12 @@ class Run(object):
 
         ewaldNeut = - (np.pi
                        * (systemCharge**2)
-                       / (2 * self.system.systemVolume * self.system.alpha))
+                       / (2 * self.system.system_volume * self.system.alpha))
         precomputed_array = self.precomputed_array
         for _ in range(n_traj):
-            currentStateOccupancy = self.system.generateRandomOccupancy(
+            currentStateOccupancy = self.system.generate_random_occupancy(
                                                     self.system.species_count)
-            currentStateChargeConfig = self.system.chargeConfig(
+            currentStateChargeConfig = self.system.charge_config(
                                                         currentStateOccupancy,
                                                         self.ion_charge_type,
                                                         self.species_charge_type)
@@ -1426,7 +1446,7 @@ class Run(object):
                                       - 2 * precomputed_array[
                                           speciesSiteSystemElementIndex,
                                           neighborSiteSystemElementIndex])))
-                            classIndex = (self.system.systemClassIndexList[
+                            classIndex = (self.system.system_class_index_list[
                                                 speciesSiteSystemElementIndex])
                             delG0 = (
                                 delG0Ewald
@@ -1594,24 +1614,24 @@ class Analysis(object):
                             np.einsum('ijk,ijk->ij', posDiff, posDiff), axis=0)
         speciesAvgSDArray = np.zeros((numTrajRecorded,
                                       self.numMSDStepsPerTraj,
-                                      self.material.numSpeciesTypes
+                                      self.material.num_species_types
                                       - list(self.species_count).count(0)))
         start_index = 0
         numNonExistentSpecies = 0
         nonExistentSpeciesIndices = []
-        for speciesTypeIndex in range(self.material.numSpeciesTypes):
-            if self.species_count[speciesTypeIndex] != 0:
-                end_index = start_index + self.species_count[speciesTypeIndex]
-                speciesAvgSDArray[:, :, (speciesTypeIndex
+        for species_type_index in range(self.material.num_species_types):
+            if self.species_count[species_type_index] != 0:
+                end_index = start_index + self.species_count[species_type_index]
+                speciesAvgSDArray[:, :, (species_type_index
                                          - numNonExistentSpecies)] \
                     = np.mean(sdArray[:, :, start_index:end_index], axis=2)
                 start_index = end_index
             else:
                 numNonExistentSpecies += 1
-                nonExistentSpeciesIndices.append(speciesTypeIndex)
+                nonExistentSpeciesIndices.append(species_type_index)
 
         msd_data = np.zeros((self.numMSDStepsPerTraj,
-                            (self.material.numSpeciesTypes
+                            (self.material.num_species_types
                              + 1 - list(self.species_count).count(0))))
         timeArray = (np.arange(self.numMSDStepsPerTraj)
                      * self.time_interval
@@ -1626,8 +1646,8 @@ class Analysis(object):
         msdFileName = 'MSD_Data_' + file_name + '.npy'
         msdFilePath = outdir.joinpath(msdFileName)
         species_types = [
-                speciesType
-                for index, speciesType in enumerate(self.material.species_types)
+                species_type
+                for index, species_type in enumerate(self.material.species_types)
                 if index not in nonExistentSpeciesIndices]
         np.save(msdFilePath, msd_data)
 
@@ -1652,14 +1672,14 @@ class Analysis(object):
         end_time = datetime.now()
         time_elapsed = end_time - self.start_time
         from scipy.stats import linregress
-        for speciesIndex, speciesType in enumerate(species_types):
+        for speciesIndex, species_type in enumerate(species_types):
             slope, _, _, _, _ = linregress(
                 msd_data[self.trim_length:-self.trim_length, 0],
                 msd_data[self.trim_length:-self.trim_length, speciesIndex + 1])
             speciesDiff = (slope * self.material.ANG2UM**2
                            * self.material.SEC2NS / (2 * self.n_dim))
             report.write('Estimated value of {:s} diffusivity is: \
-                            {:4.3f} um2/s\n'.format(speciesType, speciesDiff))
+                            {:4.3f} um2/s\n'.format(species_type, speciesDiff))
         report.write('Time elapsed: '
                      + ('%2d days, '
                         % time_elapsed.days if time_elapsed.days else '')
@@ -1682,10 +1702,10 @@ class Analysis(object):
         fig = plt.figure()
         ax = fig.add_subplot(111)
         from scipy.stats import linregress
-        for speciesIndex, speciesType in enumerate(species_types):
+        for speciesIndex, species_type in enumerate(species_types):
             ax.plot(msd_data[:, 0], msd_data[:, speciesIndex + 1], 'o',
                     markerfacecolor='blue', markeredgecolor='black',
-                    label=speciesType)
+                    label=species_type)
             if display_error_bars:
                 ax.errorbar(msd_data[:, 0], msd_data[:, speciesIndex + 1],
                             yerr=std_data[:, speciesIndex], fmt='o', capsize=3,
@@ -1697,13 +1717,13 @@ class Analysis(object):
             speciesDiff = (slope * self.material.ANG2UM**2
                            * self.material.SEC2NS / (2 * self.n_dim))
             ax.add_artist(AnchoredText('Est. $D_{{%s}}$ = %4.3f'
-                                       % (speciesType, speciesDiff)
+                                       % (species_type, speciesDiff)
                                        + '  ${{\mu}}m^2/s$; $r^2$=%4.3e'
                                        % (rValue**2),
                                        loc=4))
             ax.plot(msd_data[self.trim_length:-self.trim_length, 0], intercept
                     + slope * msd_data[self.trim_length:-self.trim_length, 0],
-                    'r', label=speciesType+'-fitted')
+                    'r', label=species_type+'-fitted')
         ax.set_xlabel('Time (' + self.repr_time + ')')
         ax.set_ylabel('MSD ('
                       + ('$\AA^2$'
@@ -1724,8 +1744,8 @@ class Analysis(object):
         assert outdir, 'Please provide the destination path where \
                                 MSD output files needs to be saved'
         numExistentSpecies = 0
-        for speciesTypeIndex in range(self.material.numSpeciesTypes):
-            if self.species_count[speciesTypeIndex] != 0:
+        for species_type_index in range(self.material.num_species_types):
+            if self.species_count[species_type_index] != 0:
                 numExistentSpecies += 1
 
         positionArray = np.loadtxt(outdir.joinpath('unwrappedTraj.dat'))
@@ -1755,24 +1775,24 @@ class Analysis(object):
                             np.einsum('ijk,ijk->ij', posDiff, posDiff), axis=0)
         speciesAvgSDArray = np.zeros((numTrajRecorded,
                                       self.numMSDStepsPerTraj,
-                                      self.material.numSpeciesTypes
+                                      self.material.num_species_types
                                       - list(self.species_count).count(0)))
         start_index = 0
         numNonExistentSpecies = 0
         nonExistentSpeciesIndices = []
-        for speciesTypeIndex in range(self.material.numSpeciesTypes):
-            if self.species_count[speciesTypeIndex] != 0:
-                end_index = start_index + self.species_count[speciesTypeIndex]
-                speciesAvgSDArray[:, :, (speciesTypeIndex
+        for species_type_index in range(self.material.num_species_types):
+            if self.species_count[species_type_index] != 0:
+                end_index = start_index + self.species_count[species_type_index]
+                speciesAvgSDArray[:, :, (species_type_index
                                          - numNonExistentSpecies)] \
                     = np.mean(sdArray[:, :, start_index:end_index], axis=2)
                 start_index = end_index
             else:
                 numNonExistentSpecies += 1
-                nonExistentSpeciesIndices.append(speciesTypeIndex)
+                nonExistentSpeciesIndices.append(species_type_index)
 
         msd_data = np.zeros((self.numMSDStepsPerTraj,
-                            (self.material.numSpeciesTypes
+                            (self.material.num_species_types
                              + 1 - list(self.species_count).count(0))))
         timeArray = (np.arange(self.numMSDStepsPerTraj)
                      * self.time_interval
@@ -1787,8 +1807,8 @@ class Analysis(object):
         msdFileName = 'COC_MSD_Data_' + file_name + '.npy'
         msdFilePath = outdir.joinpath(msdFileName)
         species_types = [
-                speciesType
-                for index, speciesType in enumerate(self.material.species_types)
+                species_type
+                for index, species_type in enumerate(self.material.species_types)
                 if index not in nonExistentSpeciesIndices]
         np.save(msdFilePath, msd_data)
 
@@ -1862,10 +1882,10 @@ class Analysis(object):
         fig = plt.figure()
         ax = fig.add_subplot(111)
         from scipy.stats import linregress
-        for speciesIndex, speciesType in enumerate(species_types):
+        for speciesIndex, species_type in enumerate(species_types):
             ax.plot(msd_data[:, 0], msd_data[:, speciesIndex + 1], 'o',
                     markerfacecolor='blue', markeredgecolor='black',
-                    label=speciesType)
+                    label=species_type)
             if display_error_bars:
                 ax.errorbar(msd_data[:, 0], msd_data[:, speciesIndex + 1],
                             yerr=std_data[:, speciesIndex], fmt='o', capsize=3,
@@ -1877,13 +1897,13 @@ class Analysis(object):
             speciesDiff = (slope * self.material.ANG2UM**2
                            * self.material.SEC2NS / (2 * self.n_dim))
             ax.add_artist(AnchoredText('Est. $D_{{%s}}$ = %4.3f'
-                                       % (speciesType, speciesDiff)
+                                       % (species_type, speciesDiff)
                                        + '  ${{\mu}}m^2/s$; $r^2$=%4.3e'
                                        % (rValue**2),
                                        loc=4))
             ax.plot(msd_data[self.trim_length:-self.trim_length, 0], intercept
                     + slope * msd_data[self.trim_length:-self.trim_length, 0],
-                    'r', label=speciesType+'-fitted')
+                    'r', label=species_type+'-fitted')
         ax.set_xlabel('Time (' + self.repr_time + ')')
         ax.set_ylabel('MSD ('
                       + ('$\AA^2$'
@@ -1911,14 +1931,14 @@ class Analysis(object):
         end_time = datetime.now()
         time_elapsed = end_time - self.start_time
         from scipy.stats import linregress
-        for speciesIndex, speciesType in enumerate(species_types):
+        for speciesIndex, species_type in enumerate(species_types):
             slope, _, _, _, _ = linregress(
                 msd_data[self.trim_length:-self.trim_length, 0],
                 msd_data[self.trim_length:-self.trim_length, speciesIndex + 1])
             speciesDiff = (slope * self.material.ANG2UM**2
                            * self.material.SEC2NS / (2 * self.n_dim))
             report.write('Estimated value of {:s} diffusivity is: \
-                            {:4.3f} um2/s\n'.format(speciesType, speciesDiff))
+                            {:4.3f} um2/s\n'.format(species_type, speciesDiff))
         report.write('Time elapsed: '
                      + ('%2d days, '
                         % time_elapsed.days if time_elapsed.days else '')
@@ -1941,10 +1961,10 @@ class Analysis(object):
     #     numRow = 3
     #     numCol = 2
     #     for iPlot in range(numPlots):
-    #         for speciesIndex, speciesType in enumerate(species_types):
+    #         for speciesIndex, species_type in enumerate(species_types):
     #             plt.subplot(numRow, numCol, figNum)
     #             plt.plot(msd_data[:, 0], msd_data[:, speciesIndex + 1],
-    #                      label=speciesType)
+    #                      label=species_type)
     #             figNum += 1
     #     plt.xlabel('Time (' + self.repr_time + ')')
     #     plt.ylabel('MSD (' + self.repr_dist + '**2)')

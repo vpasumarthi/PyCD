@@ -15,7 +15,7 @@ def diffusionProfile(outdir, systemDirectoryPath, profilingSpeciesTypeIndex,
     profileLength = len(profilingSpeciesList)
     diffusivityProfileData = np.zeros((profileLength, 2))
     diffusivityProfileData[:, 0] = profilingSpeciesList
-    speciesType = 'electron' if profilingSpeciesTypeIndex == 0 else 'hole'
+    species_type = 'electron' if profilingSpeciesTypeIndex == 0 else 'hole'
 
     if profilingSpeciesTypeIndex == 0:
         n_holes = speciesCountList[1][0]
@@ -55,12 +55,12 @@ def diffusionProfile(outdir, systemDirectoryPath, profilingSpeciesTypeIndex,
     ax = fig.add_subplot(111)
     ax.plot(diffusivityProfileData[:, 0], diffusivityProfileData[:, 1], 'o-',
             color='blue', markerfacecolor='blue', markeredgecolor='black')
-    ax.set_xlabel('Number of ' + speciesType + 's')
+    ax.set_xlabel('Number of ' + species_type + 's')
     ax.set_ylabel('Diffusivity (${{\mu}}m^2/s$)')
     figureTitle = ('Diffusion coefficient as a function of number of '
-                   + speciesType + 's')
+                   + species_type + 's')
     ax.set_title('\n'.join(wrap(figureTitle, 60)))
-    filename = (str(speciesType) + 'DiffusionProfile_' + ion_charge_type[0]
+    filename = (str(species_type) + 'DiffusionProfile_' + ion_charge_type[0]
                 + species_charge_type[0] + '_' + str(profilingSpeciesList[0])
                 + '-' + str(profilingSpeciesList[-1]))
     figureName = filename + '.png'
@@ -79,7 +79,7 @@ def runtimeProfile(outdir, systemDirectoryPath, profilingSpeciesTypeIndex,
     profileLength = len(profilingSpeciesList)
     elapsedSecondsData = np.zeros((profileLength, 2))
     elapsedSecondsData[:, 0] = profilingSpeciesList
-    speciesType = 'electron' if profilingSpeciesTypeIndex == 0 else 'hole'
+    species_type = 'electron' if profilingSpeciesTypeIndex == 0 else 'hole'
 
     if profilingSpeciesTypeIndex == 0:
         n_holes = speciesCountList[1][0]
@@ -128,12 +128,12 @@ def runtimeProfile(outdir, systemDirectoryPath, profilingSpeciesTypeIndex,
     ax = fig.add_subplot(111)
     ax.plot(elapsedSecondsData[:, 0], elapsedSecondsData[:, 1], 'o-',
             color='blue', markerfacecolor='blue', markeredgecolor='black')
-    ax.set_xlabel('Number of ' + speciesType + 's')
+    ax.set_xlabel('Number of ' + species_type + 's')
     ax.set_ylabel('Run Time (sec)')
     figureTitle = ('Simulation run time as a function of number of '
-                   + speciesType + 's')
+                   + species_type + 's')
     ax.set_title('\n'.join(wrap(figureTitle, 60)))
-    filename = (str(speciesType) + 'RunTimeProfile_' + ion_charge_type[0]
+    filename = (str(species_type) + 'RunTimeProfile_' + ion_charge_type[0]
                 + species_charge_type[0] + '_' + str(profilingSpeciesList[0])
                 + '-' + str(profilingSpeciesList[-1]))
     figureName = filename + '.png'
