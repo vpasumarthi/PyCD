@@ -60,9 +60,9 @@ def generateUniquePathways(inputFileLocation, cutoffDistKey, neighborCutoff,
     # define input parameters
     [lattice_matrix, element_types, n_elements_per_unit_cell,
      fractional_unit_cell_coords] = read_poscar(inputFileLocation)
-    nElementTypes = len(element_types)
+    n_element_types = len(element_types)
     total_elements_per_unit_cell = n_elements_per_unit_cell.sum()
-    elementTypeIndexList = np.repeat(np.arange(nElementTypes),
+    element_type_index_list = np.repeat(np.arange(n_element_types),
                                      n_elements_per_unit_cell)
     [centerElementType, neighborElementType] = cutoffDistKey.split(':')
     centerSiteElementTypeIndex = element_types.index(centerElementType)
@@ -73,23 +73,23 @@ def generateUniquePathways(inputFileLocation, cutoffDistKey, neighborCutoff,
         prec = roundLatticeParameters['prec']
 
     # sort element wise coordinates in ascending order of z-coordinate
-    startIndex = 0
-    for element_index in range(nElementTypes):
-        endIndex = startIndex + n_elements_per_unit_cell[element_index]
-        elementUnitCellCoords = fractional_unit_cell_coords[elementTypeIndexList
+    start_index = 0
+    for element_index in range(n_element_types):
+        end_index = start_index + n_elements_per_unit_cell[element_index]
+        elementUnitCellCoords = fractional_unit_cell_coords[element_type_index_list
                                                          == element_index]
-        fractional_unit_cell_coords[startIndex:endIndex] = elementUnitCellCoords[
+        fractional_unit_cell_coords[start_index:end_index] = elementUnitCellCoords[
                                         elementUnitCellCoords[:, 2].argsort()]
-        startIndex = endIndex
+        start_index = end_index
 
     # generate array of unit cell translational coordinates
     pbc = np.ones(3, int)
-    numCells = 3**sum(pbc)
+    num_cells = 3**sum(pbc)
     xRange = range(-1, 2) if pbc[0] == 1 else [0]
     yRange = range(-1, 2) if pbc[1] == 1 else [0]
     zRange = range(-1, 2) if pbc[2] == 1 else [0]
     system_size = np.array([len(xRange), len(yRange), len(zRange)])
-    unitcellTranslationalCoords = np.zeros((numCells, 3))  # Initialization
+    unitcellTranslationalCoords = np.zeros((num_cells, 3))  # Initialization
     index = 0
     for xOffset in xRange:
         for yOffset in yRange:
@@ -103,14 +103,14 @@ def generateUniquePathways(inputFileLocation, cutoffDistKey, neighborCutoff,
     if avoidElementType:
         avoidElementTypeIndex = element_types.index(avoidElementType)
         systemElementIndexOffsetArray = np.repeat(
-                            np.arange(0, total_elements_per_unit_cell * numCells,
+                            np.arange(0, total_elements_per_unit_cell * num_cells,
                                       total_elements_per_unit_cell),
                             n_elements_per_unit_cell[centerSiteElementTypeIndex])
         avoidElementIndices = (
             np.tile(n_elements_per_unit_cell[:avoidElementTypeIndex].sum()
                     + np.arange(0,
                                 n_elements_per_unit_cell[avoidElementTypeIndex]),
-                    numCells)
+                    num_cells)
             + systemElementIndexOffsetArray)
     else:
         avoidElementIndices = []
@@ -124,9 +124,9 @@ def generateUniquePathways(inputFileLocation, cutoffDistKey, neighborCutoff,
 
     # generate fractional coordinates for neighbor sites
     # and all system elements
-    neighborSiteFractCoords = np.zeros((numCells * numCenterElements, 3))
-    systemFractCoords = np.zeros((numCells * total_elements_per_unit_cell, 3))
-    for iCell in range(numCells):
+    neighborSiteFractCoords = np.zeros((num_cells * numCenterElements, 3))
+    systemFractCoords = np.zeros((num_cells * total_elements_per_unit_cell, 3))
+    for iCell in range(num_cells):
         neighborSiteFractCoords[(iCell * numCenterElements):(
                                         (iCell + 1) * numCenterElements)] \
             = (centerSiteFractCoords + unitcellTranslationalCoords[iCell])
@@ -156,7 +156,7 @@ def generateUniquePathways(inputFileLocation, cutoffDistKey, neighborCutoff,
     # initialize class pair list
     if class_list:
         centerSiteClassList = class_list[0]
-        neighborSiteClassList = np.tile(class_list[1], numCells)
+        neighborSiteClassList = np.tile(class_list[1], num_cells)
         classPairList = np.empty(numCenterElements, dtype=object)
 
     displacementVectorList = np.empty(numCenterElements, dtype=object)
