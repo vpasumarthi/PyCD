@@ -909,7 +909,7 @@ class Run(object):
         if excess:
             wrapped_position_array = np.zeros((num_path_steps_per_traj,
                                                self.total_species * 3))
-            delg_0_array = np.zeros(self.kmc_steps)
+            delg_0_array = np.zeros(num_path_steps_per_traj)
             potential_array = np.zeros((num_path_steps_per_traj,
                                         self.total_species))
         k_list = np.zeros(self.n_proc)
@@ -1039,8 +1039,9 @@ class Run(object):
                 sim_time -= np.log(rand2) / k_total
 
                 # TODO: Address pre-defining excess data arrays
-                # if excess:
-                #    delg_0_array[step] = delg_0_list[proc_index]
+                if excess:
+                    delg_0_array[start_path_index:end_path_index] = \
+                        delg_0_list[proc_index]
                 species_index = self.n_proc_species_index_list[proc_index]
                 hop_element_type = self.n_proc_hop_element_type_list[
                                                                     proc_index]
@@ -1408,8 +1409,6 @@ class Analysis(object):
         import matplotlib
         matplotlib.use('Agg')
         import matplotlib.pyplot as plt
-        import importlib
-        importlib.import_module('mpl_toolkits.mplot3d').Axes3D
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
         num_traj_recorded = int(len(coc_position_array)
@@ -1521,180 +1520,6 @@ class Analysis(object):
                             * self.material.SEC2NS / (2 * self.n_dim))
             report.write('Estimated value of {:s} diffusivity is: '
                          '{:4.3f} um2/s\n'.format(species_type, species_diff))
-        report.write('Time elapsed: ' + ('%2d days, ' % time_elapsed.days
-                                         if time_elapsed.days else '')
-                     + ('%2d hours' % ((time_elapsed.seconds // 3600) % 24))
-                     + (', %2d minutes' % ((time_elapsed.seconds // 60) % 60))
-                     + (', %2d seconds' % (time_elapsed.seconds % 60)))
-        report.close()
-        return None
-
-    # TODO: Finish writing the method soon.
-    # def displayCollectiveMSDPlot(self, msd_data, species_types,
-    #                              file_name, out_dir=None):
-    #     """Returns a line plot of the MSD data"""
-    #     import matplotlib
-    #     matplotlib.use('Agg')
-    #     import matplotlib.pyplot as plt
-    #     from textwrap import wrap
-    #     plt.figure()
-    #     figNum = 0
-    #     numRow = 3
-    #     numCol = 2
-    #     for iPlot in range(numPlots):
-    #         for species_index, species_type in enumerate(species_types):
-    #             plt.subplot(numRow, numCol, figNum)
-    #             plt.plot(msd_data[:, 0], msd_data[:, species_index + 1],
-    #                      label=species_type)
-    #             figNum += 1
-    #     plt.xlabel('Time (' + self.repr_time + ')')
-    #     plt.ylabel('MSD (' + self.repr_dist + '**2)')
-    #     figure_title = 'MSD_' + file_name
-    #     plt.title('\n'.join(wrap(figure_title, 60)))
-    #     plt.legend()
-    #     if out_dir:
-    #         figure_name = 'MSD_Plot_' + file_name + '.jpg'
-    #         figure_path = out_dir + directorySeparator + figure_name
-    #         plt.savefig(figure_path)
-
-    def mean_distance(self, out_dir, mean=1, plot=1, report=1):
-        """
-        Add combType as one of the inputs
-        combType = 0  # combType = 0: like-like; 1: like-unlike; 2: both
-        if combType == 0:
-            numComb = sum(
-                [self.species_count[index] * (self.species_count[index] - 1)
-                 for index in len(self.species_count)])
-        elif combType == 1:
-            numComb = np.prod(self.species_count)
-        elif combType == 2:
-            numComb = (np.prod(self.species_count)
-                       + sum([self.species_count[index]
-                              * (self.species_count[index] - 1)
-                              for index in len(self.species_count)]))
-        """
-        position_array = (self.trajectory_data.wrapped_position_array
-                          * self.dist_conversion)
-        num_path_steps_per_traj = int(self.kmc_steps / self.stepInterval) + 1
-        # TODO: Currently assuming only electrons exist and coding accordingly.
-        # Need to change according to combType
-        pbc = [1, 1, 1]  # change to generic
-        n_electrons = self.species_count[0]  # change to generic
-        x_range = range(-1, 2) if pbc[0] == 1 else [0]
-        y_range = range(-1, 2) if pbc[1] == 1 else [0]
-        z_range = range(-1, 2) if pbc[2] == 1 else [0]
-        # Initialization
-        system_translational_vector_list = np.zeros((3**sum(pbc), 3))
-        index = 0
-        for x_offset in x_range:
-            for y_offset in y_range:
-                for z_offset in z_range:
-                    system_translational_vector_list[index] = np.dot(
-                        np.multiply(np.array([x_offset, y_offset, z_offset]),
-                                    self.system_size),
-                        (self.material.lattice_matrix * self.dist_conversion))
-                    index += 1
-        if mean:
-            mean_distance = np.zeros((self.n_traj, num_path_steps_per_traj))
-        else:
-            inter_distance_array = np.zeros(
-                            (self.n_traj, num_path_steps_per_traj, n_electrons
-                             * (n_electrons - 1) / 2))
-        inter_distance_list = np.zeros(n_electrons * (n_electrons - 1) / 2)
-        for traj_index in range(self.n_traj):
-            head_start = traj_index * num_path_steps_per_traj
-            for step in range(num_path_steps_per_traj):
-                index = 0
-                for i in range(n_electrons):
-                    for j in range(i + 1, n_electrons):
-                        neighbor_image_coords = (
-                                        system_translational_vector_list
-                                        + position_array[head_start + step, j])
-                        neighbor_image_displacement_vectors = (
-                                        neighbor_image_coords
-                                        - position_array[head_start + step, i])
-                        neighbor_image_displacements = np.linalg.norm(
-                                neighbor_image_displacement_vectors, axis=1)
-                        displacement = np.min(neighbor_image_displacements)
-                        inter_distance_list[index] = displacement
-                        index += 1
-                if mean:
-                    mean_distance[traj_index, step] = np.mean(
-                                                        inter_distance_list)
-                    mean_distance_over_traj = np.mean(mean_distance, axis=0)
-                else:
-                    inter_distance_array[traj_index, step] = np.copy(
-                                                        inter_distance_list)
-
-        inter_distance_array_over_traj = np.mean(inter_distance_array, axis=0)
-        kmc_steps = range(0, num_path_steps_per_traj * int(self.stepInterval),
-                          int(self.stepInterval))
-        if mean:
-            mean_distance_array = np.zeros((num_path_steps_per_traj, 2))
-            mean_distance_array[:, 0] = kmc_steps
-            mean_distance_array[:, 1] = mean_distance_over_traj
-            mean_distance_file_name = 'mean_distance_data.npy'
-            mean_distance_file_path = out_dir.joinpath(mean_distance_file_name)
-            np.save(mean_distance_file_path, mean_distance_array)
-        else:
-            inter_species_distance_array = np.zeros(
-                                    (num_path_steps_per_traj,
-                                     n_electrons * (n_electrons - 1) / 2 + 1))
-            inter_species_distance_array[:, 0] = kmc_steps
-            inter_species_distance_array[:, 1:] = (
-                                                inter_distance_array_over_traj)
-            inter_species_distance_file_name = 'inter_species_distance.npy'
-            inter_species_distance_file_path = out_dir.joinpath(
-                inter_species_distance_file_name)
-            np.save(inter_species_distance_file_path,
-                    inter_species_distance_array)
-
-        if plot:
-            import matplotlib
-            matplotlib.use('Agg')
-            import matplotlib.pyplot as plt
-            plt.figure()
-            if mean:
-                plt.plot(mean_distance_array[:, 0], mean_distance_array[:, 1])
-                plt.title('Mean Distance between species along '
-                          'simulation length')
-                plt.xlabel('KMC Step')
-                plt.ylabel('Distance (' + self.repr_dist + ')')
-                figure_name = 'MeanDistanceOverTraj.jpg'
-                figure_path = out_dir.joinpath(figure_name)
-                plt.savefig(figure_path)
-            else:
-                legend_list = []
-                for i in range(n_electrons):
-                    for j in range(i + 1, n_electrons):
-                        legend_list.append('r_' + str(i) + ':' + str(j))
-                line_objects = plt.plot(inter_species_distance_array[:, 0],
-                                        inter_species_distance_array[:, 1:])
-                plt.title('Inter-species Distances along simulation length')
-                plt.xlabel('KMC Step')
-                plt.ylabel('Distance (' + self.repr_dist + ')')
-                lgd = plt.legend(line_objects, legend_list, loc='center left',
-                                 bbox_to_anchor=(1, 0.5))
-                figure_name = 'inter_species_distance.jpg'
-                figure_path = out_dir.joinpath(figure_name)
-                plt.savefig(figure_path, bbox_extra_artists=(lgd,),
-                            bbox_inches='tight')
-        if report:
-            self.generate_mean_displacement_analysis_log_report(out_dir)
-        output = (mean_distance_array
-                  if mean else inter_species_distance_array)
-        return output
-
-    def generate_mean_displacement_analysis_log_report(self, out_dir):
-        """Generates an log report of the MSD Analysis and outputs to the
-            working directory"""
-        mean_displacement_analysis_log_file_name = (
-                                            'mean_displacement_analysis.log')
-        mean_displacement_analysis_log_file_path = out_dir.joinpath(
-                                    mean_displacement_analysis_log_file_name)
-        report = open(mean_displacement_analysis_log_file_path, 'w')
-        end_time = datetime.now()
-        time_elapsed = end_time - self.start_time
         report.write('Time elapsed: ' + ('%2d days, ' % time_elapsed.days
                                          if time_elapsed.days else '')
                      + ('%2d hours' % ((time_elapsed.seconds // 3600) % 24))
