@@ -12,6 +12,11 @@ from copy import deepcopy
 import pdb
 
 import numpy as np
+from scipy.special import erfc
+from scipy.stats import linregress
+import matplotlib.pyplot as plt
+from matplotlib.offsetbox import AnchoredText
+from textwrap import wrap
 
 from PyCT.io import read_poscar, generate_report
 from PyCT import constants
@@ -680,7 +685,6 @@ class System(object):
         return charge_list
 
     def ewald_sum_setup(self, out_dir=None):
-        from scipy.special import erfc
         sqrt_alpha = np.sqrt(self.alpha)
         alpha4 = 4 * self.alpha
         fourier_sum_coeff = (2 * np.pi) / self.system_volume
@@ -1158,7 +1162,6 @@ class Analysis(object):
         if report:
             report_file_name = ('MSD_Analysis' + ('_' if file_name else '')
                                 + file_name)
-            from scipy.stats import linregress
             for species_index, species_type in enumerate(species_types):
                 slope, _, _, _, _ = \
                     linregress(msd_data[self.trim_length:-self.trim_length, 0],
@@ -1182,14 +1185,9 @@ class Analysis(object):
         """Returns a line plot of the MSD data"""
         assert out_dir, 'Please provide the destination path where MSD Plot ' \
                         'files needs to be saved'
-        import matplotlib
-        matplotlib.use('Agg')
-        import matplotlib.pyplot as plt
-        from matplotlib.offsetbox import AnchoredText
-        from textwrap import wrap
+        plt.switch_backend('Agg')
         fig = plt.figure()
         ax = fig.add_subplot(111)
-        from scipy.stats import linregress
         for species_index, species_type in enumerate(species_types):
             ax.plot(msd_data[:, 0], msd_data[:, species_index + 1], 'o',
                     markerfacecolor='blue', markeredgecolor='black',
