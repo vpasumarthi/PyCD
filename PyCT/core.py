@@ -14,6 +14,7 @@ import pdb
 import numpy as np
 
 from PyCT.io import read_poscar
+from PyCT import constants
 
 
 class Material(object):
@@ -55,37 +56,6 @@ class Material(object):
         * **lattice_matrix** (np.array (3x3): lattice cell matrix
     """
 
-    # CONSTANTS
-    EPSILON0 = 8.854187817E-12  # Electric constant in F.m-1
-    ANG = 1E-10  # Angstrom in m
-    KB = 1.38064852E-23  # Boltzmann constant in J/K
-
-    # FUNDAMENTAL ATOMIC UNITS
-    # Source: http://physics.nist.gov/cuu/Constants/Table/allascii.txt
-    EMASS = 9.10938356E-31  # Electron mass in Kg
-    ECHARGE = 1.6021766208E-19  # Elementary charge in C
-    HBAR = 1.054571800E-34  # Reduced Planck's constant in J.sec
-    KE = 1 / (4 * np.pi * EPSILON0)
-
-    # DERIVED ATOMIC UNITS
-    # Bohr radius in m
-    BOHR = HBAR**2 / (EMASS * ECHARGE**2 * KE)
-    # Hartree in J
-    HARTREE = HBAR**2 / (EMASS * BOHR**2)
-    AUTIME = HBAR / HARTREE  # sec
-    AUTEMPERATURE = HARTREE / KB  # K
-
-    # CONVERSIONS
-    EV2J = ECHARGE
-    ANG2BOHR = ANG / BOHR
-    ANG2UM = 1.00E-04
-    J2HARTREE = 1 / HARTREE
-    SEC2AUTIME = 1 / AUTIME
-    SEC2NS = 1.00E+09
-    SEC2PS = 1.00E+12
-    SEC2FS = 1.00E+15
-    K2AUTEMP = 1 / AUTEMPERATURE
-
     def __init__(self, material_parameters):
 
         # Read Input POSCAR
@@ -94,7 +64,7 @@ class Material(object):
          self.total_elements_per_unit_cell,
          fractional_unit_cell_coords] = (
             read_poscar(material_parameters.input_coord_file_location))
-        self.lattice_matrix *= self.ANG2BOHR
+        self.lattice_matrix *= constants.ANG2BOHR
         self.n_element_types = len(self.element_types)
         self.element_type_index_list = np.repeat(
                                             np.arange(self.n_element_types),
@@ -133,30 +103,31 @@ class Material(object):
                                        self.lattice_matrix)
         self.charge_types = deepcopy(material_parameters.charge_types)
 
-        self.vn = material_parameters.vn / self.SEC2AUTIME
+        self.vn = material_parameters.vn / constants.SEC2AUTIME
         self.lambda_values = deepcopy(material_parameters.lambda_values)
-        self.lambda_values.update((x, [y[index] * self.EV2J * self.J2HARTREE
-                                       for index in range(len(y))])
-                                  for x, y in self.lambda_values.items())
+        self.lambda_values.update(
+                        (x, [y[index] * constants.EV2J * constants.J2HARTREE
+                             for index in range(len(y))])
+                        for x, y in self.lambda_values.items())
 
         self.v_ab = deepcopy(material_parameters.v_ab)
         self.v_ab.update(
-                        (x, [y[index] * self.EV2J * self.J2HARTREE
+                        (x, [y[index] * constants.EV2J * constants.J2HARTREE
                              for index in range(len(y))])
                         for x, y in self.v_ab.items())
 
         self.neighbor_cutoff_dist = deepcopy(
                                     material_parameters.neighbor_cutoff_dist)
         self.neighbor_cutoff_dist.update(
-                        (x, [(y[index] * self.ANG2BOHR) if y[index] else None
-                             for index in range(len(y))])
-                        for x, y in (self.neighbor_cutoff_dist.items()))
+                    (x, [(y[index] * constants.ANG2BOHR) if y[index] else None
+                         for index in range(len(y))])
+                    for x, y in (self.neighbor_cutoff_dist.items()))
         self.neighbor_cutoff_dist_tol = deepcopy(
                         material_parameters.neighbor_cutoff_dist_tol)
         self.neighbor_cutoff_dist_tol.update(
-                        (x, [(y[index] * self.ANG2BOHR) if y[index] else None
-                             for index in range(len(y))])
-                        for x, y in (self.neighbor_cutoff_dist_tol.items()))
+                    (x, [(y[index] * constants.ANG2BOHR) if y[index] else None
+                         for index in range(len(y))])
+                    for x, y in (self.neighbor_cutoff_dist_tol.items()))
         self.num_unique_hopping_distances = {
                         key: len(value)
                         for key, value in (self.neighbor_cutoff_dist.items())}
@@ -169,14 +140,14 @@ class Material(object):
         self.num_classes = [
                         len(set(material_parameters.class_list[element_type]))
                         for element_type in self.element_types]
-        self.delG0_shift_list = {
-                    key: [[(value[center_site_class_index][index] * self.EV2J
-                            * self.J2HARTREE)
-                           for index in range(
-                                    self.num_unique_hopping_distances[key])]
-                          for center_site_class_index in range(len(value))]
-                    for key, value in (
-                                material_parameters.delG0_shift_list.items())}
+        self.delg_0_shift_list = {
+                key: [[(value[center_site_class_index][index] * constants.EV2J
+                        * constants.J2HARTREE)
+                       for index in range(
+                                self.num_unique_hopping_distances[key])]
+                      for center_site_class_index in range(len(value))]
+                for key, value in (
+                            material_parameters.delg_0_shift_list.items())}
 
         site_list = [self.species_to_element_type_map[key]
                      for key in self.species_to_element_type_map
@@ -469,28 +440,28 @@ class Neighbors(object):
                                                         i_displacement_vectors)
             num_neighbors = np.append(num_neighbors, i_num_neighbors)
             if quick_test == 1:
-                print(np.sort(displacement_list)[:10] / self.material.ANG2BOHR)
+                print(np.sort(displacement_list)[:10] / constants.ANG2BOHR)
                 pdb.set_trace()
             elif quick_test == 2:
                 for cutoff_dist in range(2, 7):
-                    cutoff = cutoff_dist * self.material.ANG2BOHR
+                    cutoff = cutoff_dist * constants.ANG2BOHR
                     print(cutoff_dist)
                     print(displacement_list[displacement_list < cutoff].shape)
                     print(np.unique(np.sort(np.round(
                                 displacement_list[displacement_list < cutoff]
-                                / self.material.ANG2BOHR, 4))).shape)
+                                / constants.ANG2BOHR, 4))).shape)
                     print(np.unique(np.sort(np.round(
                                 displacement_list[displacement_list < cutoff]
-                                / self.material.ANG2BOHR, 3))).shape)
+                                / constants.ANG2BOHR, 3))).shape)
                     print(np.unique(np.sort(np.round(
                                 displacement_list[displacement_list < cutoff]
-                                / self.material.ANG2BOHR, 2))).shape)
+                                / constants.ANG2BOHR, 2))).shape)
                     print(np.unique(np.sort(np.round(
                                 displacement_list[displacement_list < cutoff]
-                                / self.material.ANG2BOHR, 1))).shape)
+                                / constants.ANG2BOHR, 1))).shape)
                     print(np.unique(np.sort(np.round(
                                 displacement_list[displacement_list < cutoff]
-                                / self.material.ANG2BOHR, 0))).shape)
+                                / constants.ANG2BOHR, 0))).shape)
                 pdb.set_trace()
 
         return_neighbors = ReturnValues(
@@ -800,12 +771,12 @@ class Run(object):
         self.material = self.system.material
         self.neighbors = self.system.neighbors
         self.precomputed_array = precomputed_array
-        self.temp = temp * self.material.K2AUTEMP
+        self.temp = temp * constants.K2AUTEMP
         self.ion_charge_type = ion_charge_type
         self.species_charge_type = species_charge_type
         self.n_traj = int(n_traj)
-        self.t_final = t_final * self.material.SEC2AUTIME
-        self.time_interval = time_interval * self.material.SEC2AUTIME
+        self.t_final = t_final * constants.SEC2AUTIME
+        self.time_interval = time_interval * constants.SEC2AUTIME
 
         self.system_size = self.system.system_size
 
@@ -1018,7 +989,7 @@ class Run(object):
                                             species_site_system_element_index]
                             delg_0 = (
                                 delg_0_ewald
-                                + self.material.delG0_shift_list[
+                                + self.material.delg_0_shift_list[
                                     self.n_proc_hop_element_type_list[i_proc]][
                                                 class_index][hop_dist_type])
                             delg_0_list.append(delg_0)
@@ -1133,8 +1104,8 @@ class Analysis(object):
         self.species_count = species_count
         self.total_species = self.species_count.sum()
         self.n_traj = int(n_traj)
-        self.t_final = t_final * self.material.SEC2AUTIME
-        self.time_interval = time_interval * self.material.SEC2AUTIME
+        self.t_final = t_final * constants.SEC2AUTIME
+        self.time_interval = time_interval * constants.SEC2AUTIME
         self.trim_length = trim_length
         self.num_path_steps_per_traj = (int(self.t_final / self.time_interval)
                                         + 1)
@@ -1142,24 +1113,24 @@ class Analysis(object):
         self.repr_dist = repr_dist
 
         if repr_time == 'ns':
-            self.time_conversion = (self.material.SEC2NS
-                                    / self.material.SEC2AUTIME)
+            self.time_conversion = (constants.SEC2NS
+                                    / constants.SEC2AUTIME)
         elif repr_time == 'ps':
-            self.time_conversion = (self.material.SEC2PS
-                                    / self.material.SEC2AUTIME)
+            self.time_conversion = (constants.SEC2PS
+                                    / constants.SEC2AUTIME)
         elif repr_time == 'fs':
-            self.time_conversion = (self.material.SEC2FS
-                                    / self.material.SEC2AUTIME)
+            self.time_conversion = (constants.SEC2FS
+                                    / constants.SEC2AUTIME)
         elif repr_time == 's':
-            self.time_conversion = 1E+00 / self.material.SEC2AUTIME
+            self.time_conversion = 1E+00 / constants.SEC2AUTIME
 
         if repr_dist == 'm':
-            self.dist_conversion = self.material.ANG / self.material.ANG2BOHR
+            self.dist_conversion = self.material.ANG / constants.ANG2BOHR
         elif repr_dist == 'um':
-            self.dist_conversion = (self.material.ANG2UM
-                                    / self.material.ANG2BOHR)
+            self.dist_conversion = (constants.ANG2UM
+                                    / constants.ANG2BOHR)
         elif repr_dist == 'angstrom':
-            self.dist_conversion = 1E+00 / self.material.ANG2BOHR
+            self.dist_conversion = 1E+00 / constants.ANG2BOHR
 
         self.msd_t_final = msd_t_final / self.time_conversion
         self.num_msd_steps_per_traj = int(self.msd_t_final
@@ -1257,8 +1228,8 @@ class Analysis(object):
                 linregress(msd_data[self.trim_length:-self.trim_length, 0],
                            msd_data[self.trim_length:-self.trim_length,
                            species_index + 1])
-            species_diff = (slope * self.material.ANG2UM**2
-                            * self.material.SEC2NS / (2 * self.n_dim))
+            species_diff = (slope * constants.ANG2UM**2
+                            * constants.SEC2NS / (2 * self.n_dim))
             report.write('Estimated value of {:s} diffusivity is: '
                          '{:4.3f} um2/s\n'.format(species_type, species_diff))
         report.write('Time elapsed: ' + ('%2d days, ' % time_elapsed.days
@@ -1295,8 +1266,8 @@ class Analysis(object):
                 linregress(msd_data[self.trim_length:-self.trim_length, 0],
                            msd_data[self.trim_length:-self.trim_length,
                            species_index + 1])
-            species_diff = (slope * self.material.ANG2UM**2
-                            * self.material.SEC2NS / (2 * self.n_dim))
+            species_diff = (slope * constants.ANG2UM**2
+                            * constants.SEC2NS / (2 * self.n_dim))
             ax.add_artist(
                 AnchoredText('Est. $D_{{%s}}$ = %4.3f' % (species_type,
                                                           species_diff)
