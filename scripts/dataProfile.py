@@ -30,7 +30,7 @@ def diffusionProfile(outdir, systemDirectoryPath, profilingSpeciesTypeIndex,
     msdAnalysisLogFileName = ('MSD_Analysis' + ('_' if file_name else '')
                               + file_name + '.log')
 
-    for speciesIndex, nSpecies in enumerate(profilingSpeciesList):
+    for species_index, nSpecies in enumerate(profilingSpeciesList):
         # Change to working directory
         if profilingSpeciesTypeIndex == 0:
             n_electrons = nSpecies
@@ -48,7 +48,7 @@ def diffusionProfile(outdir, systemDirectoryPath, profilingSpeciesTypeIndex,
 
         with open(msdAnalysisLogFilePath, 'r') as msdAnalysisLogFile:
             firstLine = msdAnalysisLogFile.readline()
-        diffusivityProfileData[speciesIndex, 1] = float(firstLine[-13:-6])
+        diffusivityProfileData[species_index, 1] = float(firstLine[-13:-6])
 
     plt.switch_backend('Agg')
     fig = plt.figure()
@@ -91,7 +91,7 @@ def runtimeProfile(outdir, systemDirectoryPath, profilingSpeciesTypeIndex,
                   + '; species_charge_type=' + species_charge_type)
     runLogFileName = 'Run.log'
 
-    for speciesIndex, nSpecies in enumerate(profilingSpeciesList):
+    for species_index, nSpecies in enumerate(profilingSpeciesList):
         # Change to working directory
         if profilingSpeciesTypeIndex == 0:
             n_electrons = nSpecies
@@ -121,7 +121,7 @@ def runtimeProfile(outdir, systemDirectoryPath, profilingSpeciesTypeIndex,
             numSeconds = float(firstLine[36:38])
         elapsedTime = timedelta(days=numDays, hours=numHours,
                                 minutes=numMinutes, seconds=numSeconds)
-        elapsedSecondsData[speciesIndex, 1] = int(elapsedTime.total_seconds())
+        elapsedSecondsData[species_index, 1] = int(elapsedTime.total_seconds())
 
     plt.switch_backend('Agg')
     fig = plt.figure()

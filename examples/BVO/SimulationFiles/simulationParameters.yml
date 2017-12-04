@@ -14,7 +14,7 @@ work_dir_depth: 1
 dstFileName: Run.py
 n_traj: 100.0
 over_write: 1
-randomSeed: 2
+random_seed: 2
 report: 1
 t_final: 1.0e-07
 time_interval: 1.0e-08
