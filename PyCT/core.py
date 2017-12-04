@@ -20,40 +20,36 @@ class Material(object):
     """Defines the properties and structure of working material
     :param str name: A string representing the material name
     :param list element_types: list of chemical elements
-    :param dict species_to_element_type_map: list of charge carrier
-                                                species
+    :param dict species_to_element_type_map: list of charge carrier species
     :param unit_cell_coords: positions of all elements in the unit cell
     :type unit_cell_coords: np.array (nx3)
-    :param element_type_index_list: list of element types for all
-                                    unit cell coordinates
+    :param element_type_index_list: list of element types for all unit cell
+            coordinates
     :type element_type_index_list: np.array (n)
-    :param dict charge_types: types of atomic charges considered for
-                                the working material
+    :param dict charge_types: types of atomic charges considered for the
+            working material
     :param list lattice_parameters: list of three lattice constants in
-                                    angstrom and three angles between
-                                    them in degrees
+            angstrom and three angles between them in degrees
     :param float vn: typical frequency for nuclear motion
     :param dict lambda_values: Reorganization energies
-    :param dict VAB: Electronic coupling matrix element
-    :param dict neighbor_cutoff_dist: List of neighbors and their
-                                        respective cutoff distances in
-                                        angstrom
-    :param float neighbor_cutoff_dist_tol: Tolerance value in angstrom
-                                            for neighbor cutoff
-                                            distance
+    :param dict v_ab: Electronic coupling matrix element
+    :param dict neighbor_cutoff_dist: List of neighbors and their respective
+            cutoff distances in angstrom
+    :param float neighbor_cutoff_dist_tol: Tolerance value in angstrom for
+            neighbor cutoff distance
     :param str element_type_delimiter: Delimiter between element types
     :param str empty_species_type: name of the empty species type
     :param float epsilon: Dielectric constant of the material
 
     The additional attributes are:
-        * **n_elements_per_unit_cell** (np.array (n)): element-type
-                        wise total number of elements in a unit cell
+        * **n_elements_per_unit_cell** (np.array (n)): element-type wise total
+            number of elements in a unit cell
         * **site_list** (list): list of elements that act as sites
-        * **element_type_to_species_map** (dict): dictionary of element
-                                                    to species mapping
-        * **non_empty_species_to_element_type_map** (dict): dictionary
-            of species to element mapping with elements excluding
-            empty_species_type
+        * **element_type_to_species_map** (dict): dictionary of element to
+                species mapping
+        * **non_empty_species_to_element_type_map** (dict): dictionary of
+                species to element mapping with elements excluding
+                empty_species_type
         * **hop_element_types** (dict): dictionary of species to
             hopping element types separated by element_type_delimiter
         * **lattice_matrix** (np.array (3x3): lattice cell matrix
@@ -101,103 +97,95 @@ class Material(object):
         self.lattice_matrix *= self.ANG2BOHR
         self.n_element_types = len(self.element_types)
         self.element_type_index_list = np.repeat(
-                                    np.arange(self.n_element_types),
-                                    self.n_elements_per_unit_cell)
+                                            np.arange(self.n_element_types),
+                                            self.n_elements_per_unit_cell)
 
         self.name = material_parameters.name
         self.species_types = material_parameters.species_types[:]
         self.num_species_types = len(self.species_types)
         self.species_charge_list = deepcopy(
-                            material_parameters.species_charge_list)
+                                    material_parameters.species_charge_list)
         self.species_to_element_type_map = deepcopy(
-                    material_parameters.species_to_element_type_map)
+                            material_parameters.species_to_element_type_map)
 
         # Initialization
         self.fractional_unit_cell_coords = np.zeros(
-                                    fractional_unit_cell_coords.shape)
+                                            fractional_unit_cell_coords.shape)
         self.unit_cell_class_list = []
         start_index = 0
         # Reorder element-wise unit cell coordinates in ascending order
         # of z-coordinate
         for element_type_index in range(self.n_element_types):
-            element_fract_unit_cell_coords = (
-                                    fractional_unit_cell_coords[
-                                        self.element_type_index_list
-                                        == element_type_index])
+            element_fract_unit_cell_coords = fractional_unit_cell_coords[
+                            self.element_type_index_list == element_type_index]
             end_index = (start_index
-                        + self.n_elements_per_unit_cell[
-                                                element_type_index])
+                         + self.n_elements_per_unit_cell[element_type_index])
             self.fractional_unit_cell_coords[start_index:end_index] = (
-                element_fract_unit_cell_coords[
-                    element_fract_unit_cell_coords[:, 2].argsort()])
+                        element_fract_unit_cell_coords[
+                            element_fract_unit_cell_coords[:, 2].argsort()])
             element_type = self.element_types[element_type_index]
             self.unit_cell_class_list.extend(
                 [material_parameters.class_list[element_type][index]
-                 for index
-                 in element_fract_unit_cell_coords[:, 2].argsort()])
+                 for index in element_fract_unit_cell_coords[:, 2].argsort()])
             start_index = end_index
 
-        self.unit_cell_coords = np.dot(
-                self.fractional_unit_cell_coords, self.lattice_matrix)
+        self.unit_cell_coords = np.dot(self.fractional_unit_cell_coords,
+                                       self.lattice_matrix)
         self.charge_types = deepcopy(material_parameters.charge_types)
 
         self.vn = material_parameters.vn / self.SEC2AUTIME
-        self.lambda_values = deepcopy(
-                                    material_parameters.lambda_values)
-        self.lambda_values.update(
-                            (x, [y[index] * self.EV2J * self.J2HARTREE
-                                 for index in range(len(y))])
-                            for x, y in self.lambda_values.items())
+        self.lambda_values = deepcopy(material_parameters.lambda_values)
+        self.lambda_values.update((x, [y[index] * self.EV2J * self.J2HARTREE
+                                       for index in range(len(y))])
+                                  for x, y in self.lambda_values.items())
 
-        self.VAB = deepcopy(material_parameters.VAB)
-        self.VAB.update((x, [y[index] * self.EV2J * self.J2HARTREE
+        self.v_ab = deepcopy(material_parameters.v_ab)
+        self.v_ab.update(
+                        (x, [y[index] * self.EV2J * self.J2HARTREE
                              for index in range(len(y))])
-                        for x, y in self.VAB.items())
+                        for x, y in self.v_ab.items())
 
         self.neighbor_cutoff_dist = deepcopy(
-                            material_parameters.neighbor_cutoff_dist)
+                                    material_parameters.neighbor_cutoff_dist)
         self.neighbor_cutoff_dist.update(
-                (x, [(y[index] * self.ANG2BOHR)
-                     if y[index] else None for index in range(len(y))])
-                for x, y in (self.neighbor_cutoff_dist.items()))
+                        (x, [(y[index] * self.ANG2BOHR) if y[index] else None
+                             for index in range(len(y))])
+                        for x, y in (self.neighbor_cutoff_dist.items()))
         self.neighbor_cutoff_dist_tol = deepcopy(
                         material_parameters.neighbor_cutoff_dist_tol)
         self.neighbor_cutoff_dist_tol.update(
-                (x, [(y[index] * self.ANG2BOHR)
-                     if y[index] else None for index in range(len(y))])
-                for x, y in (self.neighbor_cutoff_dist_tol.items()))
+                        (x, [(y[index] * self.ANG2BOHR) if y[index] else None
+                             for index in range(len(y))])
+                        for x, y in (self.neighbor_cutoff_dist_tol.items()))
         self.num_unique_hopping_distances = {
-                key: len(value)
-                for key, value in (self.neighbor_cutoff_dist.items())}
+                        key: len(value)
+                        for key, value in (self.neighbor_cutoff_dist.items())}
 
         self.element_type_delimiter = (
-                            material_parameters.element_type_delimiter)
-        self.empty_species_type = (
-                                material_parameters.empty_species_type)
-        self.dielectric_constant = (
-                            material_parameters.dielectric_constant)
+                                    material_parameters.element_type_delimiter)
+        self.empty_species_type = material_parameters.empty_species_type
+        self.dielectric_constant = material_parameters.dielectric_constant
 
         self.num_classes = [
-                len(set(material_parameters.class_list[element_type]))
-                for element_type in self.element_types]
+                        len(set(material_parameters.class_list[element_type]))
+                        for element_type in self.element_types]
         self.delG0_shift_list = {
-            key: [[(value[center_site_class_index][index] * self.EV2J
-                    * self.J2HARTREE)
-                   for index in range(
-                            self.num_unique_hopping_distances[key])]
-                  for center_site_class_index in range(len(value))]
-            for key, value in (
-                        material_parameters.delG0_shift_list.items())}
+                    key: [[(value[center_site_class_index][index] * self.EV2J
+                            * self.J2HARTREE)
+                           for index in range(
+                                    self.num_unique_hopping_distances[key])]
+                          for center_site_class_index in range(len(value))]
+                    for key, value in (
+                                material_parameters.delG0_shift_list.items())}
 
         site_list = [self.species_to_element_type_map[key]
                      for key in self.species_to_element_type_map
                      if key != self.empty_species_type]
         self.site_list = list(
-            set([item for sublist in site_list for item in sublist]))
+                    set([item for sublist in site_list for item in sublist]))
         self.non_empty_species_to_element_type_map = deepcopy(
-                                    self.species_to_element_type_map)
-        del self.non_empty_species_to_element_type_map[
-                                            self.empty_species_type]
+                                            self.species_to_element_type_map)
+        del self.non_empty_species_to_element_type_map[self.empty_species_type]
 
         self.element_type_to_species_map = {}
         for element_type in self.element_types:
@@ -208,21 +196,19 @@ class Material(object):
                     self.non_empty_species_to_element_type_map[
                                                     species_type_key]):
                     species_list.append(species_type_key)
-            self.element_type_to_species_map[element_type] = (
-                                                    species_list[:])
+            self.element_type_to_species_map[element_type] = species_list[:]
 
         self.hop_element_types = {
-            key: [self.element_type_delimiter.join(comb)
-                  for comb in list(itertools.product(
-                              self.species_to_element_type_map[key],
-                              repeat=2))]
-            for key in self.species_to_element_type_map
-            if key != self.empty_species_type}
+                key: [self.element_type_delimiter.join(comb)
+                      for comb in list(itertools.product(
+                          self.species_to_element_type_map[key], repeat=2))]
+                for key in self.species_to_element_type_map
+                if key != self.empty_species_type}
 
     def generate_sites(self, element_type_indices,
                        cell_size=np.array([1, 1, 1])):
-        """Returns system_element_indices and coordinates of
-        specified elements in a cell of size *cell_size*
+        """Returns system_element_indices and coordinates of specified elements
+            in a cell of size *cell_size*
 
         :param str element_type_indices: element type indices
         :param cell_size: size of the cell
@@ -233,70 +219,61 @@ class Material(object):
             * **quantum_index_list** (np.array (nx5)):
             * **system_element_index_list** (np.array (n)):
 
-        :raises ValueError: if the input cell_size is less than
-        or equal to 0.
+        :raises ValueError: if the input cell_size is less than or equal to 0.
         """
-        assert all(size > 0 for size in cell_size), 'Input size \
-                                    should always be greater than 0'
+        assert all(size > 0 for size in cell_size), 'Input size should always \
+                                                    be greater than 0'
         extract_indices = np.in1d(self.element_type_index_list,
                                   element_type_indices).nonzero()[0]
-        unit_cell_element_coords = self.unit_cell_coords[
-                                                    extract_indices]
+        unit_cell_element_coords = self.unit_cell_coords[extract_indices]
         num_cells = cell_size.prod()
         n_sites_per_unit_cell = self.n_elements_per_unit_cell[
-                                            element_type_indices].sum()
+                                                    element_type_indices].sum()
         unit_cell_element_index_list = np.arange(n_sites_per_unit_cell)
         unit_cell_element_type_index = np.reshape(
-            np.concatenate((np.asarray(
-                [[element_type_index]
-                 * self.n_elements_per_unit_cell[element_type_index]
-                 for element_type_index in element_type_indices]))),
-            (n_sites_per_unit_cell, 1))
+                    np.concatenate((np.asarray(
+                        [[element_type_index]
+                         * self.n_elements_per_unit_cell[element_type_index]
+                         for element_type_index in element_type_indices]))),
+                    (n_sites_per_unit_cell, 1))
         unit_cell_element_type_element_index_list = np.reshape(
-            np.concatenate(([np.arange(
-                self.n_elements_per_unit_cell[element_type_index])
-                             for element_type_index in (
-                                 element_type_indices)])),
-            (n_sites_per_unit_cell, 1))
+                        np.concatenate(([np.arange(
+                            self.n_elements_per_unit_cell[element_type_index])
+                                         for element_type_index in (
+                                             element_type_indices)])),
+                        (n_sites_per_unit_cell, 1))
         # Initialization
-        cell_coordinates = np.zeros((num_cells * n_sites_per_unit_cell,
-                                     3))
+        cell_coordinates = np.zeros((num_cells * n_sites_per_unit_cell, 3))
         # Definition format of Quantum Indices
-        # quantum_index = [unit_cell_index, element_type_index,
-        #                 element_index]
-        quantum_index_list = np.zeros(
-                    (num_cells * n_sites_per_unit_cell, 5), dtype=int)
-        system_element_index_list = np.zeros(
-                        num_cells * n_sites_per_unit_cell, dtype=int)
+        # quantum_index = [unit_cell_index, element_type_index, element_index]
+        quantum_index_list = np.zeros((num_cells * n_sites_per_unit_cell, 5),
+                                      dtype=int)
+        system_element_index_list = np.zeros(num_cells * n_sites_per_unit_cell,
+                                             dtype=int)
         i_unit_cell = 0
         for x_index in range(cell_size[0]):
             for y_index in range(cell_size[1]):
                 for z_index in range(cell_size[2]):
                     start_index = i_unit_cell * n_sites_per_unit_cell
                     end_index = start_index + n_sites_per_unit_cell
-                    translation_vector = np.dot(
-                                            [x_index, y_index, z_index],
-                                            self.lattice_matrix)
+                    translation_vector = np.dot([x_index, y_index, z_index],
+                                                self.lattice_matrix)
                     cell_coordinates[start_index:end_index] = (
-                        unit_cell_element_coords + translation_vector)
-                    system_element_index_list[
-                        start_index:end_index] = (
-                                    i_unit_cell * n_sites_per_unit_cell
-                                    + unit_cell_element_index_list)
-                    quantum_index_list[start_index:end_index] = (
-                        np.hstack(
-                            (np.tile(
-                                np.array([x_index, y_index, z_index]),
-                                (n_sites_per_unit_cell, 1)),
-                             unit_cell_element_type_index,
-                             unit_cell_element_type_element_index_list)
-                                  ))
+                                unit_cell_element_coords + translation_vector)
+                    system_element_index_list[start_index:end_index] = (
+                                            i_unit_cell * n_sites_per_unit_cell
+                                            + unit_cell_element_index_list)
+                    quantum_index_list[start_index:end_index] = np.hstack(
+                                (np.tile(np.array([x_index, y_index, z_index]),
+                                         (n_sites_per_unit_cell, 1)),
+                                 unit_cell_element_type_index,
+                                 unit_cell_element_type_element_index_list))
                     i_unit_cell += 1
 
         return_sites = ReturnValues(
-                cell_coordinates=cell_coordinates,
-                quantum_index_list=quantum_index_list,
-                system_element_index_list=system_element_index_list)
+                        cell_coordinates=cell_coordinates,
+                        quantum_index_list=quantum_index_list,
+                        system_element_index_list=system_element_index_list)
         return return_sites
 
 
@@ -316,30 +293,26 @@ class Neighbors(object):
         # total number of unit cells
         self.num_cells = self.system_size.prod()
         self.num_system_elements = (
-                        self.num_cells
-                        * self.material.total_elements_per_unit_cell)
+                self.num_cells * self.material.total_elements_per_unit_cell)
 
         # generate all sites in the system
-        self.element_type_indices = range(
-                                        self.material.n_element_types)
+        self.element_type_indices = range(self.material.n_element_types)
         self.bulk_sites = self.material.generate_sites(
-                        self.element_type_indices, self.system_size)
+                                self.element_type_indices, self.system_size)
 
         x_range = range(-1, 2) if self.pbc[0] == 1 else [0]
         y_range = range(-1, 2) if self.pbc[1] == 1 else [0]
         z_range = range(-1, 2) if self.pbc[2] == 1 else [0]
         # Initialization
-        self.system_translational_vector_list = np.zeros(
-                                                (3**sum(self.pbc), 3))
+        self.system_translational_vector_list = np.zeros((3**sum(self.pbc), 3))
         index = 0
         for x_offset in x_range:
             for y_offset in y_range:
                 for z_offset in z_range:
                     self.system_translational_vector_list[index] = (
                         np.dot(np.multiply(
-                            np.array([x_offset, y_offset, z_offset]),
-                            system_size),
-                               self.material.lattice_matrix))
+                                np.array([x_offset, y_offset, z_offset]),
+                                system_size), self.material.lattice_matrix))
                     index += 1
 
     def generate_system_element_index(self, system_size,
@@ -364,20 +337,20 @@ class Neighbors(object):
         #             'Unit cell indices exceed the given system size'
         unit_cell_index = np.copy(quantum_indices[:3])
         [element_type_index, element_index] = quantum_indices[-2:]
-        system_element_index = (
-            element_index + self.material.n_elements_per_unit_cell[
-                                            :element_type_index].sum())
+        system_element_index = (element_index
+                                + self.material.n_elements_per_unit_cell[
+                                                :element_type_index].sum())
         n_dim = len(system_size)
         for index in range(n_dim):
             if index == 0:
                 system_element_index += (
-                            self.material.total_elements_per_unit_cell
-                            * unit_cell_index[n_dim-1-index])
+                                    self.material.total_elements_per_unit_cell
+                                    * unit_cell_index[n_dim-1-index])
             else:
                 system_element_index += (
-                            self.material.total_elements_per_unit_cell
-                            * unit_cell_index[n_dim-1-index]
-                            * system_size[-index:].prod())
+                                    self.material.total_elements_per_unit_cell
+                                    * unit_cell_index[n_dim-1-index]
+                                    * system_size[-index:].prod())
         return system_element_index
 
     def generate_quantum_indices(self, system_size,
@@ -391,18 +364,16 @@ class Neighbors(object):
         # 'System Element Index out of range for the given system size'
         quantum_indices = np.zeros(5, dtype=int)  # [0] * 5
         unit_cell_element_index = (
-                        system_element_index
-                        % self.material.total_elements_per_unit_cell)
+                                system_element_index
+                                % self.material.total_elements_per_unit_cell)
         quantum_indices[3] = np.where(
-                        self.material.n_elements_per_unit_cell.cumsum()
-                        >= (unit_cell_element_index + 1))[0][0]
-        quantum_indices[4] = (
-                        unit_cell_element_index
-                        - self.material.n_elements_per_unit_cell[
+                                self.material.n_elements_per_unit_cell.cumsum()
+                                >= (unit_cell_element_index + 1))[0][0]
+        quantum_indices[4] = (unit_cell_element_index
+                              - self.material.n_elements_per_unit_cell[
                                             :quantum_indices[3]].sum())
-        n_filled_unit_cells = (
-                    (system_element_index - unit_cell_element_index)
-                    / self.material.total_elements_per_unit_cell)
+        n_filled_unit_cells = ((system_element_index - unit_cell_element_index)
+                               / self.material.total_elements_per_unit_cell)
         for index in range(3):
             quantum_indices[index] = (n_filled_unit_cells
                                       / system_size[index+1:].prod())
@@ -413,51 +384,49 @@ class Neighbors(object):
     def compute_coordinates(self, system_size, system_element_index):
         """Returns the coordinates in atomic units of the given
             system element index for a given system size"""
-        quantum_indices = self.generate_quantum_indices(
-                                    system_size, system_element_index)
-        unit_cell_translation_vector = np.dot(
-                    quantum_indices[:3], self.material.lattice_matrix)
-        coordinates = (
-                    unit_cell_translation_vector
-                    + self.material.unit_cell_coords[
-                            quantum_indices[4]
-                            + self.material.n_elements_per_unit_cell[
-                                        :quantum_indices[3]].sum()])
+        quantum_indices = self.generate_quantum_indices(system_size,
+                                                        system_element_index)
+        unit_cell_translation_vector = np.dot(quantum_indices[:3],
+                                              self.material.lattice_matrix)
+        coordinates = (unit_cell_translation_vector
+                       + self.material.unit_cell_coords[
+                                   quantum_indices[4]
+                                   + self.material.n_elements_per_unit_cell[
+                                                :quantum_indices[3]].sum()])
         return coordinates
 
     def compute_distance(self, system_size, system_element_index_1,
                          system_element_index_2):
-        """Returns the distance in atomic units between the two
-            system element indices for a given system size"""
+        """Returns the distance in atomic units between the two system element
+            indices for a given system size"""
         center_coord = self.compute_coordinates(system_size,
                                                 system_element_index_1)
-        neighbor_coord = self.compute_coordinates(
-                                system_size, system_element_index_2)
+        neighbor_coord = self.compute_coordinates(system_size,
+                                                  system_element_index_2)
 
         neighbor_image_coords = (self.system_translational_vector_list
                                  + neighbor_coord)
         neighbor_image_displacement_vectors = (neighbor_image_coords
                                                - center_coord)
         neighbor_image_displacements = np.linalg.norm(
-                        neighbor_image_displacement_vectors, axis=1)
+                                neighbor_image_displacement_vectors, axis=1)
         displacement = np.min(neighbor_image_displacements)
         return displacement
 
     def hop_neighbor_sites(self, bulk_sites, center_site_indices,
                            neighbor_site_indices, cutoff_dist_limits,
                            cutoff_dist_key):
-        """Returns system_element_index_map and distances between
-        center sites and its neighbor sites within cutoff distance"""
+        """Returns system_element_index_map and distances between center sites
+            and its neighbor sites within cutoff distance"""
         neighbor_site_coords = bulk_sites.cell_coordinates[
-                                                neighbor_site_indices]
+                                                        neighbor_site_indices]
         neighbor_site_system_element_index_list = (
-                                bulk_sites.system_element_index_list[
-                                                neighbor_site_indices])
-        center_site_coords = bulk_sites.cell_coordinates[
-                                                center_site_indices]
+                                        bulk_sites.system_element_index_list[
+                                                        neighbor_site_indices])
+        center_site_coords = bulk_sites.cell_coordinates[center_site_indices]
 
-        neighbor_system_element_indices = np.empty(
-                                len(center_site_coords), dtype=object)
+        neighbor_system_element_indices = np.empty(len(center_site_coords),
+                                                   dtype=object)
         displacement_vector_list = np.empty(len(center_site_coords),
                                             dtype=object)
         num_neighbors = np.array([], dtype=int)
@@ -467,165 +436,151 @@ class Neighbors(object):
         else:
             quick_test = 0
 
-        for center_site_index, center_coord in enumerate(
-                                                center_site_coords):
+        for center_site_index, center_coord in enumerate(center_site_coords):
             i_neighbor_site_index_list = []
             i_displacement_vectors = []
             i_num_neighbors = 0
             if quick_test:
                 displacement_list = np.zeros(len(neighbor_site_coords))
             for neighbor_site_index, neighbor_coord in enumerate(
-                                                neighbor_site_coords):
-                neighbor_image_coords = (
-                                self.system_translational_vector_list
-                                + neighbor_coord)
-                neighbor_image_displacement_vectors = (
-                                neighbor_image_coords - center_coord)
+                                                        neighbor_site_coords):
+                neighbor_image_coords = (self.system_translational_vector_list
+                                         + neighbor_coord)
+                neighbor_image_displacement_vectors = (neighbor_image_coords
+                                                       - center_coord)
                 neighbor_image_displacements = np.linalg.norm(
-                                neighbor_image_displacement_vectors,
-                                axis=1)
+                                        neighbor_image_displacement_vectors,
+                                        axis=1)
                 [displacement, image_index] = [
-                            np.min(neighbor_image_displacements),
-                            np.argmin(neighbor_image_displacements)]
+                                    np.min(neighbor_image_displacements),
+                                    np.argmin(neighbor_image_displacements)]
                 if quick_test:
-                    displacement_list[neighbor_site_index] \
-                                                        = displacement
+                    displacement_list[neighbor_site_index] = displacement
                 if (cutoff_dist_limits[0] < displacement
-                    <= cutoff_dist_limits[1]):
-                    i_neighbor_site_index_list.append(
-                                                neighbor_site_index)
+                        <= cutoff_dist_limits[1]):
+                    i_neighbor_site_index_list.append(neighbor_site_index)
                     i_displacement_vectors.append(
-                                neighbor_image_displacement_vectors[
-                                                        image_index])
+                            neighbor_image_displacement_vectors[image_index])
                     i_num_neighbors += 1
             neighbor_system_element_indices[center_site_index] = (
-                            neighbor_site_system_element_index_list[
-                                        i_neighbor_site_index_list])
-            displacement_vector_list[center_site_index] = (
-                                    np.asarray(i_displacement_vectors))
+                                    neighbor_site_system_element_index_list[
+                                                i_neighbor_site_index_list])
+            displacement_vector_list[center_site_index] = np.asarray(
+                                                        i_displacement_vectors)
             num_neighbors = np.append(num_neighbors, i_num_neighbors)
             if quick_test == 1:
-                print(np.sort(displacement_list)[:10]
-                      / self.material.ANG2BOHR)
+                print(np.sort(displacement_list)[:10] / self.material.ANG2BOHR)
                 pdb.set_trace()
             elif quick_test == 2:
                 for cutoff_dist in range(2, 7):
                     cutoff = cutoff_dist * self.material.ANG2BOHR
                     print(cutoff_dist)
-                    print(displacement_list[displacement_list
-                                            < cutoff].shape)
+                    print(displacement_list[displacement_list < cutoff].shape)
                     print(np.unique(np.sort(np.round(
-                        displacement_list[displacement_list < cutoff]
-                        / self.material.ANG2BOHR, 4))).shape)
+                                displacement_list[displacement_list < cutoff]
+                                / self.material.ANG2BOHR, 4))).shape)
                     print(np.unique(np.sort(np.round(
-                        displacement_list[displacement_list < cutoff]
-                        / self.material.ANG2BOHR, 3))).shape)
+                                displacement_list[displacement_list < cutoff]
+                                / self.material.ANG2BOHR, 3))).shape)
                     print(np.unique(np.sort(np.round(
-                        displacement_list[displacement_list < cutoff]
-                        / self.material.ANG2BOHR, 2))).shape)
+                                displacement_list[displacement_list < cutoff]
+                                / self.material.ANG2BOHR, 2))).shape)
                     print(np.unique(np.sort(np.round(
-                        displacement_list[displacement_list < cutoff]
-                        / self.material.ANG2BOHR, 1))).shape)
+                                displacement_list[displacement_list < cutoff]
+                                / self.material.ANG2BOHR, 1))).shape)
                     print(np.unique(np.sort(np.round(
-                        displacement_list[displacement_list < cutoff]
-                        / self.material.ANG2BOHR, 0))).shape)
+                                displacement_list[displacement_list < cutoff]
+                                / self.material.ANG2BOHR, 0))).shape)
                 pdb.set_trace()
 
         return_neighbors = ReturnValues(
-            neighbor_system_element_indices=\
-                                    neighbor_system_element_indices,
+            neighbor_system_element_indices=neighbor_system_element_indices,
             displacement_vector_list=displacement_vector_list,
             num_neighbors=num_neighbors)
         return return_neighbors
 
     def generate_cumulative_displacement_list(self, dst_path):
-        """Returns cumulative displacement list for the given system
-        size printed out to disk"""
-        cumulative_displacement_list = np.zeros((
-                self.num_system_elements, self.num_system_elements, 3))
+        """Returns cumulative displacement list for the given system size
+            printed out to disk"""
+        cumulative_displacement_list = np.zeros((self.num_system_elements,
+                                                 self.num_system_elements, 3))
         for center_site_index, center_coord in enumerate(
-                                    self.bulk_sites.cell_coordinates):
+                                            self.bulk_sites.cell_coordinates):
             cumulative_system_translational_vector_list = np.tile(
-                                            self.system_translational_vector_list,
-                                            (self.num_system_elements, 1, 1))
+                                        self.system_translational_vector_list,
+                                        (self.num_system_elements, 1, 1))
             cumulative_neighbor_image_coords = (
                 cumulative_system_translational_vector_list
-                + np.tile(self.bulk_sites.cell_coordinates[
-                                                    :, np.newaxis, :],
-                          (1, len(
-                              self.system_translational_vector_list),
-                           1)))
+                + np.tile(self.bulk_sites.cell_coordinates[:, np.newaxis, :],
+                          (1, len(self.system_translational_vector_list), 1)))
             cumulative_neighbor_image_displacement_vectors = (
-                                cumulative_neighbor_image_coords
-                                - center_coord)
+                            cumulative_neighbor_image_coords - center_coord)
             cumulative_neighbor_image_displacements = np.linalg.norm(
-                        cumulative_neighbor_image_displacement_vectors,
-                        axis=2)
+                                cumulative_neighbor_image_displacement_vectors,
+                                axis=2)
             cumulative_displacement_list[center_site_index] = \
                 cumulative_neighbor_image_displacement_vectors[
                     np.arange(self.num_system_elements),
-                    np.argmin(cumulative_neighbor_image_displacements,
-                              axis=1)]
+                    np.argmin(cumulative_neighbor_image_displacements, axis=1)]
         cumulative_displacement_list_file_path = dst_path.joinpath(
-                                    'cumulative_displacement_list.npy')
+                                            'cumulative_displacement_list.npy')
         np.save(cumulative_displacement_list_file_path,
                 cumulative_displacement_list)
         return None
 
     def generate_neighbor_list(self, dst_path, report=1,
                                local_system_size=np.array([3, 3, 3])):
-        """Adds the neighbor list to the system object and
-            returns the neighbor list"""
+        """Adds the neighbor list to the system object and returns the
+            neighbor list"""
         assert dst_path, \
-            'Please provide the path to the parent directory of \
-                neighbor list files'
+            'Please provide the path to the parent directory of ' \
+            'neighbor list files'
         assert all(size >= 3 for size in local_system_size), \
-            'Local system size in all dimensions should always be \
-                greater than or equal to 3'
+            'Local system size in all dimensions should always be ' \
+            'greater than or equal to 3'
 
         Path.mkdir(dst_path, parents=True, exist_ok=True)
         hop_neighbor_list_file_path = dst_path.joinpath(
-                                            'hop_neighbor_list.npy')
+                                                    'hop_neighbor_list.npy')
 
         hop_neighbor_list = {}
         tol_dist = self.material.neighbor_cutoff_dist_tol
         element_types = self.material.element_types[:]
 
-        for cutoff_dist_key in (
-                            self.material.neighbor_cutoff_dist.keys()):
+        for cutoff_dist_key in (self.material.neighbor_cutoff_dist.keys()):
             cutoff_dist_list = self.material.neighbor_cutoff_dist[
-                                                    cutoff_dist_key][:]
+                                                            cutoff_dist_key][:]
             neighbor_list_cutoff_dist_key = []
             [center_element_type, _] = cutoff_dist_key.split(
-                                self.material.element_type_delimiter)
+                                        self.material.element_type_delimiter)
             center_site_element_type_index = element_types.index(
-                                                center_element_type)
+                                                        center_element_type)
             local_bulk_sites = self.material.generate_sites(
-                                            self.element_type_indices,
-                                            self.system_size)
+                                                    self.element_type_indices,
+                                                    self.system_size)
             system_element_index_offset_array = np.repeat(
-                np.arange(0,
-                          (self.material.total_elements_per_unit_cell
-                           * self.num_cells),
-                          self.material.total_elements_per_unit_cell),
-                self.material.n_elements_per_unit_cell[
-                                    center_site_element_type_index])
+                        np.arange(0,
+                                  (self.material.total_elements_per_unit_cell
+                                   * self.num_cells),
+                                  self.material.total_elements_per_unit_cell),
+                        self.material.n_elements_per_unit_cell[
+                                            center_site_element_type_index])
             center_site_indices = neighbor_site_indices = (
-                np.tile((self.material.n_elements_per_unit_cell[
-                                :center_site_element_type_index].sum()
-                         + np.arange(
-                             0,
-                             self.material.n_elements_per_unit_cell[
-                                    center_site_element_type_index])),
-                        self.num_cells)
-                + system_element_index_offset_array)
+                        np.tile((self.material.n_elements_per_unit_cell[
+                                        :center_site_element_type_index].sum()
+                                 + np.arange(
+                                     0,
+                                     self.material.n_elements_per_unit_cell[
+                                            center_site_element_type_index])),
+                                self.num_cells)
+                        + system_element_index_offset_array)
 
             for i_cutoff_dist in range(len(cutoff_dist_list)):
                 cutoff_dist_limits = (
-                        [(cutoff_dist_list[i_cutoff_dist]
-                          - tol_dist[cutoff_dist_key][i_cutoff_dist]),
-                         (cutoff_dist_list[i_cutoff_dist]
-                          + tol_dist[cutoff_dist_key][i_cutoff_dist])])
+                                [(cutoff_dist_list[i_cutoff_dist]
+                                  - tol_dist[cutoff_dist_key][i_cutoff_dist]),
+                                 (cutoff_dist_list[i_cutoff_dist]
+                                  + tol_dist[cutoff_dist_key][i_cutoff_dist])])
 
                 neighbor_list_cutoff_dist_key.append(
                     self.hop_neighbor_sites(local_bulk_sites,
@@ -634,7 +589,7 @@ class Neighbors(object):
                                             cutoff_dist_limits,
                                             cutoff_dist_key))
             hop_neighbor_list[cutoff_dist_key] = (
-                                    neighbor_list_cutoff_dist_key[:])
+                                            neighbor_list_cutoff_dist_key[:])
         np.save(hop_neighbor_list_file_path, hop_neighbor_list)
 
         if report:
@@ -645,235 +600,218 @@ class Neighbors(object):
         """Generates a neighbor list and prints out a
             report to the output directory"""
         neighbor_list_log_name = 'neighbor_list.log'
-        neighbor_list_log_path = dst_path.joinpath(
-                                                neighbor_list_log_name)
+        neighbor_list_log_path = dst_path.joinpath(neighbor_list_log_name)
         report = open(neighbor_list_log_path, 'w')
         end_time = datetime.now()
         time_elapsed = end_time - self.start_time
-        report.write(
-            'Time elapsed: ' + ('%2d days, ' % time_elapsed.days
-                                if time_elapsed.days else '')
-            + ('%2d hours' % ((time_elapsed.seconds // 3600) % 24))
-            + (', %2d minutes' % ((time_elapsed.seconds // 60) % 60))
-            + (', %2d seconds' % (time_elapsed.seconds % 60)))
+        report.write('Time elapsed: ' + ('%2d days, ' % time_elapsed.days
+                                         if time_elapsed.days else '')
+                     + ('%2d hours' % ((time_elapsed.seconds // 3600) % 24))
+                     + (', %2d minutes' % ((time_elapsed.seconds // 60) % 60))
+                     + (', %2d seconds' % (time_elapsed.seconds % 60)))
         report.close()
         return None
 
     # TODO: remove the function
-    def generate_hematite_neighbor_se_indices(self, dst_path,
-                                              report=1):
+    def generate_hematite_neighbor_se_indices(self, dst_path, report=1):
         start_time = datetime.now()
         offset_list = np.array(
-            [[[-1, 0, -1], [0, 0, -1], [0, 1, -1], [0, 0, -1]],
-             [[-1, -1, 0], [-1, 0, 0], [0, 0, 0], [0, 0, 0]],
-             [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 0, -1]],
-             [[0, 0, 0], [0, 1, 0], [1, 1, 0], [0, 0, 0]],
-             [[-1, -1, 0], [0, -1, 0], [0, 0, 0], [0, 0, 0]],
-             [[0, -1, 0], [0, 0, 0], [1, 0, 0], [0, 0, 0]],
-             [[-1, 0, 0], [0, 0, 0], [0, 1, 0], [0, 0, 0]],
-             [[-1, -1, 0], [-1, 0, 0], [0, 0, 0], [0, 0, 0]],
-             [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 0, 0]],
-             [[0, 0, 0], [0, 1, 0], [1, 1, 0], [0, 0, 1]],
-             [[-1, -1, 0], [0, -1, 0], [0, 0, 0], [0, 0, 0]],
-             [[0, -1, 1], [0, 0, 1], [1, 0, 1], [0, 0, 1]]])
+                            [[[-1, 0, -1], [0, 0, -1], [0, 1, -1], [0, 0, -1]],
+                             [[-1, -1, 0], [-1, 0, 0], [0, 0, 0], [0, 0, 0]],
+                             [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 0, -1]],
+                             [[0, 0, 0], [0, 1, 0], [1, 1, 0], [0, 0, 0]],
+                             [[-1, -1, 0], [0, -1, 0], [0, 0, 0], [0, 0, 0]],
+                             [[0, -1, 0], [0, 0, 0], [1, 0, 0], [0, 0, 0]],
+                             [[-1, 0, 0], [0, 0, 0], [0, 1, 0], [0, 0, 0]],
+                             [[-1, -1, 0], [-1, 0, 0], [0, 0, 0], [0, 0, 0]],
+                             [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 0, 0]],
+                             [[0, 0, 0], [0, 1, 0], [1, 1, 0], [0, 0, 1]],
+                             [[-1, -1, 0], [0, -1, 0], [0, 0, 0], [0, 0, 0]],
+                             [[0, -1, 1], [0, 0, 1], [1, 0, 1], [0, 0, 1]]])
         element_type_index = 0
         basal_neighbor_element_site_indices = np.array(
-                                [11, 2, 1, 4, 3, 6, 5, 8, 7, 10, 9, 0])
+                                        [11, 2, 1, 4, 3, 6, 5, 8, 7, 10, 9, 0])
         c_neighbor_element_site_indices = np.array(
-                                [9, 4, 11, 6, 1, 8, 3, 10, 5, 0, 7, 2])
+                                        [9, 4, 11, 6, 1, 8, 3, 10, 5, 0, 7, 2])
         num_basal_neighbors = 3
         num_c_neighbors = 1
         num_neighbors = num_basal_neighbors + num_c_neighbors
-        n_elements_per_unit_cell = (
-            self.material.n_elements_per_unit_cell[element_type_index])
+        n_elements_per_unit_cell = self.material.n_elements_per_unit_cell[
+                                                            element_type_index]
         neighbor_element_site_indices = np.zeros(
-                                    (n_elements_per_unit_cell, 4), int)
+                                            (n_elements_per_unit_cell, 4), int)
         for i_neighbor in range(num_neighbors):
             if i_neighbor < num_basal_neighbors:
                 neighbor_element_site_indices[:, i_neighbor] = \
-                                    basal_neighbor_element_site_indices
+                                            basal_neighbor_element_site_indices
             else:
                 neighbor_element_site_indices[:, i_neighbor] = \
-                                        c_neighbor_element_site_indices
+                                                c_neighbor_element_site_indices
         system_element_index_offset_array = (
-            np.repeat(np.arange(
-                        0, (self.material.total_elements_per_unit_cell
-                            * self.num_cells),
-                        self.material.total_elements_per_unit_cell),
-                      self.material.n_elements_per_unit_cell[
-                                                element_type_index]))
+                    np.repeat(np.arange(
+                                0, (self.material.total_elements_per_unit_cell
+                                    * self.num_cells),
+                                self.material.total_elements_per_unit_cell),
+                              self.material.n_elements_per_unit_cell[
+                                                        element_type_index]))
         center_site_se_indices = (
-            np.tile(self.material.n_elements_per_unit_cell[
-                                            :element_type_index].sum()
-                    + np.arange(
-                        0, self.material.n_elements_per_unit_cell[
-                                                element_type_index]),
-                    self.num_cells)
-            + system_element_index_offset_array)
+                    np.tile(self.material.n_elements_per_unit_cell[
+                                                    :element_type_index].sum()
+                            + np.arange(
+                                0, self.material.n_elements_per_unit_cell[
+                                                        element_type_index]),
+                            self.num_cells)
+                    + system_element_index_offset_array)
         num_center_site_elements = len(center_site_se_indices)
         neighbor_system_element_indices = np.zeros(
-                            (num_center_site_elements, num_neighbors))
+                                    (num_center_site_elements, num_neighbors))
 
         for center_site_index, center_site_se_index in enumerate(
-                                            center_site_se_indices):
-            center_site_quantum_indices = (
-                self.generate_quantum_indices(self.system_size,
-                                              center_site_se_index))
-            center_site_unit_cell_indices = \
-                                        center_site_quantum_indices[:3]
-            center_site_element_site_index = \
-                                    center_site_quantum_indices[-1:][0]
+                                                    center_site_se_indices):
+            center_site_quantum_indices = self.generate_quantum_indices(
+                                        self.system_size, center_site_se_index)
+            center_site_unit_cell_indices = center_site_quantum_indices[:3]
+            center_site_element_site_index = center_site_quantum_indices[-1:][
+                                                                            0]
             for neighbor_index in range(num_neighbors):
                 neighbor_unit_cell_indices = (
-                    center_site_unit_cell_indices
-                    + offset_list[center_site_element_site_index][
-                                                    neighbor_index])
+                            center_site_unit_cell_indices
+                            + offset_list[center_site_element_site_index][
+                                                            neighbor_index])
                 for index, neighbor_unit_cell_index in enumerate(
-                                        neighbor_unit_cell_indices):
+                                                neighbor_unit_cell_indices):
                     if neighbor_unit_cell_index < 0:
                         neighbor_unit_cell_indices[index] += \
-                                                self.system_size[index]
-                    elif neighbor_unit_cell_index >= self.system_size[
-                                                                index]:
+                            self.system_size[index]
+                    elif neighbor_unit_cell_index >= self.system_size[index]:
                         neighbor_unit_cell_indices[index] -= \
-                                                self.system_size[index]
+                            self.system_size[index]
                     neighbor_quantum_indices = np.hstack((
                         neighbor_unit_cell_indices, element_type_index,
                         neighbor_element_site_indices[
-                                center_site_element_site_index][
-                                                    neighbor_index]))
-                    neighbor_se_index = (
-                                    self.generate_system_element_index(
-                                            self.system_size,
-                                            neighbor_quantum_indices))
+                            center_site_element_site_index][neighbor_index]))
+                    neighbor_se_index = self.generate_system_element_index(
+                                    self.system_size, neighbor_quantum_indices)
                     neighbor_system_element_indices[center_site_index][
-                                    neighbor_index] = neighbor_se_index
+                        neighbor_index] = neighbor_se_index
 
         file_name = 'neighbor_system_element_indices.npy'
         neighbor_system_element_indices_file_path = dst_path.joinpath(
-                                                            file_name)
+                                                                    file_name)
         np.save(neighbor_system_element_indices_file_path,
                 neighbor_system_element_indices)
         if report:
-            self.generate_hematite_neighbor_se_indices_report(
-                                                dst_path, start_time)
+            self.generate_hematite_neighbor_se_indices_report(dst_path,
+                                                              start_time)
         return None
 
     def generate_hematite_neighbor_se_indices_report(self, dst_path,
                                                      start_time):
-        """Generates a neighbor list and prints out a
-            report to the output directory"""
+        """Generates a neighbor list and prints out a report to the output
+            directory"""
         neighbor_system_element_indices_log_name = \
             'neighbor_system_element_indices.log'
         neighbor_system_element_indices_log_path = dst_path.joinpath(
-                            neighbor_system_element_indices_log_name)
+                                    neighbor_system_element_indices_log_name)
         report = open(neighbor_system_element_indices_log_path, 'w')
         end_time = datetime.now()
         time_elapsed = end_time - start_time
-        report.write(
-            'Time elapsed: ' + ('%2d days, ' % time_elapsed.days
-                                if time_elapsed.days else '')
-            + ('%2d hours' % ((time_elapsed.seconds // 3600) % 24))
-            + (', %2d minutes' % ((time_elapsed.seconds // 60) % 60))
-            + (', %2d seconds' % (time_elapsed.seconds % 60)))
+        report.write('Time elapsed: ' + ('%2d days, ' % time_elapsed.days
+                                         if time_elapsed.days else '')
+                     + ('%2d hours' % ((time_elapsed.seconds // 3600) % 24))
+                     + (', %2d minutes' % ((time_elapsed.seconds // 60) % 60))
+                     + (', %2d seconds' % (time_elapsed.seconds % 60)))
         report.close()
         return None
 
-    def generate_species_site_sd_list(self,
-                                      center_site_quantum_indices,
+    def generate_species_site_sd_list(self, center_site_quantum_indices,
                                       dst_path, report=1):
         start_time = datetime.now()
         element_type_index = center_site_quantum_indices[3]
         center_site_se_index = self.generate_system_element_index(
-                                        self.system_size,
-                                        center_site_quantum_indices)
+                                                self.system_size,
+                                                center_site_quantum_indices)
         system_element_index_offset_array = np.repeat(
-            np.arange(0, (self.material.total_elements_per_unit_cell
-                          * self.num_cells),
-                      self.material.total_elements_per_unit_cell),
-            self.material.n_elements_per_unit_cell[element_type_index])
+                    np.arange(0, (self.material.total_elements_per_unit_cell
+                                  * self.num_cells),
+                              self.material.total_elements_per_unit_cell),
+                    self.material.n_elements_per_unit_cell[element_type_index])
         neighbor_site_se_indices = (
-            np.tile(self.material.n_elements_per_unit_cell[
-                                            :element_type_index].sum()
-                    + np.arange(
-                        0, self.material.n_elements_per_unit_cell[
-                                                element_type_index]),
-                    self.num_cells)
-            + system_element_index_offset_array)
+                np.tile(self.material.n_elements_per_unit_cell[
+                                        :element_type_index].sum()
+                        + np.arange(0,
+                                    self.material.n_elements_per_unit_cell[
+                                                        element_type_index]),
+                        self.num_cells) + system_element_index_offset_array)
         species_site_sd_list = np.zeros(len(neighbor_site_se_indices))
         for neighbor_site_index, neighbor_site_se_index in enumerate(
-                                            neighbor_site_se_indices):
+                                                    neighbor_site_se_indices):
             species_site_sd_list[neighbor_site_index] = (
-                    self.compute_distance(self.system_size,
-                                          center_site_se_index,
-                                          neighbor_site_se_index)**2)
+                            self.compute_distance(self.system_size,
+                                                  center_site_se_index,
+                                                  neighbor_site_se_index)**2)
         species_site_sd_list /= self.material.ANG2BOHR**2
         file_name = 'species_site_sd_list.npy'
         species_site_sd_list_file_path = dst_path.joinpath(file_name)
         np.save(species_site_sd_list_file_path, species_site_sd_list)
         if report:
-            self.generate_species_site_sd_list_report(dst_path,
-                                                      start_time)
+            self.generate_species_site_sd_list_report(dst_path, start_time)
         return None
 
-    def generate_species_site_sd_list_report(self, dst_path,
-                                             start_time):
-        """Generates a neighbor list and prints out a
-            report to the output directory"""
+    def generate_species_site_sd_list_report(self, dst_path, start_time):
+        """Generates a neighbor list and prints out a report to the
+            output directory"""
         species_site_sd_list_log_name = 'species_site_sd_list.log'
         species_site_sd_list_log_path = dst_path.joinpath(
-                                        species_site_sd_list_log_name)
+                                                species_site_sd_list_log_name)
         report = open(species_site_sd_list_log_path, 'w')
         end_time = datetime.now()
         time_elapsed = end_time - start_time
-        report.write(
-            'Time elapsed: ' + ('%2d days, ' % time_elapsed.days
-                                if time_elapsed.days else '')
-            + ('%2d hours' % ((time_elapsed.seconds // 3600) % 24))
-            + (', %2d minutes' % ((time_elapsed.seconds // 60) % 60))
-            + (', %2d seconds' % (time_elapsed.seconds % 60)))
+        report.write('Time elapsed: ' + ('%2d days, ' % time_elapsed.days
+                                         if time_elapsed.days else '')
+                     + ('%2d hours' % ((time_elapsed.seconds // 3600) % 24))
+                     + (', %2d minutes' % ((time_elapsed.seconds // 60) % 60))
+                     + (', %2d seconds' % (time_elapsed.seconds % 60)))
         report.close()
         return None
 
-    def generate_transition_prob_matrix(
-            self, neighbor_system_element_indices, dst_path, report=1):
+    def generate_transition_prob_matrix(self, neighbor_system_element_indices,
+                                        dst_path, report=1):
         start_time = datetime.now()
         element_type_index = 0
         num_neighbors = len(neighbor_system_element_indices[0])
         num_basal_neighbors = 3
         # num_c_neighbors = 1
-        T = 300 * self.material.K2AUTEMP
+        temp = 300 * self.material.K2AUTEMP
 
         hop_element_type = 'Fe:Fe'
         k_list = np.zeros(num_neighbors)
-        delG0 = 0
+        delg_0 = 0
         for neighbor_index in range(num_neighbors):
             if neighbor_index < num_basal_neighbors:
                 hop_dist_type = 0
             else:
                 hop_dist_type = 1
-            lambda_value = self.material.lambda_values[
-                                    hop_element_type][hop_dist_type]
-            VAB = self.material.VAB[hop_element_type][hop_dist_type]
-            delGs = ((lambda_value + delG0) ** 2
-                     / (4 * lambda_value)) - VAB
-            k_list[neighbor_index] = self.material.vn * np.exp(-delGs
-                                                               / T)
+            lambda_value = self.material.lambda_values[hop_element_type][
+                                                                hop_dist_type]
+            v_ab = self.material.v_ab[hop_element_type][hop_dist_type]
+            delg_s = (((lambda_value + delg_0) ** 2 / (4 * lambda_value))
+                      - v_ab)
+            k_list[neighbor_index] = self.material.vn * np.exp(-delg_s / temp)
 
         k_total = np.sum(k_list)
         prob_list = k_list / k_total
 
         system_element_index_offset_array = np.repeat(
-            np.arange(0, (self.material.total_elements_per_unit_cell
-                          * self.num_cells),
-                      self.material.total_elements_per_unit_cell),
-            self.material.n_elements_per_unit_cell[element_type_index])
+                    np.arange(0, (self.material.total_elements_per_unit_cell
+                                  * self.num_cells),
+                              self.material.total_elements_per_unit_cell),
+                    self.material.n_elements_per_unit_cell[element_type_index])
         neighbor_site_se_indices = (
             np.tile(self.material.n_elements_per_unit_cell[
-                                            :element_type_index].sum()
-                    + np.arange(
-                        0, self.material.n_elements_per_unit_cell[
-                                                element_type_index]),
+                                    :element_type_index].sum()
+                    + np.arange(0, self.material.n_elements_per_unit_cell[
+                                                        element_type_index]),
                     self.num_cells)
             + system_element_index_offset_array)
 
@@ -883,17 +821,17 @@ class Neighbors(object):
         for center_site_index in range(num_element_type_sites):
             for neighbor_index in range(num_neighbors):
                 neighbor_site_index = np.where(
-                    neighbor_site_se_indices
-                    == neighbor_system_element_indices[
-                            center_site_index][neighbor_index])[0][0]
+                                neighbor_site_se_indices
+                                == neighbor_system_element_indices[
+                                    center_site_index][neighbor_index])[0][0]
                 transition_prob_matrix[center_site_index][
-                    neighbor_site_index] = prob_list[neighbor_index]
+                            neighbor_site_index] = prob_list[neighbor_index]
         file_name = 'transition_prob_matrix.npy'
         transition_prob_matrix_file_path = dst_path.joinpath(file_name)
-        np.save(transition_prob_matrix_file_path,
-                transition_prob_matrix)
+        np.save(transition_prob_matrix_file_path, transition_prob_matrix)
         if report:
-            self.generate_transition_prob_matrix_list_report(dst_path, start_time)
+            self.generate_transition_prob_matrix_list_report(dst_path,
+                                                             start_time)
         return None
 
     def generate_transition_prob_matrix_list_report(self, dst_path,
@@ -902,101 +840,97 @@ class Neighbors(object):
             output directory"""
         transition_prob_matrix_log_name = 'transition_prob_matrix.log'
         transition_prob_matrix_log_path = dst_path.joinpath(
-                                    transition_prob_matrix_log_name)
+                                            transition_prob_matrix_log_name)
         report = open(transition_prob_matrix_log_path, 'w')
         end_time = datetime.now()
         time_elapsed = end_time - start_time
-        report.write(
-            'Time elapsed: ' + ('%2d days, ' % time_elapsed.days
-                                if time_elapsed.days else '')
-            + ('%2d hours' % ((time_elapsed.seconds // 3600) % 24))
-            + (', %2d minutes' % ((time_elapsed.seconds // 60) % 60))
-            + (', %2d seconds' % (time_elapsed.seconds % 60)))
+        report.write('Time elapsed: ' + ('%2d days, ' % time_elapsed.days
+                                         if time_elapsed.days else '')
+                     + ('%2d hours' % ((time_elapsed.seconds // 3600) % 24))
+                     + (', %2d minutes' % ((time_elapsed.seconds // 60) % 60))
+                     + (', %2d seconds' % (time_elapsed.seconds % 60)))
         report.close()
         return None
 
     def generate_msd_analytical_data(
-                    self, transition_prob_matrix, species_site_sd_list,
-                    center_site_quantum_indices, analytical_t_final,
-                    analytical_time_interval, dst_path, report=1):
+                            self, transition_prob_matrix, species_site_sd_list,
+                            center_site_quantum_indices, analytical_t_final,
+                            analytical_time_interval, dst_path, report=1):
         start_time = datetime.now()
 
         file_name = '%1.2Ens' % analytical_t_final
-        msd_analytical_data_file_name = ('MSD_Analytical_Data_'
-                                         + file_name + '.dat')
+        msd_analytical_data_file_name = ('MSD_Analytical_Data_' + file_name
+                                         + '.dat')
         msd_analytical_data_file_path = dst_path.joinpath(
-                                        msd_analytical_data_file_name)
+                                                msd_analytical_data_file_name)
         open(msd_analytical_data_file_path, 'w').close()
 
         element_type_index = 0
-        num_data_points = int(analytical_t_final
-                              / analytical_time_interval) + 1
+        num_data_points = (int(analytical_t_final / analytical_time_interval)
+                           + 1)
         msd_data = np.zeros((num_data_points, 2))
         msd_data[:, 0] = np.arange(
-                    0, analytical_t_final + analytical_time_interval,
-                    analytical_time_interval)
+                            0, analytical_t_final + analytical_time_interval,
+                            analytical_time_interval)
 
         system_element_index_offset_array = np.repeat(
-            np.arange(0, (self.material.total_elements_per_unit_cell
-                          * self.num_cells),
-                      self.material.total_elements_per_unit_cell),
-            self.material.n_elements_per_unit_cell[element_type_index])
+                    np.arange(0, (self.material.total_elements_per_unit_cell
+                                  * self.num_cells),
+                              self.material.total_elements_per_unit_cell),
+                    self.material.n_elements_per_unit_cell[element_type_index])
         center_site_se_indices = (
-            np.tile(self.material.n_elements_per_unit_cell[
-                                            :element_type_index].sum()
-                    + np.arange(
-                        0, self.material.n_elements_per_unit_cell[
-                                                element_type_index]),
-                    self.num_cells)
-            + system_element_index_offset_array)
+                    np.tile(self.material.n_elements_per_unit_cell[
+                                                    :element_type_index].sum()
+                            + np.arange(
+                                0, self.material.n_elements_per_unit_cell[
+                                                        element_type_index]),
+                            self.num_cells)
+                    + system_element_index_offset_array)
 
         center_site_se_index = self.generate_system_element_index(
-                        self.system_size, center_site_quantum_indices)
+                                self.system_size, center_site_quantum_indices)
         num_basal_neighbors = 3
         num_c_neighbors = 1
         num_neighbors = num_basal_neighbors + num_c_neighbors
-        T = 300 * self.material.K2AUTEMP
+        temp = 300 * self.material.K2AUTEMP
 
         hop_element_type = 'Fe:Fe'
         k_list = np.zeros(num_neighbors)
-        delG0 = 0
+        delg_0 = 0
         for neighbor_index in range(num_neighbors):
             if neighbor_index < num_basal_neighbors:
                 hop_dist_type = 0
             else:
                 hop_dist_type = 1
-            lambda_value = self.material.lambda_values[
-                                    hop_element_type][hop_dist_type]
-            VAB = self.material.VAB[hop_element_type][hop_dist_type]
-            delGs = ((lambda_value + delG0) ** 2
-                     / (4 * lambda_value)) - VAB
-            k_list[neighbor_index] = self.material.vn * np.exp(-delGs
-                                                               / T)
+            lambda_value = self.material.lambda_values[hop_element_type][
+                                                                hop_dist_type]
+            v_ab = self.material.v_ab[hop_element_type][hop_dist_type]
+            delg_s = (((lambda_value + delg_0) ** 2 / (4 * lambda_value))
+                      - v_ab)
+            k_list[neighbor_index] = self.material.vn * np.exp(-delg_s / temp)
 
         k_total = np.sum(k_list)
-        time_step = (self.material.SEC2NS / k_total
-                     / self.material.SEC2AUTIME)
+        time_step = (self.material.SEC2NS / k_total / self.material.SEC2AUTIME)
 
         sim_time = 0
         start_index = 0
-        row_index = np.where(center_site_se_indices
-                             == center_site_se_index)
+        row_index = np.where(center_site_se_indices == center_site_se_index)
         new_transition_prob_matrix = np.copy(transition_prob_matrix)
         with open(msd_analytical_data_file_path, 'a') as \
-                                            msd_analytical_data_file:
-            np.savetxt(msd_analytical_data_file,
-                       msd_data[start_index, :][None, :])
+                msd_analytical_data_file:
+            np.savetxt(msd_analytical_data_file, msd_data[start_index, :][
+                                                                    None, :])
         while True:
-            new_transition_prob_matrix = np.dot(
-                    new_transition_prob_matrix, transition_prob_matrix)
+            new_transition_prob_matrix = np.dot(new_transition_prob_matrix,
+                                                transition_prob_matrix)
             sim_time += time_step
             end_index = int(sim_time / analytical_time_interval)
             if end_index >= start_index + 1:
                 msd_data[end_index, 1] = np.dot(
-                                new_transition_prob_matrix[row_index],
-                                species_site_sd_list)
+                                        new_transition_prob_matrix[row_index],
+                                        species_site_sd_list)
                 with open(msd_analytical_data_file_path, 'a') as \
-                                            msd_analytical_data_file:
+                        msd_analytical_data_file:
                     np.savetxt(msd_analytical_data_file,
                                msd_data[end_index, :][None, :])
                 start_index += 1
@@ -1004,8 +938,7 @@ class Neighbors(object):
                     break
 
         if report:
-            self.generate_msd_analytical_data_report(file_name,
-                                                     dst_path,
+            self.generate_msd_analytical_data_report(file_name, dst_path,
                                                      start_time)
         return_msd_data = ReturnValues(msd_data=msd_data)
         return return_msd_data
@@ -1014,19 +947,18 @@ class Neighbors(object):
                                             start_time):
         """Generates a neighbor list and prints out a report to the
             output directory"""
-        msd_analytical_data_log_name = ('MSD_Analytical_Data_'
-                                        + file_name + '.log')
+        msd_analytical_data_log_name = ('MSD_Analytical_Data_' + file_name
+                                        + '.log')
         msd_analytical_data_log_path = dst_path.joinpath(
-                                        msd_analytical_data_log_name)
+                                                msd_analytical_data_log_name)
         report = open(msd_analytical_data_log_path, 'w')
         end_time = datetime.now()
         time_elapsed = end_time - start_time
-        report.write(
-            'Time elapsed: ' + ('%2d days, ' % time_elapsed.days
-                                if time_elapsed.days else '')
-            + ('%2d hours' % ((time_elapsed.seconds // 3600) % 24))
-            + (', %2d minutes' % ((time_elapsed.seconds // 60) % 60))
-            + (', %2d seconds' % (time_elapsed.seconds % 60)))
+        report.write('Time elapsed: ' + ('%2d days, ' % time_elapsed.days
+                                         if time_elapsed.days else '')
+                     + ('%2d hours' % ((time_elapsed.seconds // 3600) % 24))
+                     + (', %2d minutes' % ((time_elapsed.seconds // 60) % 60))
+                     + (', %2d seconds' % (time_elapsed.seconds % 60)))
         report.close()
         return None
 
@@ -1056,8 +988,7 @@ class System(object):
         self.system_size = self.neighbors.system_size
         self.num_cells = self.system_size.prod()
 
-        self.cumulative_displacement_list = \
-                                        cumulative_displacement_list
+        self.cumulative_displacement_list = cumulative_displacement_list
 
         # variables for ewald sum
         self.translational_matrix = np.multiply(
@@ -1092,64 +1023,54 @@ class System(object):
     def generate_random_occupancy(self, species_count):
         """generates initial occupancy list based on species count"""
         occupancy = []
-        for species_type_index, num_species in enumerate(
-                                                        species_count):
-            species_type = self.material.species_types[
-                                                    species_type_index]
+        for species_type_index, num_species in enumerate(species_count):
+            species_type = self.material.species_types[species_type_index]
             species_site_element_list = (
-                            self.material.species_to_element_type_map[
-                                                        species_type])
+                    self.material.species_to_element_type_map[species_type])
             species_site_element_type_index_list = [
-                self.material.element_types.index(species_site_element)
-                for species_site_element in species_site_element_list]
+                        self.material.element_types.index(species_site_element)
+                        for species_site_element in species_site_element_list]
             species_site_indices = []
             for species_site_element_type_index in (
-                                species_site_element_type_index_list):
+                                        species_site_element_type_index_list):
                 system_element_index_offset_array = np.repeat(
-                    np.arange(
-                        0, (self.material.total_elements_per_unit_cell
-                            * self.num_cells),
-                        self.material.total_elements_per_unit_cell),
-                    self.material.n_elements_per_unit_cell[
-                                    species_site_element_type_index])
+                            np.arange(
+                                0, (self.material.total_elements_per_unit_cell
+                                    * self.num_cells),
+                                self.material.total_elements_per_unit_cell),
+                            self.material.n_elements_per_unit_cell[
+                                            species_site_element_type_index])
                 site_indices = (
                     np.tile(self.material.n_elements_per_unit_cell[
                                 :species_site_element_type_index].sum()
-                            + np.arange(
-                                0,
-                                self.material.n_elements_per_unit_cell[
-                                    species_site_element_type_index]),
+                            + np.arange(0,
+                                        self.material.n_elements_per_unit_cell[
+                                            species_site_element_type_index]),
                             self.num_cells)
-                                + system_element_index_offset_array)
+                    + system_element_index_offset_array)
                 species_site_indices.extend(list(site_indices))
-            occupancy.extend(rnd.sample(species_site_indices,
-                                        num_species)[:])
+            occupancy.extend(rnd.sample(species_site_indices, num_species)[:])
         return occupancy
 
-    def charge_config(self, occupancy, ion_charge_type,
-                      species_charge_type):
+    def charge_config(self, occupancy, ion_charge_type, species_charge_type):
         """Returns charge distribution of the current configuration"""
 
         # generate lattice charge list
         unit_cell_charge_list = np.array(
             [self.material.charge_types[ion_charge_type][
-                    self.material.element_types[element_type_index]]
-             for element_type_index in (
-                            self.material.element_type_index_list)])
+                 self.material.element_types[element_type_index]]
+             for element_type_index in self.material.element_type_index_list])
         charge_list = np.tile(unit_cell_charge_list, self.num_cells)[
-                                                        :, np.newaxis]
+                                                                :, np.newaxis]
 
-        for species_type_index in range(
-                                    self.material.num_species_types):
-            start_index = 0 + self.species_count[
-                                            :species_type_index].sum()
-            end_index = start_index + self.species_count[
-                                                    species_type_index]
+        for species_type_index in range(self.material.num_species_types):
+            start_index = 0 + self.species_count[:species_type_index].sum()
+            end_index = start_index + self.species_count[species_type_index]
             center_site_system_element_indices = occupancy[
-                                            start_index:end_index][:]
+                                                    start_index:end_index][:]
             charge_list[center_site_system_element_indices] += (
-                self.material.species_charge_list[species_charge_type][
-                                                species_type_index])
+                    self.material.species_charge_list[species_charge_type][
+                                                        species_type_index])
         return charge_list
 
     def ewald_sum_setup(self, out_dir=None):
@@ -1157,30 +1078,24 @@ class System(object):
         sqrt_alpha = np.sqrt(self.alpha)
         alpha4 = 4 * self.alpha
         fourier_sum_coeff = (2 * np.pi) / self.system_volume
-        precomputed_array = np.zeros((
-                                self.neighbors.num_system_elements,
-                                self.neighbors.num_system_elements))
+        precomputed_array = np.zeros((self.neighbors.num_system_elements,
+                                      self.neighbors.num_system_elements))
 
         for i in range(-self.n_max, self.n_max+1):
             for j in range(-self.n_max, self.n_max+1):
                 for k in range(-self.n_max, self.n_max+1):
-                    temp_array = (
-                            np.linalg.norm(
-                                (self.cumulative_displacement_list
-                                 + np.dot(np.array([i, j, k]),
-                                          self.translational_matrix)),
-                                           axis=2))
-                    precomputed_array += erfc(sqrt_alpha
-                                              * temp_array) / 2
+                    temp_array = np.linalg.norm(
+                                        (self.cumulative_displacement_list
+                                         + np.dot(np.array([i, j, k]),
+                                                  self.translational_matrix)),
+                                        axis=2)
+                    precomputed_array += erfc(sqrt_alpha * temp_array) / 2
 
                     if np.all(np.array([i, j, k]) == 0):
-                        for a in range(
-                                self.neighbors.num_system_elements):
-                            for b in range(
-                                self.neighbors.num_system_elements):
+                        for a in range(self.neighbors.num_system_elements):
+                            for b in range(self.neighbors.num_system_elements):
                                 if a != b:
-                                    precomputed_array[a][b] /= (
-                                                    temp_array[a][b])
+                                    precomputed_array[a][b] /= temp_array[a][b]
                     else:
                         precomputed_array /= temp_array
 
@@ -1188,17 +1103,16 @@ class System(object):
             for j in range(-self.k_max, self.k_max+1):
                 for k in range(-self.k_max, self.k_max+1):
                     if not np.all(np.array([i, j, k]) == 0):
-                        k_vector = np.dot(
-                                        np.array([i, j, k]),
-                                        self.reciprocal_lattice_matrix)
+                        k_vector = np.dot(np.array([i, j, k]),
+                                          self.reciprocal_lattice_matrix)
                         k_vector_2 = np.dot(k_vector, k_vector)
                         precomputed_array += (
-                            fourier_sum_coeff
-                            * np.exp(-k_vector_2 / alpha4)
-                            * np.cos(np.tensordot(
-                                    self.cumulative_displacement_list,
-                                    k_vector, axes=([2], [0])))
-                                              / k_vector_2)
+                                        fourier_sum_coeff
+                                        * np.exp(-k_vector_2 / alpha4)
+                                        * np.cos(np.tensordot(
+                                            self.cumulative_displacement_list,
+                                            k_vector, axes=([2], [0])))
+                                        / k_vector_2)
 
         precomputed_array /= self.material.dielectric_constant
 
@@ -1211,16 +1125,15 @@ class System(object):
             to the working directory"""
         precomputed_array_log_file_name = 'precomputed_array.log'
         precomputed_array_log_file_path = out_dir.joinpath(
-                                    precomputed_array_log_file_name)
+                                            precomputed_array_log_file_name)
         report = open(precomputed_array_log_file_path, 'w')
         end_time = datetime.now()
         time_elapsed = end_time - self.start_time
-        report.write(
-            'Time elapsed: ' + ('%2d days, ' % time_elapsed.days
-                                if time_elapsed.days else '')
-            + ('%2d hours' % ((time_elapsed.seconds // 3600) % 24))
-            + (', %2d minutes' % ((time_elapsed.seconds // 60) % 60))
-            + (', %2d seconds' % (time_elapsed.seconds % 60)))
+        report.write('Time elapsed: ' + ('%2d days, ' % time_elapsed.days
+                                         if time_elapsed.days else '')
+                     + ('%2d hours' % ((time_elapsed.seconds // 3600) % 24))
+                     + (', %2d minutes' % ((time_elapsed.seconds // 60) % 60))
+                     + (', %2d seconds' % (time_elapsed.seconds % 60)))
         report.close()
         return None
 
@@ -1228,7 +1141,7 @@ class System(object):
 class Run(object):
     """defines the subroutines for running Kinetic Monte Carlo and
         computing electrostatic interaction energies"""
-    def __init__(self, system, precomputed_array, T, ion_charge_type,
+    def __init__(self, system, precomputed_array, temp, ion_charge_type,
                  species_charge_type, n_traj, t_final, time_interval):
         """Returns the PBC condition of the system"""
         self.start_time = datetime.now()
@@ -1237,7 +1150,7 @@ class Run(object):
         self.material = self.system.material
         self.neighbors = self.system.neighbors
         self.precomputed_array = precomputed_array
-        self.T = T * self.material.K2AUTEMP
+        self.temp = temp * self.material.K2AUTEMP
         self.ion_charge_type = ion_charge_type
         self.species_charge_type = species_charge_type
         self.n_traj = int(n_traj)
@@ -1248,30 +1161,29 @@ class Run(object):
 
         # n_elements_per_unit_cell
         self.head_start_n_elements_per_unit_cell_cum_sum = [
-            self.material.n_elements_per_unit_cell[
-                                        :site_element_type_index].sum()
-            for site_element_type_index in (
-                                self.neighbors.element_type_indices)]
+                                self.material.n_elements_per_unit_cell[
+                                            :site_element_type_index].sum()
+                                for site_element_type_index in (
+                                        self.neighbors.element_type_indices)]
 
         # species_type_list
-        self.species_type_list = [
-            self.material.species_types[index]
-            for index, value in enumerate(self.system.species_count)
-            for _ in range(value)]
-        self.species_type_index_list = [
-            index
-            for index, value in enumerate(self.system.species_count)
-            for _ in range(value)]
+        self.species_type_list = [self.material.species_types[index]
+                                  for index, value in enumerate(
+                                            self.system.species_count)
+                                  for _ in range(value)]
+        self.species_type_index_list = [index
+                                        for index, value in enumerate(
+                                                    self.system.species_count)
+                                        for _ in range(value)]
         self.species_charge_list = [
-            self.material.species_charge_list[
-                                    self.species_charge_type][index]
+            self.material.species_charge_list[self.species_charge_type][index]
             for index in self.species_type_index_list]
         self.hop_element_type_list = [
-                    self.material.hop_element_types[species_type][0]
-                    for species_type in self.species_type_list]
+                            self.material.hop_element_types[species_type][0]
+                            for species_type in self.species_type_list]
         self.len_hop_dist_type_list = [
-            len(self.material.neighbor_cutoff_dist[hop_element_type])
-            for hop_element_type in self.hop_element_type_list]
+                    len(self.material.neighbor_cutoff_dist[hop_element_type])
+                    for hop_element_type in self.hop_element_type_list]
         # number of kinetic processes
         self.n_proc = 0
         self.n_proc_hop_element_type_list = []
@@ -1280,41 +1192,36 @@ class Run(object):
         self.n_proc_lambda_value_list = []
         self.n_proc_v_ab_list = []
         for hop_element_type_index, hop_element_type in enumerate(
-                                        self.hop_element_type_list):
+                                                self.hop_element_type_list):
             center_element_type = hop_element_type.split(
-                            self.material.element_type_delimiter)[0]
+                                    self.material.element_type_delimiter)[0]
             species_type_index = self.material.species_types.index(
-                self.material.element_type_to_species_map[
-                                            center_element_type][0])
-            center_site_element_type_index = (
-                self.material.element_types.index(center_element_type))
-            for hop_dist_type_index in range(
-                                        self.len_hop_dist_type_list[
-                                            hop_element_type_index]):
+                                self.material.element_type_to_species_map[
+                                                    center_element_type][0])
+            center_site_element_type_index = self.material.element_types.index(
+                                                        center_element_type)
+            for hop_dist_type_index in range(self.len_hop_dist_type_list[
+                                                    hop_element_type_index]):
                 if self.system.species_count[species_type_index] != 0:
                     num_neighbors = self.system.hop_neighbor_list[
-                                hop_element_type][
-                                    hop_dist_type_index].num_neighbors
+                        hop_element_type][hop_dist_type_index].num_neighbors
                     self.n_proc += num_neighbors[0]
                     self.n_proc_hop_element_type_list.extend(
-                                [hop_element_type] * num_neighbors[0])
+                                        [hop_element_type] * num_neighbors[0])
                     self.n_proc_species_index_list.extend(
-                        [hop_element_type_index] * num_neighbors[0])
+                                [hop_element_type_index] * num_neighbors[0])
                     self.n_proc_site_element_type_index_list.extend(
-                                    [center_site_element_type_index]
-                                    * num_neighbors[0])
+                                            [center_site_element_type_index]
+                                            * num_neighbors[0])
                     self.n_proc_lambda_value_list.extend(
-                        [self.material.lambda_values[hop_element_type][
-                                                hop_dist_type_index]]
-                        * num_neighbors[0])
+                                [self.material.lambda_values[hop_element_type][
+                                     hop_dist_type_index]] * num_neighbors[0])
                     self.n_proc_v_ab_list.extend(
-                                [self.material.VAB[hop_element_type][
-                                                hop_dist_type_index]]
-                                * num_neighbors[0])
+                                [self.material.v_ab[hop_element_type][
+                                     hop_dist_type_index]] * num_neighbors[0])
 
         # system coordinates
-        self.system_coordinates = (
-                            self.neighbors.bulk_sites.cell_coordinates)
+        self.system_coordinates = self.neighbors.bulk_sites.cell_coordinates
 
         # total number of species
         self.total_species = self.system.species_count.sum()
@@ -1327,27 +1234,23 @@ class Run(object):
 
         excess = 0
         energy = 1
-        unwrapped_traj_file_name = out_dir.joinpath(
-                                                'unwrapped_traj.dat')
+        unwrapped_traj_file_name = out_dir.joinpath('unwrapped_traj.dat')
         open(unwrapped_traj_file_name, 'wb').close()
         if energy:
             energy_traj_file_name = out_dir.joinpath('energy_traj.dat')
             open(energy_traj_file_name, 'wb').close()
 
         if excess:
-            wrapped_traj_file_name = out_dir.joinpath(
-                                                    'wrapped_traj.dat')
-            delG0_traj_file_name = out_dir.joinpath('delG0_traj.dat')
-            potential_traj_file_name = out_dir.joinpath(
-                                                'potential_traj.dat')
+            wrapped_traj_file_name = out_dir.joinpath('wrapped_traj.dat')
+            delg_0_traj_file_name = out_dir.joinpath('delG0_traj.dat')
+            potential_traj_file_name = out_dir.joinpath('potential_traj.dat')
             open(wrapped_traj_file_name, 'wb').close()
-            open(delG0_traj_file_name, 'wb').close()
+            open(delg_0_traj_file_name, 'wb').close()
             open(potential_traj_file_name, 'wb').close()
 
         rnd.seed(random_seed)
         n_traj = self.n_traj
-        num_path_steps_per_traj = int(self.t_final
-                                      / self.time_interval) + 1
+        num_path_steps_per_traj = int(self.t_final / self.time_interval) + 1
         unwrapped_position_array = np.zeros((num_path_steps_per_traj,
                                              self.total_species * 3))
         if energy:
@@ -1356,7 +1259,7 @@ class Run(object):
         if excess:
             wrapped_position_array = np.zeros((num_path_steps_per_traj,
                                                self.total_species * 3))
-            delG0_array = np.zeros(self.kmc_steps)
+            delg_0_array = np.zeros(self.kmc_steps)
             potential_array = np.zeros((num_path_steps_per_traj,
                                         self.total_species))
         k_list = np.zeros(self.n_proc)
@@ -1369,30 +1272,26 @@ class Run(object):
                                self.material.species_charge_list[
                                             self.species_charge_type])
 
-        ewald_neut = - (
-                np.pi * (system_charge**2)
-                / (2 * self.system.system_volume * self.system.alpha))
+        ewald_neut = - (np.pi * (system_charge**2)
+                        / (2 * self.system.system_volume * self.system.alpha))
         precomputed_array = self.precomputed_array
         for _ in range(n_traj):
-            current_state_occupancy = (
-                                self.system.generate_random_occupancy(
-                                            self.system.species_count))
+            current_state_occupancy = self.system.generate_random_occupancy(
+                                                    self.system.species_count)
             current_state_charge_config = self.system.charge_config(
-                                            current_state_occupancy,
-                                            self.ion_charge_type,
-                                            self.species_charge_type)
+                                current_state_occupancy, self.ion_charge_type,
+                                self.species_charge_type)
             current_state_charge_config_prod = np.multiply(
-                            current_state_charge_config.transpose(),
-                            current_state_charge_config)
+                                    current_state_charge_config.transpose(),
+                                    current_state_charge_config)
             ewald_self = - (
-                np.sqrt(self.system.alpha / np.pi)
-                * np.einsum('ii', current_state_charge_config_prod))
+                        np.sqrt(self.system.alpha / np.pi)
+                        * np.einsum('ii', current_state_charge_config_prod))
             current_state_energy = (
-                ewald_neut + ewald_self
-                + np.sum(np.multiply(current_state_charge_config_prod,
-                                     precomputed_array)))
+                        ewald_neut + ewald_self
+                        + np.sum(np.multiply(current_state_charge_config_prod,
+                                             precomputed_array)))
             start_path_index = 1
-            end_path_index = start_path_index + 1
             if energy:
                 energy_array[0] = current_state_energy
             # TODO: How to deal excess flag?
@@ -1402,98 +1301,84 @@ class Run(object):
             #                                 self.system_coordinates[
             #                     current_state_occupancy].flatten())
             species_displacement_vector_list = np.zeros(
-                                        (1, self.total_species * 3))
+                                                (1, self.total_species * 3))
             sim_time = 0
             break_flag = 0
             while True:
                 i_proc = 0
-                delG0_list = []
+                delg_0_list = []
                 for species_index, species_site_system_element_index \
-                                in enumerate(current_state_occupancy):
+                        in enumerate(current_state_occupancy):
                     # TODO: Avoid re-defining species_index
-                    species_index = self.n_proc_species_index_list[
-                                                                i_proc]
-                    hop_element_type = (
-                            self.n_proc_hop_element_type_list[i_proc])
+                    species_index = self.n_proc_species_index_list[i_proc]
+                    hop_element_type = self.n_proc_hop_element_type_list[
+                                                                        i_proc]
                     site_element_type_index = (
-                            self.n_proc_site_element_type_index_list[
-                                                            i_proc])
+                            self.n_proc_site_element_type_index_list[i_proc])
                     row_index = (
                         species_site_system_element_index
                         // self.material.total_elements_per_unit_cell
                         * self.material.n_elements_per_unit_cell[
-                                            site_element_type_index]
+                                                    site_element_type_index]
                         + species_site_system_element_index
                         % self.material.total_elements_per_unit_cell
                         - self.head_start_n_elements_per_unit_cell_cum_sum[
-                                            site_element_type_index])
-                    for hop_dist_type in range(
-                                        self.len_hop_dist_type_list[
-                                                    species_index]):
+                                                    site_element_type_index])
+                    for hop_dist_type in range(self.len_hop_dist_type_list[
+                                                            species_index]):
                         local_neighbor_site_system_element_index_list = (
-                            self.system.hop_neighbor_list[
-                                    hop_element_type][hop_dist_type]
-                            .neighbor_system_element_indices[
-                                                            row_index])
+                            self.system.hop_neighbor_list[hop_element_type][
+                                                                hop_dist_type]
+                            .neighbor_system_element_indices[row_index])
                         for neighbor_index, \
-                            neighbor_site_system_element_index in \
-                            enumerate(
+                            neighbor_site_system_element_index in enumerate(
                                 local_neighbor_site_system_element_index_list):
                             # TODO: Introduce If condition
                             # if neighbor_system_element_index not in
                             # current_state_occupancy: commit 898baa8
-                            neighbor_site_system_element_index_list[
-                                    i_proc] = \
-                                    neighbor_site_system_element_index
-                            n_proc_hop_dist_type_list[i_proc] = \
-                                                        hop_dist_type
+                            neighbor_site_system_element_index_list[i_proc] = \
+                                neighbor_site_system_element_index
+                            n_proc_hop_dist_type_list[i_proc] = hop_dist_type
                             row_index_list[i_proc] = row_index
-                            neighbor_index_list[i_proc] = \
-                                                        neighbor_index
+                            neighbor_index_list[i_proc] = neighbor_index
                             # TODO: Print out a prompt about the
                             # assumption; detailed comment here.
                             # <Using species charge to compute change
                             # in energy> May be print log report
-                            delG0_ewald = (
+                            delg_0_ewald = (
                                 self.species_charge_list[species_index]
                                 * (2 * np.dot(
-                                       current_state_charge_config[:,
-                                                                   0],
-                                          (precomputed_array[
-                                              neighbor_site_system_element_index,
-                                              :]
-                                           - precomputed_array[
-                                               species_site_system_element_index,
-                                               :]))
-                                   + self.species_charge_list[
-                                                        species_index]
+                                    current_state_charge_config[:, 0],
+                                    (precomputed_array[
+                                        neighbor_site_system_element_index, :]
+                                     - precomputed_array[
+                                        species_site_system_element_index, :]))
+                                   + self.species_charge_list[species_index]
                                    * (precomputed_array[
-                                       species_site_system_element_index,
-                                       species_site_system_element_index]
+                                          species_site_system_element_index,
+                                          species_site_system_element_index]
                                       + precomputed_array[
                                           neighbor_site_system_element_index,
                                           neighbor_site_system_element_index]
                                       - 2 * precomputed_array[
                                           species_site_system_element_index,
-                                          neighbor_site_system_element_index])))
-                            class_index = (
-                                self.system.system_class_index_list[
-                                    species_site_system_element_index])
-                            delG0 = (
-                                delG0_ewald
+                                          neighbor_site_system_element_index]))
+                                            )
+                            class_index = self.system.system_class_index_list[
+                                            species_site_system_element_index]
+                            delg_0 = (
+                                delg_0_ewald
                                 + self.material.delG0_shift_list[
-                                    self.n_proc_hop_element_type_list[
-                                                i_proc]][class_index][
-                                                        hop_dist_type])
-                            delG0_list.append(delG0)
-                            lambda_value = (
-                                self.n_proc_lambda_value_list[i_proc])
-                            VAB = self.n_proc_v_ab_list[i_proc]
-                            delGs = (((lambda_value + delG0) ** 2
-                                      / (4 * lambda_value)) - VAB)
-                            k_list[i_proc] = (
-                                            self.material.vn
-                                            * np.exp(-delGs / self.T))
+                                    self.n_proc_hop_element_type_list[i_proc]][
+                                                class_index][hop_dist_type])
+                            delg_0_list.append(delg_0)
+                            lambda_value = self.n_proc_lambda_value_list[
+                                                                    i_proc]
+                            v_ab = self.n_proc_v_ab_list[i_proc]
+                            delg_s = (((lambda_value + delg_0) ** 2
+                                       / (4 * lambda_value)) - v_ab)
+                            k_list[i_proc] = (self.material.vn
+                                              * np.exp(-delg_s / self.temp))
                             i_proc += 1
 
                 k_total = sum(k_list)
@@ -1505,48 +1390,42 @@ class Run(object):
 
                 # TODO: Address pre-defining excess data arrays
                 # if excess:
-                #    delG0_array[step] = delG0_list[proc_index]
-                species_index = self.n_proc_species_index_list[
-                                                            proc_index]
+                #    delg_0_array[step] = delg_0_list[proc_index]
+                species_index = self.n_proc_species_index_list[proc_index]
                 hop_element_type = self.n_proc_hop_element_type_list[
-                                                            proc_index]
+                                                                    proc_index]
                 hop_dist_type = n_proc_hop_dist_type_list[proc_index]
                 row_index = row_index_list[proc_index]
                 neighbor_index = neighbor_index_list[proc_index]
-                old_site_system_element_index = (
-                                current_state_occupancy[species_index])
+                old_site_system_element_index = current_state_occupancy[
+                                                                species_index]
                 new_site_system_element_index = (
-                            neighbor_site_system_element_index_list[
-                                                        proc_index])
-                current_state_occupancy[species_index] = (
-                                        new_site_system_element_index)
+                        neighbor_site_system_element_index_list[proc_index])
+                current_state_occupancy[species_index] = \
+                    new_site_system_element_index
                 species_displacement_vector_list[
-                    0, species_index * 3:(species_index + 1) * 3] \
-                    += self.system.hop_neighbor_list[hop_element_type][
-                            hop_dist_type].displacement_vector_list[
-                                            row_index][neighbor_index]
+                    0, species_index * 3:(species_index + 1) * 3] += \
+                    self.system.hop_neighbor_list[hop_element_type][
+                        hop_dist_type].displacement_vector_list[row_index][
+                                                                neighbor_index]
 
-                current_state_energy += delG0_list[proc_index]
-                current_state_charge_config[
-                        old_site_system_element_index] -= (
-                            self.species_charge_list[species_index])
-                current_state_charge_config[
-                        new_site_system_element_index] += (
-                            self.species_charge_list[species_index])
+                current_state_energy += delg_0_list[proc_index]
+                current_state_charge_config[old_site_system_element_index] -= \
+                    self.species_charge_list[species_index]
+                current_state_charge_config[new_site_system_element_index] += \
+                    self.species_charge_list[species_index]
                 end_path_index = int(sim_time / self.time_interval)
                 if end_path_index >= start_path_index + 1:
                     if end_path_index >= num_path_steps_per_traj:
                         end_path_index = num_path_steps_per_traj
                         break_flag = 1
-                    unwrapped_position_array[
-                        start_path_index:end_path_index] = (
-                                    unwrapped_position_array[
-                                                start_path_index-1]
-                                    + species_displacement_vector_list)
-                    energy_array[start_path_index:end_path_index] \
-                        = current_state_energy
-                    species_displacement_vector_list \
-                        = np.zeros((1, self.total_species * 3))
+                    unwrapped_position_array[start_path_index:end_path_index] \
+                        = (unwrapped_position_array[start_path_index-1]
+                           + species_displacement_vector_list)
+                    energy_array[start_path_index:end_path_index] = \
+                        current_state_energy
+                    species_displacement_vector_list = np.zeros(
+                                                (1, self.total_species * 3))
                     start_path_index = end_path_index
                     if break_flag:
                         break
@@ -1556,22 +1435,18 @@ class Run(object):
                     #     wrapped_position_array[pathIndex] \
                     #         = self.system_coordinates[
                     #             current_state_occupancy].flatten()
-            with open(unwrapped_traj_file_name, 'ab') as \
-                                                unwrapped_traj_file:
-                np.savetxt(unwrapped_traj_file,
-                           unwrapped_position_array)
-            with open(energy_traj_file_name, 'ab') as energy_traj_file:
-                np.savetxt(energy_traj_file, energy_array)
+            with open(unwrapped_traj_file_name, 'ab') as unwrapped_traj_file:
+                np.savetxt(unwrapped_traj_file, unwrapped_position_array)
+            if energy:
+                with open(energy_traj_file_name, 'ab') as energy_traj_file:
+                    np.savetxt(energy_traj_file, energy_array)
             if excess:
-                with open(wrapped_traj_file_name, 'ab') as \
-                                                    wrapped_traj_file:
-                    np.savetxt(wrapped_traj_file,
-                               wrapped_position_array)
-                with open(delG0_traj_file_name, 'ab') as \
-                                                    delG0_traj_file:
-                    np.savetxt(delG0_traj_file, delG0_array)
+                with open(wrapped_traj_file_name, 'ab') as wrapped_traj_file:
+                    np.savetxt(wrapped_traj_file, wrapped_position_array)
+                with open(delg_0_traj_file_name, 'ab') as delG0_traj_file:
+                    np.savetxt(delG0_traj_file, delg_0_array)
                 with open(potential_traj_file_name, 'ab') as \
-                                                potential_traj_file:
+                        potential_traj_file:
                     np.savetxt(potential_traj_file, potential_array)
         if report:
             self.generate_simulation_log_report(out_dir)
@@ -1585,21 +1460,20 @@ class Run(object):
         report = open(simulation_log_file_path, 'w')
         end_time = datetime.now()
         time_elapsed = end_time - self.start_time
-        report.write(
-            'Time elapsed: ' + ('%2d days, ' % time_elapsed.days
-                                if time_elapsed.days else '')
-            + ('%2d hours' % ((time_elapsed.seconds // 3600) % 24))
-            + (', %2d minutes' % ((time_elapsed.seconds // 60) % 60))
-            + (', %2d seconds' % (time_elapsed.seconds % 60)))
+        report.write('Time elapsed: ' + ('%2d days, ' % time_elapsed.days
+                                         if time_elapsed.days else '')
+                     + ('%2d hours' % ((time_elapsed.seconds // 3600) % 24))
+                     + (', %2d minutes' % ((time_elapsed.seconds // 60) % 60))
+                     + (', %2d seconds' % (time_elapsed.seconds % 60)))
         report.close()
         return None
 
 
 class Analysis(object):
     """Post-simulation analysis methods"""
-    def __init__(self, material_info, n_dim, species_count, n_traj,
-                 t_final, time_interval, msd_t_final, trim_length,
-                 repr_time='ns', repr_dist='Angstrom'):
+    def __init__(self, material_info, n_dim, species_count, n_traj, t_final,
+                 time_interval, msd_t_final, trim_length, repr_time='ns',
+                 repr_dist='Angstrom'):
         """"""
         self.start_time = datetime.now()
 
@@ -1611,8 +1485,8 @@ class Analysis(object):
         self.t_final = t_final * self.material.SEC2AUTIME
         self.time_interval = time_interval * self.material.SEC2AUTIME
         self.trim_length = trim_length
-        self.num_path_steps_per_traj = int(self.t_final
-                                           / self.time_interval) + 1
+        self.num_path_steps_per_traj = (int(self.t_final / self.time_interval)
+                                        + 1)
         self.repr_time = repr_time
         self.repr_dist = repr_dist
 
@@ -1629,8 +1503,7 @@ class Analysis(object):
             self.time_conversion = 1E+00 / self.material.SEC2AUTIME
 
         if repr_dist == 'm':
-            self.dist_conversion = (self.material.ANG
-                                    / self.material.ANG2BOHR)
+            self.dist_conversion = self.material.ANG / self.material.ANG2BOHR
         elif repr_dist == 'um':
             self.dist_conversion = (self.material.ANG2UM
                                     / self.material.ANG2BOHR)
@@ -1643,50 +1516,43 @@ class Analysis(object):
 
     def compute_msd(self, out_dir, report=1):
         """Returns the squared displacement of the trajectories"""
-        assert out_dir, 'Please provide the destination path where \
-                                MSD output files needs to be saved'
-        position_array = np.loadtxt(out_dir.joinpath(
-                                                'unwrapped_traj.dat'))
+        assert out_dir, 'Please provide the destination path where MSD ' \
+                        'output files needs to be saved'
+        position_array = np.loadtxt(out_dir.joinpath('unwrapped_traj.dat'))
         num_traj_recorded = int(len(position_array)
                                 / self.num_path_steps_per_traj)
         position_array = (
             position_array[
-                :num_traj_recorded
-                * self.num_path_steps_per_traj + 1].reshape(
-                    (num_traj_recorded * self.num_path_steps_per_traj,
-                     self.total_species, 3))
+                :num_traj_recorded * self.num_path_steps_per_traj + 1].reshape(
+                (num_traj_recorded * self.num_path_steps_per_traj,
+                 self.total_species, 3))
             * self.dist_conversion)
-        sd_array = np.zeros((num_traj_recorded,
-                             self.num_msd_steps_per_traj,
+        sd_array = np.zeros((num_traj_recorded, self.num_msd_steps_per_traj,
                              self.total_species))
         for traj_index in range(num_traj_recorded):
             head_start = traj_index * self.num_path_steps_per_traj
             for time_step in range(1, self.num_msd_steps_per_traj):
                 num_disp = self.num_path_steps_per_traj - time_step
                 add_on = np.arange(num_disp)
-                pos_diff = (
-                        position_array[head_start + time_step + add_on]
-                        - position_array[head_start + add_on])
+                pos_diff = (position_array[head_start + time_step + add_on]
+                            - position_array[head_start + add_on])
                 sd_array[traj_index, time_step, :] = np.mean(
                         np.einsum('ijk,ijk->ij', pos_diff, pos_diff),
                         axis=0)
-        species_avg_sd_array = np.zeros(
-                    (num_traj_recorded, self.num_msd_steps_per_traj,
-                     self.material.num_species_types
-                     - list(self.species_count).count(0)))
+        species_avg_sd_array = np.zeros((num_traj_recorded,
+                                         self.num_msd_steps_per_traj,
+                                         self.material.num_species_types
+                                         - list(self.species_count).count(0)))
         start_index = 0
         num_non_existent_species = 0
         non_existent_species_indices = []
-        for species_type_index in range(
-                                    self.material.num_species_types):
+        for species_type_index in range(self.material.num_species_types):
             if self.species_count[species_type_index] != 0:
                 end_index = start_index + self.species_count[
-                                                    species_type_index]
+                                                            species_type_index]
                 species_avg_sd_array[
-                    :, :, (species_type_index
-                           - num_non_existent_species)] = np.mean(
-                               sd_array[:, :, start_index:end_index],
-                               axis=2)
+                    :, :, (species_type_index - num_non_existent_species)] = \
+                    np.mean(sd_array[:, :, start_index:end_index], axis=2)
                 start_index = end_index
             else:
                 num_non_existent_species += 1
@@ -1701,23 +1567,20 @@ class Analysis(object):
         msd_data[:, 0] = time_array
         msd_data[:, 1:] = np.mean(species_avg_sd_array, axis=0)
         std_data = np.std(species_avg_sd_array, axis=0)
-        file_name = (
-                ('%1.2E' % (self.msd_t_final * self.time_conversion))
-                + str(self.repr_time)
-                + (',n_traj: %1.2E' % num_traj_recorded
-                   if num_traj_recorded != self.n_traj else ''))
+        file_name = (('%1.2E' % (self.msd_t_final * self.time_conversion))
+                     + str(self.repr_time)
+                     + (',n_traj: %1.2E' % num_traj_recorded
+                        if num_traj_recorded != self.n_traj else ''))
         msd_file_name = 'MSD_Data_' + file_name + '.npy'
         msd_file_path = out_dir.joinpath(msd_file_name)
-        species_types = [
-                        species_type
-                        for index, species_type in enumerate(
-                                        self.material.species_types)
-                        if index not in non_existent_species_indices]
+        species_types = [species_type
+                         for index, species_type in enumerate(
+                                            self.material.species_types)
+                         if index not in non_existent_species_indices]
         np.save(msd_file_path, msd_data)
 
         if report:
-            self.generate_msd_analysis_log_report(msd_data,
-                                                  species_types,
+            self.generate_msd_analysis_log_report(msd_data, species_types,
                                                   file_name, out_dir)
 
         return_msd_data = ReturnValues(msd_data=msd_data,
@@ -1727,41 +1590,39 @@ class Analysis(object):
         return return_msd_data
 
     def generate_msd_analysis_log_report(self, msd_data, species_types,
-                                     file_name, out_dir):
+                                         file_name, out_dir):
         """Generates an log report of the MSD Analysis and
             outputs to the working directory"""
         msd_analysis_log_file_name = ('MSD_Analysis'
                                       + ('_' if file_name else '')
                                       + file_name + '.log')
-        msd_log_file_path = out_dir.joinpath(
-                                            msd_analysis_log_file_name)
+        msd_log_file_path = out_dir.joinpath(msd_analysis_log_file_name)
         report = open(msd_log_file_path, 'w')
         end_time = datetime.now()
         time_elapsed = end_time - self.start_time
         from scipy.stats import linregress
         for species_index, species_type in enumerate(species_types):
-            slope, _, _, _, _ = linregress(
-                    msd_data[self.trim_length:-self.trim_length, 0],
-                    msd_data[self.trim_length:-self.trim_length,
-                             species_index + 1])
+            slope, _, _, _, _ = \
+                linregress(msd_data[self.trim_length:-self.trim_length, 0],
+                           msd_data[self.trim_length:-self.trim_length,
+                           species_index + 1])
             species_diff = (slope * self.material.ANG2UM**2
                             * self.material.SEC2NS / (2 * self.n_dim))
-            report.write('Estimated value of {:s} diffusivity is: \
-                {:4.3f} um2/s\n'.format(species_type, species_diff))
-        report.write(
-            'Time elapsed: ' + ('%2d days, ' % time_elapsed.days
-                                if time_elapsed.days else '')
-            + ('%2d hours' % ((time_elapsed.seconds // 3600) % 24))
-            + (', %2d minutes' % ((time_elapsed.seconds // 60) % 60))
-            + (', %2d seconds' % (time_elapsed.seconds % 60)))
+            report.write('Estimated value of {:s} diffusivity is: '
+                         '{:4.3f} um2/s\n'.format(species_type, species_diff))
+        report.write('Time elapsed: ' + ('%2d days, ' % time_elapsed.days
+                                         if time_elapsed.days else '')
+                     + ('%2d hours' % ((time_elapsed.seconds // 3600) % 24))
+                     + (', %2d minutes' % ((time_elapsed.seconds // 60) % 60))
+                     + (', %2d seconds' % (time_elapsed.seconds % 60)))
         report.close()
         return None
 
     def generate_msd_plot(self, msd_data, std_data, display_error_bars,
                           species_types, file_name, out_dir):
         """Returns a line plot of the MSD data"""
-        assert out_dir, 'Please provide the destination path \
-                            where MSD Plot files needs to be saved'
+        assert out_dir, 'Please provide the destination path where MSD Plot ' \
+                        'files needs to be saved'
         import matplotlib
         matplotlib.use('Agg')
         import matplotlib.pyplot as plt
@@ -1771,35 +1632,32 @@ class Analysis(object):
         ax = fig.add_subplot(111)
         from scipy.stats import linregress
         for species_index, species_type in enumerate(species_types):
-            ax.plot(
-                msd_data[:, 0], msd_data[:, species_index + 1], 'o',
-                markerfacecolor='blue', markeredgecolor='black',
-                label=species_type)
+            ax.plot(msd_data[:, 0], msd_data[:, species_index + 1], 'o',
+                    markerfacecolor='blue', markeredgecolor='black',
+                    label=species_type)
             if display_error_bars:
-                ax.errorbar(
-                    msd_data[:, 0], msd_data[:, species_index + 1],
-                    yerr=std_data[:, species_index], fmt='o',
-                    capsize=3, color='blue', markerfacecolor='none',
-                    markeredgecolor='none')
-            slope, intercept, r_value, _, _ = linregress(
-                    msd_data[self.trim_length:-self.trim_length, 0],
-                    msd_data[self.trim_length:-self.trim_length,
-                             species_index + 1])
+                ax.errorbar(msd_data[:, 0], msd_data[:, species_index + 1],
+                            yerr=std_data[:, species_index], fmt='o',
+                            capsize=3, color='blue', markerfacecolor='none',
+                            markeredgecolor='none')
+            slope, intercept, r_value, _, _ = \
+                linregress(msd_data[self.trim_length:-self.trim_length, 0],
+                           msd_data[self.trim_length:-self.trim_length,
+                           species_index + 1])
             species_diff = (slope * self.material.ANG2UM**2
                             * self.material.SEC2NS / (2 * self.n_dim))
             ax.add_artist(
                 AnchoredText('Est. $D_{{%s}}$ = %4.3f' % (species_type,
                                                           species_diff)
-                             + '  ${{\mu}}m^2/s$; $r^2$=%4.3e' % (
-                                                    r_value**2), loc=4))
+                             + '  ${{\mu}}m^2/s$; $r^2$=%4.3e' % (r_value**2),
+                             loc=4))
             ax.plot(msd_data[self.trim_length:-self.trim_length, 0],
                     intercept + slope * msd_data[
-                                self.trim_length:-self.trim_length, 0],
+                                        self.trim_length:-self.trim_length, 0],
                     'r', label=species_type+'-fitted')
         ax.set_xlabel('Time (' + self.repr_time + ')')
-        ax.set_ylabel(
-                'MSD (' + ('$\AA^2$' if self.repr_dist == 'angstrom'
-                           else (self.repr_dist + '^2')) + ')')
+        ax.set_ylabel('MSD (' + ('$\AA^2$' if self.repr_dist == 'angstrom'
+                                 else (self.repr_dist + '^2')) + ')')
         figure_title = 'MSD_' + file_name
         ax.set_title('\n'.join(wrap(figure_title, 60)))
         plt.legend()
@@ -1812,94 +1670,80 @@ class Analysis(object):
 
     def compute_coc_msd(self, out_dir, report=1):
         """Returns the squared displacement of the trajectories"""
-        assert out_dir, 'Please provide the destination path where \
-                                MSD output files needs to be saved'
+        assert out_dir, 'Please provide the destination path where ' \
+                        'MSD output files needs to be saved'
         num_existent_species = 0
-        for species_type_index in range(
-                                    self.material.num_species_types):
+        for species_type_index in range(self.material.num_species_types):
             if self.species_count[species_type_index] != 0:
                 num_existent_species += 1
 
-        position_array = np.loadtxt(
-                                out_dir.joinpath('unwrapped_traj.dat'))
+        position_array = np.loadtxt(out_dir.joinpath('unwrapped_traj.dat'))
         num_traj_recorded = int(len(position_array)
                                 / self.num_path_steps_per_traj)
         position_array = (
                 position_array[
-                    :num_traj_recorded * self.num_path_steps_per_traj
-                    + 1].reshape((num_traj_recorded
-                                  * self.num_path_steps_per_traj,
-                                  self.total_species, 3))
-                * self.dist_conversion)
+                    :num_traj_recorded
+                    * self.num_path_steps_per_traj + 1].reshape(
+                            (num_traj_recorded * self.num_path_steps_per_traj,
+                             self.total_species, 3)) * self.dist_conversion)
         coc_position_array = np.mean(position_array, axis=1)
         np.savetxt('coc_position_array.txt', coc_position_array)
         file_name = 'center_of_charge'
-        self.plot_coc_dispvector(coc_position_array, file_name,
-                                 out_dir)
+        self.plot_coc_dispvector(coc_position_array, file_name, out_dir)
         coc_position_array = coc_position_array[:, np.newaxis, :]
-        sd_array = np.zeros((num_traj_recorded,
-                             self.num_msd_steps_per_traj,
+        sd_array = np.zeros((num_traj_recorded, self.num_msd_steps_per_traj,
                              num_existent_species))
         for traj_index in range(num_traj_recorded):
             head_start = traj_index * self.num_path_steps_per_traj
             for time_step in range(1, self.num_msd_steps_per_traj):
                 num_disp = self.num_path_steps_per_traj - time_step
                 add_on = np.arange(num_disp)
-                pos_diff = (
-                    coc_position_array[head_start + time_step + add_on]
-                    - coc_position_array[head_start + add_on])
+                pos_diff = (coc_position_array[head_start + time_step + add_on]
+                            - coc_position_array[head_start + add_on])
                 sd_array[traj_index, time_step, :] = np.mean(
-                        np.einsum('ijk,ijk->ij', pos_diff, pos_diff),
-                        axis=0)
+                        np.einsum('ijk,ijk->ij', pos_diff, pos_diff), axis=0)
         species_avg_sd_array = np.zeros(
-                    (num_traj_recorded, self.num_msd_steps_per_traj,
-                     self.material.num_species_types
-                     - list(self.species_count).count(0)))
+                            (num_traj_recorded, self.num_msd_steps_per_traj,
+                             self.material.num_species_types
+                             - list(self.species_count).count(0)))
         start_index = 0
         num_non_existent_species = 0
         non_existent_species_indices = []
-        for species_type_index in range(
-                                    self.material.num_species_types):
+        for species_type_index in range(self.material.num_species_types):
             if self.species_count[species_type_index] != 0:
                 end_index = start_index + self.species_count[
-                                                    species_type_index]
+                                                            species_type_index]
                 species_avg_sd_array[
-                    :, :, (species_type_index
-                           - num_non_existent_species)] = np.mean(
-                               sd_array[:, :, start_index:end_index],
-                               axis=2)
+                    :, :, (species_type_index - num_non_existent_species)] = \
+                    np.mean(sd_array[:, :, start_index:end_index], axis=2)
                 start_index = end_index
             else:
                 num_non_existent_species += 1
                 non_existent_species_indices.append(species_type_index)
 
-        msd_data = np.zeros(
-                        (self.num_msd_steps_per_traj,
-                         (self.material.num_species_types
-                          + 1 - list(self.species_count).count(0))))
+        msd_data = np.zeros((self.num_msd_steps_per_traj,
+                             (self.material.num_species_types
+                              + 1 - list(self.species_count).count(0))))
         time_array = (np.arange(self.num_msd_steps_per_traj)
-                      * self.time_interval
-                      * self.time_conversion)
+                      * self.time_interval * self.time_conversion)
         msd_data[:, 0] = time_array
         msd_data[:, 1:] = np.mean(species_avg_sd_array, axis=0)
         std_data = np.std(species_avg_sd_array, axis=0)
-        file_name = (
-                ('%1.2E' % (self.msd_t_final * self.time_conversion))
-                + str(self.repr_time)
-                + (',n_traj: %1.2E' % num_traj_recorded
-                   if num_traj_recorded != self.n_traj else ''))
+        file_name = (('%1.2E' % (self.msd_t_final * self.time_conversion))
+                     + str(self.repr_time)
+                     + (',n_traj: %1.2E' % num_traj_recorded
+                        if num_traj_recorded != self.n_traj else ''))
         msd_file_name = 'coc_msd_data_' + file_name + '.npy'
         msd_file_path = out_dir.joinpath(msd_file_name)
-        species_types = [
-                        species_type
-                        for index, species_type in enumerate(
-                                        self.material.species_types)
-                        if index not in non_existent_species_indices]
+        species_types = [species_type
+                         for index, species_type in enumerate(
+                                                self.material.species_types)
+                         if index not in non_existent_species_indices]
         np.save(msd_file_path, msd_data)
 
         if report:
-            self.generate_coc_msd_analysis_log_report(
-                        msd_data, species_types, file_name, out_dir)
+            self.generate_coc_msd_analysis_log_report(msd_data, species_types,
+                                                      file_name, out_dir)
 
         return_msd_data = ReturnValues(msd_data=msd_data,
                                        std_data=std_data,
@@ -1907,11 +1751,10 @@ class Analysis(object):
                                        file_name=file_name)
         return return_msd_data
 
-    def plot_coc_dispvector(self, coc_position_array, file_name,
-                            out_dir):
+    def plot_coc_dispvector(self, coc_position_array, file_name, out_dir):
         """Returns a line plot of the MSD data"""
-        assert out_dir, 'Please provide the destination path \
-                            where MSD Plot files needs to be saved'
+        assert out_dir, 'Please provide the destination path where ' \
+                        'MSD Plot files needs to be saved'
         import matplotlib
         matplotlib.use('Agg')
         import matplotlib.pyplot as plt
@@ -1924,14 +1767,13 @@ class Analysis(object):
         x_min = y_min = z_min = 10
         x_max = y_max = z_max = -10
         cmap = plt.get_cmap('gnuplot')
-        colors = [cmap(i) for i in np.linspace(0, 1,
-                                               num_traj_recorded)]
+        colors = [cmap(i) for i in np.linspace(0, 1, num_traj_recorded)]
         disp_vector_list = np.zeros((num_traj_recorded, 6))
         for traj_index in range(num_traj_recorded):
-            start_pos = coc_position_array[
-                            traj_index * self.num_path_steps_per_traj]
-            end_pos = coc_position_array[
-                (traj_index + 1) * self.num_path_steps_per_traj - 1]
+            start_pos = coc_position_array[traj_index
+                                           * self.num_path_steps_per_traj]
+            end_pos = coc_position_array[(traj_index + 1)
+                                         * self.num_path_steps_per_traj - 1]
             disp_vector_list[traj_index, :3] = start_pos
             disp_vector_list[traj_index, 3:] = end_pos
             pos_stack = np.vstack((start_pos, end_pos))
@@ -1947,27 +1789,22 @@ class Analysis(object):
         ax.set_xlabel('x')
         ax.set_ylabel('y')
         ax.set_zlabel('z')
-        ax.set_xlim([x_min - 0.2 * abs(x_min),
-                     x_max + 0.2 * abs(x_max)])
-        ax.set_ylim([y_min - 0.2 * abs(y_min),
-                     y_max + 0.2 * abs(y_max)])
-        ax.set_zlim([z_min - 0.2 * abs(z_min),
-                     z_max + 0.2 * abs(z_max)])
-        ax.set_title(
-            ('trajectory-wise center of charge displacement vectors')
-            + ' \n$N_{{%s}}$=' % ('species') + str(self.total_species))
+        ax.set_xlim([x_min - 0.2 * abs(x_min), x_max + 0.2 * abs(x_max)])
+        ax.set_ylim([y_min - 0.2 * abs(y_min), y_max + 0.2 * abs(y_max)])
+        ax.set_zlim([z_min - 0.2 * abs(z_min), z_max + 0.2 * abs(z_max)])
+        ax.set_title('trajectory-wise center of charge displacement vectors '
+                     '\n$N_{{%s}}$=' % 'species' + str(self.total_species))
         plt.show()  # temp change
         figure_name = ('coc_disp_vectors_' + file_name + '.png')
         figure_path = out_dir.joinpath(figure_name)
         plt.savefig(figure_path)
         return None
 
-    def generate_coc_msd_plot(self, msd_data, std_data,
-                              display_error_bars, species_types,
-                              file_name, out_dir):
+    def generate_coc_msd_plot(self, msd_data, std_data, display_error_bars,
+                              species_types, file_name, out_dir):
         """Returns a line plot of the MSD data"""
-        assert out_dir, 'Please provide the destination path \
-                            where MSD Plot files needs to be saved'
+        assert out_dir, 'Please provide the destination path where ' \
+                        'MSD Plot files needs to be saved'
         import matplotlib
         matplotlib.use('Agg')
         import matplotlib.pyplot as plt
@@ -1977,36 +1814,32 @@ class Analysis(object):
         ax = fig.add_subplot(111)
         from scipy.stats import linregress
         for species_index, species_type in enumerate(species_types):
-            ax.plot(
-                msd_data[:, 0], msd_data[:, species_index + 1], 'o',
-                markerfacecolor='blue', markeredgecolor='black',
-                label=species_type)
+            ax.plot(msd_data[:, 0], msd_data[:, species_index + 1], 'o',
+                    markerfacecolor='blue', markeredgecolor='black',
+                    label=species_type)
             if display_error_bars:
-                ax.errorbar(
-                    msd_data[:, 0], msd_data[:, species_index + 1],
-                    yerr=std_data[:, species_index], fmt='o',
-                    capsize=3, color='blue', markerfacecolor='none',
-                    markeredgecolor='none')
-            slope, intercept, r_value, _, _ = linregress(
-                    msd_data[self.trim_length:-self.trim_length, 0],
-                    msd_data[self.trim_length:-self.trim_length,
-                             species_index + 1])
+                ax.errorbar(msd_data[:, 0], msd_data[:, species_index + 1],
+                            yerr=std_data[:, species_index], fmt='o',
+                            capsize=3, color='blue', markerfacecolor='none',
+                            markeredgecolor='none')
+            slope, intercept, r_value, _, _ = \
+                linregress(msd_data[self.trim_length:-self.trim_length, 0],
+                           msd_data[self.trim_length:-self.trim_length,
+                           species_index + 1])
             species_diff = (slope * self.material.ANG2UM**2
                             * self.material.SEC2NS / (2 * self.n_dim))
             ax.add_artist(
                 AnchoredText('Est. $D_{{%s}}$ = %4.3f' % (species_type,
                                                           species_diff)
-                             + '  ${{\mu}}m^2/s$; $r^2$=%4.3e' % (
-                                                r_value**2), loc=4))
-            ax.plot(
-                    msd_data[self.trim_length:-self.trim_length, 0],
+                             + '  ${{\mu}}m^2/s$; $r^2$=%4.3e' % (r_value**2),
+                             loc=4))
+            ax.plot(msd_data[self.trim_length:-self.trim_length, 0],
                     intercept + slope * msd_data[
-                            self.trim_length:-self.trim_length, 0],
+                                        self.trim_length:-self.trim_length, 0],
                     'r', label=species_type+'-fitted')
         ax.set_xlabel('Time (' + self.repr_time + ')')
-        ax.set_ylabel(
-                'MSD (' + ('$\AA^2$' if self.repr_dist == 'angstrom'
-                           else (self.repr_dist + '^2')) + ')')
+        ax.set_ylabel('MSD (' + ('$\AA^2$' if self.repr_dist == 'angstrom'
+                                 else (self.repr_dist + '^2')) + ')')
         figure_title = 'MSD_' + file_name
         ax.set_title('\n'.join(wrap(figure_title, 60)))
         plt.legend()
@@ -2017,35 +1850,32 @@ class Analysis(object):
         plt.savefig(figure_path)
         return None
 
-    def generate_coc_msd_analysis_log_report(self, msd_data,
-                                             species_types,
+    def generate_coc_msd_analysis_log_report(self, msd_data, species_types,
                                              file_name, out_dir):
         """Generates an log report of the MSD Analysis and
             outputs to the working directory"""
         msd_analysis_log_file_name = (
-                        'coc_msd_analysis' + ('_' if file_name else '')
-                        + file_name + '.log')
-        msd_log_file_path = out_dir.joinpath(
-                                            msd_analysis_log_file_name)
+                                'coc_msd_analysis' + ('_' if file_name else '')
+                                + file_name + '.log')
+        msd_log_file_path = out_dir.joinpath(msd_analysis_log_file_name)
         report = open(msd_log_file_path, 'w')
         end_time = datetime.now()
         time_elapsed = end_time - self.start_time
         from scipy.stats import linregress
         for species_index, species_type in enumerate(species_types):
-            slope, _, _, _, _ = linregress(
-                    msd_data[self.trim_length:-self.trim_length, 0],
-                    msd_data[self.trim_length:-self.trim_length,
-                             species_index + 1])
+            slope, _, _, _, _ = \
+                linregress(msd_data[self.trim_length:-self.trim_length, 0],
+                           msd_data[self.trim_length:-self.trim_length,
+                           species_index + 1])
             species_diff = (slope * self.material.ANG2UM**2
                             * self.material.SEC2NS / (2 * self.n_dim))
-            report.write('Estimated value of {:s} diffusivity is: \
-                {:4.3f} um2/s\n'.format(species_type, species_diff))
-        report.write(
-            'Time elapsed: ' + ('%2d days, ' % time_elapsed.days
-                                if time_elapsed.days else '')
-            + ('%2d hours' % ((time_elapsed.seconds // 3600) % 24))
-            + (', %2d minutes' % ((time_elapsed.seconds // 60) % 60))
-            + (', %2d seconds' % (time_elapsed.seconds % 60)))
+            report.write('Estimated value of {:s} diffusivity is: '
+                         '{:4.3f} um2/s\n'.format(species_type, species_diff))
+        report.write('Time elapsed: ' + ('%2d days, ' % time_elapsed.days
+                                         if time_elapsed.days else '')
+                     + ('%2d hours' % ((time_elapsed.seconds // 3600) % 24))
+                     + (', %2d minutes' % ((time_elapsed.seconds // 60) % 60))
+                     + (', %2d seconds' % (time_elapsed.seconds % 60)))
         report.close()
         return None
 
@@ -2095,8 +1925,7 @@ class Analysis(object):
         """
         position_array = (self.trajectory_data.wrapped_position_array
                           * self.dist_conversion)
-        num_path_steps_per_traj = int(self.kmc_steps
-                                      / self.stepInterval) + 1
+        num_path_steps_per_traj = int(self.kmc_steps / self.stepInterval) + 1
         # TODO: Currently assuming only electrons exist and coding accordingly.
         # Need to change according to combType
         pbc = [1, 1, 1]  # change to generic
@@ -2111,21 +1940,17 @@ class Analysis(object):
             for y_offset in y_range:
                 for z_offset in z_range:
                     system_translational_vector_list[index] = np.dot(
-                            np.multiply(np.array([x_offset, y_offset,
-                                                  z_offset]),
-                                        self.system_size),
-                            (self.material.lattice_matrix
-                             * self.dist_conversion))
+                        np.multiply(np.array([x_offset, y_offset, z_offset]),
+                                    self.system_size),
+                        (self.material.lattice_matrix * self.dist_conversion))
                     index += 1
         if mean:
-            mean_distance = np.zeros((self.n_traj,
-                                      num_path_steps_per_traj))
+            mean_distance = np.zeros((self.n_traj, num_path_steps_per_traj))
         else:
             inter_distance_array = np.zeros(
-                                (self.n_traj, num_path_steps_per_traj,
-                                 n_electrons * (n_electrons - 1) / 2))
-        inter_distance_list = np.zeros(n_electrons * (n_electrons - 1)
-                                       / 2)
+                            (self.n_traj, num_path_steps_per_traj, n_electrons
+                             * (n_electrons - 1) / 2))
+        inter_distance_list = np.zeros(n_electrons * (n_electrons - 1) / 2)
         for traj_index in range(self.n_traj):
             head_start = traj_index * num_path_steps_per_traj
             for step in range(num_path_steps_per_traj):
@@ -2133,54 +1958,44 @@ class Analysis(object):
                 for i in range(n_electrons):
                     for j in range(i + 1, n_electrons):
                         neighbor_image_coords = (
-                                system_translational_vector_list
-                                + position_array[head_start + step, j])
+                                        system_translational_vector_list
+                                        + position_array[head_start + step, j])
                         neighbor_image_displacement_vectors = (
-                                neighbor_image_coords
-                                - position_array[head_start + step, i])
+                                        neighbor_image_coords
+                                        - position_array[head_start + step, i])
                         neighbor_image_displacements = np.linalg.norm(
-                                neighbor_image_displacement_vectors,
-                                axis=1)
-                        displacement = np.min(
-                                        neighbor_image_displacements)
+                                neighbor_image_displacement_vectors, axis=1)
+                        displacement = np.min(neighbor_image_displacements)
                         inter_distance_list[index] = displacement
                         index += 1
                 if mean:
                     mean_distance[traj_index, step] = np.mean(
-                                                inter_distance_list)
-                    mean_distance_over_traj = np.mean(mean_distance,
-                                                      axis=0)
+                                                        inter_distance_list)
+                    mean_distance_over_traj = np.mean(mean_distance, axis=0)
                 else:
                     inter_distance_array[traj_index, step] = np.copy(
-                                                inter_distance_list)
+                                                        inter_distance_list)
 
-        inter_distance_array_over_traj = np.mean(inter_distance_array,
-                                                 axis=0)
-        kmc_steps = range(
-                0, num_path_steps_per_traj * int(self.stepInterval),
-                int(self.stepInterval))
+        inter_distance_array_over_traj = np.mean(inter_distance_array, axis=0)
+        kmc_steps = range(0, num_path_steps_per_traj * int(self.stepInterval),
+                          int(self.stepInterval))
         if mean:
-            mean_distance_array = np.zeros((num_path_steps_per_traj,
-                                            2))
+            mean_distance_array = np.zeros((num_path_steps_per_traj, 2))
             mean_distance_array[:, 0] = kmc_steps
             mean_distance_array[:, 1] = mean_distance_over_traj
-        else:
-            inter_species_distance_array = np.zeros((
-                            num_path_steps_per_traj,
-                            n_electrons * (n_electrons - 1) / 2 + 1))
-            inter_species_distance_array[:, 0] = kmc_steps
-            inter_species_distance_array[:, 1:] = (
-                                        inter_distance_array_over_traj)
-        if mean:
             mean_distance_file_name = 'mean_distance_data.npy'
-            mean_distance_file_path = out_dir.joinpath(
-                                            mean_distance_file_name)
+            mean_distance_file_path = out_dir.joinpath(mean_distance_file_name)
             np.save(mean_distance_file_path, mean_distance_array)
         else:
-            inter_species_distance_file_name = (
-                                        'inter_species_distance.npy')
+            inter_species_distance_array = np.zeros(
+                                    (num_path_steps_per_traj,
+                                     n_electrons * (n_electrons - 1) / 2 + 1))
+            inter_species_distance_array[:, 0] = kmc_steps
+            inter_species_distance_array[:, 1:] = (
+                                                inter_distance_array_over_traj)
+            inter_species_distance_file_name = 'inter_species_distance.npy'
             inter_species_distance_file_path = out_dir.joinpath(
-                                    inter_species_distance_file_name)
+                inter_species_distance_file_name)
             np.save(inter_species_distance_file_path,
                     inter_species_distance_array)
 
@@ -2190,10 +2005,9 @@ class Analysis(object):
             import matplotlib.pyplot as plt
             plt.figure()
             if mean:
-                plt.plot(mean_distance_array[:, 0],
-                         mean_distance_array[:, 1])
-                plt.title('Mean Distance between species \
-                            along simulation length')
+                plt.plot(mean_distance_array[:, 0], mean_distance_array[:, 1])
+                plt.title('Mean Distance between species along '
+                          'simulation length')
                 plt.xlabel('KMC Step')
                 plt.ylabel('Distance (' + self.repr_dist + ')')
                 figure_name = 'MeanDistanceOverTraj.jpg'
@@ -2203,45 +2017,39 @@ class Analysis(object):
                 legend_list = []
                 for i in range(n_electrons):
                     for j in range(i + 1, n_electrons):
-                        legend_list.append('r_' + str(i) + ':'
-                                           + str(j))
-                line_objects = plt.plot(
-                                inter_species_distance_array[:, 0],
-                                inter_species_distance_array[:, 1:])
-                plt.title(
-                    'Inter-species Distances along simulation length')
+                        legend_list.append('r_' + str(i) + ':' + str(j))
+                line_objects = plt.plot(inter_species_distance_array[:, 0],
+                                        inter_species_distance_array[:, 1:])
+                plt.title('Inter-species Distances along simulation length')
                 plt.xlabel('KMC Step')
                 plt.ylabel('Distance (' + self.repr_dist + ')')
-                lgd = plt.legend(line_objects, legend_list,
-                                 loc='center left',
+                lgd = plt.legend(line_objects, legend_list, loc='center left',
                                  bbox_to_anchor=(1, 0.5))
                 figure_name = 'inter_species_distance.jpg'
                 figure_path = out_dir.joinpath(figure_name)
                 plt.savefig(figure_path, bbox_extra_artists=(lgd,),
                             bbox_inches='tight')
         if report:
-            self.generate_mean_displacement_analysis_log_report(
-                                                            out_dir)
+            self.generate_mean_displacement_analysis_log_report(out_dir)
         output = (mean_distance_array
                   if mean else inter_species_distance_array)
         return output
 
     def generate_mean_displacement_analysis_log_report(self, out_dir):
-        """Generates an log report of the MSD Analysis and \
-                outputs to the working directory"""
+        """Generates an log report of the MSD Analysis and outputs to the
+            working directory"""
         mean_displacement_analysis_log_file_name = (
-                                    'mean_displacement_analysis.log')
+                                            'mean_displacement_analysis.log')
         mean_displacement_analysis_log_file_path = out_dir.joinpath(
-                            mean_displacement_analysis_log_file_name)
+                                    mean_displacement_analysis_log_file_name)
         report = open(mean_displacement_analysis_log_file_path, 'w')
         end_time = datetime.now()
         time_elapsed = end_time - self.start_time
-        report.write(
-            'Time elapsed: ' + ('%2d days, ' % time_elapsed.days
-                                if time_elapsed.days else '')
-            + ('%2d hours' % ((time_elapsed.seconds // 3600) % 24))
-            + (', %2d minutes' % ((time_elapsed.seconds // 60) % 60))
-            + (', %2d seconds' % (time_elapsed.seconds % 60)))
+        report.write('Time elapsed: ' + ('%2d days, ' % time_elapsed.days
+                                         if time_elapsed.days else '')
+                     + ('%2d hours' % ((time_elapsed.seconds // 3600) % 24))
+                     + (', %2d minutes' % ((time_elapsed.seconds // 60) % 60))
+                     + (', %2d seconds' % (time_elapsed.seconds % 60)))
         report.close()
         return None
 
@@ -2259,8 +2067,8 @@ class Analysis(object):
 
 
 class ReturnValues(object):
-    """dummy class to return objects from methods \
-        defined inside other classes"""
+    """dummy class to return objects from methods defined inside
+        other classes"""
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
             setattr(self, key, value)
