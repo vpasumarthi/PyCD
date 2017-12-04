@@ -612,57 +612,6 @@ class Neighbors(object):
         report.close()
         return None
 
-    def generate_species_site_sd_list(self, center_site_quantum_indices,
-                                      dst_path, report=1):
-        start_time = datetime.now()
-        element_type_index = center_site_quantum_indices[3]
-        center_site_se_index = self.generate_system_element_index(
-                                                self.system_size,
-                                                center_site_quantum_indices)
-        system_element_index_offset_array = np.repeat(
-                    np.arange(0, (self.material.total_elements_per_unit_cell
-                                  * self.num_cells),
-                              self.material.total_elements_per_unit_cell),
-                    self.material.n_elements_per_unit_cell[element_type_index])
-        neighbor_site_se_indices = (
-                np.tile(self.material.n_elements_per_unit_cell[
-                                        :element_type_index].sum()
-                        + np.arange(0,
-                                    self.material.n_elements_per_unit_cell[
-                                                        element_type_index]),
-                        self.num_cells) + system_element_index_offset_array)
-        species_site_sd_list = np.zeros(len(neighbor_site_se_indices))
-        for neighbor_site_index, neighbor_site_se_index in enumerate(
-                                                    neighbor_site_se_indices):
-            species_site_sd_list[neighbor_site_index] = (
-                            self.compute_distance(self.system_size,
-                                                  center_site_se_index,
-                                                  neighbor_site_se_index)**2)
-        species_site_sd_list /= self.material.ANG2BOHR**2
-        file_name = 'species_site_sd_list.npy'
-        species_site_sd_list_file_path = dst_path.joinpath(file_name)
-        np.save(species_site_sd_list_file_path, species_site_sd_list)
-        if report:
-            self.generate_species_site_sd_list_report(dst_path, start_time)
-        return None
-
-    def generate_species_site_sd_list_report(self, dst_path, start_time):
-        """Generates a neighbor list and prints out a report to the
-            output directory"""
-        species_site_sd_list_log_name = 'species_site_sd_list.log'
-        species_site_sd_list_log_path = dst_path.joinpath(
-                                                species_site_sd_list_log_name)
-        report = open(species_site_sd_list_log_path, 'w')
-        end_time = datetime.now()
-        time_elapsed = end_time - start_time
-        report.write('Time elapsed: ' + ('%2d days, ' % time_elapsed.days
-                                         if time_elapsed.days else '')
-                     + ('%2d hours' % ((time_elapsed.seconds // 3600) % 24))
-                     + (', %2d minutes' % ((time_elapsed.seconds // 60) % 60))
-                     + (', %2d seconds' % (time_elapsed.seconds % 60)))
-        report.close()
-        return None
-
     def generate_transition_prob_matrix(self, neighbor_system_element_indices,
                                         dst_path, report=1):
         start_time = datetime.now()
