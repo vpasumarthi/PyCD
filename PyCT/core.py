@@ -78,10 +78,9 @@ class Material(object):
         self.name = material_parameters.name
         self.species_types = material_parameters.species_types[:]
         self.num_species_types = len(self.species_types)
-        self.species_charge_list = deepcopy(
-                                    material_parameters.species_charge_list)
-        self.species_to_element_type_map = deepcopy(
-                            material_parameters.species_to_element_type_map)
+        self.species_charge_list = material_parameters.species_charge_list
+        self.species_to_element_type_map = \
+            material_parameters.species_to_element_type_map
 
         # Initialization
         self.fractional_unit_cell_coords = np.zeros(
@@ -106,29 +105,28 @@ class Material(object):
 
         self.unit_cell_coords = np.dot(self.fractional_unit_cell_coords,
                                        self.lattice_matrix)
-        self.charge_types = deepcopy(material_parameters.charge_types)
+        self.charge_types = material_parameters.charge_types
 
         self.vn = material_parameters.vn / constants.SEC2AUTIME
-        self.lambda_values = deepcopy(material_parameters.lambda_values)
+        self.lambda_values = material_parameters.lambda_values
         self.lambda_values.update(
                         (x, [y[index] * constants.EV2J * constants.J2HARTREE
                              for index in range(len(y))])
                         for x, y in self.lambda_values.items())
 
-        self.v_ab = deepcopy(material_parameters.v_ab)
+        self.v_ab = material_parameters.v_ab
         self.v_ab.update(
                         (x, [y[index] * constants.EV2J * constants.J2HARTREE
                              for index in range(len(y))])
                         for x, y in self.v_ab.items())
 
-        self.neighbor_cutoff_dist = deepcopy(
-                                    material_parameters.neighbor_cutoff_dist)
+        self.neighbor_cutoff_dist = material_parameters.neighbor_cutoff_dist
         self.neighbor_cutoff_dist.update(
                     (x, [(y[index] * constants.ANG2BOHR) if y[index] else None
                          for index in range(len(y))])
                     for x, y in (self.neighbor_cutoff_dist.items()))
-        self.neighbor_cutoff_dist_tol = deepcopy(
-                        material_parameters.neighbor_cutoff_dist_tol)
+        self.neighbor_cutoff_dist_tol = \
+            material_parameters.neighbor_cutoff_dist_tol
         self.neighbor_cutoff_dist_tol.update(
                     (x, [(y[index] * constants.ANG2BOHR) if y[index] else None
                          for index in range(len(y))])
