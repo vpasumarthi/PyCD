@@ -860,7 +860,7 @@ class Run(object):
         neighbor_site_system_element_index_list = np.zeros(self.n_proc,
                                                            dtype=int)
         n_proc_hop_dist_type_list = np.zeros(self.n_proc, dtype=int)
-        row_index_list = np.zeros(self.n_proc, dtype=int)
+        element_type_element_index_list = np.zeros(self.n_proc, dtype=int)
         neighbor_index_list = np.zeros(self.n_proc, dtype=int)
         system_charge = np.dot(self.system.species_count,
                                self.material.species_charge_list[
@@ -909,7 +909,7 @@ class Run(object):
                                                                         i_proc]
                     site_element_type_index = (
                             self.n_proc_site_element_type_index_list[i_proc])
-                    row_index = (
+                    element_type_element_index = (
                         species_site_system_element_index
                         // self.material.total_elements_per_unit_cell
                         * self.material.n_elements_per_unit_cell[
@@ -923,7 +923,8 @@ class Run(object):
                         local_neighbor_site_system_element_index_list = (
                             self.system.hop_neighbor_list[hop_element_type][
                                                                 hop_dist_type]
-                            .neighbor_system_element_indices[row_index])
+                            .neighbor_system_element_indices[
+                                                element_type_element_index])
                         for neighbor_index, \
                             neighbor_site_system_element_index in enumerate(
                                 local_neighbor_site_system_element_index_list):
@@ -933,7 +934,8 @@ class Run(object):
                             neighbor_site_system_element_index_list[i_proc] = \
                                 neighbor_site_system_element_index
                             n_proc_hop_dist_type_list[i_proc] = hop_dist_type
-                            row_index_list[i_proc] = row_index
+                            element_type_element_index_list[i_proc] = \
+                                element_type_element_index
                             neighbor_index_list[i_proc] = neighbor_index
                             # TODO: Print out a prompt about the
                             # assumption; detailed comment here.
@@ -990,7 +992,8 @@ class Run(object):
                 hop_element_type = self.n_proc_hop_element_type_list[
                                                                     proc_index]
                 hop_dist_type = n_proc_hop_dist_type_list[proc_index]
-                row_index = row_index_list[proc_index]
+                element_type_element_index = element_type_element_index_list[
+                                                                    proc_index]
                 neighbor_index = neighbor_index_list[proc_index]
                 old_site_system_element_index = current_state_occupancy[
                                                                 species_index]
@@ -1001,8 +1004,8 @@ class Run(object):
                 species_displacement_vector_list[
                     0, species_index * 3:(species_index + 1) * 3] += \
                     self.system.hop_neighbor_list[hop_element_type][
-                        hop_dist_type].displacement_vector_list[row_index][
-                                                                neighbor_index]
+                        hop_dist_type].displacement_vector_list[
+                                    element_type_element_index][neighbor_index]
 
                 current_state_energy += delg_0_list[proc_index]
                 current_state_charge_config[old_site_system_element_index] -= \
