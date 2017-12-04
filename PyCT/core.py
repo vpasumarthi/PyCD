@@ -13,7 +13,7 @@ import pdb
 
 import numpy as np
 
-from PyCT.io import read_poscar
+from PyCT.io import read_poscar, generate_report
 from PyCT import constants
 
 
@@ -564,23 +564,8 @@ class Neighbors(object):
         np.save(hop_neighbor_list_file_path, hop_neighbor_list)
 
         if report:
-            self.generate_neighbor_list_report(dst_path)
-        return None
-
-    def generate_neighbor_list_report(self, dst_path):
-        """Generates a neighbor list and prints out a
-            report to the output directory"""
-        neighbor_list_log_name = 'neighbor_list.log'
-        neighbor_list_log_path = dst_path.joinpath(neighbor_list_log_name)
-        report = open(neighbor_list_log_path, 'w')
-        end_time = datetime.now()
-        time_elapsed = end_time - self.start_time
-        report.write('Time elapsed: ' + ('%2d days, ' % time_elapsed.days
-                                         if time_elapsed.days else '')
-                     + ('%2d hours' % ((time_elapsed.seconds // 3600) % 24))
-                     + (', %2d minutes' % ((time_elapsed.seconds // 60) % 60))
-                     + (', %2d seconds' % (time_elapsed.seconds % 60)))
-        report.close()
+            file_name = 'neighbor_list'
+            generate_report(self.start_time, dst_path, file_name)
         return None
 
 
@@ -738,25 +723,9 @@ class System(object):
         precomputed_array /= self.material.dielectric_constant
 
         if out_dir:
-            self.generate_precomputed_array_log_report(out_dir)
+            file_name = 'precomputed_array'
+            generate_report(self.start_time, out_dir, file_name)
         return precomputed_array
-
-    def generate_precomputed_array_log_report(self, out_dir):
-        """Generates an log report of the simulation and outputs
-            to the working directory"""
-        precomputed_array_log_file_name = 'precomputed_array.log'
-        precomputed_array_log_file_path = out_dir.joinpath(
-                                            precomputed_array_log_file_name)
-        report = open(precomputed_array_log_file_path, 'w')
-        end_time = datetime.now()
-        time_elapsed = end_time - self.start_time
-        report.write('Time elapsed: ' + ('%2d days, ' % time_elapsed.days
-                                         if time_elapsed.days else '')
-                     + ('%2d hours' % ((time_elapsed.seconds // 3600) % 24))
-                     + (', %2d minutes' % ((time_elapsed.seconds // 60) % 60))
-                     + (', %2d seconds' % (time_elapsed.seconds % 60)))
-        report.close()
-        return None
 
 
 class Run(object):
@@ -1071,23 +1040,8 @@ class Run(object):
                         potential_traj_file:
                     np.savetxt(potential_traj_file, potential_array)
         if report:
-            self.generate_simulation_log_report(out_dir)
-        return None
-
-    def generate_simulation_log_report(self, out_dir):
-        """Generates an log report of the simulation and
-            outputs to the working directory"""
-        simulation_log_file_name = 'Run.log'
-        simulation_log_file_path = out_dir.joinpath(simulation_log_file_name)
-        report = open(simulation_log_file_path, 'w')
-        end_time = datetime.now()
-        time_elapsed = end_time - self.start_time
-        report.write('Time elapsed: ' + ('%2d days, ' % time_elapsed.days
-                                         if time_elapsed.days else '')
-                     + ('%2d hours' % ((time_elapsed.seconds // 3600) % 24))
-                     + (', %2d minutes' % ((time_elapsed.seconds // 60) % 60))
-                     + (', %2d seconds' % (time_elapsed.seconds % 60)))
-        report.close()
+            file_name = 'Run'
+            generate_report(self.start_time, out_dir, file_name)
         return None
 
 
@@ -1202,43 +1156,26 @@ class Analysis(object):
         np.save(msd_file_path, msd_data)
 
         if report:
-            self.generate_msd_analysis_log_report(msd_data, species_types,
-                                                  file_name, out_dir)
+            file_name = ('MSD_Analysis' + ('_' if file_name else '')
+                         + file_name)
+            from scipy.stats import linregress
+            for species_index, species_type in enumerate(species_types):
+                slope, _, _, _, _ = \
+                    linregress(msd_data[self.trim_length:-self.trim_length, 0],
+                               msd_data[self.trim_length:-self.trim_length,
+                               species_index + 1])
+                species_diff = (slope * constants.ANG2UM ** 2
+                                * constants.SEC2NS / (2 * self.n_dim))
+                prefix = ('Estimated value of {:s} diffusivity is: '
+                          '{:4.3f} um2/s\n'.format(species_type, species_diff))
+
+            generate_report(self.start_time, out_dir, file_name, prefix)
 
         return_msd_data = ReturnValues(msd_data=msd_data,
                                        std_data=std_data,
                                        species_types=species_types,
                                        file_name=file_name)
         return return_msd_data
-
-    def generate_msd_analysis_log_report(self, msd_data, species_types,
-                                         file_name, out_dir):
-        """Generates an log report of the MSD Analysis and
-            outputs to the working directory"""
-        msd_analysis_log_file_name = ('MSD_Analysis'
-                                      + ('_' if file_name else '')
-                                      + file_name + '.log')
-        msd_log_file_path = out_dir.joinpath(msd_analysis_log_file_name)
-        report = open(msd_log_file_path, 'w')
-        end_time = datetime.now()
-        time_elapsed = end_time - self.start_time
-        from scipy.stats import linregress
-        for species_index, species_type in enumerate(species_types):
-            slope, _, _, _, _ = \
-                linregress(msd_data[self.trim_length:-self.trim_length, 0],
-                           msd_data[self.trim_length:-self.trim_length,
-                           species_index + 1])
-            species_diff = (slope * constants.ANG2UM**2
-                            * constants.SEC2NS / (2 * self.n_dim))
-            report.write('Estimated value of {:s} diffusivity is: '
-                         '{:4.3f} um2/s\n'.format(species_type, species_diff))
-        report.write('Time elapsed: ' + ('%2d days, ' % time_elapsed.days
-                                         if time_elapsed.days else '')
-                     + ('%2d hours' % ((time_elapsed.seconds // 3600) % 24))
-                     + (', %2d minutes' % ((time_elapsed.seconds // 60) % 60))
-                     + (', %2d seconds' % (time_elapsed.seconds % 60)))
-        report.close()
-        return None
 
     def generate_msd_plot(self, msd_data, std_data, display_error_bars,
                           species_types, file_name, out_dir):
