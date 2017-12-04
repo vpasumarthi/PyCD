@@ -8,7 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def diffusionProfile(outdir, systemDirectoryPath, profilingSpeciesTypeIndex,
+def diffusionProfile(out_dir, systemDirectoryPath, profilingSpeciesTypeIndex,
                      speciesCountList, ion_charge_type, species_charge_type, temp,
                      t_final, time_interval, n_traj, msd_t_final, repr_time):
     profilingSpeciesList = speciesCountList[profilingSpeciesTypeIndex]
@@ -27,7 +27,7 @@ def diffusionProfile(outdir, systemDirectoryPath, profilingSpeciesTypeIndex,
                   + '; species_charge_type=' + species_charge_type)
 
     file_name = '%1.2E%s' % (msd_t_final, repr_time)
-    msdAnalysisLogFileName = ('MSD_Analysis' + ('_' if file_name else '')
+    msd_analysis_log_file_name = ('MSD_Analysis' + ('_' if file_name else '')
                               + file_name + '.log')
 
     for species_index, nSpecies in enumerate(profilingSpeciesList):
@@ -44,7 +44,7 @@ def diffusionProfile(outdir, systemDirectoryPath, profilingSpeciesTypeIndex,
                    + 'TimeInterval,' + ('%1.2E' % n_traj) + 'Traj')
         msdAnalysisLogFilePath = os.path.join(
                     systemDirectoryPath, parentDir1, parentDir2, parentDir3,
-                    parentDir4, workDir, msdAnalysisLogFileName)
+                    parentDir4, workDir, msd_analysis_log_file_name)
 
         with open(msdAnalysisLogFilePath, 'r') as msdAnalysisLogFile:
             firstLine = msdAnalysisLogFile.readline()
@@ -57,22 +57,22 @@ def diffusionProfile(outdir, systemDirectoryPath, profilingSpeciesTypeIndex,
             color='blue', markerfacecolor='blue', markeredgecolor='black')
     ax.set_xlabel('Number of ' + species_type + 's')
     ax.set_ylabel('Diffusivity (${{\mu}}m^2/s$)')
-    figureTitle = ('Diffusion coefficient as a function of number of '
+    figure_title = ('Diffusion coefficient as a function of number of '
                    + species_type + 's')
-    ax.set_title('\n'.join(wrap(figureTitle, 60)))
+    ax.set_title('\n'.join(wrap(figure_title, 60)))
     filename = (str(species_type) + 'DiffusionProfile_' + ion_charge_type[0]
                 + species_charge_type[0] + '_' + str(profilingSpeciesList[0])
                 + '-' + str(profilingSpeciesList[-1]))
-    figureName = filename + '.png'
-    figurePath = os.path.join(outdir, figureName)
-    plt.savefig(figurePath)
+    figure_name = filename + '.png'
+    figure_path = os.path.join(out_dir, figure_name)
+    plt.savefig(figure_path)
 
     dataFileName = filename + '.txt'
-    dataFilePath = os.path.join(outdir, dataFileName)
+    dataFilePath = os.path.join(out_dir, dataFileName)
     np.savetxt(dataFilePath, diffusivityProfileData)
 
 
-def runtimeProfile(outdir, systemDirectoryPath, profilingSpeciesTypeIndex,
+def runtimeProfile(out_dir, systemDirectoryPath, profilingSpeciesTypeIndex,
                    speciesCountList, ion_charge_type, species_charge_type, temp,
                    t_final, time_interval, n_traj):
     profilingSpeciesList = speciesCountList[profilingSpeciesTypeIndex]
@@ -130,16 +130,16 @@ def runtimeProfile(outdir, systemDirectoryPath, profilingSpeciesTypeIndex,
             color='blue', markerfacecolor='blue', markeredgecolor='black')
     ax.set_xlabel('Number of ' + species_type + 's')
     ax.set_ylabel('Run Time (sec)')
-    figureTitle = ('Simulation run time as a function of number of '
+    figure_title = ('Simulation run time as a function of number of '
                    + species_type + 's')
-    ax.set_title('\n'.join(wrap(figureTitle, 60)))
+    ax.set_title('\n'.join(wrap(figure_title, 60)))
     filename = (str(species_type) + 'RunTimeProfile_' + ion_charge_type[0]
                 + species_charge_type[0] + '_' + str(profilingSpeciesList[0])
                 + '-' + str(profilingSpeciesList[-1]))
-    figureName = filename + '.png'
-    figurePath = os.path.join(outdir, figureName)
-    plt.savefig(figurePath)
+    figure_name = filename + '.png'
+    figure_path = os.path.join(out_dir, figure_name)
+    plt.savefig(figure_path)
 
     dataFileName = filename + '.txt'
-    dataFilePath = os.path.join(outdir, dataFileName)
+    dataFilePath = os.path.join(out_dir, dataFileName)
     np.savetxt(dataFilePath, elapsedSecondsData)

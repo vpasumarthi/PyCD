@@ -57,12 +57,12 @@ def materialCOCMSD(systemDirectoryPath, fileFormatIndex, system_size, pbc, n_dim
                                     n_traj, t_final, time_interval, msd_t_final,
                                     trim_length, repr_time, repr_dist)
 
-        msd_analysis_data = material_analysis.computeCOCMSD(workDirPath, report)
+        msd_analysis_data = material_analysis.compute_coc_msd(workDirPath, report)
         msd_data = msd_analysis_data.msd_data
         std_data = msd_analysis_data.std_data
         species_types = msd_analysis_data.species_types
         file_name = msd_analysis_data.file_name
-        material_analysis.generateCOCMSDPlot(msd_data, std_data, display_error_bars,
+        material_analysis.generate_coc_msd_plot(msd_data, std_data, display_error_bars,
                                             species_types, file_name,
                                             workDirPath)
 

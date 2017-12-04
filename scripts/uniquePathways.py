@@ -52,7 +52,7 @@ def generate_quantum_indices(system_size, system_element_index,
 
 
 def generateUniquePathways(inputFileLocation, cutoff_dist_key, neighborCutoff,
-                           bridgeCutoff, outdir, pathwayPrec, equivalencyPrec,
+                           bridgeCutoff, out_dir, pathwayPrec, equivalencyPrec,
                            class_list=[], avoidElementType='',
                            roundLatticeParameters={}, printPathwayList=0,
                            printEquivalency=0, desiredCoordinateParameters={}):
@@ -345,12 +345,12 @@ def generateUniquePathways(inputFileLocation, cutoff_dist_key, neighborCutoff,
     pathwayFileName = ('pathwayList_' + center_element_type + '-'
                        + neighborElementType + '_cutoff='
                        + str(neighborCutoff))
-    latticeDirectionListFilePath = (os.path.join(outdir,
+    latticeDirectionListFilePath = (os.path.join(out_dir,
                                                  latticeDirectionListFileName)
                                     + '.npy')
-    displacementListFilePath = (os.path.join(outdir, displacementListFileName)
+    displacementListFilePath = (os.path.join(out_dir, displacementListFileName)
                                 + '.npy')
-    pathwayFilePath = os.path.join(outdir, pathwayFileName) + '.npy'
+    pathwayFilePath = os.path.join(out_dir, pathwayFileName) + '.npy'
     np.save(latticeDirectionListFilePath, sortedLatticeDirectionList)
     np.save(displacementListFilePath, sortedDisplacementList)
     np.save(pathwayFilePath, pathwayList)

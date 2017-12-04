@@ -1152,7 +1152,7 @@ class System(object):
                                                 species_type_index])
         return charge_list
 
-    def ewald_sum_setup(self, outdir=None):
+    def ewald_sum_setup(self, out_dir=None):
         from scipy.special import erfc
         sqrt_alpha = np.sqrt(self.alpha)
         alpha4 = 4 * self.alpha
@@ -1202,15 +1202,15 @@ class System(object):
 
         precomputed_array /= self.material.dielectric_constant
 
-        if outdir:
-            self.generate_precomputed_array_log_report(outdir)
+        if out_dir:
+            self.generate_precomputed_array_log_report(out_dir)
         return precomputed_array
 
-    def generate_precomputed_array_log_report(self, outdir):
+    def generate_precomputed_array_log_report(self, out_dir):
         """Generates an log report of the simulation and outputs
             to the working directory"""
         precomputed_array_log_file_name = 'precomputed_array.log'
-        precomputed_array_log_file_path = outdir.joinpath(
+        precomputed_array_log_file_path = out_dir.joinpath(
                                     precomputed_array_log_file_name)
         report = open(precomputed_array_log_file_path, 'w')
         end_time = datetime.now()
@@ -1319,26 +1319,26 @@ class Run(object):
         # total number of species
         self.total_species = self.system.species_count.sum()
 
-    def do_kmc_steps(self, outdir, report=1, random_seed=1):
+    def do_kmc_steps(self, out_dir, report=1, random_seed=1):
         """Subroutine to run the KMC simulation by specified number
         of steps"""
-        assert outdir, 'Please provide the destination path where \
+        assert out_dir, 'Please provide the destination path where \
                         simulation output files needs to be saved'
 
         excess = 0
         energy = 1
-        unwrapped_traj_file_name = outdir.joinpath(
+        unwrapped_traj_file_name = out_dir.joinpath(
                                                 'unwrapped_traj.dat')
         open(unwrapped_traj_file_name, 'wb').close()
         if energy:
-            energy_traj_file_name = outdir.joinpath('energy_traj.dat')
+            energy_traj_file_name = out_dir.joinpath('energy_traj.dat')
             open(energy_traj_file_name, 'wb').close()
 
         if excess:
-            wrapped_traj_file_name = outdir.joinpath(
+            wrapped_traj_file_name = out_dir.joinpath(
                                                     'wrapped_traj.dat')
-            delG0_traj_file_name = outdir.joinpath('delG0_traj.dat')
-            potential_traj_file_name = outdir.joinpath(
+            delG0_traj_file_name = out_dir.joinpath('delG0_traj.dat')
+            potential_traj_file_name = out_dir.joinpath(
                                                 'potential_traj.dat')
             open(wrapped_traj_file_name, 'wb').close()
             open(delG0_traj_file_name, 'wb').close()
@@ -1574,14 +1574,14 @@ class Run(object):
                                                 potential_traj_file:
                     np.savetxt(potential_traj_file, potential_array)
         if report:
-            self.generate_simulation_log_report(outdir)
+            self.generate_simulation_log_report(out_dir)
         return None
 
-    def generate_simulation_log_report(self, outdir):
+    def generate_simulation_log_report(self, out_dir):
         """Generates an log report of the simulation and
             outputs to the working directory"""
         simulation_log_file_name = 'Run.log'
-        simulation_log_file_path = outdir.joinpath(simulation_log_file_name)
+        simulation_log_file_path = out_dir.joinpath(simulation_log_file_name)
         report = open(simulation_log_file_path, 'w')
         end_time = datetime.now()
         time_elapsed = end_time - self.start_time
@@ -1597,9 +1597,9 @@ class Run(object):
 
 class Analysis(object):
     """Post-simulation analysis methods"""
-    def __init__(self, material_info, n_dim, species_count, n_traj, t_final,
-                 time_interval, msd_t_final, trim_length, repr_time='ns',
-                 repr_dist='Angstrom'):
+    def __init__(self, material_info, n_dim, species_count, n_traj,
+                 t_final, time_interval, msd_t_final, trim_length,
+                 repr_time='ns', repr_dist='Angstrom'):
         """"""
         self.start_time = datetime.now()
 
@@ -1611,137 +1611,156 @@ class Analysis(object):
         self.t_final = t_final * self.material.SEC2AUTIME
         self.time_interval = time_interval * self.material.SEC2AUTIME
         self.trim_length = trim_length
-        self.num_path_steps_per_traj = int(self.t_final / self.time_interval) + 1
+        self.num_path_steps_per_traj = int(self.t_final
+                                           / self.time_interval) + 1
         self.repr_time = repr_time
         self.repr_dist = repr_dist
 
         if repr_time == 'ns':
-            self.timeConversion = (self.material.SEC2NS
-                                   / self.material.SEC2AUTIME)
+            self.time_conversion = (self.material.SEC2NS
+                                    / self.material.SEC2AUTIME)
         elif repr_time == 'ps':
-            self.timeConversion = (self.material.SEC2PS
-                                   / self.material.SEC2AUTIME)
+            self.time_conversion = (self.material.SEC2PS
+                                    / self.material.SEC2AUTIME)
         elif repr_time == 'fs':
-            self.timeConversion = (self.material.SEC2FS
-                                   / self.material.SEC2AUTIME)
+            self.time_conversion = (self.material.SEC2FS
+                                    / self.material.SEC2AUTIME)
         elif repr_time == 's':
-            self.timeConversion = 1E+00 / self.material.SEC2AUTIME
+            self.time_conversion = 1E+00 / self.material.SEC2AUTIME
 
         if repr_dist == 'm':
-            self.distConversion = self.material.ANG / self.material.ANG2BOHR
+            self.dist_conversion = (self.material.ANG
+                                    / self.material.ANG2BOHR)
         elif repr_dist == 'um':
-            self.distConversion = self.material.ANG2UM / self.material.ANG2BOHR
+            self.dist_conversion = (self.material.ANG2UM
+                                    / self.material.ANG2BOHR)
         elif repr_dist == 'angstrom':
-            self.distConversion = 1E+00 / self.material.ANG2BOHR
+            self.dist_conversion = 1E+00 / self.material.ANG2BOHR
 
-        self.msd_t_final = msd_t_final / self.timeConversion
-        self.numMSDStepsPerTraj = int(self.msd_t_final / self.time_interval) + 1
+        self.msd_t_final = msd_t_final / self.time_conversion
+        self.num_msd_steps_per_traj = int(self.msd_t_final
+                                          / self.time_interval) + 1
 
-    def compute_msd(self, outdir, report=1):
+    def compute_msd(self, out_dir, report=1):
         """Returns the squared displacement of the trajectories"""
-        assert outdir, 'Please provide the destination path where \
+        assert out_dir, 'Please provide the destination path where \
                                 MSD output files needs to be saved'
-        positionArray = np.loadtxt(outdir.joinpath('unwrapped_traj.dat'))
-        numTrajRecorded = int(len(positionArray) / self.num_path_steps_per_traj)
-        positionArray = (
-            positionArray[:numTrajRecorded
-                          * self.num_path_steps_per_traj + 1].reshape((
-                                  numTrajRecorded * self.num_path_steps_per_traj,
-                                  self.total_species, 3))
-            * self.distConversion)
-        sdArray = np.zeros((numTrajRecorded,
-                            self.numMSDStepsPerTraj,
-                            self.total_species))
-        for trajIndex in range(numTrajRecorded):
-            headStart = trajIndex * self.num_path_steps_per_traj
-            for time_step in range(1, self.numMSDStepsPerTraj):
-                numDisp = self.num_path_steps_per_traj - time_step
-                addOn = np.arange(numDisp)
-                posDiff = (positionArray[headStart + time_step + addOn]
-                           - positionArray[headStart + addOn])
-                sdArray[trajIndex, time_step, :] = np.mean(
-                            np.einsum('ijk,ijk->ij', posDiff, posDiff), axis=0)
-        speciesAvgSDArray = np.zeros((numTrajRecorded,
-                                      self.numMSDStepsPerTraj,
-                                      self.material.num_species_types
-                                      - list(self.species_count).count(0)))
+        position_array = np.loadtxt(out_dir.joinpath(
+                                                'unwrapped_traj.dat'))
+        num_traj_recorded = int(len(position_array)
+                                / self.num_path_steps_per_traj)
+        position_array = (
+            position_array[
+                :num_traj_recorded
+                * self.num_path_steps_per_traj + 1].reshape(
+                    (num_traj_recorded * self.num_path_steps_per_traj,
+                     self.total_species, 3))
+            * self.dist_conversion)
+        sd_array = np.zeros((num_traj_recorded,
+                             self.num_msd_steps_per_traj,
+                             self.total_species))
+        for traj_index in range(num_traj_recorded):
+            head_start = traj_index * self.num_path_steps_per_traj
+            for time_step in range(1, self.num_msd_steps_per_traj):
+                num_disp = self.num_path_steps_per_traj - time_step
+                add_on = np.arange(num_disp)
+                pos_diff = (
+                        position_array[head_start + time_step + add_on]
+                        - position_array[head_start + add_on])
+                sd_array[traj_index, time_step, :] = np.mean(
+                        np.einsum('ijk,ijk->ij', pos_diff, pos_diff),
+                        axis=0)
+        species_avg_sd_array = np.zeros(
+                    (num_traj_recorded, self.num_msd_steps_per_traj,
+                     self.material.num_species_types
+                     - list(self.species_count).count(0)))
         start_index = 0
-        numNonExistentSpecies = 0
-        nonExistentSpeciesIndices = []
-        for species_type_index in range(self.material.num_species_types):
+        num_non_existent_species = 0
+        non_existent_species_indices = []
+        for species_type_index in range(
+                                    self.material.num_species_types):
             if self.species_count[species_type_index] != 0:
-                end_index = start_index + self.species_count[species_type_index]
-                speciesAvgSDArray[:, :, (species_type_index
-                                         - numNonExistentSpecies)] \
-                    = np.mean(sdArray[:, :, start_index:end_index], axis=2)
+                end_index = start_index + self.species_count[
+                                                    species_type_index]
+                species_avg_sd_array[
+                    :, :, (species_type_index
+                           - num_non_existent_species)] = np.mean(
+                               sd_array[:, :, start_index:end_index],
+                               axis=2)
                 start_index = end_index
             else:
-                numNonExistentSpecies += 1
-                nonExistentSpeciesIndices.append(species_type_index)
+                num_non_existent_species += 1
+                non_existent_species_indices.append(species_type_index)
 
-        msd_data = np.zeros((self.numMSDStepsPerTraj,
+        msd_data = np.zeros((self.num_msd_steps_per_traj,
                             (self.material.num_species_types
                              + 1 - list(self.species_count).count(0))))
-        timeArray = (np.arange(self.numMSDStepsPerTraj)
-                     * self.time_interval
-                     * self.timeConversion)
-        msd_data[:, 0] = timeArray
-        msd_data[:, 1:] = np.mean(speciesAvgSDArray, axis=0)
-        std_data = np.std(speciesAvgSDArray, axis=0)
-        file_name = (('%1.2E' % (self.msd_t_final * self.timeConversion))
-                    + str(self.repr_time)
-                    + (',n_traj: %1.2E' % numTrajRecorded
-                        if numTrajRecorded != self.n_traj else ''))
-        msdFileName = 'MSD_Data_' + file_name + '.npy'
-        msdFilePath = outdir.joinpath(msdFileName)
+        time_array = (np.arange(self.num_msd_steps_per_traj)
+                      * self.time_interval
+                      * self.time_conversion)
+        msd_data[:, 0] = time_array
+        msd_data[:, 1:] = np.mean(species_avg_sd_array, axis=0)
+        std_data = np.std(species_avg_sd_array, axis=0)
+        file_name = (
+                ('%1.2E' % (self.msd_t_final * self.time_conversion))
+                + str(self.repr_time)
+                + (',n_traj: %1.2E' % num_traj_recorded
+                   if num_traj_recorded != self.n_traj else ''))
+        msd_file_name = 'MSD_Data_' + file_name + '.npy'
+        msd_file_path = out_dir.joinpath(msd_file_name)
         species_types = [
-                species_type
-                for index, species_type in enumerate(self.material.species_types)
-                if index not in nonExistentSpeciesIndices]
-        np.save(msdFilePath, msd_data)
+                        species_type
+                        for index, species_type in enumerate(
+                                        self.material.species_types)
+                        if index not in non_existent_species_indices]
+        np.save(msd_file_path, msd_data)
 
         if report:
-            self.generateMSDAnalysisLogReport(msd_data, species_types,
-                                              file_name, outdir)
+            self.generate_msd_analysis_log_report(msd_data,
+                                                  species_types,
+                                                  file_name, out_dir)
 
         return_msd_data = ReturnValues(msd_data=msd_data,
-                                     std_data=std_data,
-                                     species_types=species_types,
-                                     file_name=file_name)
+                                       std_data=std_data,
+                                       species_types=species_types,
+                                       file_name=file_name)
         return return_msd_data
 
-    def generateMSDAnalysisLogReport(self, msd_data, species_types,
-                                     file_name, outdir):
+    def generate_msd_analysis_log_report(self, msd_data, species_types,
+                                     file_name, out_dir):
         """Generates an log report of the MSD Analysis and
             outputs to the working directory"""
-        msdAnalysisLogFileName = ('MSD_Analysis' + ('_' if file_name else '')
-                                  + file_name + '.log')
-        msdLogFilePath = outdir.joinpath(msdAnalysisLogFileName)
-        report = open(msdLogFilePath, 'w')
+        msd_analysis_log_file_name = ('MSD_Analysis'
+                                      + ('_' if file_name else '')
+                                      + file_name + '.log')
+        msd_log_file_path = out_dir.joinpath(
+                                            msd_analysis_log_file_name)
+        report = open(msd_log_file_path, 'w')
         end_time = datetime.now()
         time_elapsed = end_time - self.start_time
         from scipy.stats import linregress
         for species_index, species_type in enumerate(species_types):
             slope, _, _, _, _ = linregress(
-                msd_data[self.trim_length:-self.trim_length, 0],
-                msd_data[self.trim_length:-self.trim_length, species_index + 1])
-            speciesDiff = (slope * self.material.ANG2UM**2
-                           * self.material.SEC2NS / (2 * self.n_dim))
+                    msd_data[self.trim_length:-self.trim_length, 0],
+                    msd_data[self.trim_length:-self.trim_length,
+                             species_index + 1])
+            species_diff = (slope * self.material.ANG2UM**2
+                            * self.material.SEC2NS / (2 * self.n_dim))
             report.write('Estimated value of {:s} diffusivity is: \
-                            {:4.3f} um2/s\n'.format(species_type, speciesDiff))
-        report.write('Time elapsed: '
-                     + ('%2d days, '
-                        % time_elapsed.days if time_elapsed.days else '')
-                     + ('%2d hours' % ((time_elapsed.seconds // 3600) % 24))
-                     + (', %2d minutes' % ((time_elapsed.seconds // 60) % 60))
-                     + (', %2d seconds' % (time_elapsed.seconds % 60)))
+                {:4.3f} um2/s\n'.format(species_type, species_diff))
+        report.write(
+            'Time elapsed: ' + ('%2d days, ' % time_elapsed.days
+                                if time_elapsed.days else '')
+            + ('%2d hours' % ((time_elapsed.seconds // 3600) % 24))
+            + (', %2d minutes' % ((time_elapsed.seconds // 60) % 60))
+            + (', %2d seconds' % (time_elapsed.seconds % 60)))
         report.close()
         return None
 
     def generate_msd_plot(self, msd_data, std_data, display_error_bars,
-                        species_types, file_name, outdir):
+                          species_types, file_name, out_dir):
         """Returns a line plot of the MSD data"""
-        assert outdir, 'Please provide the destination path \
+        assert out_dir, 'Please provide the destination path \
                             where MSD Plot files needs to be saved'
         import matplotlib
         matplotlib.use('Agg')
@@ -1752,128 +1771,146 @@ class Analysis(object):
         ax = fig.add_subplot(111)
         from scipy.stats import linregress
         for species_index, species_type in enumerate(species_types):
-            ax.plot(msd_data[:, 0], msd_data[:, species_index + 1], 'o',
-                    markerfacecolor='blue', markeredgecolor='black',
-                    label=species_type)
+            ax.plot(
+                msd_data[:, 0], msd_data[:, species_index + 1], 'o',
+                markerfacecolor='blue', markeredgecolor='black',
+                label=species_type)
             if display_error_bars:
-                ax.errorbar(msd_data[:, 0], msd_data[:, species_index + 1],
-                            yerr=std_data[:, species_index], fmt='o', capsize=3,
-                            color='blue', markerfacecolor='none',
-                            markeredgecolor='none')
-            slope, intercept, rValue, _, _ = linregress(
-                msd_data[self.trim_length:-self.trim_length, 0],
-                msd_data[self.trim_length:-self.trim_length, species_index + 1])
-            speciesDiff = (slope * self.material.ANG2UM**2
-                           * self.material.SEC2NS / (2 * self.n_dim))
-            ax.add_artist(AnchoredText('Est. $D_{{%s}}$ = %4.3f'
-                                       % (species_type, speciesDiff)
-                                       + '  ${{\mu}}m^2/s$; $r^2$=%4.3e'
-                                       % (rValue**2),
-                                       loc=4))
-            ax.plot(msd_data[self.trim_length:-self.trim_length, 0], intercept
-                    + slope * msd_data[self.trim_length:-self.trim_length, 0],
+                ax.errorbar(
+                    msd_data[:, 0], msd_data[:, species_index + 1],
+                    yerr=std_data[:, species_index], fmt='o',
+                    capsize=3, color='blue', markerfacecolor='none',
+                    markeredgecolor='none')
+            slope, intercept, r_value, _, _ = linregress(
+                    msd_data[self.trim_length:-self.trim_length, 0],
+                    msd_data[self.trim_length:-self.trim_length,
+                             species_index + 1])
+            species_diff = (slope * self.material.ANG2UM**2
+                            * self.material.SEC2NS / (2 * self.n_dim))
+            ax.add_artist(
+                AnchoredText('Est. $D_{{%s}}$ = %4.3f' % (species_type,
+                                                          species_diff)
+                             + '  ${{\mu}}m^2/s$; $r^2$=%4.3e' % (
+                                                    r_value**2), loc=4))
+            ax.plot(msd_data[self.trim_length:-self.trim_length, 0],
+                    intercept + slope * msd_data[
+                                self.trim_length:-self.trim_length, 0],
                     'r', label=species_type+'-fitted')
         ax.set_xlabel('Time (' + self.repr_time + ')')
-        ax.set_ylabel('MSD ('
-                      + ('$\AA^2$'
-                         if self.repr_dist == 'angstrom'
-                         else (self.repr_dist + '^2')) + ')')
-        figureTitle = 'MSD_' + file_name
-        ax.set_title('\n'.join(wrap(figureTitle, 60)))
+        ax.set_ylabel(
+                'MSD (' + ('$\AA^2$' if self.repr_dist == 'angstrom'
+                           else (self.repr_dist + '^2')) + ')')
+        figure_title = 'MSD_' + file_name
+        ax.set_title('\n'.join(wrap(figure_title, 60)))
         plt.legend()
         plt.show()  # temp change
-        figureName = ('MSD_Plot_' + file_name + '_Trim='
-                      + str(self.trim_length) + '.png')
-        figurePath = outdir.joinpath(figureName)
-        plt.savefig(str(figurePath))
+        figure_name = ('MSD_Plot_' + file_name + '_trim='
+                       + str(self.trim_length) + '.png')
+        figure_path = out_dir.joinpath(figure_name)
+        plt.savefig(str(figure_path))
         return None
 
-    def computeCOCMSD(self, outdir, report=1):
+    def compute_coc_msd(self, out_dir, report=1):
         """Returns the squared displacement of the trajectories"""
-        assert outdir, 'Please provide the destination path where \
+        assert out_dir, 'Please provide the destination path where \
                                 MSD output files needs to be saved'
-        numExistentSpecies = 0
-        for species_type_index in range(self.material.num_species_types):
+        num_existent_species = 0
+        for species_type_index in range(
+                                    self.material.num_species_types):
             if self.species_count[species_type_index] != 0:
-                numExistentSpecies += 1
+                num_existent_species += 1
 
-        positionArray = np.loadtxt(outdir.joinpath('unwrapped_traj.dat'))
-        numTrajRecorded = int(len(positionArray) / self.num_path_steps_per_traj)
-        positionArray = (
-            positionArray[:numTrajRecorded
-                          * self.num_path_steps_per_traj + 1].reshape((
-                                  numTrajRecorded * self.num_path_steps_per_traj,
+        position_array = np.loadtxt(
+                                out_dir.joinpath('unwrapped_traj.dat'))
+        num_traj_recorded = int(len(position_array)
+                                / self.num_path_steps_per_traj)
+        position_array = (
+                position_array[
+                    :num_traj_recorded * self.num_path_steps_per_traj
+                    + 1].reshape((num_traj_recorded
+                                  * self.num_path_steps_per_traj,
                                   self.total_species, 3))
-            * self.distConversion)
-        cocPositionArray = np.mean(positionArray, axis=1)
-        np.savetxt('cocPositionArray.txt', cocPositionArray)
+                * self.dist_conversion)
+        coc_position_array = np.mean(position_array, axis=1)
+        np.savetxt('coc_position_array.txt', coc_position_array)
         file_name = 'center_of_charge'
-        self.plot_coc_dispvector(cocPositionArray, file_name, outdir)
-        cocPositionArray = cocPositionArray[:, np.newaxis, :]
-        sdArray = np.zeros((numTrajRecorded,
-                            self.numMSDStepsPerTraj,
-                            numExistentSpecies))
-        for trajIndex in range(numTrajRecorded):
-            headStart = trajIndex * self.num_path_steps_per_traj
-            for time_step in range(1, self.numMSDStepsPerTraj):
-                numDisp = self.num_path_steps_per_traj - time_step
-                addOn = np.arange(numDisp)
-                posDiff = (cocPositionArray[headStart + time_step + addOn]
-                           - cocPositionArray[headStart + addOn])
-                sdArray[trajIndex, time_step, :] = np.mean(
-                            np.einsum('ijk,ijk->ij', posDiff, posDiff), axis=0)
-        speciesAvgSDArray = np.zeros((numTrajRecorded,
-                                      self.numMSDStepsPerTraj,
-                                      self.material.num_species_types
-                                      - list(self.species_count).count(0)))
+        self.plot_coc_dispvector(coc_position_array, file_name,
+                                 out_dir)
+        coc_position_array = coc_position_array[:, np.newaxis, :]
+        sd_array = np.zeros((num_traj_recorded,
+                             self.num_msd_steps_per_traj,
+                             num_existent_species))
+        for traj_index in range(num_traj_recorded):
+            head_start = traj_index * self.num_path_steps_per_traj
+            for time_step in range(1, self.num_msd_steps_per_traj):
+                num_disp = self.num_path_steps_per_traj - time_step
+                add_on = np.arange(num_disp)
+                pos_diff = (
+                    coc_position_array[head_start + time_step + add_on]
+                    - coc_position_array[head_start + add_on])
+                sd_array[traj_index, time_step, :] = np.mean(
+                        np.einsum('ijk,ijk->ij', pos_diff, pos_diff),
+                        axis=0)
+        species_avg_sd_array = np.zeros(
+                    (num_traj_recorded, self.num_msd_steps_per_traj,
+                     self.material.num_species_types
+                     - list(self.species_count).count(0)))
         start_index = 0
-        numNonExistentSpecies = 0
-        nonExistentSpeciesIndices = []
-        for species_type_index in range(self.material.num_species_types):
+        num_non_existent_species = 0
+        non_existent_species_indices = []
+        for species_type_index in range(
+                                    self.material.num_species_types):
             if self.species_count[species_type_index] != 0:
-                end_index = start_index + self.species_count[species_type_index]
-                speciesAvgSDArray[:, :, (species_type_index
-                                         - numNonExistentSpecies)] \
-                    = np.mean(sdArray[:, :, start_index:end_index], axis=2)
+                end_index = start_index + self.species_count[
+                                                    species_type_index]
+                species_avg_sd_array[
+                    :, :, (species_type_index
+                           - num_non_existent_species)] = np.mean(
+                               sd_array[:, :, start_index:end_index],
+                               axis=2)
                 start_index = end_index
             else:
-                numNonExistentSpecies += 1
-                nonExistentSpeciesIndices.append(species_type_index)
+                num_non_existent_species += 1
+                non_existent_species_indices.append(species_type_index)
 
-        msd_data = np.zeros((self.numMSDStepsPerTraj,
-                            (self.material.num_species_types
-                             + 1 - list(self.species_count).count(0))))
-        timeArray = (np.arange(self.numMSDStepsPerTraj)
-                     * self.time_interval
-                     * self.timeConversion)
-        msd_data[:, 0] = timeArray
-        msd_data[:, 1:] = np.mean(speciesAvgSDArray, axis=0)
-        std_data = np.std(speciesAvgSDArray, axis=0)
-        file_name = (('%1.2E' % (self.msd_t_final * self.timeConversion))
-                    + str(self.repr_time)
-                    + (',n_traj: %1.2E' % numTrajRecorded
-                        if numTrajRecorded != self.n_traj else ''))
-        msdFileName = 'COC_MSD_Data_' + file_name + '.npy'
-        msdFilePath = outdir.joinpath(msdFileName)
+        msd_data = np.zeros(
+                        (self.num_msd_steps_per_traj,
+                         (self.material.num_species_types
+                          + 1 - list(self.species_count).count(0))))
+        time_array = (np.arange(self.num_msd_steps_per_traj)
+                      * self.time_interval
+                      * self.time_conversion)
+        msd_data[:, 0] = time_array
+        msd_data[:, 1:] = np.mean(species_avg_sd_array, axis=0)
+        std_data = np.std(species_avg_sd_array, axis=0)
+        file_name = (
+                ('%1.2E' % (self.msd_t_final * self.time_conversion))
+                + str(self.repr_time)
+                + (',n_traj: %1.2E' % num_traj_recorded
+                   if num_traj_recorded != self.n_traj else ''))
+        msd_file_name = 'coc_msd_data_' + file_name + '.npy'
+        msd_file_path = out_dir.joinpath(msd_file_name)
         species_types = [
-                species_type
-                for index, species_type in enumerate(self.material.species_types)
-                if index not in nonExistentSpeciesIndices]
-        np.save(msdFilePath, msd_data)
+                        species_type
+                        for index, species_type in enumerate(
+                                        self.material.species_types)
+                        if index not in non_existent_species_indices]
+        np.save(msd_file_path, msd_data)
 
         if report:
-            self.generateCOCMSDAnalysisLogReport(msd_data, species_types,
-                                                 file_name, outdir)
+            self.generate_coc_msd_analysis_log_report(
+                        msd_data, species_types, file_name, out_dir)
 
         return_msd_data = ReturnValues(msd_data=msd_data,
-                                     std_data=std_data,
-                                     species_types=species_types,
-                                     file_name=file_name)
+                                       std_data=std_data,
+                                       species_types=species_types,
+                                       file_name=file_name)
         return return_msd_data
 
-    def plot_coc_dispvector(self, cocPositionArray, file_name, outdir):
+    def plot_coc_dispvector(self, coc_position_array, file_name,
+                            out_dir):
         """Returns a line plot of the MSD data"""
-        assert outdir, 'Please provide the destination path \
+        assert out_dir, 'Please provide the destination path \
                             where MSD Plot files needs to be saved'
         import matplotlib
         matplotlib.use('Agg')
@@ -1882,46 +1919,54 @@ class Analysis(object):
         importlib.import_module('mpl_toolkits.mplot3d').Axes3D
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
-        numTrajRecorded = int(len(cocPositionArray) / self.num_path_steps_per_traj)
-        xmin = ymin = zmin = 10
-        xmax = ymax = zmax = -10
+        num_traj_recorded = int(len(coc_position_array)
+                                / self.num_path_steps_per_traj)
+        x_min = y_min = z_min = 10
+        x_max = y_max = z_max = -10
         cmap = plt.get_cmap('gnuplot')
-        colors = [cmap(i) for i in np.linspace(0, 1, numTrajRecorded)]
-        dispVectorList = np.zeros((numTrajRecorded, 6))
-        for trajIndex in range(numTrajRecorded):
-            startPos = cocPositionArray[trajIndex * self.num_path_steps_per_traj]
-            endPos = cocPositionArray[(trajIndex + 1)
-                                      * self.num_path_steps_per_traj - 1]
-            dispVectorList[trajIndex, :3] = startPos
-            dispVectorList[trajIndex, 3:] = endPos
-            posStack = np.vstack((startPos, endPos))
-            ax.plot(posStack[:, 0], posStack[:, 1], posStack[:, 2],
-                    color=colors[trajIndex])
-            xmin = min(xmin, startPos[0], endPos[0])
-            ymin = min(ymin, startPos[1], endPos[1])
-            zmin = min(zmin, startPos[2], endPos[2])
-            xmax = max(xmax, startPos[0], endPos[0])
-            ymax = max(ymax, startPos[1], endPos[1])
-            zmax = max(zmax, startPos[2], endPos[2])
-        np.savetxt('displacement_vector_list.txt', dispVectorList)
+        colors = [cmap(i) for i in np.linspace(0, 1,
+                                               num_traj_recorded)]
+        disp_vector_list = np.zeros((num_traj_recorded, 6))
+        for traj_index in range(num_traj_recorded):
+            start_pos = coc_position_array[
+                            traj_index * self.num_path_steps_per_traj]
+            end_pos = coc_position_array[
+                (traj_index + 1) * self.num_path_steps_per_traj - 1]
+            disp_vector_list[traj_index, :3] = start_pos
+            disp_vector_list[traj_index, 3:] = end_pos
+            pos_stack = np.vstack((start_pos, end_pos))
+            ax.plot(pos_stack[:, 0], pos_stack[:, 1], pos_stack[:, 2],
+                    color=colors[traj_index])
+            x_min = min(x_min, start_pos[0], end_pos[0])
+            y_min = min(y_min, start_pos[1], end_pos[1])
+            z_min = min(z_min, start_pos[2], end_pos[2])
+            x_max = max(x_max, start_pos[0], end_pos[0])
+            y_max = max(y_max, start_pos[1], end_pos[1])
+            z_max = max(z_max, start_pos[2], end_pos[2])
+        np.savetxt('displacement_vector_list.txt', disp_vector_list)
         ax.set_xlabel('x')
         ax.set_ylabel('y')
         ax.set_zlabel('z')
-        ax.set_xlim([xmin - 0.2 * abs(xmin), xmax + 0.2 * abs(xmax)])
-        ax.set_ylim([ymin - 0.2 * abs(ymin), ymax + 0.2 * abs(ymax)])
-        ax.set_zlim([zmin - 0.2 * abs(zmin), zmax + 0.2 * abs(zmax)])
-        ax.set_title(('trajectory-wise center of charge displacement vectors')
-                     + ' \n$N_{{%s}}$=' % ('species') + str(self.total_species))
+        ax.set_xlim([x_min - 0.2 * abs(x_min),
+                     x_max + 0.2 * abs(x_max)])
+        ax.set_ylim([y_min - 0.2 * abs(y_min),
+                     y_max + 0.2 * abs(y_max)])
+        ax.set_zlim([z_min - 0.2 * abs(z_min),
+                     z_max + 0.2 * abs(z_max)])
+        ax.set_title(
+            ('trajectory-wise center of charge displacement vectors')
+            + ' \n$N_{{%s}}$=' % ('species') + str(self.total_species))
         plt.show()  # temp change
-        figureName = ('COC_DispVectors_' + file_name + '.png')
-        figurePath = outdir.joinpath(figureName)
-        plt.savefig(figurePath)
+        figure_name = ('coc_disp_vectors_' + file_name + '.png')
+        figure_path = out_dir.joinpath(figure_name)
+        plt.savefig(figure_path)
         return None
 
-    def generateCOCMSDPlot(self, msd_data, std_data, display_error_bars,
-                           species_types, file_name, outdir):
+    def generate_coc_msd_plot(self, msd_data, std_data,
+                              display_error_bars, species_types,
+                              file_name, out_dir):
         """Returns a line plot of the MSD data"""
-        assert outdir, 'Please provide the destination path \
+        assert out_dir, 'Please provide the destination path \
                             where MSD Plot files needs to be saved'
         import matplotlib
         matplotlib.use('Agg')
@@ -1932,74 +1977,81 @@ class Analysis(object):
         ax = fig.add_subplot(111)
         from scipy.stats import linregress
         for species_index, species_type in enumerate(species_types):
-            ax.plot(msd_data[:, 0], msd_data[:, species_index + 1], 'o',
-                    markerfacecolor='blue', markeredgecolor='black',
-                    label=species_type)
+            ax.plot(
+                msd_data[:, 0], msd_data[:, species_index + 1], 'o',
+                markerfacecolor='blue', markeredgecolor='black',
+                label=species_type)
             if display_error_bars:
-                ax.errorbar(msd_data[:, 0], msd_data[:, species_index + 1],
-                            yerr=std_data[:, species_index], fmt='o', capsize=3,
-                            color='blue', markerfacecolor='none',
-                            markeredgecolor='none')
-            slope, intercept, rValue, _, _ = linregress(
-                msd_data[self.trim_length:-self.trim_length, 0],
-                msd_data[self.trim_length:-self.trim_length, species_index + 1])
-            speciesDiff = (slope * self.material.ANG2UM**2
-                           * self.material.SEC2NS / (2 * self.n_dim))
-            ax.add_artist(AnchoredText('Est. $D_{{%s}}$ = %4.3f'
-                                       % (species_type, speciesDiff)
-                                       + '  ${{\mu}}m^2/s$; $r^2$=%4.3e'
-                                       % (rValue**2),
-                                       loc=4))
-            ax.plot(msd_data[self.trim_length:-self.trim_length, 0], intercept
-                    + slope * msd_data[self.trim_length:-self.trim_length, 0],
+                ax.errorbar(
+                    msd_data[:, 0], msd_data[:, species_index + 1],
+                    yerr=std_data[:, species_index], fmt='o',
+                    capsize=3, color='blue', markerfacecolor='none',
+                    markeredgecolor='none')
+            slope, intercept, r_value, _, _ = linregress(
+                    msd_data[self.trim_length:-self.trim_length, 0],
+                    msd_data[self.trim_length:-self.trim_length,
+                             species_index + 1])
+            species_diff = (slope * self.material.ANG2UM**2
+                            * self.material.SEC2NS / (2 * self.n_dim))
+            ax.add_artist(
+                AnchoredText('Est. $D_{{%s}}$ = %4.3f' % (species_type,
+                                                          species_diff)
+                             + '  ${{\mu}}m^2/s$; $r^2$=%4.3e' % (
+                                                r_value**2), loc=4))
+            ax.plot(
+                    msd_data[self.trim_length:-self.trim_length, 0],
+                    intercept + slope * msd_data[
+                            self.trim_length:-self.trim_length, 0],
                     'r', label=species_type+'-fitted')
         ax.set_xlabel('Time (' + self.repr_time + ')')
-        ax.set_ylabel('MSD ('
-                      + ('$\AA^2$'
-                         if self.repr_dist == 'angstrom'
-                         else (self.repr_dist + '^2')) + ')')
-        figureTitle = 'MSD_' + file_name
-        ax.set_title('\n'.join(wrap(figureTitle, 60)))
+        ax.set_ylabel(
+                'MSD (' + ('$\AA^2$' if self.repr_dist == 'angstrom'
+                           else (self.repr_dist + '^2')) + ')')
+        figure_title = 'MSD_' + file_name
+        ax.set_title('\n'.join(wrap(figure_title, 60)))
         plt.legend()
         plt.show()  # temp change
-        figureName = ('COC_MSD_Plot_' + file_name + '_Trim='
-                      + str(self.trim_length) + '.png')
-        figurePath = outdir.joinpath(figureName)
-        plt.savefig(figurePath)
+        figure_name = ('coc_msd_plot_' + file_name + '_trim='
+                       + str(self.trim_length) + '.png')
+        figure_path = out_dir.joinpath(figure_name)
+        plt.savefig(figure_path)
         return None
 
-    def generateCOCMSDAnalysisLogReport(self, msd_data, species_types,
-                                        file_name, outdir):
+    def generate_coc_msd_analysis_log_report(self, msd_data,
+                                             species_types,
+                                             file_name, out_dir):
         """Generates an log report of the MSD Analysis and
             outputs to the working directory"""
-        msdAnalysisLogFileName = ('COC_MSD_Analysis'
-                                  + ('_' if file_name else '')
-                                  + file_name + '.log')
-        msdLogFilePath = outdir.joinpath(msdAnalysisLogFileName)
-        report = open(msdLogFilePath, 'w')
+        msd_analysis_log_file_name = (
+                        'coc_msd_analysis' + ('_' if file_name else '')
+                        + file_name + '.log')
+        msd_log_file_path = out_dir.joinpath(
+                                            msd_analysis_log_file_name)
+        report = open(msd_log_file_path, 'w')
         end_time = datetime.now()
         time_elapsed = end_time - self.start_time
         from scipy.stats import linregress
         for species_index, species_type in enumerate(species_types):
             slope, _, _, _, _ = linregress(
-                msd_data[self.trim_length:-self.trim_length, 0],
-                msd_data[self.trim_length:-self.trim_length, species_index + 1])
-            speciesDiff = (slope * self.material.ANG2UM**2
-                           * self.material.SEC2NS / (2 * self.n_dim))
+                    msd_data[self.trim_length:-self.trim_length, 0],
+                    msd_data[self.trim_length:-self.trim_length,
+                             species_index + 1])
+            species_diff = (slope * self.material.ANG2UM**2
+                            * self.material.SEC2NS / (2 * self.n_dim))
             report.write('Estimated value of {:s} diffusivity is: \
-                            {:4.3f} um2/s\n'.format(species_type, speciesDiff))
-        report.write('Time elapsed: '
-                     + ('%2d days, '
-                        % time_elapsed.days if time_elapsed.days else '')
-                     + ('%2d hours' % ((time_elapsed.seconds // 3600) % 24))
-                     + (', %2d minutes' % ((time_elapsed.seconds // 60) % 60))
-                     + (', %2d seconds' % (time_elapsed.seconds % 60)))
+                {:4.3f} um2/s\n'.format(species_type, species_diff))
+        report.write(
+            'Time elapsed: ' + ('%2d days, ' % time_elapsed.days
+                                if time_elapsed.days else '')
+            + ('%2d hours' % ((time_elapsed.seconds // 3600) % 24))
+            + (', %2d minutes' % ((time_elapsed.seconds // 60) % 60))
+            + (', %2d seconds' % (time_elapsed.seconds % 60)))
         report.close()
         return None
 
     # TODO: Finish writing the method soon.
     # def displayCollectiveMSDPlot(self, msd_data, species_types,
-    #                              file_name, outdir=None):
+    #                              file_name, out_dir=None):
     #     """Returns a line plot of the MSD data"""
     #     import matplotlib
     #     matplotlib.use('Agg')
@@ -2017,15 +2069,15 @@ class Analysis(object):
     #             figNum += 1
     #     plt.xlabel('Time (' + self.repr_time + ')')
     #     plt.ylabel('MSD (' + self.repr_dist + '**2)')
-    #     figureTitle = 'MSD_' + file_name
-    #     plt.title('\n'.join(wrap(figureTitle, 60)))
+    #     figure_title = 'MSD_' + file_name
+    #     plt.title('\n'.join(wrap(figure_title, 60)))
     #     plt.legend()
-    #     if outdir:
-    #         figureName = 'MSD_Plot_' + file_name + '.jpg'
-    #         figurePath = outdir + directorySeparator + figureName
-    #         plt.savefig(figurePath)
+    #     if out_dir:
+    #         figure_name = 'MSD_Plot_' + file_name + '.jpg'
+    #         figure_path = out_dir + directorySeparator + figure_name
+    #         plt.savefig(figure_path)
 
-    def meanDistance(self, outdir, mean=1, plot=1, report=1):
+    def mean_distance(self, out_dir, mean=1, plot=1, report=1):
         """
         Add combType as one of the inputs
         combType = 0  # combType = 0: like-like; 1: like-unlike; 2: both
@@ -2041,9 +2093,10 @@ class Analysis(object):
                               * (self.species_count[index] - 1)
                               for index in len(self.species_count)]))
         """
-        positionArray = (self.trajectoryData.wrapped_position_array
-                         * self.distConversion)
-        num_path_steps_per_traj = int(self.kmc_steps / self.stepInterval) + 1
+        position_array = (self.trajectory_data.wrapped_position_array
+                          * self.dist_conversion)
+        num_path_steps_per_traj = int(self.kmc_steps
+                                      / self.stepInterval) + 1
         # TODO: Currently assuming only electrons exist and coding accordingly.
         # Need to change according to combType
         pbc = [1, 1, 1]  # change to generic
@@ -2058,64 +2111,78 @@ class Analysis(object):
             for y_offset in y_range:
                 for z_offset in z_range:
                     system_translational_vector_list[index] = np.dot(
-                        np.multiply(np.array([x_offset, y_offset, z_offset]),
-                                    self.system_size),
-                        (self.material.lattice_matrix * self.distConversion))
+                            np.multiply(np.array([x_offset, y_offset,
+                                                  z_offset]),
+                                        self.system_size),
+                            (self.material.lattice_matrix
+                             * self.dist_conversion))
                     index += 1
         if mean:
-            meanDistance = np.zeros((self.n_traj, num_path_steps_per_traj))
+            mean_distance = np.zeros((self.n_traj,
+                                      num_path_steps_per_traj))
         else:
-            interDistanceArray = np.zeros((self.n_traj, num_path_steps_per_traj,
-                                           n_electrons * (n_electrons - 1) / 2))
-        interDistanceList = np.zeros(n_electrons * (n_electrons - 1) / 2)
-        for trajIndex in range(self.n_traj):
-            headStart = trajIndex * num_path_steps_per_traj
+            inter_distance_array = np.zeros(
+                                (self.n_traj, num_path_steps_per_traj,
+                                 n_electrons * (n_electrons - 1) / 2))
+        inter_distance_list = np.zeros(n_electrons * (n_electrons - 1)
+                                       / 2)
+        for traj_index in range(self.n_traj):
+            head_start = traj_index * num_path_steps_per_traj
             for step in range(num_path_steps_per_traj):
                 index = 0
                 for i in range(n_electrons):
                     for j in range(i + 1, n_electrons):
-                        neighbor_image_coords = (system_translational_vector_list
-                                               + positionArray[
-                                                        headStart + step, j])
+                        neighbor_image_coords = (
+                                system_translational_vector_list
+                                + position_array[head_start + step, j])
                         neighbor_image_displacement_vectors = (
-                                        neighbor_image_coords
-                                        - positionArray[headStart + step, i])
+                                neighbor_image_coords
+                                - position_array[head_start + step, i])
                         neighbor_image_displacements = np.linalg.norm(
-                                            neighbor_image_displacement_vectors,
-                                            axis=1)
-                        displacement = np.min(neighbor_image_displacements)
-                        interDistanceList[index] = displacement
+                                neighbor_image_displacement_vectors,
+                                axis=1)
+                        displacement = np.min(
+                                        neighbor_image_displacements)
+                        inter_distance_list[index] = displacement
                         index += 1
                 if mean:
-                    meanDistance[trajIndex, step] = np.mean(interDistanceList)
-                    meanDistanceOverTraj = np.mean(meanDistance, axis=0)
+                    mean_distance[traj_index, step] = np.mean(
+                                                inter_distance_list)
+                    mean_distance_over_traj = np.mean(mean_distance,
+                                                      axis=0)
                 else:
-                    interDistanceArray[trajIndex, step] = np.copy(
-                                                            interDistanceList)
+                    inter_distance_array[traj_index, step] = np.copy(
+                                                inter_distance_list)
 
-        interDistanceArrayOverTraj = np.mean(interDistanceArray, axis=0)
-        kmc_steps = range(0,
-                         num_path_steps_per_traj * int(self.stepInterval),
-                         int(self.stepInterval))
+        inter_distance_array_over_traj = np.mean(inter_distance_array,
+                                                 axis=0)
+        kmc_steps = range(
+                0, num_path_steps_per_traj * int(self.stepInterval),
+                int(self.stepInterval))
         if mean:
-            meanDistanceArray = np.zeros((num_path_steps_per_traj, 2))
-            meanDistanceArray[:, 0] = kmc_steps
-            meanDistanceArray[:, 1] = meanDistanceOverTraj
+            mean_distance_array = np.zeros((num_path_steps_per_traj,
+                                            2))
+            mean_distance_array[:, 0] = kmc_steps
+            mean_distance_array[:, 1] = mean_distance_over_traj
         else:
-            interSpeciesDistanceArray = np.zeros((
-                                        num_path_steps_per_traj,
-                                        n_electrons * (n_electrons - 1) / 2 + 1))
-            interSpeciesDistanceArray[:, 0] = kmc_steps
-            interSpeciesDistanceArray[:, 1:] = interDistanceArrayOverTraj
+            inter_species_distance_array = np.zeros((
+                            num_path_steps_per_traj,
+                            n_electrons * (n_electrons - 1) / 2 + 1))
+            inter_species_distance_array[:, 0] = kmc_steps
+            inter_species_distance_array[:, 1:] = (
+                                        inter_distance_array_over_traj)
         if mean:
-            meanDistanceFileName = 'MeanDistanceData.npy'
-            meanDistanceFilePath = outdir.joinpath(meanDistanceFileName)
-            np.save(meanDistanceFilePath, meanDistanceArray)
+            mean_distance_file_name = 'mean_distance_data.npy'
+            mean_distance_file_path = out_dir.joinpath(
+                                            mean_distance_file_name)
+            np.save(mean_distance_file_path, mean_distance_array)
         else:
-            interSpeciesDistanceFileName = 'InterSpeciesDistance.npy'
-            interSpeciesDistanceFilePath = outdir.joinpath(
-                                                interSpeciesDistanceFileName)
-            np.save(interSpeciesDistanceFilePath, interSpeciesDistanceArray)
+            inter_species_distance_file_name = (
+                                        'inter_species_distance.npy')
+            inter_species_distance_file_path = out_dir.joinpath(
+                                    inter_species_distance_file_name)
+            np.save(inter_species_distance_file_path,
+                    inter_species_distance_array)
 
         if plot:
             import matplotlib
@@ -2123,62 +2190,70 @@ class Analysis(object):
             import matplotlib.pyplot as plt
             plt.figure()
             if mean:
-                plt.plot(meanDistanceArray[:, 0], meanDistanceArray[:, 1])
+                plt.plot(mean_distance_array[:, 0],
+                         mean_distance_array[:, 1])
                 plt.title('Mean Distance between species \
                             along simulation length')
                 plt.xlabel('KMC Step')
                 plt.ylabel('Distance (' + self.repr_dist + ')')
-                figureName = 'MeanDistanceOverTraj.jpg'
-                figurePath = outdir.joinpath(figureName)
-                plt.savefig(figurePath)
+                figure_name = 'MeanDistanceOverTraj.jpg'
+                figure_path = out_dir.joinpath(figure_name)
+                plt.savefig(figure_path)
             else:
-                legendList = []
+                legend_list = []
                 for i in range(n_electrons):
                     for j in range(i + 1, n_electrons):
-                        legendList.append('r_' + str(i) + ':' + str(j))
-                lineObjects = plt.plot(interSpeciesDistanceArray[:, 0],
-                                       interSpeciesDistanceArray[:, 1:])
-                plt.title('Inter-species Distances along simulation length')
+                        legend_list.append('r_' + str(i) + ':'
+                                           + str(j))
+                line_objects = plt.plot(
+                                inter_species_distance_array[:, 0],
+                                inter_species_distance_array[:, 1:])
+                plt.title(
+                    'Inter-species Distances along simulation length')
                 plt.xlabel('KMC Step')
                 plt.ylabel('Distance (' + self.repr_dist + ')')
-                lgd = plt.legend(lineObjects, legendList, loc='center left',
+                lgd = plt.legend(line_objects, legend_list,
+                                 loc='center left',
                                  bbox_to_anchor=(1, 0.5))
-                figureName = 'Inter-SpeciesDistance.jpg'
-                figurePath = outdir.joinpath(figureName)
-                plt.savefig(figurePath, bbox_extra_artists=(lgd,),
+                figure_name = 'inter_species_distance.jpg'
+                figure_path = out_dir.joinpath(figure_name)
+                plt.savefig(figure_path, bbox_extra_artists=(lgd,),
                             bbox_inches='tight')
         if report:
-            self.generateMeanDisplacementAnalysisLogReport(outdir)
-        output = meanDistanceArray if mean else interSpeciesDistanceArray
+            self.generate_mean_displacement_analysis_log_report(
+                                                            out_dir)
+        output = (mean_distance_array
+                  if mean else inter_species_distance_array)
         return output
 
-    def generateMeanDisplacementAnalysisLogReport(self, outdir):
+    def generate_mean_displacement_analysis_log_report(self, out_dir):
         """Generates an log report of the MSD Analysis and \
                 outputs to the working directory"""
-        meanDisplacementAnalysisLogFileName = 'MeanDisplacement_Analysis.log'
-        meanDisplacementAnalysisLogFilePath = outdir.joinpath(
-                                        meanDisplacementAnalysisLogFileName)
-        report = open(meanDisplacementAnalysisLogFilePath, 'w')
+        mean_displacement_analysis_log_file_name = (
+                                    'mean_displacement_analysis.log')
+        mean_displacement_analysis_log_file_path = out_dir.joinpath(
+                            mean_displacement_analysis_log_file_name)
+        report = open(mean_displacement_analysis_log_file_path, 'w')
         end_time = datetime.now()
         time_elapsed = end_time - self.start_time
-        report.write('Time elapsed: '
-                     + ('%2d days, '
-                        % time_elapsed.days if time_elapsed.days else '')
-                     + ('%2d hours' % ((time_elapsed.seconds // 3600) % 24))
-                     + (', %2d minutes' % ((time_elapsed.seconds // 60) % 60))
-                     + (', %2d seconds' % (time_elapsed.seconds % 60)))
+        report.write(
+            'Time elapsed: ' + ('%2d days, ' % time_elapsed.days
+                                if time_elapsed.days else '')
+            + ('%2d hours' % ((time_elapsed.seconds // 3600) % 24))
+            + (', %2d minutes' % ((time_elapsed.seconds // 60) % 60))
+            + (', %2d seconds' % (time_elapsed.seconds % 60)))
         report.close()
         return None
 
-    def displayWrappedTrajectories(self):
+    def display_wrapped_trajectories(self):
         """ """
         return None
 
-    def displayUnwrappedTrajectories(self):
+    def display_unwrapped_trajectories(self):
         """ """
         return None
 
-    def trajectoryToDCD(self):
+    def trajectory_to_dcd(self):
         """Convert trajectory data and outputs dcd file"""
         return None
 
