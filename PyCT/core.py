@@ -1703,18 +1703,6 @@ class Analysis(object):
         report.close()
         return None
 
-    def display_wrapped_trajectories(self):
-        """ """
-        return None
-
-    def display_unwrapped_trajectories(self):
-        """ """
-        return None
-
-    def trajectory_to_dcd(self):
-        """Convert trajectory data and outputs dcd file"""
-        return None
-
 
 class ReturnValues(object):
     """dummy class to return objects from methods defined inside
