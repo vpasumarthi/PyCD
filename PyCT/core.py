@@ -1156,8 +1156,8 @@ class Analysis(object):
         np.save(msd_file_path, msd_data)
 
         if report:
-            file_name = ('MSD_Analysis' + ('_' if file_name else '')
-                         + file_name)
+            report_file_name = ('MSD_Analysis' + ('_' if file_name else '')
+                                + file_name)
             from scipy.stats import linregress
             for species_index, species_type in enumerate(species_types):
                 slope, _, _, _, _ = \
@@ -1169,7 +1169,7 @@ class Analysis(object):
                 prefix = ('Estimated value of {:s} diffusivity is: '
                           '{:4.3f} um2/s\n'.format(species_type, species_diff))
 
-            generate_report(self.start_time, out_dir, file_name, prefix)
+            generate_report(self.start_time, out_dir, report_file_name, prefix)
 
         return_msd_data = ReturnValues(msd_data=msd_data,
                                        std_data=std_data,
