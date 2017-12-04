@@ -26,13 +26,13 @@ vn: 1.85E+13  # typical frequency for nuclear motion in (1/sec)
 lambda_values:
     'Fe:Fe': [1.74533, 1.88683]
 # electronic coupling matrix element in eV
-VAB:
+v_ab:
     'Fe:Fe': [0.184, 0.028]
 class_list:
     'Fe': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
     'O': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
 # delG0_shift in eV
-delG0_shift_list:
+delg_0_shift_list:
     'Fe:Fe': [[+0.0000, +0.0000, +0.0000, +0.0000]]
 element_type_delimiter: ':'
 empty_species_type: 'empty'

@@ -21,7 +21,7 @@ time_interval: 1.0e-08
 
 # MSD parameters:
 display_error_bars: 1
-dstFileName: MSD.py
+dstFileName: generateMSDPlot.py
 msd_t_final: 60
 n_dim: 3
 report: 1
