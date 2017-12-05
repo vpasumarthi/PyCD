@@ -1073,22 +1073,18 @@ class Analysis(object):
         self.repr_dist = repr_dist
 
         if repr_time == 'ns':
-            self.time_conversion = (constants.SEC2NS
-                                    / constants.SEC2AUTIME)
+            self.time_conversion = constants.AUTIME2NS
         elif repr_time == 'ps':
-            self.time_conversion = (constants.SEC2PS
-                                    / constants.SEC2AUTIME)
+            self.time_conversion = constants.AUTIME2PS
         elif repr_time == 'fs':
-            self.time_conversion = (constants.SEC2FS
-                                    / constants.SEC2AUTIME)
+            self.time_conversion = constants.AUTIME2FS
         elif repr_time == 's':
             self.time_conversion = 1E+00 / constants.SEC2AUTIME
 
         if repr_dist == 'm':
-            self.dist_conversion = self.material.ANG / constants.ANG2BOHR
+            self.dist_conversion = constants.BOHR
         elif repr_dist == 'um':
-            self.dist_conversion = (constants.ANG2UM
-                                    / constants.ANG2BOHR)
+            self.dist_conversion = constants.BOHR2UM
         elif repr_dist == 'angstrom':
             self.dist_conversion = 1E+00 / constants.ANG2BOHR
 
