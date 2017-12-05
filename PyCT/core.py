@@ -64,10 +64,9 @@ class Material(object):
 
         # Read Input POSCAR
         [self.lattice_matrix, self.element_types,
-         self.n_elements_per_unit_cell,
-         self.total_elements_per_unit_cell,
+         self.n_elements_per_unit_cell, self.total_elements_per_unit_cell,
          fractional_unit_cell_coords] = (
-            read_poscar(material_parameters.input_coord_file_location))
+                    read_poscar(material_parameters.input_coord_file_location))
         self.lattice_matrix *= constants.ANG2BOHR
         self.n_element_types = len(self.element_types)
         self.element_type_index_list = np.repeat(
