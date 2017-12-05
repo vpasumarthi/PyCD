@@ -8,7 +8,6 @@ from pathlib import Path
 from datetime import datetime
 import random as rnd
 import itertools
-from copy import deepcopy
 import pdb
 
 import numpy as np
@@ -79,8 +78,11 @@ class Material(object):
         self.species_types = material_parameters.species_types[:]
         self.num_species_types = len(self.species_types)
         self.species_charge_list = material_parameters.species_charge_list
-        self.species_to_element_type_map = \
-            material_parameters.species_to_element_type_map
+
+        self.species_to_element_type_map = {
+                    key: [value[index] for index in range(len(value))]
+                    for key, value in
+                    material_parameters.species_to_element_type_map.items()}
 
         # Initialization
         self.fractional_unit_cell_coords = np.zeros(
@@ -108,58 +110,57 @@ class Material(object):
         self.charge_types = material_parameters.charge_types
 
         self.vn = material_parameters.vn / constants.SEC2AUTIME
-        self.lambda_values = material_parameters.lambda_values
-        self.lambda_values.update(
-                        (x, [y[index] * constants.EV2J * constants.J2HARTREE
-                             for index in range(len(y))])
-                        for x, y in self.lambda_values.items())
 
-        self.v_ab = material_parameters.v_ab
-        self.v_ab.update(
-                        (x, [y[index] * constants.EV2J * constants.J2HARTREE
-                             for index in range(len(y))])
-                        for x, y in self.v_ab.items())
+        self.lambda_values = {
+                key: [value[index] * constants.EV2HARTREE
+                      for index in range(len(value))]
+                for key, value in material_parameters.lambda_values.items()}
 
-        self.neighbor_cutoff_dist = material_parameters.neighbor_cutoff_dist
-        self.neighbor_cutoff_dist.update(
-                    (x, [(y[index] * constants.ANG2BOHR) if y[index] else None
-                         for index in range(len(y))])
-                    for x, y in (self.neighbor_cutoff_dist.items()))
-        self.neighbor_cutoff_dist_tol = \
-            material_parameters.neighbor_cutoff_dist_tol
-        self.neighbor_cutoff_dist_tol.update(
-                    (x, [(y[index] * constants.ANG2BOHR) if y[index] else None
-                         for index in range(len(y))])
-                    for x, y in (self.neighbor_cutoff_dist_tol.items()))
+        self.v_ab = {key: [value[index] * constants.EV2HARTREE
+                           for index in range(len(value))]
+                     for key, value in material_parameters.v_ab.items()}
+
+        self.neighbor_cutoff_dist = {
+            key: [(value[index] * constants.ANG2BOHR) if value[index] else None
+                  for index in range(len(value))]
+            for key, value in material_parameters.neighbor_cutoff_dist.items()}
+
+        self.neighbor_cutoff_dist_tol = {
+            key: [(value[index] * constants.ANG2BOHR) if value[index] else None
+                  for index in range(len(value))]
+            for key, value in
+            material_parameters.neighbor_cutoff_dist_tol.items()}
+
         self.num_unique_hopping_distances = {
                         key: len(value)
                         for key, value in (self.neighbor_cutoff_dist.items())}
 
-        self.element_type_delimiter = (
-                                    material_parameters.element_type_delimiter)
+        self.element_type_delimiter = \
+            material_parameters.element_type_delimiter
         self.empty_species_type = material_parameters.empty_species_type
         self.dielectric_constant = material_parameters.dielectric_constant
 
         self.num_classes = [
                         len(set(material_parameters.class_list[element_type]))
                         for element_type in self.element_types]
+
         self.delg_0_shift_list = {
-                key: [[(value[center_site_class_index][index] * constants.EV2J
-                        * constants.J2HARTREE)
-                       for index in range(
-                                self.num_unique_hopping_distances[key])]
-                      for center_site_class_index in range(len(value))]
-                for key, value in (
-                            material_parameters.delg_0_shift_list.items())}
+            key: [[value[center_site_class_index][index] * constants.EV2HARTREE
+                   for index in range(self.num_unique_hopping_distances[key])]
+                  for center_site_class_index in range(len(value))]
+            for key, value in material_parameters.delg_0_shift_list.items()}
 
         site_list = [self.species_to_element_type_map[key]
                      for key in self.species_to_element_type_map
                      if key != self.empty_species_type]
         self.site_list = list(
                     set([item for sublist in site_list for item in sublist]))
-        self.non_empty_species_to_element_type_map = deepcopy(
-                                            self.species_to_element_type_map)
-        del self.non_empty_species_to_element_type_map[self.empty_species_type]
+
+        self.non_empty_species_to_element_type_map = {
+                        key: [value[index] for index in range(len(value))]
+                        for key, value in
+                        material_parameters.species_to_element_type_map.items()
+                        if key != self.empty_species_type}
 
         self.element_type_to_species_map = {}
         for element_type in self.element_types:
