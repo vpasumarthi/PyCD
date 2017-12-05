@@ -61,7 +61,10 @@ class Material(object):
     """
 
     def __init__(self, material_parameters):
+        """
 
+        :param material_parameters:
+        """
         # Read Input POSCAR
         [self.lattice_matrix, self.element_types,
          self.n_elements_per_unit_cell, self.total_elements_per_unit_cell,
@@ -259,6 +262,12 @@ class Neighbors(object):
     """
 
     def __init__(self, material, system_size, pbc):
+        """
+
+        :param material:
+        :param system_size:
+        :param pbc:
+        """
         self.start_time = datetime.now()
         self.material = material
         self.system_size = system_size
@@ -291,7 +300,11 @@ class Neighbors(object):
 
     def generate_system_element_index(self, system_size,
                                       quantum_indices):
-        """Returns the system_element_index of the element"""
+        """Returns the system_element_index of the element
+        :param system_size:
+        :param quantum_indices:
+        :return:
+        """
         # assert type(system_size) is np.ndarray, \
         #     'Please input system_size as a numpy array'
         # assert type(quantum_indices) is np.ndarray, \
@@ -329,7 +342,11 @@ class Neighbors(object):
 
     def generate_quantum_indices(self, system_size,
                                  system_element_index):
-        """Returns the quantum indices of the element"""
+        """Returns the quantum indices of the element
+        :param system_size:
+        :param system_element_index:
+        :return:
+        """
         # assert system_element_index >= 0, \
         #     'System Element Index cannot be negative'
         # assert system_element_index < (
@@ -357,7 +374,10 @@ class Neighbors(object):
 
     def compute_coordinates(self, system_size, system_element_index):
         """Returns the coordinates in atomic units of the given
-            system element index for a given system size"""
+            system element index for a given system size
+            :param system_size:
+            :param system_element_index:
+            :return: """
         quantum_indices = self.generate_quantum_indices(system_size,
                                                         system_element_index)
         unit_cell_translation_vector = np.dot(quantum_indices[:3],
@@ -372,7 +392,11 @@ class Neighbors(object):
     def compute_distance(self, system_size, system_element_index_1,
                          system_element_index_2):
         """Returns the distance in atomic units between the two system element
-            indices for a given system size"""
+            indices for a given system size
+            :param system_size:
+            :param system_element_index_1:
+            :param system_element_index_2:
+            :return: """
         center_coord = self.compute_coordinates(system_size,
                                                 system_element_index_1)
         neighbor_coord = self.compute_coordinates(system_size,
@@ -391,7 +415,13 @@ class Neighbors(object):
                            neighbor_site_indices, cutoff_dist_limits,
                            cutoff_dist_key):
         """Returns system_element_index_map and distances between center sites
-            and its neighbor sites within cutoff distance"""
+            and its neighbor sites within cutoff distance
+            :param bulk_sites:
+            :param center_site_indices:
+            :param neighbor_site_indices:
+            :param cutoff_dist_limits:
+            :param cutoff_dist_key:
+            :return: """
         neighbor_site_coords = bulk_sites.cell_coordinates[
                                                         neighbor_site_indices]
         neighbor_site_system_element_index_list = (
@@ -475,7 +505,9 @@ class Neighbors(object):
 
     def generate_cumulative_displacement_list(self, dst_path):
         """Returns cumulative displacement list for the given system size
-            printed out to disk"""
+            printed out to disk
+            :param dst_path:
+            :return: """
         cumulative_displacement_list = np.zeros((self.num_system_elements,
                                                  self.num_system_elements, 3))
         for center_site_index, center_coord in enumerate(
@@ -505,7 +537,11 @@ class Neighbors(object):
     def generate_neighbor_list(self, dst_path, report=1,
                                local_system_size=np.array([3, 3, 3])):
         """Adds the neighbor list to the system object and returns the
-            neighbor list"""
+            neighbor list
+            :param dst_path:
+            :param report:
+            :param local_system_size:
+            :return: """
         assert dst_path, \
             'Please provide the path to the parent directory of ' \
             'neighbor list files'
@@ -583,7 +619,16 @@ class System(object):
     def __init__(self, material_info, material_neighbors,
                  hop_neighbor_list, cumulative_displacement_list,
                  species_count, alpha, n_max, k_max):
-        """Return a system object whose size is *size*"""
+        """Return a system object whose size is *size*
+        :param material_info:
+        :param material_neighbors:
+        :param hop_neighbor_list:
+        :param cumulative_displacement_list:
+        :param species_count:
+        :param alpha:
+        :param n_max:
+        :param k_max:
+        """
         self.start_time = datetime.now()
 
         self.material = material_info
@@ -630,7 +675,10 @@ class System(object):
         self.k_max = k_max
 
     def generate_random_occupancy(self, species_count):
-        """generates initial occupancy list based on species count"""
+        """generates initial occupancy list based on species count
+        :param species_count:
+        :return:
+        """
         occupancy = []
         for species_type_index, num_species in enumerate(species_count):
             species_type = self.material.species_types[species_type_index]
@@ -662,7 +710,12 @@ class System(object):
         return occupancy
 
     def charge_config(self, occupancy, ion_charge_type, species_charge_type):
-        """Returns charge distribution of the current configuration"""
+        """Returns charge distribution of the current configuration
+        :param occupancy:
+        :param ion_charge_type:
+        :param species_charge_type:
+        :return:
+        """
 
         # generate lattice charge list
         unit_cell_charge_list = np.array(
@@ -683,6 +736,11 @@ class System(object):
         return charge_list
 
     def ewald_sum_setup(self, out_dir=None):
+        """
+
+        :param out_dir:
+        :return:
+        """
         sqrt_alpha = np.sqrt(self.alpha)
         alpha4 = 4 * self.alpha
         fourier_sum_coeff = (2 * np.pi) / self.system_volume
@@ -735,7 +793,16 @@ class Run(object):
         computing electrostatic interaction energies"""
     def __init__(self, system, precomputed_array, temp, ion_charge_type,
                  species_charge_type, n_traj, t_final, time_interval):
-        """Returns the PBC condition of the system"""
+        """Returns the PBC condition of the system
+        :param system:
+        :param precomputed_array:
+        :param temp:
+        :param ion_charge_type:
+        :param species_charge_type:
+        :param n_traj:
+        :param t_final:
+        :param time_interval:
+        """
         self.start_time = datetime.now()
 
         self.system = system
@@ -820,7 +887,11 @@ class Run(object):
 
     def do_kmc_steps(self, out_dir, report=1, random_seed=1):
         """Subroutine to run the KMC simulation by specified number
-        of steps"""
+        of steps
+        :param out_dir:
+        :param report:
+        :param random_seed:
+        :return: """
         assert out_dir, 'Please provide the destination path where \
                         simulation output files needs to be saved'
 
@@ -1055,7 +1126,18 @@ class Analysis(object):
     def __init__(self, material_info, n_dim, species_count, n_traj, t_final,
                  time_interval, msd_t_final, trim_length, repr_time='ns',
                  repr_dist='Angstrom'):
-        """"""
+        """
+        :param material_info:
+        :param n_dim:
+        :param species_count:
+        :param n_traj:
+        :param t_final:
+        :param time_interval:
+        :param msd_t_final:
+        :param trim_length:
+        :param repr_time:
+        :param repr_dist:
+        """
         self.start_time = datetime.now()
 
         self.material = material_info
@@ -1092,7 +1174,11 @@ class Analysis(object):
                                           / self.time_interval) + 1
 
     def compute_msd(self, out_dir, report=1):
-        """Returns the squared displacement of the trajectories"""
+        """Returns the squared displacement of the trajectories
+        :param out_dir:
+        :param report:
+        :return:
+        """
         assert out_dir, 'Please provide the destination path where MSD ' \
                         'output files needs to be saved'
         position_array = np.loadtxt(out_dir.joinpath('unwrapped_traj.dat'))
@@ -1179,7 +1265,15 @@ class Analysis(object):
 
     def generate_msd_plot(self, msd_data, std_data, display_error_bars,
                           species_types, file_name, out_dir):
-        """Returns a line plot of the MSD data"""
+        """Returns a line plot of the MSD data
+        :param msd_data:
+        :param std_data:
+        :param display_error_bars:
+        :param species_types:
+        :param file_name:
+        :param out_dir:
+        :return:
+        """
         assert out_dir, 'Please provide the destination path where MSD Plot ' \
                         'files needs to be saved'
         plt.switch_backend('Agg')
