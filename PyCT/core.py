@@ -1238,8 +1238,8 @@ class Analysis(object):
         np.save(msd_file_path, msd_data)
 
         if report:
-            report_file_name = ''.join('MSD_Analysis',
-                                       ('_' if file_name else ''), file_name)
+            report_file_name = ''.join(['MSD_Analysis',
+                                        ('_' if file_name else ''), file_name])
             for species_index, species_type in enumerate(species_types):
                 slope, _, _, _, _ = \
                     linregress(msd_data[self.trim_length:-self.trim_length, 0],
@@ -1298,15 +1298,15 @@ class Analysis(object):
                     intercept + slope * msd_data[
                                         self.trim_length:-self.trim_length, 0],
                     'r', label=species_type+'-fitted')
-        ax.set_xlabel(''.join('Time (', self.repr_time, ')'))
+        ax.set_xlabel(''.join(['Time (', self.repr_time, ')']))
         ax.set_ylabel('MSD (' + ('$\AA^2$' if self.repr_dist == 'angstrom'
                                  else (self.repr_dist + '^2')) + ')')
         figure_title = 'MSD_' + file_name
         ax.set_title('\n'.join(wrap(figure_title, 60)))
         plt.legend()
         plt.show()  # temp change
-        figure_name = ''.join('MSD_Plot_', file_name + '_trim='
-                       + str(self.trim_length) + '.png')
+        figure_name = ''.join(['MSD_Plot_', file_name + '_trim='
+                               + str(self.trim_length) + '.png'])
         figure_path = out_dir.joinpath(figure_name)
         plt.savefig(str(figure_path))
         return None
