@@ -1048,7 +1048,8 @@ class Run(object):
                 proc_index = np.where(k_cum_sum > rand1)[0][0]
                 rand2 = rnd.random()
                 sim_time -= np.log(rand2) / k_total
-
+                end_path_index = int(sim_time / self.time_interval)
+                
                 # TODO: Address pre-defining excess data arrays
                 if excess:
                     delg_0_array[start_path_index:end_path_index] = \
@@ -1077,7 +1078,6 @@ class Run(object):
                     self.species_charge_list[species_index]
                 current_state_charge_config[new_site_system_element_index] += \
                     self.species_charge_list[species_index]
-                end_path_index = int(sim_time / self.time_interval)
                 if end_path_index >= start_path_index + 1:
                     if end_path_index >= num_path_steps_per_traj:
                         end_path_index = num_path_steps_per_traj
