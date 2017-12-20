@@ -165,8 +165,7 @@ class Material(object):
         self.element_type_to_species_map = {}
         for element_type in self.element_types:
             species_list = []
-            for species_type_key in (
-                    self.non_empty_species_to_element_type_map.keys()):
+            for species_type_key in self.non_empty_species_to_element_type_map:
                 if element_type in (
                     self.non_empty_species_to_element_type_map[
                                                     species_type_key]):
@@ -555,7 +554,7 @@ class Neighbors(object):
         tol_dist = self.material.neighbor_cutoff_dist_tol
         element_types = self.material.element_types[:]
 
-        for cutoff_dist_key in (self.material.neighbor_cutoff_dist.keys()):
+        for cutoff_dist_key in self.material.neighbor_cutoff_dist:
             cutoff_dist_list = self.material.neighbor_cutoff_dist[
                                                             cutoff_dist_key][:]
             neighbor_list_cutoff_dist_key = []
