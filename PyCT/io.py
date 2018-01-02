@@ -19,23 +19,20 @@ def read_poscar(input_file_path):
         elif line_number == 6:
             element_types = line.split()
         elif line_number == 7:
-            n_elements_per_unit_cell = np.fromstring(
-                                            line, dtype=int, sep=' ')
-            total_elements_per_unit_cell = (
-                                        n_elements_per_unit_cell.sum())
-            fractional_unit_cell_coords = np.zeros(
-                                    (total_elements_per_unit_cell, 3))
+            n_elements = np.fromstring(line, dtype=int, sep=' ')
+            total_elements = n_elements.sum()
+            coordinates = np.zeros((total_elements, 3))
             element_index = 0
+        elif line_number == 8:
+            coordinate_type = line.split()[0]
         elif (line_number > 8
-              and element_index < total_elements_per_unit_cell):
-            fractional_unit_cell_coords[element_index, :] = (
-                                        np.fromstring(line, sep=' '))
+              and element_index < total_elements):
+            coordinates[element_index, :] = np.fromstring(line, sep=' ')
             element_index += 1
     input_file.close()
     poscar_info = np.array(
-        [lattice_matrix, element_types, n_elements_per_unit_cell,
-         total_elements_per_unit_cell, fractional_unit_cell_coords],
-                           dtype=object)
+        [lattice_matrix, element_types, n_elements, total_elements,
+         coordinate_type, coordinates], dtype=object)
     return poscar_info
 
 
