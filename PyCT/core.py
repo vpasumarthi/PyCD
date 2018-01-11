@@ -107,8 +107,8 @@ class Material(object):
                  for index in element_fract_unit_cell_coords[:, 2].argsort()])
             start_index = end_index
 
-        self.unit_cell_coords = np.dot(self.fractional_unit_cell_coords,
-                                       self.lattice_matrix)
+        self.cartesian_unit_cell_coords = np.dot(self.fractional_unit_cell_coords,
+                                                 self.lattice_matrix)
         self.charge_types = material_parameters.charge_types
 
         self.vn = material_parameters.vn / constants.SEC2AUTIME
@@ -199,7 +199,7 @@ class Material(object):
                                                     be greater than 0'
         extract_indices = np.in1d(self.element_type_index_list,
                                   element_type_indices).nonzero()[0]
-        unit_cell_element_coords = self.unit_cell_coords[extract_indices]
+        unit_cell_element_coords = self.cartesian_unit_cell_coords[extract_indices]
         num_cells = cell_size.prod()
         n_sites_per_unit_cell = self.n_elements_per_unit_cell[
                                                     element_type_indices].sum()
@@ -380,10 +380,10 @@ class Neighbors(object):
         unit_cell_translation_vector = np.dot(quantum_indices[:3],
                                               self.material.lattice_matrix)
         coordinates = (unit_cell_translation_vector
-                       + self.material.unit_cell_coords[
-                                   quantum_indices[4]
-                                   + self.material.n_elements_per_unit_cell[
-                                                :quantum_indices[3]].sum()])
+                       + self.material.cartesian_unit_cell_coords[
+                                               quantum_indices[4]
+                                               + self.material.n_elements_per_unit_cell[
+                                                            :quantum_indices[3]].sum()])
         return coordinates
 
     def compute_distance(self, system_size, system_element_index_1,
