@@ -949,7 +949,7 @@ class Run(object):
                         ewald_neut + ewald_self
                         + np.sum(np.multiply(current_state_charge_config_prod,
                                              precomputed_array)))
-            start_path_index = 1
+            start_path_index = end_path_index = 1
             if energy:
                 energy_array[0] = current_state_energy
             # TODO: How to deal excess flag?
@@ -961,8 +961,7 @@ class Run(object):
             species_displacement_vector_list = np.zeros(
                                                 (1, self.total_species * 3))
             sim_time = 0
-            break_flag = 0
-            while True:
+            while end_path_index < num_path_steps_per_traj:
                 i_proc = 0
                 delg_0_list = []
                 for species_index, species_site_system_element_index \
@@ -1080,7 +1079,6 @@ class Run(object):
                 if end_path_index >= start_path_index + 1:
                     if end_path_index >= num_path_steps_per_traj:
                         end_path_index = num_path_steps_per_traj
-                        break_flag = 1
                     unwrapped_position_array[start_path_index:end_path_index] \
                         = (unwrapped_position_array[start_path_index-1]
                            + species_displacement_vector_list)
@@ -1089,8 +1087,6 @@ class Run(object):
                     species_displacement_vector_list = np.zeros(
                                                 (1, self.total_species * 3))
                     start_path_index = end_path_index
-                    if break_flag:
-                        break
                     # TODO: Address excess flag
                     # if excess:
                     #     # TODO: Avoid using flatten
