@@ -68,12 +68,12 @@ class Material(object):
         if coordinate_type == 'Direct':
             fractional_unit_cell_coords = unit_cell_coords
         elif coordinate_type == 'Cartesian':
-            fractional_unit_cell_coords = np.dot(unit_cell_coords,
-                                                 np.linalg.inv(self.lattice_matrix))
+            fractional_unit_cell_coords = np.dot(
+                        unit_cell_coords, np.linalg.inv(self.lattice_matrix))
         self.lattice_matrix *= constants.ANG2BOHR
         self.num_element_types = len(self.element_types)
-        self.element_type_index_list = np.repeat(np.arange(self.num_element_types),
-                                                 self.n_elements_per_unit_cell)
+        self.element_type_index_list = np.repeat(
+            np.arange(self.num_element_types), self.n_elements_per_unit_cell)
         self.name = material_parameters.name
         self.species_types = material_parameters.species_types[:]
         self.num_species_types = len(self.species_types)
@@ -84,7 +84,8 @@ class Material(object):
                     material_parameters.species_to_element_type_map.items()}
 
         # Initialization
-        self.fractional_unit_cell_coords = np.zeros(fractional_unit_cell_coords.shape)
+        self.fractional_unit_cell_coords = np.zeros(
+                                            fractional_unit_cell_coords.shape)
         self.unit_cell_class_list = []
         start_index = 0
         # Reorder element-wise unit cell coordinates in ascending order
@@ -103,52 +104,56 @@ class Material(object):
                  for index in element_fract_unit_cell_coords[:, 2].argsort()])
             start_index = end_index
 
-        self.cartesian_unit_cell_coords = np.dot(self.fractional_unit_cell_coords,
-                                                 self.lattice_matrix)
+        self.cartesian_unit_cell_coords = np.dot(
+                        self.fractional_unit_cell_coords, self.lattice_matrix)
         self.charge_types = material_parameters.charge_types
 
         self.vn = material_parameters.vn / constants.SEC2AUTIME
 
         self.lambda_values = {
-                        key: [value * constants.EV2HARTREE for value in values]
-                        for key, values in material_parameters.lambda_values.items()}
+                key: [value * constants.EV2HARTREE for value in values]
+                for key, values in material_parameters.lambda_values.items()}
 
         self.v_ab = {key: [value * constants.EV2HARTREE for value in values]
                      for key, values in material_parameters.v_ab.items()}
 
         self.neighbor_cutoff_dist = {
-                    key: [(value * constants.ANG2BOHR) if value else None
-                          for value in values]
-                    for key, values in material_parameters.neighbor_cutoff_dist.items()}
+            key: [(value * constants.ANG2BOHR) if value else None
+                  for value in values]
+            for key, values in material_parameters.neighbor_cutoff_dist.items()
+            }
 
         self.neighbor_cutoff_dist_tol = {
-                                key: [(value * constants.ANG2BOHR) if value else None
-                                      for value in values]
-                                for key, values in
-                                material_parameters.neighbor_cutoff_dist_tol.items()}
+                        key: [(value * constants.ANG2BOHR) if value else None
+                              for value in values]
+                        for key, values in
+                        material_parameters.neighbor_cutoff_dist_tol.items()}
 
         self.num_unique_hopping_distances = {
-                                key: len(value)
-                                for key, value in (self.neighbor_cutoff_dist.items())}
+                        key: len(value)
+                        for key, value in (self.neighbor_cutoff_dist.items())}
 
-        self.element_type_delimiter = material_parameters.element_type_delimiter
+        self.element_type_delimiter = \
+            material_parameters.element_type_delimiter
         self.dielectric_constant = material_parameters.dielectric_constant
 
-        self.num_classes = [len(set(material_parameters.class_list[element_type]))
-                            for element_type in self.element_types]
+        self.num_classes = [
+                        len(set(material_parameters.class_list[element_type]))
+                        for element_type in self.element_types]
 
         self.delg_0_shift_list = {
-                    key: [[value[index] * constants.EV2HARTREE
-                           for index in range(self.num_unique_hopping_distances[key])]
-                          for value in values]
-                    for key, values in material_parameters.delg_0_shift_list.items()}
+            key: [[value[index] * constants.EV2HARTREE
+                   for index in range(self.num_unique_hopping_distances[key])]
+                  for value in values]
+            for key, values in material_parameters.delg_0_shift_list.items()}
 
         self.element_type_to_species_map = {}
         for element_type in self.element_types:
             species_list = []
-            for species_type_key in self.species_to_element_type_map:
-                if element_type in (self.species_to_element_type_map[species_type_key]):
-                    species_list.append(species_type_key)
+            for species_type in self.species_types:
+                if element_type in (self.species_to_element_type_map[
+                                                                species_type]):
+                    species_list.append(species_type)
             self.element_type_to_species_map[element_type] = species_list[:]
 
         self.hop_element_types = {
@@ -156,7 +161,6 @@ class Material(object):
                       for comb in list(itertools.product(
                           self.species_to_element_type_map[key], repeat=2))]
                 for key in self.species_to_element_type_map}
-        #pdb.set_trace()
 
     def generate_sites(self, element_type_indices,
                        cell_size=np.array([1, 1, 1])):
@@ -178,7 +182,8 @@ class Material(object):
                                                     be greater than 0'
         extract_indices = np.in1d(self.element_type_index_list,
                                   element_type_indices).nonzero()[0]
-        unit_cell_element_coords = self.cartesian_unit_cell_coords[extract_indices]
+        unit_cell_element_coords = self.cartesian_unit_cell_coords[
+                                                            extract_indices]
         num_cells = cell_size.prod()
         n_sites_per_unit_cell = self.n_elements_per_unit_cell[
                                                     element_type_indices].sum()
@@ -360,9 +365,9 @@ class Neighbors(object):
                                               self.material.lattice_matrix)
         coordinates = (unit_cell_translation_vector
                        + self.material.cartesian_unit_cell_coords[
-                                               quantum_indices[4]
-                                               + self.material.n_elements_per_unit_cell[
-                                                            :quantum_indices[3]].sum()])
+                                   quantum_indices[4]
+                                   + self.material.n_elements_per_unit_cell[
+                                       :quantum_indices[3]].sum()])
         return coordinates
 
     def compute_distance(self, system_size, system_element_index_1,
