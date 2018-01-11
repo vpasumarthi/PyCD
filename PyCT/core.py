@@ -43,18 +43,13 @@ class Material(object):
     :param float neighbor_cutoff_dist_tol: Tolerance value in angstrom for
             neighbor cutoff distance
     :param str element_type_delimiter: Delimiter between element types
-    :param str empty_species_type: name of the empty species type
     :param float epsilon: Dielectric constant of the material
 
     The additional attributes are:
         * **n_elements_per_unit_cell** (np.array (n)): element-type wise total
             number of elements in a unit cell
-        * **site_list** (list): list of elements that act as sites
         * **element_type_to_species_map** (dict): dictionary of element to
                 species mapping
-        * **non_empty_species_to_element_type_map** (dict): dictionary of
-                species to element mapping with elements excluding
-                empty_species_type
         * **hop_element_types** (dict): dictionary of species to
             hopping element types separated by element_type_delimiter
         * **lattice_matrix** (np.array (3x3): lattice cell matrix
@@ -76,29 +71,25 @@ class Material(object):
             fractional_unit_cell_coords = np.dot(unit_cell_coords,
                                                  np.linalg.inv(self.lattice_matrix))
         self.lattice_matrix *= constants.ANG2BOHR
-        self.n_element_types = len(self.element_types)
-        self.element_type_index_list = np.repeat(
-                                            np.arange(self.n_element_types),
-                                            self.n_elements_per_unit_cell)
-
+        self.num_element_types = len(self.element_types)
+        self.element_type_index_list = np.repeat(np.arange(self.num_element_types),
+                                                 self.n_elements_per_unit_cell)
         self.name = material_parameters.name
         self.species_types = material_parameters.species_types[:]
         self.num_species_types = len(self.species_types)
         self.species_charge_list = material_parameters.species_charge_list
-
         self.species_to_element_type_map = {
                     key: values
                     for key, values in
                     material_parameters.species_to_element_type_map.items()}
 
         # Initialization
-        self.fractional_unit_cell_coords = np.zeros(
-                                            fractional_unit_cell_coords.shape)
+        self.fractional_unit_cell_coords = np.zeros(fractional_unit_cell_coords.shape)
         self.unit_cell_class_list = []
         start_index = 0
         # Reorder element-wise unit cell coordinates in ascending order
         # of z-coordinate
-        for element_type_index in range(self.n_element_types):
+        for element_type_index in range(self.num_element_types):
             element_fract_unit_cell_coords = fractional_unit_cell_coords[
                             self.element_type_index_list == element_type_index]
             end_index = (start_index
@@ -119,61 +110,44 @@ class Material(object):
         self.vn = material_parameters.vn / constants.SEC2AUTIME
 
         self.lambda_values = {
-                key: [value * constants.EV2HARTREE for value in values]
-                for key, values in material_parameters.lambda_values.items()}
+                        key: [value * constants.EV2HARTREE for value in values]
+                        for key, values in material_parameters.lambda_values.items()}
 
         self.v_ab = {key: [value * constants.EV2HARTREE for value in values]
                      for key, values in material_parameters.v_ab.items()}
 
         self.neighbor_cutoff_dist = {
-            key: [(value * constants.ANG2BOHR) if value else None
-                  for value in values]
-            for key, values in material_parameters.neighbor_cutoff_dist.items()}
+                    key: [(value * constants.ANG2BOHR) if value else None
+                          for value in values]
+                    for key, values in material_parameters.neighbor_cutoff_dist.items()}
 
         self.neighbor_cutoff_dist_tol = {
-            key: [(value * constants.ANG2BOHR) if value else None
-                  for value in values]
-            for key, values in
-            material_parameters.neighbor_cutoff_dist_tol.items()}
+                                key: [(value * constants.ANG2BOHR) if value else None
+                                      for value in values]
+                                for key, values in
+                                material_parameters.neighbor_cutoff_dist_tol.items()}
 
         self.num_unique_hopping_distances = {
-                        key: len(value)
-                        for key, value in (self.neighbor_cutoff_dist.items())}
+                                key: len(value)
+                                for key, value in (self.neighbor_cutoff_dist.items())}
 
-        self.element_type_delimiter = \
-            material_parameters.element_type_delimiter
-        self.empty_species_type = material_parameters.empty_species_type
+        self.element_type_delimiter = material_parameters.element_type_delimiter
         self.dielectric_constant = material_parameters.dielectric_constant
 
-        self.num_classes = [
-                        len(set(material_parameters.class_list[element_type]))
-                        for element_type in self.element_types]
+        self.num_classes = [len(set(material_parameters.class_list[element_type]))
+                            for element_type in self.element_types]
 
         self.delg_0_shift_list = {
-            key: [[value[index] * constants.EV2HARTREE
-                   for index in range(self.num_unique_hopping_distances[key])]
-                  for value in values]
-            for key, values in material_parameters.delg_0_shift_list.items()}
-
-        site_list = [self.species_to_element_type_map[key]
-                     for key in self.species_to_element_type_map
-                     if key != self.empty_species_type]
-        self.site_list = list(
-                    set([item for sublist in site_list for item in sublist]))
-
-        self.non_empty_species_to_element_type_map = {
-                        key: values
-                        for key, values in
-                        material_parameters.species_to_element_type_map.items()
-                        if key != self.empty_species_type}
+                    key: [[value[index] * constants.EV2HARTREE
+                           for index in range(self.num_unique_hopping_distances[key])]
+                          for value in values]
+                    for key, values in material_parameters.delg_0_shift_list.items()}
 
         self.element_type_to_species_map = {}
         for element_type in self.element_types:
             species_list = []
-            for species_type_key in self.non_empty_species_to_element_type_map:
-                if element_type in (
-                    self.non_empty_species_to_element_type_map[
-                                                    species_type_key]):
+            for species_type_key in self.species_to_element_type_map:
+                if element_type in (self.species_to_element_type_map[species_type_key]):
                     species_list.append(species_type_key)
             self.element_type_to_species_map[element_type] = species_list[:]
 
@@ -181,8 +155,8 @@ class Material(object):
                 key: [self.element_type_delimiter.join(comb)
                       for comb in list(itertools.product(
                           self.species_to_element_type_map[key], repeat=2))]
-                for key in self.species_to_element_type_map
-                if key != self.empty_species_type}
+                for key in self.species_to_element_type_map}
+        #pdb.set_trace()
 
     def generate_sites(self, element_type_indices,
                        cell_size=np.array([1, 1, 1])):
@@ -281,7 +255,7 @@ class Neighbors(object):
                 self.num_cells * self.material.total_elements_per_unit_cell)
 
         # generate all sites in the system
-        self.element_type_indices = range(self.material.n_element_types)
+        self.element_type_indices = range(self.material.num_element_types)
         self.bulk_sites = self.material.generate_sites(
                                 self.element_type_indices, self.system_size)
 
