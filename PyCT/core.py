@@ -709,10 +709,10 @@ class System(object):
                                                         species_type_index])
         return charge_list
 
-    def ewald_sum_setup(self, out_dir):
+    def ewald_sum_setup(self, dst_path):
         """
 
-        :param out_dir:
+        :param dst_path:
         :return:
         """
         sqrt_alpha = np.sqrt(self.alpha)
@@ -757,7 +757,7 @@ class System(object):
         precomputed_array /= self.material.dielectric_constant
 
         file_name = 'precomputed_array'
-        generate_report(self.start_time, out_dir, file_name)
+        generate_report(self.start_time, dst_path, file_name)
         return precomputed_array
 
 
@@ -858,27 +858,27 @@ class Run(object):
         # total number of species
         self.total_species = self.system.species_count.sum()
 
-    def do_kmc_steps(self, out_dir, random_seed):
+    def do_kmc_steps(self, dst_path, random_seed):
         """Subroutine to run the KMC simulation by specified number
         of steps
-        :param out_dir:
+        :param dst_path:
         :param random_seed:
         :return: """
-        assert out_dir, 'Please provide the destination path where \
-                        simulation output files needs to be saved'
+        assert dst_path, 'Please provide the destination path where \
+                          simulation output files needs to be saved'
 
         excess = 0
         energy = 1
-        unwrapped_traj_file_name = out_dir.joinpath('unwrapped_traj.dat')
+        unwrapped_traj_file_name = dst_path.joinpath('unwrapped_traj.dat')
         open(unwrapped_traj_file_name, 'wb').close()
         if energy:
-            energy_traj_file_name = out_dir.joinpath('energy_traj.dat')
+            energy_traj_file_name = dst_path.joinpath('energy_traj.dat')
             open(energy_traj_file_name, 'wb').close()
 
         if excess:
-            wrapped_traj_file_name = out_dir.joinpath('wrapped_traj.dat')
-            delg_0_traj_file_name = out_dir.joinpath('delG0_traj.dat')
-            potential_traj_file_name = out_dir.joinpath('potential_traj.dat')
+            wrapped_traj_file_name = dst_path.joinpath('wrapped_traj.dat')
+            delg_0_traj_file_name = dst_path.joinpath('delG0_traj.dat')
+            potential_traj_file_name = dst_path.joinpath('potential_traj.dat')
             open(wrapped_traj_file_name, 'wb').close()
             open(delg_0_traj_file_name, 'wb').close()
             open(potential_traj_file_name, 'wb').close()
@@ -1085,7 +1085,7 @@ class Run(object):
                     np.savetxt(potential_traj_file, potential_array)
 
         file_name = 'Run'
-        generate_report(self.start_time, out_dir, file_name)
+        generate_report(self.start_time, dst_path, file_name)
         return None
 
 
@@ -1141,14 +1141,14 @@ class Analysis(object):
         self.num_msd_steps_per_traj = int(self.msd_t_final
                                           / self.time_interval) + 1
 
-    def compute_msd(self, out_dir):
+    def compute_msd(self, dst_path):
         """Returns the squared displacement of the trajectories
-        :param out_dir:
+        :param dst_path:
         :return:
         """
-        assert out_dir, 'Please provide the destination path where MSD ' \
-                        'output files needs to be saved'
-        position_array = np.loadtxt(out_dir.joinpath('unwrapped_traj.dat'))
+        assert dst_path, 'Please provide the destination path where MSD ' \
+                         'output files needs to be saved'
+        position_array = np.loadtxt(dst_path.joinpath('unwrapped_traj.dat'))
         num_traj_recorded = int(len(position_array)
                                 / self.num_path_steps_per_traj)
         position_array = (
@@ -1202,7 +1202,7 @@ class Analysis(object):
                      + (',n_traj: %1.2E' % num_traj_recorded
                         if num_traj_recorded != self.n_traj else ''))
         msd_file_name = ''.join(['MSD_Data_', file_name, '.npy'])
-        msd_file_path = out_dir.joinpath(msd_file_name)
+        msd_file_path = dst_path.joinpath(msd_file_name)
         species_types = [species_type
                          for index, species_type in enumerate(
                                             self.material.species_types)
@@ -1221,7 +1221,7 @@ class Analysis(object):
             prefix = ('Estimated value of {:s} diffusivity is: '
                       '{:4.3f} um2/s\n'.format(species_type, species_diff))
 
-        generate_report(self.start_time, out_dir, report_file_name, prefix)
+        generate_report(self.start_time, dst_path, report_file_name, prefix)
 
         return_msd_data = ReturnValues(msd_data=msd_data,
                                        std_data=std_data,
@@ -1230,17 +1230,17 @@ class Analysis(object):
         return return_msd_data
 
     def generate_msd_plot(self, msd_data, std_data, display_error_bars,
-                          species_types, file_name, out_dir):
+                          species_types, file_name, dst_path):
         """Returns a line plot of the MSD data
         :param msd_data:
         :param std_data:
         :param display_error_bars:
         :param species_types:
         :param file_name:
-        :param out_dir:
+        :param dst_path:
         :return:
         """
-        assert out_dir, 'Please provide the destination path where MSD Plot ' \
+        assert dst_path, 'Please provide the destination path where MSD Plot ' \
                         'files needs to be saved'
         plt.switch_backend('Agg')
         fig = plt.figure()
@@ -1278,7 +1278,7 @@ class Analysis(object):
         plt.show()  # temp change
         figure_name = ''.join(['MSD_Plot_', file_name + '_trim='
                                + str(self.trim_length) + '.png'])
-        figure_path = out_dir.joinpath(figure_name)
+        figure_path = dst_path.joinpath(figure_name)
         plt.savefig(str(figure_path))
         return None
 
