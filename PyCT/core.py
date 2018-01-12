@@ -157,10 +157,11 @@ class Material(object):
                                                                 species_type)
 
         self.hop_element_types = {
-                key: [self.element_type_delimiter.join(comb)
-                      for comb in list(itertools.product(
-                          self.species_to_element_type_map[key], repeat=2))]
-                for key in self.species_to_element_type_map}
+            species_type: [self.element_type_delimiter.join(comb)
+                           for comb in list(itertools.product(
+                               self.species_to_element_type_map[species_type],
+                               repeat=2))]
+            for species_type in self.species_types}
 
     def generate_sites(self, element_type_indices,
                        cell_size=np.array([1, 1, 1])):
