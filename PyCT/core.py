@@ -7,6 +7,7 @@ systems
 from pathlib import Path
 from datetime import datetime
 import random as rnd
+from collections import defaultdict
 import itertools
 import pdb
 
@@ -147,14 +148,13 @@ class Material(object):
                   for value in values]
             for key, values in material_parameters.delg_0_shift_list.items()}
 
-        self.element_type_to_species_map = {}
+        self.element_type_to_species_map = defaultdict(list)
         for element_type in self.element_types:
-            species_list = []
             for species_type in self.species_types:
                 if element_type in (self.species_to_element_type_map[
                                                                 species_type]):
-                    species_list.append(species_type)
-            self.element_type_to_species_map[element_type] = species_list[:]
+                    self.element_type_to_species_map[element_type].append(
+                                                                species_type)
 
         self.hop_element_types = {
                 key: [self.element_type_delimiter.join(comb)
