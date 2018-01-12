@@ -6,33 +6,59 @@ import numpy as np
 
 
 def read_poscar(input_file_path):
+    input_file = open(input_file_path, 'r')
+    element_types_line_number = 6
+    for line_index, line in enumerate(input_file):
+        line_number = line_index + 1
+        if line_number == element_types_line_number:
+            prospective_element_types = line[:-1].split()
+            element_types_exist = prospective_element_types[0].isalpha()
+            break
+    input_file.close()
+
     lattice_matrix = np.zeros((3, 3))
     lattice_parameter_index = 0
     lattice_parameters_line_range = range(3, 6)
+    element_types_line_number = 6 * element_types_exist
+    num_elements_line_number = 6 + element_types_exist
+    coordinate_type_number = 7 + element_types_exist
+    coord_start_line_number = 8 + element_types_exist
     input_file = open(input_file_path, 'r')
     for line_index, line in enumerate(input_file):
         line_number = line_index + 1
-        if line_number in lattice_parameters_line_range:
+        if line_number == 1 and not element_types_exist:
+            element_types = line.split()
+        elif line_number in lattice_parameters_line_range:
             lattice_matrix[lattice_parameter_index, :] = (
                                         np.fromstring(line, sep=' '))
             lattice_parameter_index += 1
-        elif line_number == 6:
+        elif (line_number == element_types_line_number
+              and element_types_exist):
             element_types = line.split()
-        elif line_number == 7:
-            n_elements = np.fromstring(line, dtype=int, sep=' ')
-            total_elements = n_elements.sum()
+        elif line_number == num_elements_line_number:
+            num_elements = np.fromstring(line, dtype=int, sep=' ')
+            total_elements = num_elements.sum()
             coordinates = np.zeros((total_elements, 3))
-            element_index = 0
-        elif line_number == 8:
+        elif line_number == coordinate_type_number:
             coordinate_type = line.split()[0]
-        elif (line_number > 8
-              and element_index < total_elements):
+        elif line_number == coord_start_line_number:
+            element_index = 0
             coordinates[element_index, :] = np.fromstring(line, sep=' ')
+            coordinate_string_length = len(line.split()[0])
+            if coordinate_string_length == 18:
+                file_format = 'VASP'
+            elif coordinate_string_length == 11:
+                file_format = 'VESTA'
+            else:
+                file_format = 'unknown'
+        elif ((line_number > coord_start_line_number)
+              and (element_index < total_elements - 1)):
             element_index += 1
+            coordinates[element_index, :] = np.fromstring(line, sep=' ')
     input_file.close()
     poscar_info = np.array(
-        [lattice_matrix, element_types, n_elements, total_elements,
-         coordinate_type, coordinates], dtype=object)
+        [lattice_matrix, element_types, num_elements, total_elements,
+         coordinate_type, coordinates, file_format], dtype=object)
     return poscar_info
 
 

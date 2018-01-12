@@ -64,7 +64,7 @@ class Material(object):
         # Read Input POSCAR
         [self.lattice_matrix, self.element_types,
          self.n_elements_per_unit_cell, self.total_elements_per_unit_cell,
-         coordinate_type, unit_cell_coords] = (
+         coordinate_type, unit_cell_coords, _] = (
                     read_poscar(material_parameters.input_coord_file_location))
         if coordinate_type == 'Direct':
             fractional_unit_cell_coords = unit_cell_coords
