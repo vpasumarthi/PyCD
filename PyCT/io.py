@@ -36,49 +36,51 @@ def read_poscar(input_file_path):
     return poscar_info
 
 
-def write_poscar(srcFilePath, dstFilePath, fileFormat, elementTypes_cluster,
-                 nElements_cluster, coordinateType, coordinates_cluster):
-    unmodifiedLineNumberLimit = 5
-    srcFile = open(srcFilePath, 'r')
-    open(dstFilePath, 'w').close()
-    dstFile = open(dstFilePath, 'a')
-    for lineIndex, line in enumerate(srcFile):
-        lineNumber = lineIndex + 1
-        if lineNumber <= unmodifiedLineNumberLimit:
-            dstFile.write(line)
+def write_poscar(src_file_path, dst_file_path, file_format,
+                 element_types_cluster, num_elements_cluster, coordinate_type,
+                 coordinates_cluster):
+    unmodified_line_number_limit = 5
+    src_file = open(src_file_path, 'r')
+    open(dst_file_path, 'w').close()
+    dst_file = open(dst_file_path, 'a')
+    for line_index, line in enumerate(src_file):
+        line_number = line_index + 1
+        if line_number <= unmodified_line_number_limit:
+            dst_file.write(line)
         else:
             break
-    srcFile.close()
+    src_file.close()
 
-    elementTypesLine = (' ' * 3 + (' ' * 4).join(elementTypes_cluster) + '\n')
-    dstFile.write(elementTypesLine)
-    nElementsLine = (' ' * 3 + (' ' * 4).join(map(str, nElements_cluster))
-                     + '\n')
-    dstFile.write(nElementsLine)
-    dstFile.write(coordinateType + '\n')
-    for elementCoordinates in coordinates_cluster:
-        if fileFormat == 'VASP' or fileFormat == 'unknown':
+    element_types_line = (' ' * 3 + (' ' * 4).join(element_types_cluster)
+                          + '\n')
+    dst_file.write(element_types_line)
+    num_elements_line = (
+            ' ' * 3 + (' ' * 4).join(map(str, num_elements_cluster)) + '\n')
+    dst_file.write(num_elements_line)
+    dst_file.write(coordinate_type + '\n')
+    for element_coordinates in coordinates_cluster:
+        if file_format == 'VASP' or file_format == 'unknown':
             line = (
                 ''.join([
                     ' ' * 2,
-                    '%18.16f' % elementCoordinates[0],
+                    '%18.16f' % element_coordinates[0],
                     ' ' * 2,
-                    '%18.16f' % elementCoordinates[1],
+                    '%18.16f' % element_coordinates[1],
                     ' ' * 2,
-                    '%18.16f' % elementCoordinates[2]])
+                    '%18.16f' % element_coordinates[2]])
                 + '\n')
-        elif fileFormat == 'VESTA':
+        elif file_format == 'VESTA':
             line = (
                 ''.join([
                     ' ' * 5,
-                    '%11.9f' % elementCoordinates[0],
+                    '%11.9f' % element_coordinates[0],
                     ' ' * 9,
-                    '%11.9f' % elementCoordinates[1],
+                    '%11.9f' % element_coordinates[1],
                     ' ' * 9,
-                    '%11.9f' % elementCoordinates[2]])
+                    '%11.9f' % element_coordinates[2]])
                 + '\n')
-        dstFile.write(line)
-    dstFile.close()
+        dst_file.write(line)
+    dst_file.close()
     return None
 
 
