@@ -36,7 +36,9 @@ def material_setup(input_directory_path, system_size, pbc,
 
     # generate neighbor list
     if generate_hop_neighbor_list:
-        material_neighbors.generate_neighbor_list(input_directory_path)
+        local_system_size = np.array([3, 3, 3])
+        material_neighbors.generate_neighbor_list(input_directory_path,
+                                                  local_system_size)
 
     # generate cumulative displacement list
     if generate_cum_disp_list:

@@ -163,8 +163,7 @@ class Material(object):
                                repeat=2))]
             for species_type in self.species_types}
 
-    def generate_sites(self, element_type_indices,
-                       cell_size=np.array([1, 1, 1])):
+    def generate_sites(self, element_type_indices, cell_size):
         """Returns system_element_indices and coordinates of specified elements
             in a cell of size *cell_size*
 
@@ -280,8 +279,7 @@ class Neighbors(object):
                                 system_size), self.material.lattice_matrix))
                     index += 1
 
-    def generate_system_element_index(self, system_size,
-                                      quantum_indices):
+    def generate_system_element_index(self, system_size, quantum_indices):
         """Returns the system_element_index of the element
         :param system_size:
         :param quantum_indices:
@@ -322,8 +320,7 @@ class Neighbors(object):
                                     * system_size[-index:].prod())
         return system_element_index
 
-    def generate_quantum_indices(self, system_size,
-                                 system_element_index):
+    def generate_quantum_indices(self, system_size, system_element_index):
         """Returns the quantum indices of the element
         :param system_size:
         :param system_element_index:
@@ -516,12 +513,10 @@ class Neighbors(object):
                 cumulative_displacement_list)
         return None
 
-    def generate_neighbor_list(self, dst_path, report=1,
-                               local_system_size=np.array([3, 3, 3])):
+    def generate_neighbor_list(self, dst_path, local_system_size):
         """Adds the neighbor list to the system object and returns the
             neighbor list
             :param dst_path:
-            :param report:
             :param local_system_size:
             :return: """
         assert dst_path, \
@@ -582,9 +577,8 @@ class Neighbors(object):
                                             neighbor_list_cutoff_dist_key[:])
         np.save(hop_neighbor_list_file_path, hop_neighbor_list)
 
-        if report:
-            file_name = 'neighbor_list'
-            generate_report(self.start_time, dst_path, file_name)
+        file_name = 'neighbor_list'
+        generate_report(self.start_time, dst_path, file_name)
         return None
 
 
@@ -715,7 +709,7 @@ class System(object):
                                                         species_type_index])
         return charge_list
 
-    def ewald_sum_setup(self, out_dir=None):
+    def ewald_sum_setup(self, out_dir):
         """
 
         :param out_dir:
@@ -762,9 +756,8 @@ class System(object):
 
         precomputed_array /= self.material.dielectric_constant
 
-        if out_dir:
-            file_name = 'precomputed_array'
-            generate_report(self.start_time, out_dir, file_name)
+        file_name = 'precomputed_array'
+        generate_report(self.start_time, out_dir, file_name)
         return precomputed_array
 
 
@@ -865,11 +858,10 @@ class Run(object):
         # total number of species
         self.total_species = self.system.species_count.sum()
 
-    def do_kmc_steps(self, out_dir, report=1, random_seed=1):
+    def do_kmc_steps(self, out_dir, random_seed):
         """Subroutine to run the KMC simulation by specified number
         of steps
         :param out_dir:
-        :param report:
         :param random_seed:
         :return: """
         assert out_dir, 'Please provide the destination path where \
@@ -1091,9 +1083,9 @@ class Run(object):
                 with open(potential_traj_file_name, 'ab') as \
                         potential_traj_file:
                     np.savetxt(potential_traj_file, potential_array)
-        if report:
-            file_name = 'Run'
-            generate_report(self.start_time, out_dir, file_name)
+
+        file_name = 'Run'
+        generate_report(self.start_time, out_dir, file_name)
         return None
 
 
@@ -1149,10 +1141,9 @@ class Analysis(object):
         self.num_msd_steps_per_traj = int(self.msd_t_final
                                           / self.time_interval) + 1
 
-    def compute_msd(self, out_dir, report=1):
+    def compute_msd(self, out_dir):
         """Returns the squared displacement of the trajectories
         :param out_dir:
-        :param report:
         :return:
         """
         assert out_dir, 'Please provide the destination path where MSD ' \
@@ -1218,20 +1209,19 @@ class Analysis(object):
                          if index not in non_existent_species_indices]
         np.save(msd_file_path, msd_data)
 
-        if report:
-            report_file_name = ''.join(['MSD_Analysis',
-                                        ('_' if file_name else ''), file_name])
-            for species_index, species_type in enumerate(species_types):
-                slope, _, _, _, _ = \
-                    linregress(msd_data[self.trim_length:-self.trim_length, 0],
-                               msd_data[self.trim_length:-self.trim_length,
-                               species_index + 1])
-                species_diff = (slope * constants.ANG2UM ** 2
-                                * constants.SEC2NS / (2 * self.n_dim))
-                prefix = ('Estimated value of {:s} diffusivity is: '
-                          '{:4.3f} um2/s\n'.format(species_type, species_diff))
+        report_file_name = ''.join(['MSD_Analysis',
+                             ('_' if file_name else ''), file_name])
+        for species_index, species_type in enumerate(species_types):
+            slope, _, _, _, _ = \
+                linregress(msd_data[self.trim_length:-self.trim_length, 0],
+                           msd_data[self.trim_length:-self.trim_length,
+                           species_index + 1])
+            species_diff = (slope * constants.ANG2UM ** 2
+                            * constants.SEC2NS / (2 * self.n_dim))
+            prefix = ('Estimated value of {:s} diffusivity is: '
+                      '{:4.3f} um2/s\n'.format(species_type, species_diff))
 
-            generate_report(self.start_time, out_dir, report_file_name, prefix)
+        generate_report(self.start_time, out_dir, report_file_name, prefix)
 
         return_msd_data = ReturnValues(msd_data=msd_data,
                                        std_data=std_data,
