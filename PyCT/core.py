@@ -62,10 +62,15 @@ class Material(object):
         :param material_parameters:
         """
         # Read Input POSCAR
-        [self.lattice_matrix, self.element_types,
-         self.n_elements_per_unit_cell, self.total_elements_per_unit_cell,
-         coordinate_type, unit_cell_coords, _] = (
+        poscar_info = (
                     read_poscar(material_parameters.input_coord_file_location))
+        self.lattice_matrix = poscar_info['lattice_matrix']
+        self.element_types = poscar_info['element_types']
+        self.n_elements_per_unit_cell = poscar_info['num_elements']
+        self.total_elements_per_unit_cell = poscar_info['total_elements']
+        coordinate_type = poscar_info['coordinate_type']
+        unit_cell_coords = poscar_info['coordinates']
+
         if coordinate_type == 'Direct':
             fractional_unit_cell_coords = unit_cell_coords
         elif coordinate_type == 'Cartesian':
