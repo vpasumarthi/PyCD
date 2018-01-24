@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 from datetime import datetime
+from collections import namedtuple
 
 import numpy as np
 
@@ -56,9 +57,12 @@ def read_poscar(input_file_path):
             element_index += 1
             coordinates[element_index, :] = np.fromstring(line, sep=' ')
     input_file.close()
-    poscar_info = np.array(
-        [lattice_matrix, element_types, num_elements, total_elements,
-         coordinate_type, coordinates, file_format], dtype=object)
+    poscar_info_keys = {'lattice_matrix', 'element_types', 'num_elements',
+                        'total_elements', 'coordinate_type', 'coordinates',
+                        'file_format'}
+    poscar_info = {}
+    for key in poscar_info_keys:
+        poscar_info[key] = locals()[key]
     return poscar_info
 
 
