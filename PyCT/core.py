@@ -875,7 +875,7 @@ class Run(object):
                                                     site_element_type_index])
         return element_type_element_index
 
-    def do_kmc_steps(self, dst_path, random_seed):
+    def do_kmc_steps(self, dst_path, random_seed, output_data):
         """Subroutine to run the KMC simulation by specified number
         of steps
         :param dst_path:
@@ -884,35 +884,26 @@ class Run(object):
         assert dst_path, 'Please provide the destination path where \
                           simulation output files needs to be saved'
 
-        excess = 0
-        energy = 0
-        unwrapped_traj_file_name = dst_path.joinpath('unwrapped_traj.dat')
-        open(unwrapped_traj_file_name, 'wb').close()
-        if energy:
-            energy_traj_file_name = dst_path.joinpath('energy_traj.dat')
-            open(energy_traj_file_name, 'wb').close()
-
-        if excess:
-            wrapped_traj_file_name = dst_path.joinpath('wrapped_traj.dat')
-            delg_0_traj_file_name = dst_path.joinpath('delG0_traj.dat')
-            potential_traj_file_name = dst_path.joinpath('potential_traj.dat')
-            open(wrapped_traj_file_name, 'wb').close()
-            open(delg_0_traj_file_name, 'wb').close()
-            open(potential_traj_file_name, 'wb').close()
-
         rnd.seed(random_seed)
         num_path_steps_per_traj = int(self.t_final / self.time_interval) + 1
-        unwrapped_position_array = np.zeros((num_path_steps_per_traj,
-                                             self.total_species * 3))
-        if energy:
-            energy_array = np.zeros(num_path_steps_per_traj)
+        for output_data_type, output_attributes in output_data.items():
+            if output_attributes[0]:
+                output_file_name = dst_path.joinpath(output_attributes[1])
+                open(output_file_name, 'wb').close()
+                if output_data_type == 'unwrapped_traj':
+                    unwrapped_position_array = np.zeros(
+                            (num_path_steps_per_traj, self.total_species * 3))
+                elif output_data_type == 'wrapped_traj':
+                    wrapped_position_array = np.zeros((num_path_steps_per_traj,
+                                                       self.total_species * 3))
+                elif output_data_type == 'energy':
+                    energy_array = np.zeros(num_path_steps_per_traj)
+                elif output_data_type == 'delg_0':
+                    delg_0_array = np.zeros(num_path_steps_per_traj)
+                elif output_data_type == 'potential':
+                    potential_array = np.zeros((num_path_steps_per_traj,
+                                                self.total_species))
 
-        if excess:
-            wrapped_position_array = np.zeros((num_path_steps_per_traj,
-                                               self.total_species * 3))
-            delg_0_array = np.zeros(num_path_steps_per_traj)
-            potential_array = np.zeros((num_path_steps_per_traj,
-                                        self.total_species))
         k_list = np.zeros(self.n_proc)
         neighbor_site_system_element_index_list = np.zeros(self.n_proc,
                                                            dtype=int)
@@ -943,14 +934,8 @@ class Run(object):
                         + np.sum(np.multiply(current_state_charge_config_prod,
                                              precomputed_array)))
             start_path_index = end_path_index = 1
-            if energy:
+            if output_data['energy'][0]:
                 energy_array[0] = current_state_energy
-            # TODO: How to deal excess flag?
-            # if excess:
-            #     # TODO: Avoid using flatten
-            #     wrapped_position_array[pathIndex] = (
-            #                                 self.system_coordinates[
-            #                     current_state_occupancy].flatten())
             species_displacement_vector_list = np.zeros(
                                                 (1, self.total_species * 3))
             sim_time = 0
@@ -1032,8 +1017,7 @@ class Run(object):
                 sim_time -= np.log(rand2) / k_total
                 end_path_index = int(sim_time / self.time_interval)
                 
-                # TODO: Address pre-defining excess data arrays
-                if excess:
+                if output_data['delg_0'][0]:
                     delg_0_array[start_path_index:end_path_index] = \
                         delg_0_list[proc_index]
                 species_index = self.n_proc_species_index_list[proc_index]
@@ -1066,31 +1050,27 @@ class Run(object):
                     unwrapped_position_array[start_path_index:end_path_index] \
                         = (unwrapped_position_array[start_path_index-1]
                            + species_displacement_vector_list)
-                    if energy:
+                    if output_data['energy'][0]:
                         energy_array[start_path_index:end_path_index] = \
                             current_state_energy
                     species_displacement_vector_list = np.zeros(
                                                 (1, self.total_species * 3))
                     start_path_index = end_path_index
-                    # TODO: Address excess flag
-                    # if excess:
-                    #     # TODO: Avoid using flatten
-                    #     wrapped_position_array[pathIndex] \
-                    #         = self.system_coordinates[
-                    #             current_state_occupancy].flatten()
-            with open(unwrapped_traj_file_name, 'ab') as unwrapped_traj_file:
-                np.savetxt(unwrapped_traj_file, unwrapped_position_array)
-            if energy:
-                with open(energy_traj_file_name, 'ab') as energy_traj_file:
-                    np.savetxt(energy_traj_file, energy_array)
-            if excess:
-                with open(wrapped_traj_file_name, 'ab') as wrapped_traj_file:
-                    np.savetxt(wrapped_traj_file, wrapped_position_array)
-                with open(delg_0_traj_file_name, 'ab') as delG0_traj_file:
-                    np.savetxt(delG0_traj_file, delg_0_array)
-                with open(potential_traj_file_name, 'ab') as \
-                        potential_traj_file:
-                    np.savetxt(potential_traj_file, potential_array)
+
+            for output_data_type, output_attributes in output_data.items():
+                if output_attributes[0]:
+                    output_file_name = dst_path.joinpath(output_attributes[1])
+                    with open(output_file_name, 'ab') as output_file:
+                        if output_data_type == 'unwrapped_traj':
+                            np.savetxt(output_file, unwrapped_position_array)
+                        elif output_data_type == 'wrapped_traj':
+                            np.savetxt(output_file, wrapped_position_array)
+                        elif output_data_type == 'energy':
+                            np.savetxt(output_file, energy_array)
+                        elif output_data_type == 'delg_0':
+                            np.savetxt(output_file, delg_0_array)
+                        elif output_data_type == 'potential':
+                            np.savetxt(output_file, potential_array)
 
         file_name = 'Run'
         generate_report(self.start_time, dst_path, file_name)
