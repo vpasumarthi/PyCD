@@ -969,10 +969,6 @@ class Run(object):
                             element_type_element_index_list[i_proc] = \
                                 element_type_element_index
                             neighbor_index_list[i_proc] = neighbor_index
-                            # TODO: Print out a prompt about the
-                            # assumption; detailed comment here.
-                            # <Using species charge to compute change
-                            # in energy> May be print log report
                             delg_0_ewald = (
                                 self.species_charge_list[species_index]
                                 * (2 * np.dot(
