@@ -864,6 +864,17 @@ class Run(object):
         # total number of species
         self.total_species = self.system.species_count.sum()
 
+    def compute_element_type_element_index(self, i_proc, system_element_index):
+        site_element_type_index = self.n_proc_site_element_type_index_list[
+                                                                        i_proc]
+        element_type_element_index = (
+            system_element_index // self.material.total_elements_per_unit_cell
+            * self.material.n_elements_per_unit_cell[site_element_type_index]
+            + system_element_index % self.material.total_elements_per_unit_cell
+            - self.head_start_n_elements_per_unit_cell_cum_sum[
+                                                    site_element_type_index])
+        return element_type_element_index
+
     def do_kmc_steps(self, dst_path, random_seed):
         """Subroutine to run the KMC simulation by specified number
         of steps
@@ -951,17 +962,9 @@ class Run(object):
                     species_index = self.n_proc_species_index_list[i_proc]
                     hop_element_type = self.n_proc_hop_element_type_list[
                                                                         i_proc]
-                    site_element_type_index = (
-                            self.n_proc_site_element_type_index_list[i_proc])
                     element_type_element_index = (
-                        species_site_system_element_index
-                        // self.material.total_elements_per_unit_cell
-                        * self.material.n_elements_per_unit_cell[
-                                                    site_element_type_index]
-                        + species_site_system_element_index
-                        % self.material.total_elements_per_unit_cell
-                        - self.head_start_n_elements_per_unit_cell_cum_sum[
-                                                    site_element_type_index])
+                                self.compute_element_type_element_index(
+                                    i_proc, species_site_system_element_index))
                     for hop_dist_type in range(self.len_hop_dist_type_list[
                                                             species_index]):
                         local_neighbor_site_system_element_index_list = (
