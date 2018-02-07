@@ -889,7 +889,6 @@ class Run(object):
             open(potential_traj_file_name, 'wb').close()
 
         rnd.seed(random_seed)
-        n_traj = self.n_traj
         num_path_steps_per_traj = int(self.t_final / self.time_interval) + 1
         unwrapped_position_array = np.zeros((num_path_steps_per_traj,
                                              self.total_species * 3))
@@ -915,7 +914,7 @@ class Run(object):
         ewald_neut = - (np.pi * (system_charge**2)
                         / (2 * self.system.system_volume * self.system.alpha))
         precomputed_array = self.precomputed_array
-        for _ in range(n_traj):
+        for _ in range(self.n_traj):
             current_state_occupancy = self.system.generate_random_occupancy(
                                                     self.system.species_count)
             current_state_charge_config = self.system.charge_config(
