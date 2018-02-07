@@ -842,6 +842,7 @@ class Run(object):
                 if self.system.species_count[species_type_index] != 0:
                     num_neighbors = self.system.hop_neighbor_list[
                         hop_element_type][hop_dist_type_index].num_neighbors
+                    # TODO: Use num_neighbors instead of num_neighbors[0]
                     self.n_proc += num_neighbors[0]
                     self.n_proc_hop_element_type_list.extend(
                                         [hop_element_type] * num_neighbors[0])
@@ -945,9 +946,8 @@ class Run(object):
             while end_path_index < num_path_steps_per_traj:
                 i_proc = 0
                 delg_0_list = []
-                for species_index, species_site_system_element_index \
-                        in enumerate(current_state_occupancy):
-                    # TODO: Avoid re-defining species_index
+                for species_site_system_element_index \
+                        in current_state_occupancy:
                     species_index = self.n_proc_species_index_list[i_proc]
                     hop_element_type = self.n_proc_hop_element_type_list[
                                                                         i_proc]
