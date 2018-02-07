@@ -885,7 +885,7 @@ class Run(object):
                           simulation output files needs to be saved'
 
         excess = 0
-        energy = 1
+        energy = 0
         unwrapped_traj_file_name = dst_path.joinpath('unwrapped_traj.dat')
         open(unwrapped_traj_file_name, 'wb').close()
         if energy:
@@ -1066,8 +1066,9 @@ class Run(object):
                     unwrapped_position_array[start_path_index:end_path_index] \
                         = (unwrapped_position_array[start_path_index-1]
                            + species_displacement_vector_list)
-                    energy_array[start_path_index:end_path_index] = \
-                        current_state_energy
+                    if energy:
+                        energy_array[start_path_index:end_path_index] = \
+                            current_state_energy
                     species_displacement_vector_list = np.zeros(
                                                 (1, self.total_species * 3))
                     start_path_index = end_path_index
