@@ -905,17 +905,18 @@ class Run(object):
                                                 self.total_species))
 
         k_list = np.zeros(self.n_proc)
-        neighbor_site_system_element_index_list = np.zeros(self.n_proc,
-                                                           dtype=int)
         n_proc_hop_dist_type_list = np.zeros(self.n_proc, dtype=int)
         element_type_element_index_list = np.zeros(self.n_proc, dtype=int)
         neighbor_index_list = np.zeros(self.n_proc, dtype=int)
+        old_site_system_element_index_list = np.zeros(self.n_proc, dtype=int)
+        new_site_system_element_index_list = np.zeros(self.n_proc, dtype=int)
         system_charge = np.dot(self.system.species_count,
                                self.material.species_charge_list[
                                             self.species_charge_type])
 
         ewald_neut = - (np.pi * (system_charge**2)
                         / (2 * self.system.system_volume * self.system.alpha))
+        # TODO: How helpful is recording precomputed_array?
         precomputed_array = self.precomputed_array
         for _ in range(self.n_traj):
             current_state_occupancy = self.system.generate_random_occupancy(
@@ -952,24 +953,38 @@ class Run(object):
                                     i_proc, species_site_system_element_index))
                     for hop_dist_type in range(self.len_hop_dist_type_list[
                                                             species_index]):
+                        num_neighbors = self.system.hop_neighbor_list[
+                            hop_element_type][hop_dist_type].num_neighbors[
+                                                element_type_element_index]
                         local_neighbor_site_system_element_index_list = (
                             self.system.hop_neighbor_list[hop_element_type][
                                                                 hop_dist_type]
                             .neighbor_system_element_indices[
                                                 element_type_element_index])
-                        for neighbor_index, \
-                            neighbor_site_system_element_index in enumerate(
-                                local_neighbor_site_system_element_index_list):
-                            # TODO: Introduce If condition
-                            # if neighbor_system_element_index not in
-                            # current_state_occupancy: commit 898baa8
-                            neighbor_site_system_element_index_list[i_proc] = \
-                                neighbor_site_system_element_index
-                            n_proc_hop_dist_type_list[i_proc] = hop_dist_type
-                            element_type_element_index_list[i_proc] = \
+                        old_site_system_element_index_list[
+                            i_proc:i_proc+num_neighbors] = \
+                                species_site_system_element_index
+                        new_site_system_element_index_list[
+                            i_proc:i_proc+num_neighbors] = \
+                                local_neighbor_site_system_element_index_list
+                        neighbor_index_list[i_proc:i_proc+num_neighbors] = \
+                            np.arange(num_neighbors)
+                        n_proc_hop_dist_type_list[
+                            i_proc:i_proc+num_neighbors] = hop_dist_type
+                        element_type_element_index_list[
+                            i_proc:i_proc+num_neighbors] = \
                                 element_type_element_index
-                            neighbor_index_list[i_proc] = neighbor_index
-                            delg_0_ewald = (
+                        i_proc += num_neighbors
+
+                # TODO: Introduce If condition if neighbor_system_element_index
+                # not in current_state_occupancy: commit 898baa8
+                for i_proc in range(self.n_proc):
+                    species_site_system_element_index = \
+                        old_site_system_element_index_list[i_proc]
+                    neighbor_site_system_element_index = \
+                        new_site_system_element_index_list[i_proc]
+                    species_index = self.n_proc_species_index_list[i_proc]
+                    delg_0_ewald = (
                                 self.species_charge_list[species_index]
                                 * (2 * np.dot(
                                     current_state_charge_config[:, 0],
@@ -988,22 +1003,20 @@ class Run(object):
                                           species_site_system_element_index,
                                           neighbor_site_system_element_index]))
                                             )
-                            class_index = self.system.system_class_index_list[
+                    class_index = self.system.system_class_index_list[
                                             species_site_system_element_index]
-                            delg_0 = (
-                                delg_0_ewald
-                                + self.material.delg_0_shift_list[
-                                    self.n_proc_hop_element_type_list[i_proc]][
-                                                class_index][hop_dist_type])
-                            delg_0_list.append(delg_0)
-                            lambda_value = self.n_proc_lambda_value_list[
-                                                                    i_proc]
-                            v_ab = self.n_proc_v_ab_list[i_proc]
-                            delg_s = (((lambda_value + delg_0) ** 2
-                                       / (4 * lambda_value)) - v_ab)
-                            k_list[i_proc] = (self.material.vn
-                                              * np.exp(-delg_s / self.temp))
-                            i_proc += 1
+                    delg_0 = (
+                        delg_0_ewald
+                        + self.material.delg_0_shift_list[
+                            self.n_proc_hop_element_type_list[i_proc]][
+                                class_index][hop_dist_type])
+                    delg_0_list.append(delg_0)
+                    lambda_value = self.n_proc_lambda_value_list[i_proc]
+                    v_ab = self.n_proc_v_ab_list[i_proc]
+                    delg_s = (((lambda_value + delg_0) ** 2
+                               / (4 * lambda_value)) - v_ab)
+                    k_list[i_proc] = (self.material.vn * np.exp(-delg_s
+                                                                / self.temp))
 
                 k_total = sum(k_list)
                 k_cum_sum = (k_list / k_total).cumsum()
@@ -1026,7 +1039,7 @@ class Run(object):
                 old_site_system_element_index = current_state_occupancy[
                                                                 species_index]
                 new_site_system_element_index = (
-                        neighbor_site_system_element_index_list[proc_index])
+                                new_site_system_element_index_list[proc_index])
                 current_state_occupancy[species_index] = \
                     new_site_system_element_index
                 species_displacement_vector_list[
