@@ -257,6 +257,7 @@ class Neighbors(object):
         self.start_time = datetime.now()
         self.material = material
         self.system_size = system_size
+        self.n_dim = len(system_size)
         self.pbc = pbc[:]
 
         # total number of unit cells
