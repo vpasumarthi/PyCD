@@ -7,7 +7,7 @@ systems
 from pathlib import Path
 from datetime import datetime
 import random as rnd
-from collections import defaultdict, namedtuple
+from collections import defaultdict
 import itertools
 import pdb
 
@@ -931,6 +931,7 @@ class Run(object):
 
     def get_process_rates(self, process_attributes, charge_config):
         nproc_delg_0_array = np.zeros(self.n_proc)
+        nproc_hop_vector_array = np.zeros((self.n_proc, self.neighbors.n_dim))
         k_list = np.zeros(self.n_proc)
         (old_site_system_element_index_list,
          new_site_system_element_index_list,
@@ -970,22 +971,23 @@ class Run(object):
             nproc_delg_0_array[i_proc] = delg_0
             lambda_value = self.n_proc_lambda_value_list[i_proc]
             v_ab = self.n_proc_v_ab_list[i_proc]
-            if np.any(self.electric_field):
-                hop_element_type = self.n_proc_hop_element_type_list[i_proc]
-                element_type_element_index = element_type_element_index_list[
+            hop_element_type = self.n_proc_hop_element_type_list[i_proc]
+            element_type_element_index = element_type_element_index_list[
                                                                         i_proc]
-                neighbor_index = neighbor_index_list[i_proc]
-                hop_vector = (self.system.hop_neighbor_list[hop_element_type][
+            neighbor_index = neighbor_index_list[i_proc]
+            hop_vector = (self.system.hop_neighbor_list[hop_element_type][
                             hop_dist_type].displacement_vector_list[
                                 element_type_element_index][neighbor_index])
+            nproc_hop_vector_array[i_proc] = hop_vector
+            if np.any(self.electric_field):
                 delg_s_shift = 0.5 * np.dot(self.electric_field, hop_vector)
             else:
                 delg_s_shift = 0
             delg_s = (((lambda_value + delg_0) ** 2
                        / (4 * lambda_value)) - v_ab) - delg_s_shift
-            k_list[i_proc] = (self.material.vn * np.exp(-delg_s
-                                                        / self.temp))        
-        process_rate_info = (k_list, nproc_delg_0_array)
+            k_list[i_proc] = (self.material.vn * np.exp(-delg_s / self.temp))        
+        process_rate_info = (k_list, nproc_delg_0_array,
+                             nproc_hop_vector_array)
         return process_rate_info
 
     def do_kmc_steps(self, dst_path, random_seed, output_data):
@@ -1049,12 +1051,11 @@ class Run(object):
             while end_path_index < num_path_steps_per_traj:
                 process_attributes = self.get_process_attributes(
                                                     current_state_occupancy)
-                (_, new_site_system_element_index_list,
-                 neighbor_index_list, n_proc_hop_dist_type_list,
-                 element_type_element_index_list) = process_attributes
+                new_site_system_element_index_list = process_attributes[1]
                 process_rate_info = self.get_process_rates(
                             process_attributes, current_state_charge_config)
-                (k_list, nproc_delg_0_array) = process_rate_info
+                (k_list, nproc_delg_0_array,
+                 nproc_hop_vector_array) = process_rate_info
                 # TODO: Introduce If condition if neighbor_system_element_index
                 # not in current_state_occupancy: commit 898baa8
 
@@ -1070,12 +1071,6 @@ class Run(object):
                     delg_0_array[start_path_index:end_path_index] = \
                         nproc_delg_0_array[proc_index]
                 species_index = self.n_proc_species_index_list[proc_index]
-                hop_element_type = self.n_proc_hop_element_type_list[
-                                                                    proc_index]
-                hop_dist_type = n_proc_hop_dist_type_list[proc_index]
-                element_type_element_index = element_type_element_index_list[
-                                                                    proc_index]
-                neighbor_index = neighbor_index_list[proc_index]
                 old_site_system_element_index = current_state_occupancy[
                                                                 species_index]
                 new_site_system_element_index = (
@@ -1084,9 +1079,7 @@ class Run(object):
                     new_site_system_element_index
                 species_displacement_vector_list[
                     0, species_index * 3:(species_index + 1) * 3] += \
-                    self.system.hop_neighbor_list[hop_element_type][
-                        hop_dist_type].displacement_vector_list[
-                                    element_type_element_index][neighbor_index]
+                        nproc_hop_vector_array[proc_index]
 
                 current_state_energy += nproc_delg_0_array[proc_index]
                 current_state_charge_config[old_site_system_element_index] -= \
