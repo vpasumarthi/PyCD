@@ -803,7 +803,7 @@ class Run(object):
                                    * (np.asarray(electric_field['dir'])
                                       / np.linalg.norm(electric_field['dir'])))
         else:
-            self.electric_field = self.pbc * 0
+            self.electric_field = np.zeros(self.neighbors.n_dim)
 
         self.system_size = self.system.system_size
 
