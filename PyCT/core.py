@@ -1027,8 +1027,6 @@ class Run(object):
                                             self.species_charge_type])
         ewald_neut = - (np.pi * (system_charge**2)
                         / (2 * self.system.system_volume * self.system.alpha))
-        # TODO: How helpful is recording precomputed_array?
-        precomputed_array = self.precomputed_array
         for _ in range(self.n_traj):
             current_state_occupancy = self.system.generate_random_occupancy(
                                                     self.system.species_count)
@@ -1041,10 +1039,11 @@ class Run(object):
             ewald_self = - (
                         np.sqrt(self.system.alpha / np.pi)
                         * np.einsum('ii', current_state_charge_config_prod))
+            # TODO: How helpful is recording precomputed_array?
             current_state_energy = (
                         ewald_neut + ewald_self
                         + np.sum(np.multiply(current_state_charge_config_prod,
-                                             precomputed_array)))
+                                             self.precomputed_array)))
             start_path_index = end_path_index = 1
             if output_data['energy'][0]:
                 energy_array[0] = current_state_energy
