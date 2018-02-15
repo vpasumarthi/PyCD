@@ -931,6 +931,70 @@ class Run(object):
             process_attributes[key] = locals()[key]
         return process_attributes
 
+    def get_process_rates(self, process_attributes, charge_config):
+        delg_0_list = []
+        k_list = np.zeros(self.n_proc)
+        old_site_system_element_index_list = process_attributes[
+                                        'old_site_system_element_index_list']
+        new_site_system_element_index_list = process_attributes[
+                                        'new_site_system_element_index_list']
+        neighbor_index_list = process_attributes['neighbor_index_list']
+        n_proc_hop_dist_type_list = process_attributes[
+                                                'n_proc_hop_dist_type_list']
+        element_type_element_index_list = process_attributes[
+                                            'element_type_element_index_list']
+
+        for i_proc in range(self.n_proc):
+            species_site_system_element_index = \
+                                    old_site_system_element_index_list[i_proc]
+            neighbor_site_system_element_index = \
+                                    new_site_system_element_index_list[i_proc]
+            species_index = self.n_proc_species_index_list[i_proc]
+            term01 = 2 * np.dot(
+                charge_config[:, 0],
+                (self.precomputed_array[neighbor_site_system_element_index, :]
+                 - self.precomputed_array[species_site_system_element_index, :]
+                 ))
+            term02 = (
+                self.species_charge_list[species_index]
+                * (self.precomputed_array[species_site_system_element_index,
+                                          species_site_system_element_index]
+                   + self.precomputed_array[neighbor_site_system_element_index,
+                                            neighbor_site_system_element_index]
+                   - 2 * self.precomputed_array[
+                                       species_site_system_element_index,
+                                       neighbor_site_system_element_index]))
+
+            delg_0_ewald = (self.species_charge_list[species_index]
+                            * (term01 + term02))
+            class_index = self.system.system_class_index_list[
+                                            species_site_system_element_index]
+            hop_dist_type = n_proc_hop_dist_type_list[i_proc]
+            delg_0 = (delg_0_ewald
+                      + self.material.delg_0_shift_list[
+                                  self.n_proc_hop_element_type_list[i_proc]][
+                                                class_index][hop_dist_type])
+            delg_0_list.append(delg_0)
+            lambda_value = self.n_proc_lambda_value_list[i_proc]
+            v_ab = self.n_proc_v_ab_list[i_proc]
+            if np.any(self.system.electric_field):
+                hop_element_type = self.n_proc_hop_element_type_list[i_proc]
+                element_type_element_index = element_type_element_index_list[
+                                                                        i_proc]
+                neighbor_index = neighbor_index_list[i_proc]
+                hop_vector = (self.system.hop_neighbor_list[hop_element_type][
+                            hop_dist_type].displacement_vector_list[
+                                element_type_element_index][neighbor_index])
+                delg_s_shift = 0.5 * np.dot(self.system.electric_field,
+                                            hop_vector)
+            else:
+                delg_s_shift = 0
+            delg_s = (((lambda_value + delg_0) ** 2
+                       / (4 * lambda_value)) - v_ab) - delg_s_shift
+            k_list[i_proc] = (self.material.vn * np.exp(-delg_s
+                                                        / self.temp))        
+        return (k_list, delg_0_list)
+
     def do_kmc_steps(self, dst_path, random_seed, output_data):
         """Subroutine to run the KMC simulation by specified number
         of steps
@@ -960,16 +1024,9 @@ class Run(object):
                     potential_array = np.zeros((num_path_steps_per_traj,
                                                 self.total_species))
 
-        k_list = np.zeros(self.n_proc)
-        n_proc_hop_dist_type_list = np.zeros(self.n_proc, dtype=int)
-        element_type_element_index_list = np.zeros(self.n_proc, dtype=int)
-        neighbor_index_list = np.zeros(self.n_proc, dtype=int)
-        old_site_system_element_index_list = np.zeros(self.n_proc, dtype=int)
-        new_site_system_element_index_list = np.zeros(self.n_proc, dtype=int)
         system_charge = np.dot(self.system.species_count,
                                self.material.species_charge_list[
                                             self.species_charge_type])
-
         ewald_neut = - (np.pi * (system_charge**2)
                         / (2 * self.system.system_volume * self.system.alpha))
         # TODO: How helpful is recording precomputed_array?
@@ -997,11 +1054,8 @@ class Run(object):
                                                 (1, self.total_species * 3))
             sim_time = 0
             while end_path_index < num_path_steps_per_traj:
-                delg_0_list = []
                 process_attributes = self.get_process_attributes(
                                                     current_state_occupancy)
-                old_site_system_element_index_list = process_attributes[
-                                        'old_site_system_element_index_list']
                 new_site_system_element_index_list = process_attributes[
                                         'new_site_system_element_index_list']
                 neighbor_index_list = process_attributes['neighbor_index_list']
@@ -1009,64 +1063,10 @@ class Run(object):
                                                 'n_proc_hop_dist_type_list']
                 element_type_element_index_list = process_attributes[
                                             'element_type_element_index_list']
-
+                (k_list, delg_0_list) = self.get_process_rates(
+                            process_attributes, current_state_charge_config)
                 # TODO: Introduce If condition if neighbor_system_element_index
                 # not in current_state_occupancy: commit 898baa8
-                for i_proc in range(self.n_proc):
-                    species_site_system_element_index = \
-                        old_site_system_element_index_list[i_proc]
-                    neighbor_site_system_element_index = \
-                        new_site_system_element_index_list[i_proc]
-                    species_index = self.n_proc_species_index_list[i_proc]
-                    delg_0_ewald = (
-                                self.species_charge_list[species_index]
-                                * (2 * np.dot(
-                                    current_state_charge_config[:, 0],
-                                    (precomputed_array[
-                                        neighbor_site_system_element_index, :]
-                                     - precomputed_array[
-                                        species_site_system_element_index, :]))
-                                   + self.species_charge_list[species_index]
-                                   * (precomputed_array[
-                                          species_site_system_element_index,
-                                          species_site_system_element_index]
-                                      + precomputed_array[
-                                          neighbor_site_system_element_index,
-                                          neighbor_site_system_element_index]
-                                      - 2 * precomputed_array[
-                                          species_site_system_element_index,
-                                          neighbor_site_system_element_index]))
-                                            )
-                    class_index = self.system.system_class_index_list[
-                                            species_site_system_element_index]
-                    hop_dist_type = n_proc_hop_dist_type_list[i_proc]
-                    delg_0 = (
-                        delg_0_ewald
-                        + self.material.delg_0_shift_list[
-                            self.n_proc_hop_element_type_list[i_proc]][
-                                class_index][hop_dist_type])
-                    delg_0_list.append(delg_0)
-                    lambda_value = self.n_proc_lambda_value_list[i_proc]
-                    v_ab = self.n_proc_v_ab_list[i_proc]
-                    if np.any(self.system.electric_field):
-                        hop_element_type = self.n_proc_hop_element_type_list[
-                                                                        i_proc]
-                        element_type_element_index = \
-                                        element_type_element_index_list[i_proc]
-                        neighbor_index = neighbor_index_list[i_proc]
-                        hop_vector = (
-                            self.system.hop_neighbor_list[hop_element_type][
-                                hop_dist_type].displacement_vector_list[
-                                    element_type_element_index][neighbor_index]
-                                )
-                        delg_s_shift = 0.5 * np.dot(self.system.electric_field,
-                                                    hop_vector)
-                    else:
-                        delg_s_shift = 0
-                    delg_s = (((lambda_value + delg_0) ** 2
-                               / (4 * lambda_value)) - v_ab) - delg_s_shift
-                    k_list[i_proc] = (self.material.vn * np.exp(-delg_s
-                                                                / self.temp))
 
                 k_total = sum(k_list)
                 k_cum_sum = (k_list / k_total).cumsum()
