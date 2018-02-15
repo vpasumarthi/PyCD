@@ -69,7 +69,7 @@ def material_run(dst_path):
         material_system = System(
             material_info, material_neighbors, hop_neighbor_list,
             cumulative_displacement_list, sim_params['species_count'],
-            alpha, n_max, k_max)
+            alpha, n_max, k_max, sim_params['external_field'])
 
         # Load precomputed array to instantiate run class
         precomputed_array_file_path = input_directory_path.joinpath(

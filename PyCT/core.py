@@ -597,7 +597,7 @@ class System(object):
     # @profile
     def __init__(self, material_info, material_neighbors,
                  hop_neighbor_list, cumulative_displacement_list,
-                 species_count, alpha, n_max, k_max):
+                 species_count, alpha, n_max, k_max, external_field):
         """Return a system object whose size is *size*
         :param material_info:
         :param material_neighbors:
@@ -652,6 +652,15 @@ class System(object):
         self.alpha = alpha
         self.n_max = n_max
         self.k_max = k_max
+
+        # electric field
+        electric_field = external_field['electric']
+        if electric_field['active']:
+            self.electric_field = (electric_field['mag']
+                                   * (np.asarray(electric_field['dir'])
+                                      / np.linalg.norm(electric_field['dir'])))
+        else:
+            self.electric_field = self.pbc * 0
 
     def generate_random_occupancy(self, species_count):
         """generates initial occupancy list based on species count
@@ -1014,8 +1023,23 @@ class Run(object):
                     delg_0_list.append(delg_0)
                     lambda_value = self.n_proc_lambda_value_list[i_proc]
                     v_ab = self.n_proc_v_ab_list[i_proc]
+                    if np.any(self.system.electric_field):
+                        hop_element_type = self.n_proc_hop_element_type_list[
+                                                                        i_proc]
+                        element_type_element_index = \
+                                        element_type_element_index_list[i_proc]
+                        neighbor_index = neighbor_index_list[i_proc]
+                        hop_vector = (
+                            self.system.hop_neighbor_list[hop_element_type][
+                                hop_dist_type].displacement_vector_list[
+                                    element_type_element_index][neighbor_index]
+                                )
+                        delg_s_shift = 0.5 * np.dot(self.system.electric_field,
+                                                    hop_vector)
+                    else:
+                        delg_s_shift = 0
                     delg_s = (((lambda_value + delg_0) ** 2
-                               / (4 * lambda_value)) - v_ab)
+                               / (4 * lambda_value)) - v_ab) - delg_s_shift
                     k_list[i_proc] = (self.material.vn * np.exp(-delg_s
                                                                 / self.temp))
 
