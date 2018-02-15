@@ -7,7 +7,7 @@ systems
 from pathlib import Path
 from datetime import datetime
 import random as rnd
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 import itertools
 import pdb
 
@@ -921,28 +921,19 @@ class Run(object):
                     i_proc:i_proc+num_neighbors] = \
                         element_type_element_index
                 i_proc += num_neighbors
-        process_attribute_keys = {'old_site_system_element_index_list',
-                                  'new_site_system_element_index_list',
-                                  'neighbor_index_list',
-                                  'n_proc_hop_dist_type_list',
-                                  'element_type_element_index_list'}
-        process_attributes = {}
-        for key in process_attribute_keys:
-            process_attributes[key] = locals()[key]
+        process_attributes = (old_site_system_element_index_list,
+                              new_site_system_element_index_list,
+                              neighbor_index_list, n_proc_hop_dist_type_list,
+                              element_type_element_index_list)
         return process_attributes
 
     def get_process_rates(self, process_attributes, charge_config):
         delg_0_list = []
         k_list = np.zeros(self.n_proc)
-        old_site_system_element_index_list = process_attributes[
-                                        'old_site_system_element_index_list']
-        new_site_system_element_index_list = process_attributes[
-                                        'new_site_system_element_index_list']
-        neighbor_index_list = process_attributes['neighbor_index_list']
-        n_proc_hop_dist_type_list = process_attributes[
-                                                'n_proc_hop_dist_type_list']
-        element_type_element_index_list = process_attributes[
-                                            'element_type_element_index_list']
+        (old_site_system_element_index_list,
+         new_site_system_element_index_list,
+         neighbor_index_list, n_proc_hop_dist_type_list,
+         element_type_element_index_list) = process_attributes
 
         for i_proc in range(self.n_proc):
             species_site_system_element_index = \
@@ -993,7 +984,8 @@ class Run(object):
                        / (4 * lambda_value)) - v_ab) - delg_s_shift
             k_list[i_proc] = (self.material.vn * np.exp(-delg_s
                                                         / self.temp))        
-        return (k_list, delg_0_list)
+        process_rate_info = (k_list, delg_0_list)
+        return process_rate_info
 
     def do_kmc_steps(self, dst_path, random_seed, output_data):
         """Subroutine to run the KMC simulation by specified number
@@ -1056,15 +1048,12 @@ class Run(object):
             while end_path_index < num_path_steps_per_traj:
                 process_attributes = self.get_process_attributes(
                                                     current_state_occupancy)
-                new_site_system_element_index_list = process_attributes[
-                                        'new_site_system_element_index_list']
-                neighbor_index_list = process_attributes['neighbor_index_list']
-                n_proc_hop_dist_type_list = process_attributes[
-                                                'n_proc_hop_dist_type_list']
-                element_type_element_index_list = process_attributes[
-                                            'element_type_element_index_list']
-                (k_list, delg_0_list) = self.get_process_rates(
+                (_, new_site_system_element_index_list,
+                 neighbor_index_list, n_proc_hop_dist_type_list,
+                 element_type_element_index_list) = process_attributes
+                process_rate_info = self.get_process_rates(
                             process_attributes, current_state_charge_config)
+                (k_list, delg_0_list) = process_rate_info
                 # TODO: Introduce If condition if neighbor_system_element_index
                 # not in current_state_occupancy: commit 898baa8
 
