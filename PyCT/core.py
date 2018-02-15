@@ -1005,6 +1005,7 @@ class Run(object):
                                             )
                     class_index = self.system.system_class_index_list[
                                             species_site_system_element_index]
+                    hop_dist_type = n_proc_hop_dist_type_list[i_proc]
                     delg_0 = (
                         delg_0_ewald
                         + self.material.delg_0_shift_list[
