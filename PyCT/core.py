@@ -912,6 +912,8 @@ class Run(object):
                 old_site_system_element_index_list[
                     i_proc:i_proc+num_neighbors] = \
                         species_site_system_element_index
+                # TODO: Introduce If condition if neighbor_system_element_index
+                # not in current_state_occupancy: commit 898baa8
                 new_site_system_element_index_list[
                     i_proc:i_proc+num_neighbors] = \
                         local_neighbor_site_system_element_index_list
@@ -1056,8 +1058,6 @@ class Run(object):
                             process_attributes, current_state_charge_config)
                 (k_list, nproc_delg_0_array,
                  nproc_hop_vector_array) = process_rate_info
-                # TODO: Introduce If condition if neighbor_system_element_index
-                # not in current_state_occupancy: commit 898baa8
 
                 k_total = sum(k_list)
                 k_cum_sum = (k_list / k_total).cumsum()
