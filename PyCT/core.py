@@ -884,6 +884,53 @@ class Run(object):
                                                     site_element_type_index])
         return element_type_element_index
 
+    def get_process_attributes(self, occupancy):
+        i_proc = 0
+        old_site_system_element_index_list = np.zeros(self.n_proc, dtype=int)
+        new_site_system_element_index_list = np.zeros(self.n_proc, dtype=int)
+        neighbor_index_list = np.zeros(self.n_proc, dtype=int)
+        n_proc_hop_dist_type_list = np.zeros(self.n_proc, dtype=int)
+        element_type_element_index_list = np.zeros(self.n_proc, dtype=int)
+        for species_site_system_element_index in occupancy:
+            species_index = self.n_proc_species_index_list[i_proc]
+            hop_element_type = self.n_proc_hop_element_type_list[i_proc]
+            element_type_element_index = (
+                                self.compute_element_type_element_index(
+                                    i_proc, species_site_system_element_index))
+            for hop_dist_type in range(self.len_hop_dist_type_list[
+                                                            species_index]):
+                num_neighbors = self.system.hop_neighbor_list[
+                                hop_element_type][hop_dist_type].num_neighbors[
+                                                    element_type_element_index]
+                local_neighbor_site_system_element_index_list = (
+                            self.system.hop_neighbor_list[hop_element_type][
+                                                                hop_dist_type]
+                            .neighbor_system_element_indices[
+                                                element_type_element_index])
+                old_site_system_element_index_list[
+                    i_proc:i_proc+num_neighbors] = \
+                        species_site_system_element_index
+                new_site_system_element_index_list[
+                    i_proc:i_proc+num_neighbors] = \
+                        local_neighbor_site_system_element_index_list
+                neighbor_index_list[i_proc:i_proc+num_neighbors] = \
+                    np.arange(num_neighbors)
+                n_proc_hop_dist_type_list[
+                    i_proc:i_proc+num_neighbors] = hop_dist_type
+                element_type_element_index_list[
+                    i_proc:i_proc+num_neighbors] = \
+                        element_type_element_index
+                i_proc += num_neighbors
+        process_attribute_keys = {'old_site_system_element_index_list',
+                                  'new_site_system_element_index_list',
+                                  'neighbor_index_list',
+                                  'n_proc_hop_dist_type_list',
+                                  'element_type_element_index_list'}
+        process_attributes = {}
+        for key in process_attribute_keys:
+            process_attributes[key] = locals()[key]
+        return process_attributes
+
     def do_kmc_steps(self, dst_path, random_seed, output_data):
         """Subroutine to run the KMC simulation by specified number
         of steps
@@ -950,40 +997,18 @@ class Run(object):
                                                 (1, self.total_species * 3))
             sim_time = 0
             while end_path_index < num_path_steps_per_traj:
-                i_proc = 0
                 delg_0_list = []
-                for species_site_system_element_index \
-                        in current_state_occupancy:
-                    species_index = self.n_proc_species_index_list[i_proc]
-                    hop_element_type = self.n_proc_hop_element_type_list[
-                                                                        i_proc]
-                    element_type_element_index = (
-                                self.compute_element_type_element_index(
-                                    i_proc, species_site_system_element_index))
-                    for hop_dist_type in range(self.len_hop_dist_type_list[
-                                                            species_index]):
-                        num_neighbors = self.system.hop_neighbor_list[
-                            hop_element_type][hop_dist_type].num_neighbors[
-                                                element_type_element_index]
-                        local_neighbor_site_system_element_index_list = (
-                            self.system.hop_neighbor_list[hop_element_type][
-                                                                hop_dist_type]
-                            .neighbor_system_element_indices[
-                                                element_type_element_index])
-                        old_site_system_element_index_list[
-                            i_proc:i_proc+num_neighbors] = \
-                                species_site_system_element_index
-                        new_site_system_element_index_list[
-                            i_proc:i_proc+num_neighbors] = \
-                                local_neighbor_site_system_element_index_list
-                        neighbor_index_list[i_proc:i_proc+num_neighbors] = \
-                            np.arange(num_neighbors)
-                        n_proc_hop_dist_type_list[
-                            i_proc:i_proc+num_neighbors] = hop_dist_type
-                        element_type_element_index_list[
-                            i_proc:i_proc+num_neighbors] = \
-                                element_type_element_index
-                        i_proc += num_neighbors
+                process_attributes = self.get_process_attributes(
+                                                    current_state_occupancy)
+                old_site_system_element_index_list = process_attributes[
+                                        'old_site_system_element_index_list']
+                new_site_system_element_index_list = process_attributes[
+                                        'new_site_system_element_index_list']
+                neighbor_index_list = process_attributes['neighbor_index_list']
+                n_proc_hop_dist_type_list = process_attributes[
+                                                'n_proc_hop_dist_type_list']
+                element_type_element_index_list = process_attributes[
+                                            'element_type_element_index_list']
 
                 # TODO: Introduce If condition if neighbor_system_element_index
                 # not in current_state_occupancy: commit 898baa8
