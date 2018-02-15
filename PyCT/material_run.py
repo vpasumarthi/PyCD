@@ -69,7 +69,7 @@ def material_run(dst_path):
         material_system = System(
             material_info, material_neighbors, hop_neighbor_list,
             cumulative_displacement_list, sim_params['species_count'],
-            alpha, n_max, k_max, sim_params['external_field'])
+            alpha, n_max, k_max)
 
         # Load precomputed array to instantiate run class
         precomputed_array_file_path = input_directory_path.joinpath(
@@ -79,7 +79,8 @@ def material_run(dst_path):
             material_system, precomputed_array, sim_params['temp'],
             sim_params['ion_charge_type'],
             sim_params['species_charge_type'], sim_params['n_traj'],
-            sim_params['t_final'], sim_params['time_interval'])
+            sim_params['t_final'], sim_params['time_interval'],
+            sim_params['external_field'])
         material_run.do_kmc_steps(dst_path, sim_params['random_seed'],
                                   sim_params['output_data'])
     else:

@@ -598,7 +598,7 @@ class System(object):
     # @profile
     def __init__(self, material_info, material_neighbors,
                  hop_neighbor_list, cumulative_displacement_list,
-                 species_count, alpha, n_max, k_max, external_field):
+                 species_count, alpha, n_max, k_max):
         """Return a system object whose size is *size*
         :param material_info:
         :param material_neighbors:
@@ -653,15 +653,6 @@ class System(object):
         self.alpha = alpha
         self.n_max = n_max
         self.k_max = k_max
-
-        # electric field
-        electric_field = external_field['electric']
-        if electric_field['active']:
-            self.electric_field = (electric_field['mag']
-                                   * (np.asarray(electric_field['dir'])
-                                      / np.linalg.norm(electric_field['dir'])))
-        else:
-            self.electric_field = self.pbc * 0
 
     def generate_random_occupancy(self, species_count):
         """generates initial occupancy list based on species count
@@ -780,7 +771,8 @@ class Run(object):
     """defines the subroutines for running Kinetic Monte Carlo and
         computing electrostatic interaction energies"""
     def __init__(self, system, precomputed_array, temp, ion_charge_type,
-                 species_charge_type, n_traj, t_final, time_interval):
+                 species_charge_type, n_traj, t_final, time_interval,
+                 external_field):
         """Returns the PBC condition of the system
         :param system:
         :param precomputed_array:
@@ -803,6 +795,15 @@ class Run(object):
         self.n_traj = int(n_traj)
         self.t_final = t_final * constants.SEC2AUTIME
         self.time_interval = time_interval * constants.SEC2AUTIME
+
+        # electric field
+        electric_field = external_field['electric']
+        if electric_field['active']:
+            self.electric_field = (electric_field['mag']
+                                   * (np.asarray(electric_field['dir'])
+                                      / np.linalg.norm(electric_field['dir'])))
+        else:
+            self.electric_field = self.pbc * 0
 
         self.system_size = self.system.system_size
 
@@ -969,7 +970,7 @@ class Run(object):
             nproc_delg_0_array[i_proc] = delg_0
             lambda_value = self.n_proc_lambda_value_list[i_proc]
             v_ab = self.n_proc_v_ab_list[i_proc]
-            if np.any(self.system.electric_field):
+            if np.any(self.electric_field):
                 hop_element_type = self.n_proc_hop_element_type_list[i_proc]
                 element_type_element_index = element_type_element_index_list[
                                                                         i_proc]
@@ -977,8 +978,7 @@ class Run(object):
                 hop_vector = (self.system.hop_neighbor_list[hop_element_type][
                             hop_dist_type].displacement_vector_list[
                                 element_type_element_index][neighbor_index])
-                delg_s_shift = 0.5 * np.dot(self.system.electric_field,
-                                            hop_vector)
+                delg_s_shift = 0.5 * np.dot(self.electric_field, hop_vector)
             else:
                 delg_s_shift = 0
             delg_s = (((lambda_value + delg_0) ** 2
