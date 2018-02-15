@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 from datetime import datetime
-from collections import namedtuple
 
 import numpy as np
 
