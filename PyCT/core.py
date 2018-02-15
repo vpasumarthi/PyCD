@@ -1003,6 +1003,7 @@ class Run(object):
 
         rnd.seed(random_seed)
         num_path_steps_per_traj = int(self.t_final / self.time_interval) + 1
+        # Initialize data arrays
         for output_data_type, output_attributes in output_data.items():
             if output_attributes[0]:
                 output_file_name = dst_path.joinpath(output_attributes[1])
@@ -1061,12 +1062,15 @@ class Run(object):
 
                 k_total = sum(k_list)
                 k_cum_sum = (k_list / k_total).cumsum()
+                # Randomly choose a kinetic process
                 rand1 = rnd.random()
                 proc_index = np.where(k_cum_sum > rand1)[0][0]
+                # Update simulation time
                 rand2 = rnd.random()
                 sim_time -= np.log(rand2) / k_total
                 end_path_index = int(sim_time / self.time_interval)
-                
+
+                # Update data arrays at each kmc step
                 if output_data['delg_0'][0]:
                     delg_0_array[start_path_index:end_path_index] = \
                         nproc_delg_0_array[proc_index]
@@ -1080,12 +1084,12 @@ class Run(object):
                 species_displacement_vector_list[
                     0, species_index * 3:(species_index + 1) * 3] += \
                         nproc_hop_vector_array[proc_index]
-
                 current_state_energy += nproc_delg_0_array[proc_index]
                 current_state_charge_config[old_site_system_element_index] -= \
                     self.species_charge_list[species_index]
                 current_state_charge_config[new_site_system_element_index] += \
                     self.species_charge_list[species_index]
+                # Update data arrays for each path step
                 if end_path_index >= start_path_index + 1:
                     if end_path_index >= num_path_steps_per_traj:
                         end_path_index = num_path_steps_per_traj
@@ -1099,6 +1103,7 @@ class Run(object):
                                                 (1, self.total_species * 3))
                     start_path_index = end_path_index
 
+            # Write output data arrays to disk
             for output_data_type, output_attributes in output_data.items():
                 if output_attributes[0]:
                     output_file_name = dst_path.joinpath(output_attributes[1])
