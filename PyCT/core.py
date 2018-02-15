@@ -1005,8 +1005,9 @@ class Run(object):
         num_path_steps_per_traj = int(self.t_final / self.time_interval) + 1
         # Initialize data arrays
         for output_data_type, output_attributes in output_data.items():
-            if output_attributes[0]:
-                output_file_name = dst_path.joinpath(output_attributes[1])
+            if output_attributes['write']:
+                output_file_name = dst_path.joinpath(output_attributes[
+                                                                'file_name'])
                 open(output_file_name, 'wb').close()
                 if output_data_type == 'unwrapped_traj':
                     unwrapped_position_array = np.zeros(
@@ -1045,7 +1046,7 @@ class Run(object):
                         + np.sum(np.multiply(current_state_charge_config_prod,
                                              self.precomputed_array)))
             start_path_index = end_path_index = 1
-            if output_data['energy'][0]:
+            if output_data['energy']['write']:
                 energy_array[0] = current_state_energy
             species_displacement_vector_list = np.zeros(
                                                 (1, self.total_species * 3))
@@ -1070,7 +1071,7 @@ class Run(object):
                 end_path_index = int(sim_time / self.time_interval)
 
                 # Update data arrays at each kmc step
-                if output_data['delg_0'][0]:
+                if output_data['delg_0']['write']:
                     delg_0_array[start_path_index:end_path_index] = \
                         nproc_delg_0_array[proc_index]
                 species_index = self.n_proc_species_index_list[proc_index]
@@ -1095,7 +1096,7 @@ class Run(object):
                     unwrapped_position_array[start_path_index:end_path_index] \
                         = (unwrapped_position_array[start_path_index-1]
                            + species_displacement_vector_list)
-                    if output_data['energy'][0]:
+                    if output_data['energy']['write']:
                         energy_array[start_path_index:end_path_index] = \
                             current_state_energy
                     species_displacement_vector_list = np.zeros(
@@ -1104,8 +1105,9 @@ class Run(object):
 
             # Write output data arrays to disk
             for output_data_type, output_attributes in output_data.items():
-                if output_attributes[0]:
-                    output_file_name = dst_path.joinpath(output_attributes[1])
+                if output_attributes['write']:
+                    output_file_name = dst_path.joinpath(output_attributes[
+                                                                'file_name'])
                     with open(output_file_name, 'ab') as output_file:
                         if output_data_type == 'unwrapped_traj':
                             np.savetxt(output_file, unwrapped_position_array)
