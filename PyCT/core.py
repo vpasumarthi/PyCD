@@ -595,7 +595,6 @@ class System(object):
     size: An array (3 x 1) defining the system size in multiple of
     unit cells
     """
-    # @profile
     def __init__(self, material_info, material_neighbors,
                  hop_neighbor_list, cumulative_displacement_list,
                  species_count, alpha, n_max, k_max):
@@ -887,7 +886,7 @@ class Run(object):
         return element_type_element_index
 
     def get_process_attributes(self, occupancy):
-        i_proc = 0
+        i_proc = i_proc_old = 0
         old_site_system_element_index_list = np.zeros(self.n_proc, dtype=int)
         new_site_system_element_index_list = np.zeros(self.n_proc, dtype=int)
         neighbor_index_list = np.zeros(self.n_proc, dtype=int)
@@ -909,9 +908,6 @@ class Run(object):
                                                                 hop_dist_type]
                             .neighbor_system_element_indices[
                                                 element_type_element_index])
-                old_site_system_element_index_list[
-                    i_proc:i_proc+num_neighbors] = \
-                        species_site_system_element_index
                 # TODO: Introduce If condition if neighbor_system_element_index
                 # not in current_state_occupancy: commit 898baa8
                 new_site_system_element_index_list[
@@ -925,6 +921,10 @@ class Run(object):
                     i_proc:i_proc+num_neighbors] = \
                         element_type_element_index
                 i_proc += num_neighbors
+            old_site_system_element_index_list[i_proc_old:i_proc] = \
+                                            species_site_system_element_index
+            i_proc_old = i_proc
+
         process_attributes = (old_site_system_element_index_list,
                               new_site_system_element_index_list,
                               neighbor_index_list, n_proc_hop_dist_type_list,
