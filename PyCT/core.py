@@ -900,14 +900,13 @@ class Run(object):
                                     i_proc, species_site_system_element_index))
             for hop_dist_type in range(self.len_hop_dist_type_list[
                                                             species_index]):
-                num_neighbors = self.system.hop_neighbor_list[
-                                hop_element_type][hop_dist_type].num_neighbors[
-                                                    element_type_element_index]
                 local_neighbor_site_system_element_index_list = (
                             self.system.hop_neighbor_list[hop_element_type][
                                                                 hop_dist_type]
                             .neighbor_system_element_indices[
                                                 element_type_element_index])
+                num_neighbors = len(
+                                local_neighbor_site_system_element_index_list)
                 # TODO: Introduce If condition if neighbor_system_element_index
                 # not in current_state_occupancy: commit 898baa8
                 new_site_system_element_index_list[
