@@ -916,12 +916,11 @@ class Run(object):
                     np.arange(num_neighbors)
                 n_proc_hop_dist_type_list[
                     i_proc:i_proc+num_neighbors] = hop_dist_type
-                element_type_element_index_list[
-                    i_proc:i_proc+num_neighbors] = \
-                        element_type_element_index
                 i_proc += num_neighbors
             old_site_system_element_index_list[i_proc_old:i_proc] = \
                                             species_site_system_element_index
+            element_type_element_index_list[i_proc_old:i_proc] = \
+                                                    element_type_element_index
             i_proc_old = i_proc
 
         process_attributes = (old_site_system_element_index_list,
