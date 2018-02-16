@@ -798,10 +798,12 @@ class Run(object):
         # electric field
         electric_field = external_field['electric']
         if electric_field['active']:
+            self.electric_field_active = 1
             self.electric_field = (electric_field['mag']
                                    * (np.asarray(electric_field['dir'])
                                       / np.linalg.norm(electric_field['dir'])))
         else:
+            self.electric_field_active = 0
             self.electric_field = np.zeros(self.neighbors.n_dim)
 
         self.system_size = self.system.system_size
@@ -979,7 +981,7 @@ class Run(object):
                             hop_dist_type].displacement_vector_list[
                                 element_type_element_index][neighbor_index])
             nproc_hop_vector_array[i_proc] = hop_vector
-            if np.any(self.electric_field):
+            if self.electric_field_active:
                 delg_s_shift = 0.5 * np.dot(self.electric_field, hop_vector)
             else:
                 delg_s_shift = 0
