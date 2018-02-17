@@ -965,15 +965,14 @@ class Run(object):
                             * (term01 + term02))
             class_index = self.system.system_class_index_list[
                                             species_site_system_element_index]
+            hop_element_type = self.n_proc_hop_element_type_list[i_proc]
             hop_dist_type = n_proc_hop_dist_type_list[i_proc]
             delg_0 = (delg_0_ewald
-                      + self.material.delg_0_shift_list[
-                                  self.n_proc_hop_element_type_list[i_proc]][
+                      + self.material.delg_0_shift_list[hop_element_type][
                                                 class_index][hop_dist_type])
             nproc_delg_0_array[i_proc] = delg_0
             lambda_value = self.n_proc_lambda_value_list[i_proc]
             v_ab = self.n_proc_v_ab_list[i_proc]
-            hop_element_type = self.n_proc_hop_element_type_list[i_proc]
             element_type_element_index = element_type_element_index_list[
                                                                         i_proc]
             neighbor_index = neighbor_index_list[i_proc]
