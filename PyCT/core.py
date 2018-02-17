@@ -987,7 +987,7 @@ class Run(object):
                 delg_s_shift = 0
             delg_s = (((lambda_value + delg_0) ** 2
                        / (4 * lambda_value)) - v_ab) - delg_s_shift
-            k_list[i_proc] = (self.material.vn * np.exp(-delg_s / self.temp))        
+            k_list[i_proc] = self.material.vn * np.e**(-delg_s / self.temp)
         process_rate_info = (k_list, nproc_delg_0_array,
                              nproc_hop_vector_array)
         return process_rate_info
