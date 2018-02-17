@@ -853,22 +853,21 @@ class Run(object):
                                                     hop_element_type_index]):
                 if self.system.species_count[species_type_index] != 0:
                     num_neighbors = self.system.hop_neighbor_list[
-                        hop_element_type][hop_dist_type_index].num_neighbors
-                    # TODO: Use num_neighbors instead of num_neighbors[0]
-                    self.n_proc += num_neighbors[0]
+                        hop_element_type][hop_dist_type_index].num_neighbors[0]
+                    self.n_proc += num_neighbors
                     self.n_proc_hop_element_type_list.extend(
-                                        [hop_element_type] * num_neighbors[0])
+                                        [hop_element_type] * num_neighbors)
                     self.n_proc_species_index_list.extend(
-                                [hop_element_type_index] * num_neighbors[0])
+                                [hop_element_type_index] * num_neighbors)
                     self.n_proc_site_element_type_index_list.extend(
                                             [center_site_element_type_index]
-                                            * num_neighbors[0])
+                                            * num_neighbors)
                     self.n_proc_lambda_value_list.extend(
                                 [self.material.lambda_values[hop_element_type][
-                                     hop_dist_type_index]] * num_neighbors[0])
+                                     hop_dist_type_index]] * num_neighbors)
                     self.n_proc_v_ab_list.extend(
                                 [self.material.v_ab[hop_element_type][
-                                     hop_dist_type_index]] * num_neighbors[0])
+                                     hop_dist_type_index]] * num_neighbors)
 
         # system coordinates
         self.system_coordinates = self.neighbors.bulk_sites.cell_coordinates
