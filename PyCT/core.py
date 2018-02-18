@@ -648,6 +648,26 @@ class System(object):
             np.tile(self.material.unit_cell_class_list, self.num_cells)
             - 1)
 
+        # species-wise number of nearest neighbors
+        self.num_neighbors = np.zeros(self.material.num_species_types, int)
+        for species_type_index, species_type in enumerate(
+                                                self.material.species_types):
+            # NOTE: Used [0] at the end of the statement assuming element types
+            # hosting the species have equivalent number of nearest neighbors
+            species_element_type = self.material.species_to_element_type_map[
+                                                            species_type][0]
+            # NOTE: Assumes hop between same element type is allowed
+            hop_element_type = self.material.element_type_delimiter.join(
+                                                    [species_element_type] * 2)
+            for hop_dist_type in range(len(self.material.neighbor_cutoff_dist[
+                                                        hop_element_type])):
+                self.num_neighbors[species_type_index] += (
+                                    self.hop_neighbor_list[hop_element_type][
+                                            hop_dist_type].num_neighbors[0])
+
+        # number of kinetic processes
+        self.n_proc = np.dot(self.species_count, self.num_neighbors)
+
         # ewald parameters:
         self.alpha = alpha
         self.n_max = n_max
@@ -833,15 +853,14 @@ class Run(object):
         self.len_hop_dist_type_list = [
                     len(self.material.neighbor_cutoff_dist[hop_element_type])
                     for hop_element_type in self.hop_element_type_list]
-        # number of kinetic processes
-        self.n_proc = 0
+
         self.n_proc_hop_element_type_list = [] # good
         self.n_proc_neighbor_index_list = []  # could be buggy
         self.n_proc_species_index_list = [] # good
         self.n_proc_site_element_type_index_list = [] # undecided
         self.n_proc_lambda_value_list = [] # could be buggy
         self.n_proc_v_ab_list = [] # could be buggy
-        i_proc_old = 0
+        i_proc = i_proc_old = 0
         for hop_element_type_index, hop_element_type in enumerate(
                                                 self.hop_element_type_list):
             center_element_type = hop_element_type.split(
@@ -852,7 +871,7 @@ class Run(object):
                                                     hop_element_type_index]):
                 num_neighbors = self.system.hop_neighbor_list[
                     hop_element_type][hop_dist_type].num_neighbors[0]
-                self.n_proc += num_neighbors
+                i_proc += num_neighbors
                 self.n_proc_neighbor_index_list.extend(range(
                                                             num_neighbors))
                 self.n_proc_species_index_list.extend(
@@ -867,8 +886,8 @@ class Run(object):
                             [self.material.v_ab[hop_element_type][
                                  hop_dist_type]] * num_neighbors)
             self.n_proc_hop_element_type_list.extend(
-                            [hop_element_type] * (self.n_proc - i_proc_old))
-            i_proc_old = self.n_proc
+                            [hop_element_type] * (i_proc - i_proc_old))
+            i_proc_old = i_proc
 
         # system coordinates
         self.system_coordinates = self.neighbors.bulk_sites.cell_coordinates
@@ -889,10 +908,13 @@ class Run(object):
 
     def get_process_attributes(self, occupancy):
         i_proc = i_proc_old = 0
-        old_site_system_element_index_list = np.zeros(self.n_proc, dtype=int)
-        new_site_system_element_index_list = np.zeros(self.n_proc, dtype=int)
-        n_proc_hop_dist_type_list = np.zeros(self.n_proc, dtype=int)
-        element_type_element_index_list = np.zeros(self.n_proc, dtype=int)
+        old_site_system_element_index_list = np.zeros(self.system.n_proc,
+                                                      dtype=int)
+        new_site_system_element_index_list = np.zeros(self.system.n_proc,
+                                                      dtype=int)
+        n_proc_hop_dist_type_list = np.zeros(self.system.n_proc, dtype=int)
+        element_type_element_index_list = np.zeros(self.system.n_proc,
+                                                   dtype=int)
         for species_site_system_element_index in occupancy:
             species_index = self.n_proc_species_index_list[i_proc]
             hop_element_type = self.n_proc_hop_element_type_list[i_proc]
@@ -929,15 +951,16 @@ class Run(object):
         return process_attributes
 
     def get_process_rates(self, process_attributes, charge_config):
-        nproc_delg_0_array = np.zeros(self.n_proc)
-        nproc_hop_vector_array = np.zeros((self.n_proc, self.neighbors.n_dim))
-        k_list = np.zeros(self.n_proc)
+        nproc_delg_0_array = np.zeros(self.system.n_proc)
+        nproc_hop_vector_array = np.zeros((self.system.n_proc,
+                                           self.neighbors.n_dim))
+        k_list = np.zeros(self.system.n_proc)
         (old_site_system_element_index_list,
          new_site_system_element_index_list,
          n_proc_hop_dist_type_list,
          element_type_element_index_list) = process_attributes
 
-        for i_proc in range(self.n_proc):
+        for i_proc in range(self.system.n_proc):
             species_site_system_element_index = \
                                     old_site_system_element_index_list[i_proc]
             neighbor_site_system_element_index = \
