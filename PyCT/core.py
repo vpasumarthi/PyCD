@@ -878,6 +878,8 @@ class Run(object):
         self.n_proc_site_element_type_index_list = []
         local_num_neighbors_list = {}
         n_proc_hop_dist_type_list = {}
+        lambda_value_list = {}
+        v_ab_list = {}
         for species_type_index, species_type in enumerate(
                                                 self.material.species_types):
             species_count = self.system.species_count[species_type_index]
@@ -898,6 +900,8 @@ class Run(object):
             if species_count != 0:
                 local_num_neighbors_list[element_type] = []
                 n_proc_hop_dist_type_list[element_type] = []
+                lambda_value_list[element_type] = []
+                v_ab_list[element_type] = []
                 for class_index in range(self.material.num_classes[
                                                         element_type_index]):
                     sample_site_index = class_based_sample_site_indices[
@@ -915,6 +919,16 @@ class Run(object):
                     n_proc_hop_dist_type_list[element_type].append(
                         np.repeat(range(len_local_num_neighbors),
                                   local_num_neighbors))
+                    lambda_value_list[element_type].append(
+                        [self.material.lambda_values[hop_element_type][
+                                                                hop_dist_type]
+                         for hop_dist_type in n_proc_hop_dist_type_list[
+                                                element_type][class_index]])
+                    v_ab_list[element_type].append(
+                        [self.material.lambda_values[hop_element_type][
+                                                                hop_dist_type]
+                         for hop_dist_type in n_proc_hop_dist_type_list[
+                                                element_type][class_index]])
 
         self.n_proc_neighbor_index_list = []  # could be buggy
         self.n_proc_lambda_value_list = [] # could be buggy
