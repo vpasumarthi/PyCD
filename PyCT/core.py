@@ -878,6 +878,7 @@ class Run(object):
         self.n_proc_site_element_type_index_list = []
         local_num_neighbors_list = {}
         n_proc_hop_dist_type_list = {}
+        neighbor_index_list = {}
         lambda_value_list = {}
         v_ab_list = {}
         for species_type_index, species_type in enumerate(
@@ -900,6 +901,7 @@ class Run(object):
             if species_count != 0:
                 local_num_neighbors_list[element_type] = []
                 n_proc_hop_dist_type_list[element_type] = []
+                neighbor_index_list[element_type] = []
                 lambda_value_list[element_type] = []
                 v_ab_list[element_type] = []
                 for class_index in range(self.material.num_classes[
@@ -919,6 +921,13 @@ class Run(object):
                     n_proc_hop_dist_type_list[element_type].append(
                         np.repeat(range(len_local_num_neighbors),
                                   local_num_neighbors))
+                    neighbor_index_list[element_type].append(
+                                [index
+                                 for value in np.unique(
+                                     n_proc_hop_dist_type_list[element_type][
+                                                                class_index],
+                                     return_counts=True)[1]
+                                 for index in range(value)])
                     lambda_value_list[element_type].append(
                         [self.material.lambda_values[hop_element_type][
                                                                 hop_dist_type]
@@ -947,7 +956,6 @@ class Run(object):
                 self.n_proc_v_ab_list.extend(
                             [self.material.v_ab[hop_element_type][
                                  hop_dist_type]] * num_neighbors)
-
         # system coordinates
         self.system_coordinates = self.neighbors.bulk_sites.cell_coordinates
 
