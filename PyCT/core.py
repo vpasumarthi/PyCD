@@ -876,7 +876,6 @@ class Run(object):
         self.n_proc_hop_element_type_list = []
         # NOTE: doesn't work with doping.
         self.n_proc_site_element_type_index_list = []
-        local_num_neighbors_list = {}
         self.n_proc_hop_dist_type_list = {}
         self.n_proc_neighbor_index_list = {}
         self.n_proc_lambda_value_list = {}
@@ -899,7 +898,6 @@ class Run(object):
                             [element_type_index] * species_count
                             * self.system.num_neighbors[species_type_index])
             if species_count != 0:
-                local_num_neighbors_list[element_type] = []
                 self.n_proc_hop_dist_type_list[hop_element_type] = []
                 self.n_proc_neighbor_index_list[hop_element_type] = []
                 self.n_proc_lambda_value_list[hop_element_type] = []
@@ -916,8 +914,6 @@ class Run(object):
                             self.system.hop_neighbor_list[hop_element_type][
                                 hop_dist_type].num_neighbors[sample_site_index]
                             )
-                    local_num_neighbors_list[element_type].append(
-                                                        local_num_neighbors)
                     self.n_proc_hop_dist_type_list[hop_element_type].append(
                         np.repeat(range(len_local_num_neighbors),
                                   local_num_neighbors))
@@ -966,7 +962,6 @@ class Run(object):
             element_type_element_index = (
                                 self.compute_element_type_element_index(
                                     i_proc, species_site_system_element_index))
-            local_num_neighbors_list = []
             for hop_dist_type in range(self.len_hop_dist_type_list[
                                                             species_index]):
                 local_neighbor_site_system_element_index_list = (
@@ -976,7 +971,6 @@ class Run(object):
                                                 element_type_element_index])
                 num_neighbors = len(
                                 local_neighbor_site_system_element_index_list)
-                local_num_neighbors_list.append(num_neighbors)
                 # TODO: Introduce If condition if neighbor_system_element_index
                 # not in current_state_occupancy: commit 898baa8
                 new_site_system_element_index_list[
@@ -988,7 +982,6 @@ class Run(object):
             element_type_element_index_list[i_proc_old:i_proc] = \
                                                     element_type_element_index
             i_proc_old = i_proc
-
         process_attributes = (old_site_system_element_index_list,
                               new_site_system_element_index_list,
                               element_type_element_index_list)
