@@ -878,7 +878,7 @@ class Run(object):
         self.n_proc_site_element_type_index_list = []
         local_num_neighbors_list = {}
         self.n_proc_hop_dist_type_list = {}
-        neighbor_index_list = {}
+        self.n_proc_neighbor_index_list = {}
         self.n_proc_lambda_value_list = {}
         self.n_proc_v_ab_list = {}
         for species_type_index, species_type in enumerate(
@@ -901,7 +901,7 @@ class Run(object):
             if species_count != 0:
                 local_num_neighbors_list[element_type] = []
                 self.n_proc_hop_dist_type_list[hop_element_type] = []
-                neighbor_index_list[element_type] = []
+                self.n_proc_neighbor_index_list[hop_element_type] = []
                 self.n_proc_lambda_value_list[hop_element_type] = []
                 self.n_proc_v_ab_list[hop_element_type] = []
                 for class_index in range(self.material.num_classes[
@@ -921,7 +921,7 @@ class Run(object):
                     self.n_proc_hop_dist_type_list[hop_element_type].append(
                         np.repeat(range(len_local_num_neighbors),
                                   local_num_neighbors))
-                    neighbor_index_list[element_type].append(
+                    self.n_proc_neighbor_index_list[hop_element_type].append(
                                 [index
                                  for value in np.unique(
                                      self.n_proc_hop_dist_type_list[
@@ -937,15 +937,7 @@ class Run(object):
                         [self.material.v_ab[hop_element_type][hop_dist_type]
                          for hop_dist_type in self.n_proc_hop_dist_type_list[
                                             hop_element_type][class_index]])
-        self.n_proc_neighbor_index_list = []  # could be buggy
-        for hop_element_type_index, hop_element_type in enumerate(
-                                                self.hop_element_type_list):
-            for hop_dist_type in range(self.len_hop_dist_type_list[
-                                                    hop_element_type_index]):
-                num_neighbors = self.system.hop_neighbor_list[
-                    hop_element_type][hop_dist_type].num_neighbors[0]
-                self.n_proc_neighbor_index_list.extend(range(
-                                                            num_neighbors))
+
         # system coordinates
         self.system_coordinates = self.neighbors.bulk_sites.cell_coordinates
 
@@ -1047,7 +1039,8 @@ class Run(object):
             v_ab = self.n_proc_v_ab_list[hop_element_type][class_index][i_proc]
             element_type_element_index = element_type_element_index_list[
                                                                         i_proc]
-            neighbor_index = self.n_proc_neighbor_index_list[i_proc]
+            neighbor_index = self.n_proc_neighbor_index_list[hop_element_type][
+                                                        class_index][i_proc]
             hop_vector = (self.system.hop_neighbor_list[hop_element_type][
                             hop_dist_type].displacement_vector_list[
                                 element_type_element_index][neighbor_index])
