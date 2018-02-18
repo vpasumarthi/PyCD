@@ -850,6 +850,27 @@ class Run(object):
                     len(self.material.neighbor_cutoff_dist[hop_element_type])
                     for hop_element_type in self.hop_element_type_list]
 
+        class_based_sample_site_indices = {}
+        for species_type_index, species_type in enumerate(
+                                                self.material.species_types):
+            species_count = self.system.species_count[species_type_index]
+            hop_element_type = self.material.hop_element_types[species_type][0]
+            element_type = self.material.species_to_element_type_map[
+                                                            species_type][0]
+            element_type_index = self.material.element_types.index(
+                                                                element_type)
+            class_based_sample_site_indices[element_type] = []
+            start_index = self.material.n_elements_per_unit_cell[
+                                                    :element_type_index].sum()
+            end_index = start_index + self.material.n_elements_per_unit_cell[
+                                                            element_type_index]
+            for class_index in range(self.material.num_classes[
+                                                        element_type_index]):
+                sample_site_index = self.material.unit_cell_class_list[
+                                    start_index:end_index].index(class_index)
+                class_based_sample_site_indices[element_type].append(
+                                                            sample_site_index)
+
         self.n_proc_species_index_list = []
         # NOTE: doesn't work with doping.
         self.n_proc_hop_element_type_list = []
@@ -859,8 +880,10 @@ class Run(object):
                                                 self.material.species_types):
             species_count = self.system.species_count[species_type_index]
             hop_element_type = self.material.hop_element_types[species_type][0]
-            element_type = self.material.species_to_element_type_map[species_type][0]
-            element_type_index = self.material.element_types.index(element_type)
+            element_type = self.material.species_to_element_type_map[
+                                                            species_type][0]
+            element_type_index = self.material.element_types.index(
+                                                                element_type)
             self.n_proc_species_index_list.extend(
                                 np.repeat(range(species_count),
                                 self.system.num_neighbors[species_type_index]))
