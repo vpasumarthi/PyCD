@@ -934,8 +934,7 @@ class Run(object):
                          for hop_dist_type in n_proc_hop_dist_type_list[
                                                 element_type][class_index]])
                     v_ab_list[element_type].append(
-                        [self.material.lambda_values[hop_element_type][
-                                                                hop_dist_type]
+                        [self.material.v_ab[hop_element_type][hop_dist_type]
                          for hop_dist_type in n_proc_hop_dist_type_list[
                                                 element_type][class_index]])
 
