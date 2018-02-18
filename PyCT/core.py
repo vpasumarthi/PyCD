@@ -877,7 +877,7 @@ class Run(object):
         # NOTE: doesn't work with doping.
         self.n_proc_site_element_type_index_list = []
         local_num_neighbors_list = {}
-        n_proc_hop_dist_type_list = {}
+        self.n_proc_hop_dist_type_list = {}
         neighbor_index_list = {}
         self.n_proc_lambda_value_list = {}
         self.n_proc_v_ab_list = {}
@@ -900,7 +900,7 @@ class Run(object):
                             * self.system.num_neighbors[species_type_index])
             if species_count != 0:
                 local_num_neighbors_list[element_type] = []
-                n_proc_hop_dist_type_list[element_type] = []
+                self.n_proc_hop_dist_type_list[hop_element_type] = []
                 neighbor_index_list[element_type] = []
                 self.n_proc_lambda_value_list[hop_element_type] = []
                 self.n_proc_v_ab_list[hop_element_type] = []
@@ -918,25 +918,25 @@ class Run(object):
                             )
                     local_num_neighbors_list[element_type].append(
                                                         local_num_neighbors)
-                    n_proc_hop_dist_type_list[element_type].append(
+                    self.n_proc_hop_dist_type_list[hop_element_type].append(
                         np.repeat(range(len_local_num_neighbors),
                                   local_num_neighbors))
                     neighbor_index_list[element_type].append(
                                 [index
                                  for value in np.unique(
-                                     n_proc_hop_dist_type_list[element_type][
-                                                                class_index],
+                                     self.n_proc_hop_dist_type_list[
+                                         hop_element_type][class_index],
                                      return_counts=True)[1]
                                  for index in range(value)])
                     self.n_proc_lambda_value_list[hop_element_type].append(
                         [self.material.lambda_values[hop_element_type][
                                                                 hop_dist_type]
-                         for hop_dist_type in n_proc_hop_dist_type_list[
-                                                element_type][class_index]])
+                         for hop_dist_type in self.n_proc_hop_dist_type_list[
+                                            hop_element_type][class_index]])
                     self.n_proc_v_ab_list[hop_element_type].append(
                         [self.material.v_ab[hop_element_type][hop_dist_type]
-                         for hop_dist_type in n_proc_hop_dist_type_list[
-                                                element_type][class_index]])
+                         for hop_dist_type in self.n_proc_hop_dist_type_list[
+                                            hop_element_type][class_index]])
         self.n_proc_neighbor_index_list = []  # could be buggy
         for hop_element_type_index, hop_element_type in enumerate(
                                                 self.hop_element_type_list):
@@ -967,7 +967,6 @@ class Run(object):
         i_proc = i_proc_old = 0
         old_site_system_element_index_list = np.zeros(self.n_proc, dtype=int)
         new_site_system_element_index_list = np.zeros(self.n_proc, dtype=int)
-        n_proc_hop_dist_type_list = np.zeros(self.n_proc, dtype=int)
         element_type_element_index_list = np.zeros(self.n_proc, dtype=int)
         for species_site_system_element_index in occupancy:
             species_index = self.n_proc_species_index_list[i_proc]
@@ -992,9 +991,6 @@ class Run(object):
                     i_proc:i_proc+num_neighbors] = \
                         local_neighbor_site_system_element_index_list
                 i_proc += num_neighbors
-            n_proc_hop_dist_type_list[i_proc_old:i_proc] = np.repeat(
-                range(self.len_hop_dist_type_list[species_index]),
-                local_num_neighbors_list)
             old_site_system_element_index_list[i_proc_old:i_proc] = \
                                             species_site_system_element_index
             element_type_element_index_list[i_proc_old:i_proc] = \
@@ -1003,7 +999,6 @@ class Run(object):
 
         process_attributes = (old_site_system_element_index_list,
                               new_site_system_element_index_list,
-                              n_proc_hop_dist_type_list,
                               element_type_element_index_list)
         return process_attributes
 
@@ -1013,7 +1008,6 @@ class Run(object):
         k_list = np.zeros(self.n_proc)
         (old_site_system_element_index_list,
          new_site_system_element_index_list,
-         n_proc_hop_dist_type_list,
          element_type_element_index_list) = process_attributes
 
         for i_proc in range(self.n_proc):
@@ -1042,7 +1036,8 @@ class Run(object):
             class_index = self.system.system_class_index_list[
                                             species_site_system_element_index]
             hop_element_type = self.n_proc_hop_element_type_list[i_proc]
-            hop_dist_type = n_proc_hop_dist_type_list[i_proc]
+            hop_dist_type = self.n_proc_hop_dist_type_list[hop_element_type][
+                                                        class_index][i_proc]
             delg_0 = (delg_0_ewald
                       + self.material.delg_0_shift_list[hop_element_type][
                                                 class_index][hop_dist_type])
