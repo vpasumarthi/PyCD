@@ -652,13 +652,9 @@ class System(object):
         self.num_neighbors = np.zeros(self.material.num_species_types, int)
         for species_type_index, species_type in enumerate(
                                                 self.material.species_types):
-            # NOTE: Used [0] at the end of the statement assuming element types
-            # hosting the species have equivalent number of nearest neighbors
-            species_element_type = self.material.species_to_element_type_map[
-                                                            species_type][0]
-            # NOTE: Assumes hop between same element type is allowed
-            hop_element_type = self.material.element_type_delimiter.join(
-                                                    [species_element_type] * 2)
+            # NOTE: Used [0] at the end of the statement assuming all 
+            # hop_element_types have equivalent number of nearest neighbors
+            hop_element_type = self.material.hop_element_types[species_type][0]
             for hop_dist_type in range(len(self.material.neighbor_cutoff_dist[
                                                         hop_element_type])):
                 self.num_neighbors[species_type_index] += (
