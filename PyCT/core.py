@@ -851,7 +851,15 @@ class Run(object):
                     len(self.material.neighbor_cutoff_dist[hop_element_type])
                     for hop_element_type in self.hop_element_type_list]
 
-        self.n_proc_hop_element_type_list = [] # good
+        self.n_proc_hop_element_type_list = []
+        for species_type_index, species_type in enumerate(
+                                                self.material.species_types):
+            species_count = self.system.species_count[species_type_index]
+            hop_element_type = self.material.hop_element_types[species_type][0]
+            self.n_proc_hop_element_type_list.extend(
+                            [hop_element_type] * species_count
+                            * self.system.num_neighbors[species_type_index])
+
         self.n_proc_neighbor_index_list = []  # could be buggy
         self.n_proc_species_index_list = [] # good
         self.n_proc_site_element_type_index_list = [] # undecided
