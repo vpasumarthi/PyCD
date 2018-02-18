@@ -835,12 +835,13 @@ class Run(object):
                     for hop_element_type in self.hop_element_type_list]
         # number of kinetic processes
         self.n_proc = 0
-        self.n_proc_hop_element_type_list = []
-        self.n_proc_neighbor_index_list = []
-        self.n_proc_species_index_list = []
-        self.n_proc_site_element_type_index_list = []
-        self.n_proc_lambda_value_list = []
-        self.n_proc_v_ab_list = []
+        self.n_proc_hop_element_type_list = [] # good
+        self.n_proc_neighbor_index_list = []  # could be buggy
+        self.n_proc_species_index_list = [] # good
+        self.n_proc_site_element_type_index_list = [] # undecided
+        self.n_proc_lambda_value_list = [] # could be buggy
+        self.n_proc_v_ab_list = [] # could be buggy
+        i_proc_old = 0
         for hop_element_type_index, hop_element_type in enumerate(
                                                 self.hop_element_type_list):
             center_element_type = hop_element_type.split(
@@ -856,8 +857,6 @@ class Run(object):
                     num_neighbors = self.system.hop_neighbor_list[
                         hop_element_type][hop_dist_type_index].num_neighbors[0]
                     self.n_proc += num_neighbors
-                    self.n_proc_hop_element_type_list.extend(
-                                        [hop_element_type] * num_neighbors)
                     self.n_proc_neighbor_index_list.extend(range(
                                                                 num_neighbors))
                     self.n_proc_species_index_list.extend(
@@ -871,6 +870,9 @@ class Run(object):
                     self.n_proc_v_ab_list.extend(
                                 [self.material.v_ab[hop_element_type][
                                      hop_dist_type_index]] * num_neighbors)
+            self.n_proc_hop_element_type_list.extend(
+                            [hop_element_type] * (self.n_proc - i_proc_old))
+            i_proc_old = self.n_proc
 
         # system coordinates
         self.system_coordinates = self.neighbors.bulk_sites.cell_coordinates
