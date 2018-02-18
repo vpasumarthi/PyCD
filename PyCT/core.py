@@ -852,47 +852,41 @@ class Run(object):
                     for hop_element_type in self.hop_element_type_list]
 
         self.n_proc_hop_element_type_list = []
+        self.n_proc_species_index_list = []
+        self.n_proc_site_element_type_index_list = []
         for species_type_index, species_type in enumerate(
                                                 self.material.species_types):
             species_count = self.system.species_count[species_type_index]
             hop_element_type = self.material.hop_element_types[species_type][0]
+            element_type = self.material.species_to_element_type_map[species_type][0]
+            element_type_index = self.material.element_types.index(element_type)
             self.n_proc_hop_element_type_list.extend(
                             [hop_element_type] * species_count
                             * self.system.num_neighbors[species_type_index])
+            self.n_proc_species_index_list.extend(
+                                np.repeat(range(species_count),
+                                self.system.num_neighbors[species_type_index]))
+            self.n_proc_site_element_type_index_list.extend(
+                            [element_type_index] * species_count
+                            * self.system.num_neighbors[species_type_index])
 
         self.n_proc_neighbor_index_list = []  # could be buggy
-        self.n_proc_species_index_list = [] # good
-        self.n_proc_site_element_type_index_list = [] # undecided
         self.n_proc_lambda_value_list = [] # could be buggy
         self.n_proc_v_ab_list = [] # could be buggy
-        i_proc = i_proc_old = 0
         for hop_element_type_index, hop_element_type in enumerate(
                                                 self.hop_element_type_list):
-            center_element_type = hop_element_type.split(
-                                    self.material.element_type_delimiter)[0]
-            center_site_element_type_index = self.material.element_types.index(
-                                                        center_element_type)
             for hop_dist_type in range(self.len_hop_dist_type_list[
                                                     hop_element_type_index]):
                 num_neighbors = self.system.hop_neighbor_list[
                     hop_element_type][hop_dist_type].num_neighbors[0]
-                i_proc += num_neighbors
                 self.n_proc_neighbor_index_list.extend(range(
                                                             num_neighbors))
-                self.n_proc_species_index_list.extend(
-                            [hop_element_type_index] * num_neighbors)
-                self.n_proc_site_element_type_index_list.extend(
-                                        [center_site_element_type_index]
-                                        * num_neighbors)
                 self.n_proc_lambda_value_list.extend(
                             [self.material.lambda_values[hop_element_type][
                                  hop_dist_type]] * num_neighbors)
                 self.n_proc_v_ab_list.extend(
                             [self.material.v_ab[hop_element_type][
                                  hop_dist_type]] * num_neighbors)
-            self.n_proc_hop_element_type_list.extend(
-                            [hop_element_type] * (i_proc - i_proc_old))
-            i_proc_old = i_proc
 
         # system coordinates
         self.system_coordinates = self.neighbors.bulk_sites.cell_coordinates
