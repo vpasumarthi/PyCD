@@ -827,6 +827,7 @@ class Run(object):
             self.electric_field = np.zeros(self.neighbors.n_dim)
 
         self.system_size = self.system.system_size
+        self.n_proc = self.system.n_proc
 
         # n_elements_per_unit_cell
         self.head_start_n_elements_per_unit_cell_cum_sum = [
@@ -908,13 +909,10 @@ class Run(object):
 
     def get_process_attributes(self, occupancy):
         i_proc = i_proc_old = 0
-        old_site_system_element_index_list = np.zeros(self.system.n_proc,
-                                                      dtype=int)
-        new_site_system_element_index_list = np.zeros(self.system.n_proc,
-                                                      dtype=int)
-        n_proc_hop_dist_type_list = np.zeros(self.system.n_proc, dtype=int)
-        element_type_element_index_list = np.zeros(self.system.n_proc,
-                                                   dtype=int)
+        old_site_system_element_index_list = np.zeros(self.n_proc, dtype=int)
+        new_site_system_element_index_list = np.zeros(self.n_proc, dtype=int)
+        n_proc_hop_dist_type_list = np.zeros(self.n_proc, dtype=int)
+        element_type_element_index_list = np.zeros(self.n_proc, dtype=int)
         for species_site_system_element_index in occupancy:
             species_index = self.n_proc_species_index_list[i_proc]
             hop_element_type = self.n_proc_hop_element_type_list[i_proc]
@@ -951,16 +949,15 @@ class Run(object):
         return process_attributes
 
     def get_process_rates(self, process_attributes, charge_config):
-        nproc_delg_0_array = np.zeros(self.system.n_proc)
-        nproc_hop_vector_array = np.zeros((self.system.n_proc,
-                                           self.neighbors.n_dim))
-        k_list = np.zeros(self.system.n_proc)
+        nproc_delg_0_array = np.zeros(self.n_proc)
+        nproc_hop_vector_array = np.zeros((self.n_proc, self.neighbors.n_dim))
+        k_list = np.zeros(self.n_proc)
         (old_site_system_element_index_list,
          new_site_system_element_index_list,
          n_proc_hop_dist_type_list,
          element_type_element_index_list) = process_attributes
 
-        for i_proc in range(self.system.n_proc):
+        for i_proc in range(self.n_proc):
             species_site_system_element_index = \
                                     old_site_system_element_index_list[i_proc]
             neighbor_site_system_element_index = \
