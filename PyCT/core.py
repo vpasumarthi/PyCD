@@ -876,6 +876,7 @@ class Run(object):
         self.n_proc_hop_element_type_list = []
         # NOTE: doesn't work with doping.
         self.n_proc_site_element_type_index_list = []
+        local_num_neighbors_list = {}
         for species_type_index, species_type in enumerate(
                                                 self.material.species_types):
             species_count = self.system.species_count[species_type_index]
@@ -893,6 +894,23 @@ class Run(object):
             self.n_proc_site_element_type_index_list.extend(
                             [element_type_index] * species_count
                             * self.system.num_neighbors[species_type_index])
+            if species_count != 0:
+                local_num_neighbors_list[element_type] = []
+                for class_index in range(self.material.num_classes[
+                                                        element_type_index]):
+                    #pdb.set_trace()
+                    sample_site_index = class_based_sample_site_indices[
+                                                    element_type][class_index]
+                    
+                    local_num_neighbors = []
+                    for hop_dist_type in range(len(
+                        self.material.neighbor_cutoff_dist[hop_element_type])):
+                        local_num_neighbors.append(
+                            self.system.hop_neighbor_list[hop_element_type][
+                                hop_dist_type].num_neighbors[sample_site_index]
+                            )
+                    local_num_neighbors_list[element_type].append(
+                                                        local_num_neighbors)
 
         self.n_proc_neighbor_index_list = []  # could be buggy
         self.n_proc_lambda_value_list = [] # could be buggy
