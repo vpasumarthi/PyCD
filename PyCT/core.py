@@ -933,6 +933,10 @@ class Run(object):
                         [self.material.v_ab[hop_element_type][hop_dist_type]
                          for hop_dist_type in self.n_proc_hop_dist_type_list[
                                             hop_element_type][class_index]])
+        self.n_proc_species_proc_list = [
+            species_proc_index
+            for index in self.species_type_index_list
+            for species_proc_index in range(self.system.num_neighbors[index])]
 
         # system coordinates
         self.system_coordinates = self.neighbors.bulk_sites.cell_coordinates
@@ -1001,6 +1005,7 @@ class Run(object):
             neighbor_site_system_element_index = \
                                     new_site_system_element_index_list[i_proc]
             species_index = self.n_proc_species_index_list[i_proc]
+            species_proc_index = self.n_proc_species_proc_list[i_proc]
             term01 = 2 * np.dot(
                 charge_config[:, 0],
                 (self.precomputed_array[neighbor_site_system_element_index, :]
@@ -1022,18 +1027,19 @@ class Run(object):
                                             species_site_system_element_index]
             hop_element_type = self.n_proc_hop_element_type_list[i_proc]
             hop_dist_type = self.n_proc_hop_dist_type_list[hop_element_type][
-                                                        class_index][i_proc]
+                                            class_index][species_proc_index]
             delg_0 = (delg_0_ewald
                       + self.material.delg_0_shift_list[hop_element_type][
                                                 class_index][hop_dist_type])
             nproc_delg_0_array[i_proc] = delg_0
             lambda_value = self.n_proc_lambda_value_list[hop_element_type][
-                                                        class_index][i_proc]
-            v_ab = self.n_proc_v_ab_list[hop_element_type][class_index][i_proc]
+                                            class_index][species_proc_index]
+            v_ab = self.n_proc_v_ab_list[hop_element_type][class_index][
+                                                            species_proc_index]
             element_type_element_index = element_type_element_index_list[
                                                                         i_proc]
             neighbor_index = self.n_proc_neighbor_index_list[hop_element_type][
-                                                        class_index][i_proc]
+                                            class_index][species_proc_index]
             hop_vector = (self.system.hop_neighbor_list[hop_element_type][
                             hop_dist_type].displacement_vector_list[
                                 element_type_element_index][neighbor_index])
