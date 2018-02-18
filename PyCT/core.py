@@ -106,7 +106,7 @@ class Material(object):
                             element_fract_unit_cell_coords[:, 2].argsort()])
             element_type = self.element_types[element_type_index]
             self.unit_cell_class_list.extend(
-                [material_parameters.class_list[element_type][index]
+                [material_parameters.class_list[element_type][index] - 1
                  for index in element_fract_unit_cell_coords[:, 2].argsort()])
             start_index = end_index
 
@@ -645,8 +645,7 @@ class System(object):
 
         # class list
         self.system_class_index_list = (
-            np.tile(self.material.unit_cell_class_list, self.num_cells)
-            - 1)
+                np.tile(self.material.unit_cell_class_list, self.num_cells))
 
         # species-wise number of nearest neighbors
         self.num_neighbors = np.zeros(self.material.num_species_types, int)
