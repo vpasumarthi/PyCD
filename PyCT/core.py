@@ -918,6 +918,7 @@ class Run(object):
             element_type_element_index = (
                                 self.compute_element_type_element_index(
                                     i_proc, species_site_system_element_index))
+            local_num_neighbors_list = []
             for hop_dist_type in range(self.len_hop_dist_type_list[
                                                             species_index]):
                 local_neighbor_site_system_element_index_list = (
@@ -927,14 +928,16 @@ class Run(object):
                                                 element_type_element_index])
                 num_neighbors = len(
                                 local_neighbor_site_system_element_index_list)
+                local_num_neighbors_list.append(num_neighbors)
                 # TODO: Introduce If condition if neighbor_system_element_index
                 # not in current_state_occupancy: commit 898baa8
                 new_site_system_element_index_list[
                     i_proc:i_proc+num_neighbors] = \
                         local_neighbor_site_system_element_index_list
-                n_proc_hop_dist_type_list[
-                    i_proc:i_proc+num_neighbors] = hop_dist_type
                 i_proc += num_neighbors
+            n_proc_hop_dist_type_list[i_proc_old:i_proc] = np.repeat(
+                range(self.len_hop_dist_type_list[species_index]),
+                local_num_neighbors_list)
             old_site_system_element_index_list[i_proc_old:i_proc] = \
                                             species_site_system_element_index
             element_type_element_index_list[i_proc_old:i_proc] = \
