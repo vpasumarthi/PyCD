@@ -24,10 +24,10 @@ def diffusion_profile(out_dir, system_directory_path,
         n_electrons = species_count_list[0][0]
 
     parent_dir1 = 'SimulationFiles'
-    parent_dir2 = ('ion_charge_type=' + ion_charge_type
-                   + '; species_charge_type=' + species_charge_type)
+    parent_dir2 = ('ionChargeType=' + ion_charge_type
+                   + ';speciesChargeType=' + species_charge_type)
 
-    file_name = '%1.2_e%s' % (msd_t_final, repr_time)
+    file_name = '%1.2E%s' % (msd_t_final, repr_time)
     msd_analysis_log_file_name = ('MSD_Analysis' + ('_' if file_name else '')
                                   + file_name + '.log')
 
@@ -39,11 +39,11 @@ def diffusion_profile(out_dir, system_directory_path,
             n_holes = n_species
         parent_dir3 = (str(n_electrons)
                        + ('electron' if n_electrons == 1 else 'electrons')
-                       + ', ' + str(n_holes)
+                       + ',' + str(n_holes)
                        + ('hole' if n_holes == 1 else 'holes'))
         parent_dir4 = str(temp) + 'K'
-        work_dir = (('%1.2_e' % t_final) + 'SEC,' + ('%1.2_e' % time_interval)
-                   + 'TimeInterval,' + ('%1.2_e' % n_traj) + 'Traj')
+        work_dir = (('%1.2E' % t_final) + 'SEC,' + ('%1.2E' % time_interval)
+                   + 'TimeInterval,' + ('%1.2E' % n_traj) + 'Traj')
         msd_analysis_log_file_path = os.path.join(
                 system_directory_path, parent_dir1, parent_dir2, parent_dir3,
                 parent_dir4, work_dir, msd_analysis_log_file_name)
@@ -91,8 +91,8 @@ def runtime_profile(out_dir, system_directory_path,
         n_electrons = species_count_list[0][0]
 
     parent_dir1 = 'SimulationFiles'
-    parent_dir2 = ('ion_charge_type=' + ion_charge_type
-                   + '; species_charge_type=' + species_charge_type)
+    parent_dir2 = ('ionChargeType=' + ion_charge_type
+                   + ';speciesChargeType=' + species_charge_type)
     run_log_file_name = 'Run.log'
 
     for species_index, n_species in enumerate(profiling_species_list):
@@ -103,11 +103,11 @@ def runtime_profile(out_dir, system_directory_path,
             n_holes = n_species
         parent_dir3 = (str(n_electrons)
                        + ('electron' if n_electrons == 1 else 'electrons')
-                       + ', ' + str(n_holes)
+                       + ',' + str(n_holes)
                        + ('hole' if n_holes == 1 else 'holes'))
         parent_dir4 = str(temp) + 'K'
-        work_dir = (('%1.2_e' % t_final) + 'SEC,' + ('%1.2_e' % time_interval)
-                    + 'TimeInterval,' + ('%1.2_e' % n_traj) + 'Traj')
+        work_dir = (('%1.2E' % t_final) + 'SEC,' + ('%1.2E' % time_interval)
+                    + 'TimeInterval,' + ('%1.2E' % n_traj) + 'Traj')
         run_log_file_path = os.path.join(
                 system_directory_path, parent_dir1, parent_dir2, parent_dir3,
                 parent_dir4, work_dir, run_log_file_name)
