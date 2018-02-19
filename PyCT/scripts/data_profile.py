@@ -8,17 +8,19 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def diffusion_profile(out_dir, system_directory_path,
-                      profiling_species_type_index, species_count_list,
+def diffusion_profile(out_dir, system_directory_path, species_count_list,
                       ion_charge_type, species_charge_type, temp, t_final,
                       time_interval, n_traj, msd_t_final, external_field,
                       repr_time):
+    if len(species_count_list[0]) == 1:
+        profiling_species_type_index = 1
+    else:
+        profiling_species_type_index = 0
     profiling_species_list = species_count_list[profiling_species_type_index]
     profile_length = len(profiling_species_list)
     diffusivity_profile_data = np.zeros((profile_length, 2))
     diffusivity_profile_data[:, 0] = profiling_species_list
     species_type = 'electron' if profiling_species_type_index == 0 else 'hole'
-
     if profiling_species_type_index == 0:
         n_holes = species_count_list[1][0]
     else:
@@ -84,10 +86,13 @@ def diffusion_profile(out_dir, system_directory_path,
     np.savetxt(data_file_path, diffusivity_profile_data)
 
 
-def runtime_profile(out_dir, system_directory_path,
-                    profiling_species_type_index, species_count_list,
+def runtime_profile(out_dir, system_directory_path, species_count_list,
                     ion_charge_type, species_charge_type, temp, t_final,
                     time_interval, n_traj, external_field):
+    if len(species_count_list[0]) == 1:
+        profiling_species_type_index = 1
+    else:
+        profiling_species_type_index = 0
     profiling_species_list = species_count_list[profiling_species_type_index]
     profile_length = len(profiling_species_list)
     elapsed_seconds_data = np.zeros((profile_length, 2))
@@ -155,7 +160,7 @@ def runtime_profile(out_dir, system_directory_path,
     figure_title = ('Simulation run time as a function of number of '
                    + species_type + 's')
     ax.set_title('\n'.join(wrap(figure_title, 60)))
-    filename = (str(species_type) + 'RunTimeProfile_' + ion_charge_type[0]
+    filename = (str(species_type) + '_run_time_profile_' + ion_charge_type[0]
                 + species_charge_type[0] + '_' + str(profiling_species_list[0])
                 + '-' + str(profiling_species_list[-1]) + '_' + work_dir)
     figure_name = filename + '.png'
