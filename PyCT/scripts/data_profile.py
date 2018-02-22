@@ -27,9 +27,8 @@ def diffusion_profile(out_dir, system_directory_path, species_count_list,
         n_electrons = species_count_list[0][0]
 
     parent_dir1 = 'SimulationFiles'
-    # TODO: parent_dir2 to lower case with underscores
-    parent_dir2 = ('ionChargeType=' + ion_charge_type
-                   + ';speciesChargeType=' + species_charge_type)
+    parent_dir2 = ('IonChargeType=' + ion_charge_type
+                   + ';SpeciesChargeType=' + species_charge_type)
 
     file_name = '%1.2E%s' % (msd_t_final, repr_time)
     msd_analysis_log_file_name = ('MSD_Analysis' + ('_' if file_name else '')
@@ -48,10 +47,11 @@ def diffusion_profile(out_dir, system_directory_path, species_count_list,
         parent_dir4 = str(temp) + 'K'
         parent_dir5 = (('%1.2E' % t_final) + 'SEC,' + ('%1.2E' % time_interval)
                        + 'TimeInterval,' + ('%1.2E' % n_traj) + 'Traj')
-        # TODO: Modify mag string to '%1.2E'
+        ld_tag = 'ld_' if external_field['electric']['ld'] else ''
         field_tag = (
-                'ef_' + str(external_field['electric']['dir']).replace(' ','')
-                + '_' + ('%1.4f' % external_field['electric']['mag']))
+                'ef_' + ld_tag
+                + str(external_field['electric']['dir']).replace(' ','') + '_'
+                + ('%1.2E' % external_field['electric']['mag']))
         work_dir = (field_tag
                     if external_field['electric']['active'] else 'no_field')
         msd_analysis_log_file_path = os.path.join(
@@ -105,9 +105,8 @@ def runtime_profile(out_dir, system_directory_path, species_count_list,
         n_electrons = species_count_list[0][0]
 
     parent_dir1 = 'SimulationFiles'
-    # TODO: parent_dir2 to lower case with underscores
-    parent_dir2 = ('ionChargeType=' + ion_charge_type
-                   + ';speciesChargeType=' + species_charge_type)
+    parent_dir2 = ('IonChargeType=' + ion_charge_type
+                   + ';SpeciesChargeType=' + species_charge_type)
     run_log_file_name = 'Run.log'
 
     for species_index, n_species in enumerate(profiling_species_list):
@@ -123,10 +122,11 @@ def runtime_profile(out_dir, system_directory_path, species_count_list,
         parent_dir4 = str(temp) + 'K'
         parent_dir5 = (('%1.2E' % t_final) + 'SEC,' + ('%1.2E' % time_interval)
                        + 'TimeInterval,' + ('%1.2E' % n_traj) + 'Traj')
-        # TODO: Modify mag string to '%1.2E'
+        ld_tag = 'ld_' if external_field['electric']['ld'] else ''
         field_tag = (
-                'ef_' + str(external_field['electric']['dir']).replace(' ','')
-                + '_' + ('%1.4f' % external_field['electric']['mag']))
+                'ef_' + ld_tag
+                + str(external_field['electric']['dir']).replace(' ','') + '_'
+                + ('%1.2E' % external_field['electric']['mag']))
         work_dir = (field_tag
                     if external_field['electric']['active'] else 'no_field')
         run_log_file_path = os.path.join(
