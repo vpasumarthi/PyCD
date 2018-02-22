@@ -812,11 +812,14 @@ class Run(object):
 
         # electric field
         electric_field = external_field['electric']
+        self.electric_field_ld = electric_field['ld']
         if electric_field['active']:
             self.electric_field_active = 1
+            field_dir = np.asarray(electric_field['dir'])
+            if self.electric_field_ld == 1:
+                field_dir = np.dot(field_dir, self.material.lattice_matrix)
             self.electric_field = (electric_field['mag']
-                                   * (np.asarray(electric_field['dir'])
-                                      / np.linalg.norm(electric_field['dir'])))
+                                   * (field_dir / np.linalg.norm(field_dir)))
         else:
             self.electric_field_active = 0
             self.electric_field = np.zeros(self.neighbors.n_dim)
