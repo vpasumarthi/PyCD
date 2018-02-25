@@ -51,10 +51,10 @@ def material_msd(dst_path):
 
     msd_analysis_data = material_analysis.compute_msd(dst_path)
     msd_data = msd_analysis_data.msd_data
-    std_data = msd_analysis_data.std_data
+    sem_data = msd_analysis_data.sem_data
     species_types = msd_analysis_data.species_types
     file_name = msd_analysis_data.file_name
-    material_analysis.generate_msd_plot(msd_data, std_data,
+    material_analysis.generate_msd_plot(msd_data, sem_data,
                                         sim_params['display_error_bars'],
                                         species_types, file_name,
                                         dst_path)

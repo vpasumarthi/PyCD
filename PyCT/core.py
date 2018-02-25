@@ -1298,7 +1298,7 @@ class Analysis(object):
                       * self.time_conversion)
         msd_data[:, 0] = time_array
         msd_data[:, 1:] = np.mean(species_avg_sd_array, axis=0)
-        std_data = np.std(species_avg_sd_array, axis=0)
+        sem_data = np.std(species_avg_sd_array, axis=0) / np.sqrt(self.n_traj)
         file_name = (('%1.2E' % (self.msd_t_final * self.time_conversion))
                      + str(self.repr_time)
                      + (',n_traj: %1.2E' % num_traj_recorded
@@ -1338,12 +1338,12 @@ class Analysis(object):
         generate_report(self.start_time, dst_path, report_file_name, prefix)
 
         return_msd_data = ReturnValues(msd_data=msd_data,
-                                       std_data=std_data,
+                                       sem_data=sem_data,
                                        species_types=species_types,
                                        file_name=file_name)
         return return_msd_data
 
-    def generate_msd_plot(self, msd_data, std_data, display_error_bars,
+    def generate_msd_plot(self, msd_data, sem_data, display_error_bars,
                           species_types, file_name, dst_path):
         """Returns a line plot of the MSD data
         :param msd_data:
@@ -1365,7 +1365,7 @@ class Analysis(object):
                     label=species_type)
             if display_error_bars:
                 ax.errorbar(msd_data[:, 0], msd_data[:, species_index + 1],
-                            yerr=std_data[:, species_index], fmt='o',
+                            yerr=sem_data[:, species_index], fmt='o',
                             capsize=3, color='blue', markerfacecolor='none',
                             markeredgecolor='none')
             slope, intercept, r_value, _, _ = \
