@@ -1298,7 +1298,8 @@ class Analysis(object):
                       * self.time_conversion)
         msd_data[:, 0] = time_array
         msd_data[:, 1:] = np.mean(species_avg_sd_array, axis=0)
-        sem_data = np.std(species_avg_sd_array, axis=0) / np.sqrt(self.n_traj)
+        sem_data = (np.std(species_avg_sd_array, axis=0)
+                    / np.sqrt(num_traj_recorded))
         file_name = (('%1.2E' % (self.msd_t_final * self.time_conversion))
                      + str(self.repr_time)
                      + (',n_traj: %1.2E' % num_traj_recorded
@@ -1314,7 +1315,6 @@ class Analysis(object):
         report_file_name = ''.join(['MSD_Analysis',
                              ('_' if file_name else ''), file_name])
         slope_data = np.zeros((num_traj_recorded, num_existent_species))
-        slope_std_data = np.zeros(num_existent_species)
         prefix_list = []
         for species_index, species_type in enumerate(species_types):
             for traj_index in range(num_traj_recorded):
@@ -1326,14 +1326,16 @@ class Analysis(object):
             slope = np.mean(slope_data[:, species_index])
             species_diff = (slope * constants.ANG2UM ** 2
                             * constants.SEC2NS / (2 * self.n_dim))
-            prefix_list.append('Estimated value of {:s} diffusivity is: '
-                               '{:4.3f} um2/s\n'.format(species_type, species_diff))
-            slope_std_data[species_index] = np.std(slope_data[:, species_index])
-            species_std = (slope_std_data[species_index]
-                           * constants.ANG2UM ** 2 * constants.SEC2NS
-                           / (2 * self.n_dim))
-            prefix_list.append('Standard deviation in {:s} diffusivity is: '
-                               '{:4.3f} um2/s\n'.format(species_type, species_std))
+            prefix_list.append(
+                        'Estimated value of {:s} diffusivity is: '
+                        '{:4.3f} um2/s\n'.format(species_type, species_diff))
+            slope_sem = (np.std(slope_data[:, species_index])
+                         / np.sqrt(num_traj_recorded))
+            species_diff_sem = (slope_sem * constants.ANG2UM ** 2
+                                * constants.SEC2NS / (2 * self.n_dim))
+            prefix_list.append(
+                'Standard error of mean in {:s} diffusivity is: '
+                '{:4.3f} um2/s\n'.format(species_type, species_diff_sem))
         prefix = ''.join(prefix_list)
         generate_report(self.start_time, dst_path, report_file_name, prefix)
 
