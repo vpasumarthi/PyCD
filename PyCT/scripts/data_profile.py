@@ -18,8 +18,7 @@ def diffusion_profile(out_dir, system_directory_path, species_count_list,
         profiling_species_type_index = 0
     profiling_species_list = species_count_list[profiling_species_type_index]
     profile_length = len(profiling_species_list)
-    diffusivity_profile_data = np.zeros((profile_length, 2))
-    error_bar_data = np.zeros(profile_length)
+    diffusivity_profile_data = np.zeros((profile_length, 3))
     diffusivity_profile_data[:, 0] = profiling_species_list
     species_type = 'electron' if profiling_species_type_index == 0 else 'hole'
     if profiling_species_type_index == 0:
@@ -63,7 +62,7 @@ def diffusion_profile(out_dir, system_directory_path, species_count_list,
             first_line = msd_analysis_log_file.readline()
             second_line = msd_analysis_log_file.readline()
         diffusivity_profile_data[species_index, 1] = float(first_line[-13:-6])
-        error_bar_data[species_index] = float(second_line[-13:-6])
+        diffusivity_profile_data[species_index, 2] = float(second_line[-13:-6])
 
     plt.switch_backend('Agg')
     fig = plt.figure()
@@ -72,8 +71,8 @@ def diffusion_profile(out_dir, system_directory_path, species_count_list,
             'o-', color='blue', markerfacecolor='blue', markeredgecolor='black'
             )
     ax.errorbar(diffusivity_profile_data[:, 0], diffusivity_profile_data[:, 1],
-                yerr=error_bar_data, fmt='o', capsize=3, color='blue',
-                markerfacecolor='none', markeredgecolor='none')
+                yerr=diffusivity_profile_data[:, 2], fmt='o', capsize=3,
+                color='blue', markerfacecolor='none', markeredgecolor='none')
     ax.set_xlabel('Number of ' + species_type + 's')
     ax.set_ylabel('Diffusivity (${{\mu}}m^2/s$)')
     figure_title = ('Diffusion coefficient as a function of number of '
