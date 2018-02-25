@@ -9,9 +9,9 @@ import matplotlib.pyplot as plt
 
 
 def diffusion_profile(out_dir, system_directory_path, species_count_list,
-                      ion_charge_type, species_charge_type, temp, t_final,
-                      time_interval, n_traj, msd_t_final, external_field,
-                      repr_time):
+                      ion_charge_type, species_charge_type, plot_error_bars,
+                      temp, t_final, time_interval, n_traj, msd_t_final,
+                      external_field, repr_time):
     if len(species_count_list[0]) == 1:
         profiling_species_type_index = 1
     else:
@@ -70,9 +70,12 @@ def diffusion_profile(out_dir, system_directory_path, species_count_list,
     ax.plot(diffusivity_profile_data[:, 0], diffusivity_profile_data[:, 1],
             'o-', color='blue', markerfacecolor='blue', markeredgecolor='black'
             )
-    ax.errorbar(diffusivity_profile_data[:, 0], diffusivity_profile_data[:, 1],
-                yerr=diffusivity_profile_data[:, 2], fmt='o', capsize=3,
-                color='blue', markerfacecolor='none', markeredgecolor='none')
+    if plot_error_bars:
+        ax.errorbar(diffusivity_profile_data[:, 0],
+                    diffusivity_profile_data[:, 1],
+                    yerr=diffusivity_profile_data[:, 2], fmt='o', capsize=3,
+                    color='blue', markerfacecolor='none',
+                    markeredgecolor='none')
     ax.set_xlabel('Number of ' + species_type + 's')
     ax.set_ylabel('Diffusivity (${{\mu}}m^2/s$)')
     figure_title = ('Diffusion coefficient as a function of number of '
