@@ -1271,10 +1271,11 @@ class Analysis(object):
                 sd_array[traj_index, time_step, :] = np.mean(
                         np.einsum('ijk,ijk->ij', pos_diff, pos_diff),
                         axis=0)
+        num_existent_species = (self.material.num_species_types
+                                - list(self.species_count).count(0))
         species_avg_sd_array = np.zeros((num_traj_recorded,
                                          self.num_msd_steps_per_traj,
-                                         self.material.num_species_types
-                                         - list(self.species_count).count(0)))
+                                         num_existent_species))
         start_index = 0
         num_non_existent_species = 0
         non_existent_species_indices = []
@@ -1291,8 +1292,7 @@ class Analysis(object):
                 non_existent_species_indices.append(species_type_index)
 
         msd_data = np.zeros((self.num_msd_steps_per_traj,
-                            (self.material.num_species_types
-                             + 1 - list(self.species_count).count(0))))
+                             num_existent_species + 1))
         time_array = (np.arange(self.num_msd_steps_per_traj)
                       * self.time_interval
                       * self.time_conversion)
@@ -1313,16 +1313,28 @@ class Analysis(object):
 
         report_file_name = ''.join(['MSD_Analysis',
                              ('_' if file_name else ''), file_name])
+        slope_data = np.zeros((num_traj_recorded, num_existent_species))
+        slope_std_data = np.zeros(num_existent_species)
+        prefix_list = []
         for species_index, species_type in enumerate(species_types):
-            slope, _, _, _, _ = \
-                linregress(msd_data[self.trim_length:-self.trim_length, 0],
-                           msd_data[self.trim_length:-self.trim_length,
-                           species_index + 1])
+            for traj_index in range(num_traj_recorded):
+                slope_data[traj_index, species_index], _, _, _, _ = \
+                    linregress(msd_data[self.trim_length:-self.trim_length, 0],
+                               species_avg_sd_array[traj_index,
+                                                    self.trim_length:-self.trim_length,
+                                                    species_index])
+            slope = np.mean(slope_data[:, species_index])
             species_diff = (slope * constants.ANG2UM ** 2
                             * constants.SEC2NS / (2 * self.n_dim))
-            prefix = ('Estimated value of {:s} diffusivity is: '
-                      '{:4.3f} um2/s\n'.format(species_type, species_diff))
-
+            prefix_list.append('Estimated value of {:s} diffusivity is: '
+                               '{:4.3f} um2/s\n'.format(species_type, species_diff))
+            slope_std_data[species_index] = np.std(slope_data[:, species_index])
+            species_std = (slope_std_data[species_index]
+                           * constants.ANG2UM ** 2 * constants.SEC2NS
+                           / (2 * self.n_dim))
+            prefix_list.append('Standard deviation in {:s} diffusivity is: '
+                               '{:4.3f} um2/s\n'.format(species_type, species_std))
+        prefix = ''.join(prefix_list)
         generate_report(self.start_time, dst_path, report_file_name, prefix)
 
         return_msd_data = ReturnValues(msd_data=msd_data,
