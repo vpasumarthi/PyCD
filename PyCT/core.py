@@ -1059,6 +1059,43 @@ class Run(object):
                              nproc_hop_vector_array)
         return process_rate_info
 
+    def compute_drift_mobility(self, drift_velocity_array, dst_path,
+                               prefix_list):
+        drift_mobility_au = (np.dot(drift_velocity_array, self.electric_field)
+                             / self.electric_field_mag**2)
+        # mobility in cm2/V.s.
+        drift_mobility_array = (drift_mobility_au * (constants.BOHR2CM**2
+                                                     * constants.SEC2AUTIME
+                                                     * constants.V2AUPOT))
+        # write drift mobility data to file
+        output_file_name = dst_path.joinpath('drift_mobility.dat')
+        with open(output_file_name, 'wb') as output_file:
+            np.savetxt(output_file, drift_mobility_array)
+        # compute average drift mobiltiy and standard error of mean
+        start_species_index = 0
+        for species_index, num_species in enumerate(
+                                                self.system.species_count):
+            end_species_index = start_species_index + num_species
+            if num_species != 0:
+                species_type = self.material.species_types[species_index]
+                species_drift_mobility = drift_mobility_array[
+                                    start_species_index:end_species_index]
+                species_avg_drift_mobility = np.mean(species_drift_mobility,
+                                                     axis=1)
+                mean_drift_mobility = np.mean(species_avg_drift_mobility)
+                sem_drift_mobility = (np.std(species_avg_drift_mobility)
+                                      / np.sqrt(self.n_traj))
+                prefix_list.append(
+                        'Estimated value of {:s} drift mobility is: '
+                        '{:4.3e} cm2/V.s.\n'.format(species_type,
+                                                    mean_drift_mobility))
+                prefix_list.append(
+                    'Standard error of mean in {:s} drift mobility is: '
+                    '{:4.3e} cm2/V.s.\n'.format(species_type,
+                                                sem_drift_mobility))
+            start_species_index = end_species_index
+        return prefix_list
+
     def do_kmc_steps(self, dst_path, random_seed, output_data):
         """Subroutine to run the KMC simulation by specified number
         of steps
@@ -1090,15 +1127,16 @@ class Run(object):
                     potential_array = np.zeros((num_path_steps_per_traj,
                                                 self.total_species))
         if self.electric_field_active:
-            output_file_name = dst_path.joinpath('drift_mobility.dat')
-            open(output_file_name, 'wb').close()
+            drift_velocity_array = np.zeros((self.n_traj,
+                                             self.total_species, 3))
 
+        prefix_list = []
         system_charge = np.dot(self.system.species_count,
                                self.material.species_charge_list[
                                             self.species_charge_type])
         ewald_neut = - (np.pi * (system_charge**2)
                         / (2 * self.system.system_volume * self.system.alpha))
-        for _ in range(self.n_traj):
+        for traj_index in range(self.n_traj):
             current_state_occupancy = self.system.generate_random_occupancy(
                                                     self.system.species_count)
             current_state_charge_config = self.system.charge_config(
@@ -1120,7 +1158,6 @@ class Run(object):
                 energy_array[0] = current_state_energy
             species_displacement_vector_list = np.zeros(
                                                 (1, self.total_species * 3))
-            drift_velocity_array = np.zeros((self.total_species, 3))
             sim_time = 0
             while end_path_index < num_path_steps_per_traj:
                 process_attributes = self.get_process_attributes(
@@ -1155,8 +1192,10 @@ class Run(object):
                 species_displacement_vector_list[
                     0, species_index * 3:(species_index + 1) * 3] += \
                         nproc_hop_vector_array[proc_index]
-                drift_velocity_array[species_index, :] += (
-                    nproc_hop_vector_array[proc_index] * k_list[proc_index])
+                if self.electric_field_active:
+                    drift_velocity_array[traj_index, species_index, :] += (
+                                            nproc_hop_vector_array[proc_index]
+                                            * k_list[proc_index])
                 current_state_energy += nproc_delg_0_array[proc_index]
                 current_state_charge_config[old_site_system_element_index] -= \
                     self.species_charge_list[species_index]
@@ -1175,13 +1214,6 @@ class Run(object):
                     species_displacement_vector_list = np.zeros(
                                                 (1, self.total_species * 3))
                     start_path_index = end_path_index
-            drift_mobility_au = (
-                            np.dot(drift_velocity_array, self.electric_field)
-                            / self.electric_field_mag**2)
-            # mobility in cm2/V.s.
-            drift_mobility_array = (drift_mobility_au * (constants.BOHR2CM**2
-                                                         * constants.SEC2AUTIME
-                                                         * constants.V2AUPOT))
 
             # Write output data arrays to disk
             for output_data_type, output_attributes in output_data.items():
@@ -1199,13 +1231,14 @@ class Run(object):
                             np.savetxt(output_file, delg_0_array)
                         elif output_data_type == 'potential':
                             np.savetxt(output_file, potential_array)
-            if self.electric_field_active:
-                output_file_name = dst_path.joinpath('drift_mobility.dat')
-                with open(output_file_name, 'ab') as output_file:
-                    np.savetxt(output_file, drift_mobility_array[None, :])
+
+        if self.electric_field_active:
+            prefix_list = self.compute_drift_mobility(drift_velocity_array,
+                                                      dst_path, prefix_list)
 
         file_name = 'Run'
-        generate_report(self.start_time, dst_path, file_name)
+        prefix = ''.join(prefix_list)
+        generate_report(self.start_time, dst_path, file_name, prefix)
         return None
 
 
