@@ -1079,7 +1079,7 @@ class Run(object):
             if num_species != 0:
                 species_type = self.material.species_types[species_index]
                 species_drift_mobility = drift_mobility_array[
-                                    start_species_index:end_species_index]
+                                    :, start_species_index:end_species_index]
                 species_avg_drift_mobility = np.mean(species_drift_mobility,
                                                      axis=1)
                 mean_drift_mobility = np.mean(species_avg_drift_mobility)
