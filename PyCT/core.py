@@ -813,12 +813,13 @@ class Run(object):
         # electric field
         electric_field = external_field['electric']
         self.electric_field_ld = electric_field['ld']
+        self.electric_field_mag = electric_field['mag']
         if electric_field['active']:
             self.electric_field_active = 1
             field_dir = np.asarray(electric_field['dir'])
             if self.electric_field_ld == 1:
                 field_dir = np.dot(field_dir, self.material.lattice_matrix)
-            self.electric_field = (electric_field['mag']
+            self.electric_field = (self.electric_field_mag
                                    * (field_dir / np.linalg.norm(field_dir)))
         else:
             self.electric_field_active = 0
@@ -1088,6 +1089,9 @@ class Run(object):
                 elif output_data_type == 'potential':
                     potential_array = np.zeros((num_path_steps_per_traj,
                                                 self.total_species))
+        if self.electric_field_active:
+            output_file_name = dst_path.joinpath('drift_mobility.dat')
+            open(output_file_name, 'wb').close()
 
         system_charge = np.dot(self.system.species_count,
                                self.material.species_charge_list[
@@ -1116,6 +1120,7 @@ class Run(object):
                 energy_array[0] = current_state_energy
             species_displacement_vector_list = np.zeros(
                                                 (1, self.total_species * 3))
+            drift_velocity_array = np.zeros((self.total_species, 3))
             sim_time = 0
             while end_path_index < num_path_steps_per_traj:
                 process_attributes = self.get_process_attributes(
@@ -1150,6 +1155,8 @@ class Run(object):
                 species_displacement_vector_list[
                     0, species_index * 3:(species_index + 1) * 3] += \
                         nproc_hop_vector_array[proc_index]
+                drift_velocity_array[species_index, :] += (
+                    nproc_hop_vector_array[proc_index] * k_list[proc_index])
                 current_state_energy += nproc_delg_0_array[proc_index]
                 current_state_charge_config[old_site_system_element_index] -= \
                     self.species_charge_list[species_index]
@@ -1168,6 +1175,13 @@ class Run(object):
                     species_displacement_vector_list = np.zeros(
                                                 (1, self.total_species * 3))
                     start_path_index = end_path_index
+            drift_mobility_au = (
+                            np.dot(drift_velocity_array, self.electric_field)
+                            / self.electric_field_mag**2)
+            # mobility in cm2/V.s.
+            drift_mobility_array = (drift_mobility_au * (constants.BOHR2CM**2
+                                                         * constants.SEC2AUTIME
+                                                         * constants.V2AUPOT))
 
             # Write output data arrays to disk
             for output_data_type, output_attributes in output_data.items():
@@ -1185,6 +1199,10 @@ class Run(object):
                             np.savetxt(output_file, delg_0_array)
                         elif output_data_type == 'potential':
                             np.savetxt(output_file, potential_array)
+            if self.electric_field_active:
+                output_file_name = dst_path.joinpath('drift_mobility.dat')
+                with open(output_file_name, 'ab') as output_file:
+                    np.savetxt(output_file, drift_mobility_array[None, :])
 
         file_name = 'Run'
         generate_report(self.start_time, dst_path, file_name)
