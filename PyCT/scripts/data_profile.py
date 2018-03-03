@@ -7,7 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def diffusion_profile(out_dir, system_directory_path, species_count_list,
+def diffusion_profile(dst_path, system_directory_path, species_count_list,
                       ion_charge_type, species_charge_type, plot_error_bars,
                       temp, t_final, time_interval, n_traj, msd_t_final,
                       external_field, repr_time):
@@ -84,16 +84,16 @@ def diffusion_profile(out_dir, system_directory_path, species_count_list,
                 + species_charge_type[0] + '_' + str(profiling_species_list[0])
                 + '-' + str(profiling_species_list[-1]) + '_' + work_dir)
     figure_name = filename + '.png'
-    figure_path = out_dir / figure_name
+    figure_path = dst_path / figure_name
     plt.tight_layout()
     plt.savefig(str(figure_path))
 
     data_file_name = filename + '.txt'
-    data_file_path = out_dir / data_file_name
+    data_file_path = dst_path / data_file_name
     np.savetxt(data_file_path, diffusivity_profile_data)
 
 
-def drift_mobility_profile(out_dir, system_directory_path, species_count_list,
+def drift_mobility_profile(dst_path, system_directory_path, species_count_list,
                            ion_charge_type, species_charge_type,
                            plot_error_bars, temp, t_final, time_interval,
                            n_traj, external_field):
@@ -168,16 +168,16 @@ def drift_mobility_profile(out_dir, system_directory_path, species_count_list,
                 + str(profiling_species_list[0]) + '-'
                 + str(profiling_species_list[-1]) + '_' + work_dir)
     figure_name = filename + '.png'
-    figure_path = out_dir / figure_name
+    figure_path = dst_path / figure_name
     plt.tight_layout()
     plt.savefig(str(figure_path))
 
     data_file_name = filename + '.txt'
-    data_file_path = out_dir / data_file_name
+    data_file_path = dst_path / data_file_name
     np.savetxt(data_file_path, diffusivity_profile_data)
 
 
-def runtime_profile(out_dir, system_directory_path, species_count_list,
+def runtime_profile(dst_path, system_directory_path, species_count_list,
                     ion_charge_type, species_charge_type, temp, t_final,
                     time_interval, n_traj, external_field):
     if len(species_count_list[0]) == 1:
@@ -255,10 +255,10 @@ def runtime_profile(out_dir, system_directory_path, species_count_list,
                 + species_charge_type[0] + '_' + str(profiling_species_list[0])
                 + '-' + str(profiling_species_list[-1]) + '_' + work_dir)
     figure_name = filename + '.png'
-    figure_path = out_dir / figure_name
+    figure_path = dst_path / figure_name
     plt.tight_layout()
     plt.savefig(str(figure_path))
 
     data_file_name = filename + '.txt'
-    data_file_path = out_dir / data_file_name
+    data_file_path = dst_path / data_file_name
     np.savetxt(data_file_path, elapsed_seconds_data)
