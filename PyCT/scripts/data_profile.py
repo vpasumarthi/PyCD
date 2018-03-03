@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import os.path
 from textwrap import wrap
 from datetime import timedelta
 
@@ -54,10 +53,10 @@ def diffusion_profile(out_dir, system_directory_path, species_count_list,
                 + ('%1.2E' % external_field['electric']['mag']))
         work_dir = (field_tag
                     if external_field['electric']['active'] else 'no_field')
-        msd_analysis_log_file_path = os.path.join(
-                system_directory_path, parent_dir1, parent_dir2, parent_dir3,
-                parent_dir4, parent_dir5, work_dir, msd_analysis_log_file_name)
-
+        work_dir_path = (system_directory_path / parent_dir1 / parent_dir2
+                         / parent_dir3 / parent_dir4 / parent_dir5 / work_dir)
+        msd_analysis_log_file_path = work_dir_path.joinpath(
+                                                    msd_analysis_log_file_name)
         with open(msd_analysis_log_file_path, 'r') as msd_analysis_log_file:
             first_line = msd_analysis_log_file.readline()
             second_line = msd_analysis_log_file.readline()
@@ -85,19 +84,19 @@ def diffusion_profile(out_dir, system_directory_path, species_count_list,
                 + species_charge_type[0] + '_' + str(profiling_species_list[0])
                 + '-' + str(profiling_species_list[-1]) + '_' + work_dir)
     figure_name = filename + '.png'
-    figure_path = os.path.join(out_dir, figure_name)
+    figure_path = out_dir / figure_name
     plt.tight_layout()
-    plt.savefig(figure_path)
+    plt.savefig(str(figure_path))
 
     data_file_name = filename + '.txt'
-    data_file_path = os.path.join(out_dir, data_file_name)
+    data_file_path = out_dir / data_file_name
     np.savetxt(data_file_path, diffusivity_profile_data)
 
 
 def drift_mobility_profile(out_dir, system_directory_path, species_count_list,
                            ion_charge_type, species_charge_type,
                            plot_error_bars, temp, t_final, time_interval,
-                           n_traj, msd_t_final, external_field, repr_time):
+                           n_traj, external_field):
     if len(species_count_list[0]) == 1:
         profiling_species_type_index = 1
     else:
@@ -137,9 +136,9 @@ def drift_mobility_profile(out_dir, system_directory_path, species_count_list,
                 + ('%1.2E' % external_field['electric']['mag']))
         work_dir = (field_tag
                     if external_field['electric']['active'] else 'no_field')
-        msd_analysis_log_file_path = os.path.join(
-                system_directory_path, parent_dir1, parent_dir2, parent_dir3,
-                parent_dir4, parent_dir5, work_dir, run_log_file_name)
+        msd_analysis_log_file_path = (
+                system_directory_path / parent_dir1 / parent_dir2 / parent_dir3
+                / parent_dir4 / parent_dir5 / work_dir / run_log_file_name)
 
         with open(msd_analysis_log_file_path, 'r') as msd_analysis_log_file:
             first_line = msd_analysis_log_file.readline()
@@ -169,12 +168,12 @@ def drift_mobility_profile(out_dir, system_directory_path, species_count_list,
                 + str(profiling_species_list[0]) + '-'
                 + str(profiling_species_list[-1]) + '_' + work_dir)
     figure_name = filename + '.png'
-    figure_path = os.path.join(out_dir, figure_name)
+    figure_path = out_dir / figure_name
     plt.tight_layout()
-    plt.savefig(figure_path)
+    plt.savefig(str(figure_path))
 
     data_file_name = filename + '.txt'
-    data_file_path = os.path.join(out_dir, data_file_name)
+    data_file_path = out_dir / data_file_name
     np.savetxt(data_file_path, diffusivity_profile_data)
 
 
@@ -221,9 +220,9 @@ def runtime_profile(out_dir, system_directory_path, species_count_list,
                 + ('%1.2E' % external_field['electric']['mag']))
         work_dir = (field_tag
                     if external_field['electric']['active'] else 'no_field')
-        run_log_file_path = os.path.join(
-                system_directory_path, parent_dir1, parent_dir2, parent_dir3,
-                parent_dir4, parent_dir5, work_dir, run_log_file_name)
+        run_log_file_path = (
+                system_directory_path / parent_dir1 / parent_dir2 / parent_dir3
+                / parent_dir4 / parent_dir5 / work_dir / run_log_file_name)
 
         with open(run_log_file_path, 'r') as run_log_file:
             first_line = run_log_file.readline()
@@ -256,10 +255,10 @@ def runtime_profile(out_dir, system_directory_path, species_count_list,
                 + species_charge_type[0] + '_' + str(profiling_species_list[0])
                 + '-' + str(profiling_species_list[-1]) + '_' + work_dir)
     figure_name = filename + '.png'
-    figure_path = os.path.join(out_dir, figure_name)
+    figure_path = out_dir / figure_name
     plt.tight_layout()
-    plt.savefig(figure_path)
+    plt.savefig(str(figure_path))
 
     data_file_name = filename + '.txt'
-    data_file_path = os.path.join(out_dir, data_file_name)
+    data_file_path = out_dir / data_file_name
     np.savetxt(data_file_path, elapsed_seconds_data)
