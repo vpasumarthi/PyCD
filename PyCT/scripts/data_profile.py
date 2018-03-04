@@ -141,7 +141,7 @@ class DataProfile(object):
         filename = self.generate_profile_plot(
                             drift_mobility_profile_data, y_label, figure_title,
                             profiling_quantity, plot_error_bars)
-        data_file_name = filename + '.txt'
+        data_file_name = filename + '.dat'
         data_file_path = self.dst_path / data_file_name
         np.savetxt(data_file_path, drift_mobility_profile_data)
         return None
@@ -179,7 +179,7 @@ class DataProfile(object):
         filename = self.generate_profile_plot(
                             elapsed_seconds_data, y_label, figure_title,
                             profiling_quantity, plot_error_bars)
-        data_file_name = filename + '.txt'
+        data_file_name = filename + '.dat'
         data_file_path = self.dst_path / data_file_name
         np.savetxt(data_file_path, elapsed_seconds_data)
         return None
