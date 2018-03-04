@@ -62,7 +62,8 @@ class DataProfile(object):
                          / self.field_tag)
         return work_dir_path
 
-    def generate_profile_plot(self, profile_data, plot_error_bars):
+    def generate_profile_plot(self, profile_data, y_label, figure_title,
+                              profiling_quantity, plot_error_bars):
         plt.switch_backend('Agg')
         fig = plt.figure()
         ax = fig.add_subplot(111)
@@ -74,15 +75,14 @@ class DataProfile(object):
                         color='blue', markerfacecolor='none',
                         markeredgecolor='none')
         ax.set_xlabel('Number of ' + self.var_species_type + 's')
-        ax.set_ylabel('Diffusivity (${{\mu}}m^2/s$)')
-        figure_title = ('Diffusion coefficient as a function of number of '
-                        + self.var_species_type + 's')
+        ax.set_ylabel(y_label)
         ax.set_title('\n'.join(wrap(figure_title, 60)))
-        filename = (self.var_species_type + '_diffusion_profile_'
-                    + self.ion_charge_type[0] + self.species_charge_type[0]
-                    + '_' + str(self.var_species_count_list[0])
-                    + '-' + str(self.var_species_count_list[-1])
-                    + '_' + self.field_tag)
+        filename = (
+            self.var_species_type + '_' + profiling_quantity + '_profile_'
+            + self.ion_charge_type[0] + self.species_charge_type[0]
+            + '_' + str(self.var_species_count_list[0])
+            + '-' + str(self.var_species_count_list[-1])
+            + '_' + self.field_tag)
         figure_name = filename + '.png'
         figure_path = self.dst_path / figure_name
         plt.tight_layout()
@@ -92,13 +92,11 @@ class DataProfile(object):
     def diffusion_profile(self, plot_error_bars, msd_t_final, repr_time):
         diffusivity_profile_data = np.zeros((self.profile_length, 3))
         diffusivity_profile_data[:, 0] = np.copy(self.var_species_count_list)
-
         file_name = '%1.2E%s' % (msd_t_final, repr_time)
         msd_analysis_log_file_name = (
             'MSD_Analysis' + ('_' if file_name else '') + file_name + '.log')
 
         for index in range(self.profile_length):
-            # Change to working directory
             species_count = self.species_count_list[index, :]
             work_dir_path = self.generate_work_dir_path(species_count)
             msd_analysis_log_file_path = (work_dir_path
@@ -109,71 +107,39 @@ class DataProfile(object):
             diffusivity_profile_data[index, 1] = float(first_line[-13:-6])
             diffusivity_profile_data[index, 2] = float(second_line[-13:-6])
 
-        filename = self.generate_profile_plot(diffusivity_profile_data,
-                                              plot_error_bars)
+        y_label = 'Diffusivity (${{\mu}}m^2/s$)'
+        figure_title = ('Diffusion coefficient as a function of number of '
+                        + self.var_species_type + 's')
+        profiling_quantity = 'diffusion'
+        filename = self.generate_profile_plot(
+                            diffusivity_profile_data, y_label, figure_title,
+                            profiling_quantity, plot_error_bars)
         data_file_name = filename + '.dat'
         data_file_path = self.dst_path / data_file_name
         np.savetxt(data_file_path, diffusivity_profile_data)
 
     def drift_mobility_profile(self, plot_error_bars):
-        if len(self.species_count_list[0]) == 1:
-            profiling_species_type_index = 1
-        else:
-            profiling_species_type_index = 0
-        profiling_species_list = self.species_count_list[profiling_species_type_index]
-        profile_length = len(profiling_species_list)
-        diffusivity_profile_data = np.zeros((profile_length, 3))
-        diffusivity_profile_data[:, 0] = profiling_species_list
-        species_type = 'electron' if profiling_species_type_index == 0 else 'hole'
-        if profiling_species_type_index == 0:
-            n_holes = self.species_count_list[1][0]
-        else:
-            n_electrons = self.species_count_list[0][0]
-    
+        diffusivity_profile_data = np.zeros((self.profile_length, 3))
+        diffusivity_profile_data[:, 0] = np.copy(self.var_species_count_list)
         run_log_file_name = 'Run.log'
     
-        for species_index, n_species in enumerate(profiling_species_list):
-            # Change to working directory
-            if profiling_species_type_index == 0:
-                n_electrons = n_species
-            else:
-                n_holes = n_species
-            work_dir_path = self.generate_work_dir_path(n_electrons, n_holes)
+        for index in range(self.profile_length):
+            species_count = self.species_count_list[index, :]
+            work_dir_path = self.generate_work_dir_path(species_count)
             msd_analysis_log_file_path = work_dir_path / run_log_file_name
-    
             with open(msd_analysis_log_file_path, 'r') as msd_analysis_log_file:
                 first_line = msd_analysis_log_file.readline()
                 second_line = msd_analysis_log_file.readline()
-            diffusivity_profile_data[species_index, 1] = float(first_line[-19:-10])
-            diffusivity_profile_data[species_index, 2] = float(second_line[-19:-10])
+            diffusivity_profile_data[index, 1] = float(first_line[-19:-10])
+            diffusivity_profile_data[index, 2] = float(second_line[-19:-10])
     
-        plt.switch_backend('Agg')
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        ax.plot(diffusivity_profile_data[:, 0], diffusivity_profile_data[:, 1],
-                'o-', color='blue', markerfacecolor='blue', markeredgecolor='black'
-                )
-        if plot_error_bars:
-            ax.errorbar(diffusivity_profile_data[:, 0],
-                        diffusivity_profile_data[:, 1],
-                        yerr=diffusivity_profile_data[:, 2], fmt='o', capsize=3,
-                        color='blue', markerfacecolor='none',
-                        markeredgecolor='none')
-        ax.set_xlabel('Number of ' + species_type + 's')
-        ax.set_ylabel('Drift mobility ($cm^2/V.s$)')
+        y_label = 'Drift mobility ($cm^2/V.s$)'
         figure_title = ('Drift mobility as a function of number of '
-                        + species_type + 's')
-        ax.set_title('\n'.join(wrap(figure_title, 60)))
-        work_dir = work_dir_path.name
-        filename = (str(species_type) + '_drift_mobility_profile_'
-                    + self.ion_charge_type[0] + self.species_charge_type[0] + '_'
-                    + str(profiling_species_list[0]) + '-'
-                    + str(profiling_species_list[-1]) + '_' + work_dir)
-        figure_name = filename + '.png'
-        figure_path = self.dst_path / figure_name
-        plt.tight_layout()
-        plt.savefig(str(figure_path))
-    
+                        + self.var_species_type + 's')
+        profiling_quantity = 'drift_mobility'
+        filename = self.generate_profile_plot(
+                            diffusivity_profile_data, y_label, figure_title,
+                            profiling_quantity, plot_error_bars)
         data_file_name = filename + '.txt'
         data_file_path = self.dst_path / data_file_name
         np.savetxt(data_file_path, diffusivity_profile_data)
