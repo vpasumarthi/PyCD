@@ -34,6 +34,14 @@ class DataProfile(object):
         self.time_interval = time_interval
         self.n_traj = n_traj
         self.external_field = external_field
+        ld_tag = 'ld_' if self.external_field['electric']['ld'] else ''
+        ef_field_tag = (
+            'ef_' + ld_tag
+            + str(self.external_field['electric']['dir']).replace(' ','') + '_'
+            + ('%1.2E' % self.external_field['electric']['mag']))
+        self.field_tag = (
+                ef_field_tag
+                if self.external_field['electric']['active'] else 'no_field')
         return None
 
     def generate_work_dir_path(self, species_count):
@@ -49,17 +57,37 @@ class DataProfile(object):
         parent_dir5 = (('%1.2E' % self.t_final) + 'SEC,'
                        + ('%1.2E' % self.time_interval) + 'TimeInterval,'
                        + ('%1.2E' % self.n_traj) + 'Traj')
-        ld_tag = 'ld_' if self.external_field['electric']['ld'] else ''
-        field_tag = (
-            'ef_' + ld_tag
-            + str(self.external_field['electric']['dir']).replace(' ','') + '_'
-            + ('%1.2E' % self.external_field['electric']['mag']))
-        work_dir = (
-                field_tag
-                if self.external_field['electric']['active'] else 'no_field')
         work_dir_path = (self.system_directory_path / parent_dir1 / parent_dir2
-                         / parent_dir3 / parent_dir4 / parent_dir5 / work_dir)
+                         / parent_dir3 / parent_dir4 / parent_dir5
+                         / self.field_tag)
         return work_dir_path
+
+    def generate_profile_plot(self, profile_data, plot_error_bars):
+        plt.switch_backend('Agg')
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot(profile_data[:, 0], profile_data[:, 1], 'o-', color='blue',
+                markerfacecolor='blue', markeredgecolor='black')
+        if plot_error_bars:
+            ax.errorbar(profile_data[:, 0], profile_data[:, 1],
+                        yerr=profile_data[:, 2], fmt='o', capsize=3,
+                        color='blue', markerfacecolor='none',
+                        markeredgecolor='none')
+        ax.set_xlabel('Number of ' + self.var_species_type + 's')
+        ax.set_ylabel('Diffusivity (${{\mu}}m^2/s$)')
+        figure_title = ('Diffusion coefficient as a function of number of '
+                        + self.var_species_type + 's')
+        ax.set_title('\n'.join(wrap(figure_title, 60)))
+        filename = (self.var_species_type + '_diffusion_profile_'
+                    + self.ion_charge_type[0] + self.species_charge_type[0]
+                    + '_' + str(self.var_species_count_list[0])
+                    + '-' + str(self.var_species_count_list[-1])
+                    + '_' + self.field_tag)
+        figure_name = filename + '.png'
+        figure_path = self.dst_path / figure_name
+        plt.tight_layout()
+        plt.savefig(str(figure_path))
+        return filename
 
     def diffusion_profile(self, plot_error_bars, msd_t_final, repr_time):
         diffusivity_profile_data = np.zeros((self.profile_length, 3))
@@ -81,34 +109,8 @@ class DataProfile(object):
             diffusivity_profile_data[index, 1] = float(first_line[-13:-6])
             diffusivity_profile_data[index, 2] = float(second_line[-13:-6])
 
-        plt.switch_backend('Agg')
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        ax.plot(diffusivity_profile_data[:, 0], diffusivity_profile_data[:, 1],
-                'o-', color='blue', markerfacecolor='blue',
-                markeredgecolor='black')
-        if plot_error_bars:
-            ax.errorbar(diffusivity_profile_data[:, 0],
-                        diffusivity_profile_data[:, 1],
-                        yerr=diffusivity_profile_data[:, 2], fmt='o', capsize=3,
-                        color='blue', markerfacecolor='none',
-                        markeredgecolor='none')
-        ax.set_xlabel('Number of ' + self.var_species_type + 's')
-        ax.set_ylabel('Diffusivity (${{\mu}}m^2/s$)')
-        figure_title = ('Diffusion coefficient as a function of number of '
-                        + self.var_species_type + 's')
-        ax.set_title('\n'.join(wrap(figure_title, 60)))
-        work_dir = work_dir_path.name
-        filename = (self.var_species_type + '_diffusion_profile_'
-                    + self.ion_charge_type[0] + self.species_charge_type[0]
-                    + '_' + str(self.var_species_count_list[0])
-                    + '-' + str(self.var_species_count_list[-1])
-                    + '_' + work_dir)
-        figure_name = filename + '.png'
-        figure_path = self.dst_path / figure_name
-        plt.tight_layout()
-        plt.savefig(str(figure_path))
-
+        filename = self.generate_profile_plot(diffusivity_profile_data,
+                                              plot_error_bars)
         data_file_name = filename + '.dat'
         data_file_path = self.dst_path / data_file_name
         np.savetxt(data_file_path, diffusivity_profile_data)
