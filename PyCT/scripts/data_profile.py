@@ -117,12 +117,13 @@ class DataProfile(object):
         data_file_name = filename + '.dat'
         data_file_path = self.dst_path / data_file_name
         np.savetxt(data_file_path, diffusivity_profile_data)
+        return None
 
     def drift_mobility_profile(self, plot_error_bars):
-        diffusivity_profile_data = np.zeros((self.profile_length, 3))
-        diffusivity_profile_data[:, 0] = np.copy(self.var_species_count_list)
+        drift_mobility_profile_data = np.zeros((self.profile_length, 3))
+        drift_mobility_profile_data[:, 0] = np.copy(self.var_species_count_list)
         run_log_file_name = 'Run.log'
-    
+
         for index in range(self.profile_length):
             species_count = self.species_count_list[index, :]
             work_dir_path = self.generate_work_dir_path(species_count)
@@ -130,47 +131,30 @@ class DataProfile(object):
             with open(msd_analysis_log_file_path, 'r') as msd_analysis_log_file:
                 first_line = msd_analysis_log_file.readline()
                 second_line = msd_analysis_log_file.readline()
-            diffusivity_profile_data[index, 1] = float(first_line[-19:-10])
-            diffusivity_profile_data[index, 2] = float(second_line[-19:-10])
-    
+            drift_mobility_profile_data[index, 1] = float(first_line[-19:-10])
+            drift_mobility_profile_data[index, 2] = float(second_line[-19:-10])
+
         y_label = 'Drift mobility ($cm^2/V.s$)'
         figure_title = ('Drift mobility as a function of number of '
                         + self.var_species_type + 's')
         profiling_quantity = 'drift_mobility'
         filename = self.generate_profile_plot(
-                            diffusivity_profile_data, y_label, figure_title,
+                            drift_mobility_profile_data, y_label, figure_title,
                             profiling_quantity, plot_error_bars)
         data_file_name = filename + '.txt'
         data_file_path = self.dst_path / data_file_name
-        np.savetxt(data_file_path, diffusivity_profile_data)
-    
+        np.savetxt(data_file_path, drift_mobility_profile_data)
+        return None
+
     def runtime_profile(self):
-        if len(self.species_count_list[0]) == 1:
-            profiling_species_type_index = 1
-        else:
-            profiling_species_type_index = 0
-        profiling_species_list = self.species_count_list[profiling_species_type_index]
-        profile_length = len(profiling_species_list)
-        elapsed_seconds_data = np.zeros((profile_length, 2))
-        elapsed_seconds_data[:, 0] = profiling_species_list
-        species_type = 'electron' if profiling_species_type_index == 0 else 'hole'
-    
-        if profiling_species_type_index == 0:
-            n_holes = self.species_count_list[1][0]
-        else:
-            n_electrons = self.species_count_list[0][0]
-    
+        elapsed_seconds_data = np.zeros((self.profile_length, 2))
+        elapsed_seconds_data[:, 0] = np.copy(self.var_species_count_list)
         run_log_file_name = 'Run.log'
-    
-        for species_index, n_species in enumerate(profiling_species_list):
-            # Change to working directory
-            if profiling_species_type_index == 0:
-                n_electrons = n_species
-            else:
-                n_holes = n_species
-            work_dir_path = self.generate_work_dir_path(n_electrons, n_holes)
+
+        for index in range(self.profile_length):
+            species_count = self.species_count_list[index, :]
+            work_dir_path = self.generate_work_dir_path(species_count)
             run_log_file_path = work_dir_path / run_log_file_name
-    
             with open(run_log_file_path, 'r') as run_log_file:
                 first_line = run_log_file.readline()
             if 'days' in first_line:
@@ -185,29 +169,18 @@ class DataProfile(object):
                 num_seconds = float(first_line[36:38])
             elapsed_time = timedelta(days=num_days, hours=num_hours,
                                      minutes=num_minutes, seconds=num_seconds)
-            elapsed_seconds_data[species_index, 1] = int(
-                                                    elapsed_time.total_seconds())
-    
-        plt.switch_backend('Agg')
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        ax.plot(elapsed_seconds_data[:, 0], elapsed_seconds_data[:, 1], 'o-',
-                color='blue', markerfacecolor='blue', markeredgecolor='black')
-        ax.set_xlabel('Number of ' + species_type + 's')
-        ax.set_ylabel('Run Time (sec)')
+            elapsed_seconds_data[index, 1] = int(elapsed_time.total_seconds())
+
+        y_label = 'Run Time (sec)'
         figure_title = ('Simulation run time as a function of number of '
-                       + species_type + 's')
-        ax.set_title('\n'.join(wrap(figure_title, 60)))
-        work_dir = work_dir_path.name
-        filename = (str(species_type) + '_run_time_profile_'
-                    + self.ion_charge_type[0] + self.species_charge_type[0]
-                    + '_' + str(profiling_species_list[0])
-                    + '-' + str(profiling_species_list[-1]) + '_' + work_dir)
-        figure_name = filename + '.png'
-        figure_path = self.dst_path / figure_name
-        plt.tight_layout()
-        plt.savefig(str(figure_path))
-    
+                       + self.var_species_type + 's')
+        profiling_quantity = 'run_time'
+        plot_error_bars = 0
+        filename = self.generate_profile_plot(
+                            elapsed_seconds_data, y_label, figure_title,
+                            profiling_quantity, plot_error_bars)
         data_file_name = filename + '.txt'
         data_file_path = self.dst_path / data_file_name
         np.savetxt(data_file_path, elapsed_seconds_data)
+        return None
+
