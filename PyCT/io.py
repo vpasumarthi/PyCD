@@ -91,22 +91,28 @@ def write_poscar(src_file_path, dst_file_path, file_format,
         if file_format == 'VASP' or file_format == 'unknown':
             line = (
                 ''.join([
-                    ' ' * 2,
-                    '%18.16f' % element_coordinates[0],
-                    ' ' * 2,
-                    '%18.16f' % element_coordinates[1],
-                    ' ' * 2,
-                    '%18.16f' % element_coordinates[2]])
+                    ' ' * 1,
+                    [' ', '-'][element_coordinates[0] < 0],
+                    '%18.16f' % abs(element_coordinates[0]),
+                    ' ' * 1,
+                    [' ', '-'][element_coordinates[1] < 0],
+                    '%18.16f' % abs(element_coordinates[1]),
+                    ' ' * 1,
+                    [' ', '-'][element_coordinates[2] < 0],
+                    '%18.16f' % abs(element_coordinates[2])])
                 + '\n')
         elif file_format == 'VESTA':
             line = (
                 ''.join([
-                    ' ' * 5,
-                    '%11.9f' % element_coordinates[0],
-                    ' ' * 9,
-                    '%11.9f' % element_coordinates[1],
-                    ' ' * 9,
-                    '%11.9f' % element_coordinates[2]])
+                    ' ' * 4,
+                    [' ', '-'][element_coordinates[0] < 0],
+                    '%11.9f' % abs(element_coordinates[0]),
+                    ' ' * 8,
+                    [' ', '-'][element_coordinates[1] < 0],
+                    '%11.9f' % abs(element_coordinates[1]),
+                    ' ' * 8,
+                    [' ', '-'][element_coordinates[2] < 0],
+                    '%11.9f' % abs(element_coordinates[2])])
                 + '\n')
         dst_file.write(line)
     dst_file.close()
