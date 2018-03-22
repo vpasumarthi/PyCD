@@ -5,7 +5,6 @@ species_charge_list:
     'partial': [-0.5, +0.5]
 species_to_element_type_map:
     'electron': ['V']
-    'empty': ['Bi', 'O', 'V']
     'hole': ['O']
 # multiples of elementary charge
 charge_types:
@@ -51,7 +50,6 @@ delg_0_shift_list:
              +0.0000, +0.0000, +0.0000, -0.0406, -0.0406, +0.0000, +0.0000,
              -0.0406, -0.0406]]
 element_type_delimiter: ':'
-empty_species_type: 'empty'
 # Estimated dielectric constant computed using Clausius-Mosotti equation
 # Source: Shannon et al. JAP 1993. DOI: 10.1063/1.353856
 dielectric_constant: 38.299

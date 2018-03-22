@@ -1,6 +1,5 @@
 # System parameters:
-temp: 300
-dstFileName: simulation_parameters.yml
+dst_file_name: simulation_parameters.yml
 input_file_directory_name: InputFiles
 ion_charge_type: full
 material: BVO
@@ -8,11 +7,18 @@ pbc: [1, 1, 1]
 species_charge_type: full
 species_count: [0, 1]
 system_size: [2, 2, 1]
+temp: 300
 work_dir_depth: 1
 
 # Run parameters:
-dstFileName: Run.py
+dst_file_name: Run.py
 n_traj: 100.0
+output_data:
+  delg_0: [0, 'delG0_traj.dat']
+  energy: [1, 'energy_traj.dat']
+  potential: [0, 'potential_traj.dat']
+  unwrapped_traj: [1, 'unwrapped_traj.dat']
+  wrapped_traj: [0, 'wrapped_traj.dat']
 over_write: 1
 random_seed: 2
 report: 1
@@ -21,7 +27,7 @@ time_interval: 1.0e-08
 
 # MSD parameters:
 display_error_bars: 1
-dstFileName: generateMSDPlot.py
+dst_file_name: generateMSDPlot.py
 msd_t_final: 60
 n_dim: 3
 report: 1
