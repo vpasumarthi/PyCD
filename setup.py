@@ -5,10 +5,13 @@ This is a setup script to install PyCT
 
 import setuptools
 
+from PyCT import __version__
+
+
 if __name__ == "__main__":
     setuptools.setup(
         name='PyCT',
-        version="0.1.1",
+        version=__version__,
         description='Python-based mesoscale model for Charge Transport',
         author='Viswanath Pasumarthi',
         author_email='pasumart@buffalo.edu',
