@@ -34,7 +34,6 @@ class_list:
 delg_0_shift_list:
     'Fe:Fe': [[+0.0000, +0.0000, +0.0000, +0.0000]]
 element_type_delimiter: ':'
-siteIdentifier: '0'
 # Direction-averaged value of the static dielectric constant of the potential 
 # model used in KMC paper. Dielectric constant tensor obtained from METADISE.
 # Source: Kerisit et al., The Journal of Chemical Physics 127, 124706 (2007); 
