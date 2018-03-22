@@ -5,7 +5,6 @@ species_charge_list:
     'partial': [-0.5, +0.5]
 species_to_element_type_map:
     'electron': ['Fe']
-    'empty': ['Fe', 'O']
     'hole': ['O']
 # multiples of elementary charge
 charge_types:
@@ -35,7 +34,6 @@ class_list:
 delg_0_shift_list:
     'Fe:Fe': [[+0.0000, +0.0000, +0.0000, +0.0000]]
 element_type_delimiter: ':'
-empty_species_type: 'empty'
 siteIdentifier: '0'
 # Direction-averaged value of the static dielectric constant of the potential 
 # model used in KMC paper. Dielectric constant tensor obtained from METADISE.
