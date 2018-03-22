@@ -654,8 +654,12 @@ class System(object):
             # NOTE: Used [0] at the end of the statement assuming all 
             # hop_element_types have equivalent number of nearest neighbors
             hop_element_type = self.material.hop_element_types[species_type][0]
-            for hop_dist_type in range(len(self.material.neighbor_cutoff_dist[
-                                                        hop_element_type])):
+            if hop_element_type in self.material.neighbor_cutoff_dist:
+                num_hop_dist_types = len(self.material.neighbor_cutoff_dist[
+                                                            hop_element_type])
+            else:
+                num_hop_dist_types = 0
+            for hop_dist_type in range(num_hop_dist_types):
                 self.num_neighbors[species_type_index] += (
                                     self.hop_neighbor_list[hop_element_type][
                                             hop_dist_type].num_neighbors[0])
