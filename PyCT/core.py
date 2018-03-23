@@ -117,27 +117,30 @@ class Material(object):
         self.vn = material_parameters.vn / constants.SEC2AUTIME
 
         self.lambda_values = {
-                key: [value * constants.EV2HARTREE for value in values]
-                for key, values in material_parameters.lambda_values.items()}
+                key: [[value * constants.EV2HARTREE for value in values]
+                      for values in class_values]
+                for key, class_values in material_parameters.lambda_values.items()}
 
-        self.v_ab = {key: [value * constants.EV2HARTREE for value in values]
-                     for key, values in material_parameters.v_ab.items()}
+        self.v_ab = {
+                key: [[value * constants.EV2HARTREE for value in values]
+                      for values in class_values]
+                for key, class_values in material_parameters.v_ab.items()}
 
         self.neighbor_cutoff_dist = {
-            key: [(value * constants.ANG2BOHR) if value else None
-                  for value in values]
-            for key, values in material_parameters.neighbor_cutoff_dist.items()
+            key: [[(value * constants.ANG2BOHR) if value else None
+                  for value in values] for values in class_values]
+            for key, class_values in material_parameters.neighbor_cutoff_dist.items()
             }
 
         self.neighbor_cutoff_dist_tol = {
-                        key: [(value * constants.ANG2BOHR) if value else None
-                              for value in values]
-                        for key, values in
-                        material_parameters.neighbor_cutoff_dist_tol.items()}
+            key: [[(value * constants.ANG2BOHR) if value else None
+                  for value in values] for values in class_values]
+            for key, class_values in material_parameters.neighbor_cutoff_dist_tol.items()
+            }
 
         self.num_unique_hopping_distances = {
-                        key: len(value)
-                        for key, value in (self.neighbor_cutoff_dist.items())}
+                    key: [len(values) for values in class_values]
+                    for key, class_values in (self.neighbor_cutoff_dist.items())}
 
         self.element_type_delimiter = \
             material_parameters.element_type_delimiter
@@ -149,8 +152,7 @@ class Material(object):
 
         self.delg_0_shift_list = {
             key: [[value[index] * constants.EV2HARTREE
-                   for index in range(self.num_unique_hopping_distances[key])]
-                  for value in values]
+                   for index in range(len(value))] for value in values]
             for key, values in material_parameters.delg_0_shift_list.items()}
 
         self.element_type_to_species_map = defaultdict(list)
@@ -568,19 +570,24 @@ class Neighbors(object):
                                 self.num_cells)
                         + system_element_index_offset_array)
 
-            for index, cutoff_dist in enumerate(cutoff_dist_list):
-                cutoff_dist_limits = (
-                            [(cutoff_dist - tol_dist[cutoff_dist_key][index]),
-                             (cutoff_dist + tol_dist[cutoff_dist_key][index])])
-
+            for class_index, class_cutoff_dist_list in enumerate(cutoff_dist_list):
+                class_neighbor_list_cutoff_dist_key = []
+                for index, cutoff_dist in enumerate(class_cutoff_dist_list):
+                    cutoff_dist_limits = (
+                        [(cutoff_dist - tol_dist[cutoff_dist_key][class_index][index]),
+                         (cutoff_dist + tol_dist[cutoff_dist_key][class_index][index])])
+    
+                    class_neighbor_list_cutoff_dist_key.append(
+                        self.hop_neighbor_sites(local_bulk_sites,
+                                                center_site_indices,
+                                                neighbor_site_indices,
+                                                cutoff_dist_limits,
+                                                cutoff_dist_key))
                 neighbor_list_cutoff_dist_key.append(
-                    self.hop_neighbor_sites(local_bulk_sites,
-                                            center_site_indices,
-                                            neighbor_site_indices,
-                                            cutoff_dist_limits,
-                                            cutoff_dist_key))
+                                            class_neighbor_list_cutoff_dist_key[:])
             hop_neighbor_list[cutoff_dist_key] = (
-                                            neighbor_list_cutoff_dist_key[:])
+                [class_neighbor_list_cutoff_dist_key[:]
+                 for class_neighbor_list_cutoff_dist_key in neighbor_list_cutoff_dist_key])
         np.save(hop_neighbor_list_file_path, hop_neighbor_list)
 
         file_name = 'neighbor_list'
@@ -660,9 +667,11 @@ class System(object):
             else:
                 num_hop_dist_types = 0
             for hop_dist_type in range(num_hop_dist_types):
+                # NOTE: Assuming number of neighbors is identical to all class indices
+                class_index = 0
                 self.num_neighbors[species_type_index] += (
-                                    self.hop_neighbor_list[hop_element_type][
-                                            hop_dist_type].num_neighbors[0])
+                        self.hop_neighbor_list[hop_element_type][class_index][
+                                                hop_dist_type].num_neighbors[0])
 
         # number of kinetic processes
         self.n_proc = np.dot(self.species_count, self.num_neighbors)
