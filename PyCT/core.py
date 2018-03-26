@@ -662,8 +662,10 @@ class System(object):
             # hop_element_types have equivalent number of nearest neighbors
             hop_element_type = self.material.hop_element_types[species_type][0]
             if hop_element_type in self.material.neighbor_cutoff_dist:
+                # NOTE: Assuming number of neighbors is identical to all class indices
+                class_index = 0
                 num_hop_dist_types = len(self.material.neighbor_cutoff_dist[
-                                                            hop_element_type])
+                                                hop_element_type][class_index])
             else:
                 num_hop_dist_types = 0
             for hop_dist_type in range(num_hop_dist_types):
@@ -863,8 +865,10 @@ class Run(object):
         self.hop_element_type_list = [
                             self.material.hop_element_types[species_type][0]
                             for species_type in self.species_type_list]
+        # NOTE: Assuming number of neighbors is identical to all class indices
+        class_index = 0
         self.len_hop_dist_type_list = [
-                    len(self.material.neighbor_cutoff_dist[hop_element_type])
+                    len(self.material.neighbor_cutoff_dist[hop_element_type][class_index])
                     for hop_element_type in self.hop_element_type_list]
 
         class_based_sample_site_indices = {}
@@ -925,10 +929,10 @@ class Run(object):
                                                     element_type][class_index]
                     local_num_neighbors = []
                     len_local_num_neighbors = len(
-                        self.material.neighbor_cutoff_dist[hop_element_type])
+                        self.material.neighbor_cutoff_dist[hop_element_type][class_index])
                     for hop_dist_type in range(len_local_num_neighbors):
                         local_num_neighbors.append(
-                            self.system.hop_neighbor_list[hop_element_type][
+                            self.system.hop_neighbor_list[hop_element_type][class_index][
                                 hop_dist_type].num_neighbors[sample_site_index]
                             )
                     self.n_proc_hop_dist_type_list[hop_element_type].append(
@@ -941,15 +945,18 @@ class Run(object):
                                          hop_element_type][class_index],
                                      return_counts=True)[1]
                                  for index in range(value)])
-                    self.n_proc_lambda_value_list[hop_element_type].append(
-                        [self.material.lambda_values[hop_element_type][
-                                                                hop_dist_type]
-                         for hop_dist_type in self.n_proc_hop_dist_type_list[
-                                            hop_element_type][class_index]])
-                    self.n_proc_v_ab_list[hop_element_type].append(
-                        [self.material.v_ab[hop_element_type][hop_dist_type]
-                         for hop_dist_type in self.n_proc_hop_dist_type_list[
-                                            hop_element_type][class_index]])
+                self.n_proc_lambda_value_list[hop_element_type].extend(
+                    [[self.material.lambda_values[hop_element_type][
+                                                class_index][hop_dist_type]
+                     for hop_dist_type in self.n_proc_hop_dist_type_list[
+                                        hop_element_type][class_index]]
+                    for class_index in range(self.material.num_classes[element_type_index])])
+                self.n_proc_v_ab_list[hop_element_type].extend(
+                    [[self.material.v_ab[hop_element_type][class_index][hop_dist_type]
+                     for hop_dist_type in self.n_proc_hop_dist_type_list[
+                                        hop_element_type][class_index]]
+                    for class_index in range(self.material.num_classes[element_type_index])])
+
         self.n_proc_species_proc_list = [
             species_proc_index
             for index in self.species_type_index_list
@@ -984,11 +991,16 @@ class Run(object):
             (element_type_element_index, element_index) = (
                                 self.compute_element_type_element_index(
                                     i_proc, species_site_system_element_index))
+            site_element_type_index = self.n_proc_site_element_type_index_list[
+                                                                        i_proc]
+            class_index = self.material.unit_cell_class_list[
+                self.material.n_elements_per_unit_cell[:site_element_type_index].sum()
+                + element_index]
             for hop_dist_type in range(self.len_hop_dist_type_list[
                                                             species_index]):
                 local_neighbor_site_system_element_index_list = (
                             self.system.hop_neighbor_list[hop_element_type][
-                                                                hop_dist_type]
+                                            class_index][hop_dist_type]
                             .neighbor_system_element_indices[
                                                 element_type_element_index])
                 num_neighbors = len(
@@ -1059,7 +1071,7 @@ class Run(object):
             neighbor_index = self.n_proc_neighbor_index_list[hop_element_type][
                                             class_index][species_proc_index]
             hop_vector = (self.system.hop_neighbor_list[hop_element_type][
-                            hop_dist_type].displacement_vector_list[
+                            class_index][hop_dist_type].displacement_vector_list[
                                 element_type_element_index][neighbor_index])
             nproc_hop_vector_array[i_proc] = hop_vector
             if self.electric_field_active:
