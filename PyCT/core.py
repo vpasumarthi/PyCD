@@ -576,7 +576,7 @@ class Neighbors(object):
                     cutoff_dist_limits = (
                         [(cutoff_dist - tol_dist[cutoff_dist_key][class_index][index]),
                          (cutoff_dist + tol_dist[cutoff_dist_key][class_index][index])])
-    
+
                     class_neighbor_list_cutoff_dist_key.append(
                         self.hop_neighbor_sites(local_bulk_sites,
                                                 center_site_indices,
@@ -964,13 +964,14 @@ class Run(object):
     def compute_element_type_element_index(self, i_proc, system_element_index):
         site_element_type_index = self.n_proc_site_element_type_index_list[
                                                                         i_proc]
+        element_index = (
+            system_element_index % self.material.total_elements_per_unit_cell
+            - self.head_start_n_elements_per_unit_cell_cum_sum[site_element_type_index])
         element_type_element_index = (
             system_element_index // self.material.total_elements_per_unit_cell
             * self.material.n_elements_per_unit_cell[site_element_type_index]
-            + system_element_index % self.material.total_elements_per_unit_cell
-            - self.head_start_n_elements_per_unit_cell_cum_sum[
-                                                    site_element_type_index])
-        return element_type_element_index
+            + element_index)
+        return (element_type_element_index, element_index)
 
     def get_process_attributes(self, occupancy):
         i_proc = i_proc_old = 0
@@ -980,7 +981,7 @@ class Run(object):
         for species_site_system_element_index in occupancy:
             species_index = self.n_proc_species_index_list[i_proc]
             hop_element_type = self.n_proc_hop_element_type_list[i_proc]
-            element_type_element_index = (
+            (element_type_element_index, element_index) = (
                                 self.compute_element_type_element_index(
                                     i_proc, species_site_system_element_index))
             for hop_dist_type in range(self.len_hop_dist_type_list[
