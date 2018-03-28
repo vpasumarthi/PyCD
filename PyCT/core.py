@@ -968,7 +968,7 @@ class Run(object):
         # total number of species
         self.total_species = self.system.species_count.sum()
 
-    def compute_element_type_element_index(self, i_proc, system_element_index):
+    def get_element_type_element_index(self, i_proc, system_element_index):
         site_element_type_index = self.n_proc_site_element_type_index_list[
                                                                         i_proc]
         element_index = (
@@ -989,7 +989,7 @@ class Run(object):
             species_index = self.n_proc_species_index_list[i_proc]
             hop_element_type = self.n_proc_hop_element_type_list[i_proc]
             (element_type_element_index, element_index) = (
-                                self.compute_element_type_element_index(
+                                self.get_element_type_element_index(
                                     i_proc, species_site_system_element_index))
             site_element_type_index = self.n_proc_site_element_type_index_list[
                                                                         i_proc]
