@@ -57,21 +57,13 @@ def material_setup(input_directory_path, system_size, pbc,
         cumulative_displacement_list = np.load(
                                 cumulative_displacement_list_file_path)
 
-        # Note: species_count doesn't effect the precomputed_array,
-        # however it is essential to instantiate system class
-        # So, any non-zero value of species_count will do.
-        n_electrons = 1
-        n_holes = 0
-        species_count = np.array([n_electrons, n_holes])
-
         alpha = config_params.alpha
         n_max = config_params.n_max
         k_max = config_params.k_max
 
         material_system = System(
             material_info, material_neighbors, hop_neighbor_list,
-            cumulative_displacement_list, species_count, alpha, n_max,
-            k_max)
+            cumulative_displacement_list, alpha, n_max, k_max)
         precomputed_array = material_system.ewald_sum_setup(
                                                 input_directory_path)
         precomputed_array_file_path = input_directory_path.joinpath(

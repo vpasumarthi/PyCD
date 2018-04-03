@@ -598,8 +598,8 @@ class System(object):
     unit cells
     """
     def __init__(self, material_info, material_neighbors,
-                 hop_neighbor_list, cumulative_displacement_list,
-                 species_count, alpha, n_max, k_max):
+                 hop_neighbor_list, cumulative_displacement_list, alpha, n_max,
+                 k_max):
         """Return a system object whose size is *size*
         :param material_info:
         :param material_neighbors:
@@ -617,7 +617,6 @@ class System(object):
         self.hop_neighbor_list = hop_neighbor_list
 
         self.pbc = self.neighbors.pbc
-        self.species_count = species_count
 
         # total number of unit cells
         self.system_size = self.neighbors.system_size
@@ -670,9 +669,6 @@ class System(object):
                         self.hop_neighbor_list[hop_element_type][class_index][
                                                 hop_dist_type].num_neighbors[0])
 
-        # number of kinetic processes
-        self.n_proc = np.dot(self.species_count, self.num_neighbors)
-
         # ewald parameters:
         self.alpha = alpha
         self.n_max = n_max
@@ -713,7 +709,8 @@ class System(object):
             occupancy.extend(rnd.sample(species_site_indices, num_species)[:])
         return occupancy
 
-    def charge_config(self, occupancy, ion_charge_type, species_charge_type):
+    def charge_config(self, species_count, occupancy, ion_charge_type,
+                      species_charge_type):
         """Returns charge distribution of the current configuration
         :param occupancy:
         :param ion_charge_type:
@@ -730,8 +727,8 @@ class System(object):
                                                                 :, np.newaxis]
 
         for species_type_index in range(self.material.num_species_types):
-            start_index = 0 + self.species_count[:species_type_index].sum()
-            end_index = start_index + self.species_count[species_type_index]
+            start_index = 0 + species_count[:species_type_index].sum()
+            end_index = start_index + species_count[species_type_index]
             center_site_system_element_indices = occupancy[
                                                     start_index:end_index][:]
             charge_list[center_site_system_element_indices] += (
@@ -796,7 +793,7 @@ class Run(object):
         computing electrostatic interaction energies"""
     def __init__(self, system, precomputed_array, temp, ion_charge_type,
                  species_charge_type, n_traj, t_final, time_interval,
-                 relative_energies, external_field):
+                 species_count, relative_energies, external_field):
         """Returns the PBC condition of the system
         :param system:
         :param precomputed_array:
@@ -819,6 +816,7 @@ class Run(object):
         self.n_traj = int(n_traj)
         self.t_final = t_final * constants.SEC2AUTIME
         self.time_interval = time_interval * constants.SEC2AUTIME
+        self.species_count = species_count
 
         # delg_0_shift_list
         unit_cell_relative_energies = np.zeros(self.material.total_elements_per_unit_cell)
@@ -851,7 +849,9 @@ class Run(object):
             self.electric_field = np.zeros(self.neighbors.n_dim)
 
         self.system_size = self.system.system_size
-        self.n_proc = self.system.n_proc
+
+        # number of kinetic processes
+        self.n_proc = np.dot(self.species_count, self.system.num_neighbors)
 
         # n_elements_per_unit_cell
         self.head_start_n_elements_per_unit_cell_cum_sum = [
@@ -862,12 +862,10 @@ class Run(object):
 
         # species_type_list
         self.species_type_list = [self.material.species_types[index]
-                                  for index, value in enumerate(
-                                            self.system.species_count)
+                                  for index, value in enumerate(self.species_count)
                                   for _ in range(value)]
         self.species_type_index_list = [index
-                                        for index, value in enumerate(
-                                                    self.system.species_count)
+                                        for index, value in enumerate(self.species_count)
                                         for _ in range(value)]
         self.species_charge_list = [
             self.material.species_charge_list[self.species_charge_type][index]
@@ -884,8 +882,6 @@ class Run(object):
         class_based_sample_site_indices = {}
         for species_type_index, species_type in enumerate(
                                                 self.material.species_types):
-            species_count = self.system.species_count[species_type_index]
-            hop_element_type = self.material.hop_element_types[species_type][0]
             element_type = self.material.species_to_element_type_map[
                                                             species_type][0]
             element_type_index = self.material.element_types.index(
@@ -913,22 +909,22 @@ class Run(object):
         self.n_proc_v_ab_list = {}
         for species_type_index, species_type in enumerate(
                                                 self.material.species_types):
-            species_count = self.system.species_count[species_type_index]
+            species_type_species_count = self.species_count[species_type_index]
             hop_element_type = self.material.hop_element_types[species_type][0]
             element_type = self.material.species_to_element_type_map[
                                                             species_type][0]
             element_type_index = self.material.element_types.index(
                                                                 element_type)
             self.n_proc_species_index_list.extend(
-                                np.repeat(range(species_count),
+                                np.repeat(range(species_type_species_count),
                                 self.system.num_neighbors[species_type_index]))
             self.n_proc_hop_element_type_list.extend(
-                            [hop_element_type] * species_count
+                            [hop_element_type] * species_type_species_count
                             * self.system.num_neighbors[species_type_index])
             self.n_proc_site_element_type_index_list.extend(
-                            [element_type_index] * species_count
+                            [element_type_index] * species_type_species_count
                             * self.system.num_neighbors[species_type_index])
-            if species_count != 0:
+            if species_type_species_count != 0:
                 self.n_proc_hop_dist_type_list[hop_element_type] = []
                 self.n_proc_neighbor_index_list[hop_element_type] = []
                 self.n_proc_lambda_value_list[hop_element_type] = []
@@ -976,7 +972,7 @@ class Run(object):
         self.system_coordinates = self.neighbors.bulk_sites.cell_coordinates
 
         # total number of species
-        self.total_species = self.system.species_count.sum()
+        self.total_species = self.species_count.sum()
 
     def get_element_type_element_index(self, i_proc, system_element_index):
         site_element_type_index = self.n_proc_site_element_type_index_list[
@@ -1111,8 +1107,7 @@ class Run(object):
             np.savetxt(output_file, drift_mobility_array)
         # compute average drift mobiltiy and standard error of mean
         start_species_index = 0
-        for species_index, num_species in enumerate(
-                                                self.system.species_count):
+        for species_index, num_species in enumerate(self.species_count):
             end_species_index = start_species_index + num_species
             if num_species != 0:
                 species_type = self.material.species_types[species_index]
@@ -1169,17 +1164,17 @@ class Run(object):
                                              self.total_species, 3))
 
         prefix_list = []
-        system_charge = np.dot(self.system.species_count,
+        system_charge = np.dot(self.species_count,
                                self.material.species_charge_list[
                                             self.species_charge_type])
         ewald_neut = - (np.pi * (system_charge**2)
                         / (2 * self.system.system_volume * self.system.alpha))
         for traj_index in range(self.n_traj):
             current_state_occupancy = self.system.generate_random_occupancy(
-                                                    self.system.species_count)
+                                                            self.species_count)
             current_state_charge_config = self.system.charge_config(
-                                current_state_occupancy, self.ion_charge_type,
-                                self.species_charge_type)
+                                self.species_count, current_state_occupancy,
+                                self.ion_charge_type, self.species_charge_type)
             current_state_charge_config_prod = np.multiply(
                                     current_state_charge_config.transpose(),
                                     current_state_charge_config)
