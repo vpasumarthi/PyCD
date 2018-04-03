@@ -150,11 +150,6 @@ class Material(object):
                         len(set(material_parameters.class_list[element_type]))
                         for element_type in self.element_types]
 
-        self.delg_0_shift_list = {
-            key: [[value[index] * constants.EV2HARTREE
-                   for index in range(len(value))] for value in values]
-            for key, values in material_parameters.delg_0_shift_list.items()}
-
         self.element_type_to_species_map = defaultdict(list)
         for element_type in self.element_types:
             for species_type in self.species_types:
@@ -801,7 +796,7 @@ class Run(object):
         computing electrostatic interaction energies"""
     def __init__(self, system, precomputed_array, temp, ion_charge_type,
                  species_charge_type, n_traj, t_final, time_interval,
-                 external_field):
+                 relative_energies, external_field):
         """Returns the PBC condition of the system
         :param system:
         :param precomputed_array:
@@ -824,6 +819,21 @@ class Run(object):
         self.n_traj = int(n_traj)
         self.t_final = t_final * constants.SEC2AUTIME
         self.time_interval = time_interval * constants.SEC2AUTIME
+
+        # delg_0_shift_list
+        unit_cell_relative_energies = np.zeros(self.material.total_elements_per_unit_cell)
+        start_index = end_index = 0
+        for element_index in range(self.material.num_element_types):
+            end_index = start_index + self.material.n_elements_per_unit_cell[element_index]
+            if self.material.num_classes[element_index] != 1:
+                element_type = self.material.element_types[element_index]
+                unit_cell_relative_energies[start_index:end_index] += [
+                    relative_energies['class_index'][element_type][class_index] * constants.EV2HARTREE
+                    for class_index in self.material.unit_cell_class_list[start_index:end_index]]
+            start_index = end_index
+
+        self.system_relative_energies = (
+                np.tile(unit_cell_relative_energies, self.system.num_cells))
 
         # electric field
         electric_field = external_field['electric']
@@ -1058,9 +1068,11 @@ class Run(object):
             hop_element_type = self.n_proc_hop_element_type_list[i_proc]
             hop_dist_type = self.n_proc_hop_dist_type_list[hop_element_type][
                                             class_index][species_proc_index]
-            delg_0 = (delg_0_ewald
-                      + self.material.delg_0_shift_list[hop_element_type][
-                                                class_index][hop_dist_type])
+            delg_0_shift = (
+                self.system_relative_energies[neighbor_site_system_element_index]
+                - self.system_relative_energies[species_site_system_element_index])
+            delg_0 = (delg_0_ewald + delg_0_shift)
+
             nproc_delg_0_array[i_proc] = delg_0
             lambda_value = self.n_proc_lambda_value_list[hop_element_type][
                                             class_index][species_proc_index]
