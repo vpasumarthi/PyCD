@@ -755,8 +755,9 @@ class Run(object):
         self.t_final = t_final * constants.SEC2AUTIME
         self.time_interval = time_interval * constants.SEC2AUTIME
         self.species_count = species_count
+        self.relative_energies = relative_energies
 
-        # delg_0_shift_list
+        # relative energies
         unit_cell_relative_energies = np.zeros(self.material.total_elements_per_unit_cell)
         start_index = end_index = 0
         for element_index in range(self.material.num_element_types):
