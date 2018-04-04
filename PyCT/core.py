@@ -1094,9 +1094,9 @@ class Run(object):
             start_species_index = end_species_index
         return prefix_list
 
-    def get_doping_distribution(self, doping_element_type, insertion_type,
+    def get_doping_distribution(self, dopant_element_type, insertion_type,
                                 num_dopants, dopant_site_indices):
-        map_index = self.dopant_element_types.index(doping_element_type)
+        map_index = self.dopant_element_types.index(dopant_element_type)
         substitution_element_type = self.substitution_element_types[map_index]
         substitution_element_type_index = self.material.element_types.index(
                                                     substitution_element_type)
@@ -1116,7 +1116,7 @@ class Run(object):
                     self.system.num_cells)
             + system_element_index_offset_array).tolist()
         if insertion_type == 'random':
-            dopant_site_indices[doping_element_type] = rnd.sample(site_indices,
+            dopant_site_indices[dopant_element_type] = rnd.sample(site_indices,
                                                                   num_dopants)[:]
         return dopant_site_indices
 
@@ -1167,9 +1167,9 @@ class Run(object):
                     if (self.doping['site_charge_initiation'][map_index] == 'yes'
                         and dopant_species_type == species_type
                         and num_dopant_sites and num_species):
-                        doping_element_type = self.dopant_element_types[map_index]
-                        occupancy.extend(dopant_site_indices[doping_element_type][:num_species])
-                        num_species -= len(dopant_site_indices[doping_element_type][:num_species])
+                        dopant_element_type = self.dopant_element_types[map_index]
+                        occupancy.extend(dopant_site_indices[dopant_element_type][:num_species])
+                        num_species -= len(dopant_site_indices[dopant_element_type][:num_species])
 
             if num_species:
                 species_site_element_list = (
@@ -1277,17 +1277,17 @@ class Run(object):
         for traj_index in range(self.n_traj):
             if self.doping_active:
                 dopant_site_indices = {}
-                for map_index, doping_element_type in enumerate(
+                for map_index, dopant_element_type in enumerate(
                                                     self.dopant_element_types):
                     num_dopants = self.doping['num_dopants'][map_index]
                     if num_dopants != 0:
                         insertion_type = self.doping['insertion_type'][map_index]
                         if insertion_type == 'manual':
-                            dopant_site_indices[doping_element_type] = (
+                            dopant_site_indices[dopant_element_type] = (
                                 self.doping['dopant_site_indices'][map_index])
                         else:
                             dopant_site_indices = self.get_doping_distribution(
-                                doping_element_type, insertion_type, num_dopants,
+                                dopant_element_type, insertion_type, num_dopants,
                                 dopant_site_indices)
                 site_charge_initiation_active = 1
                 # update system_relative_energies
