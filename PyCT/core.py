@@ -674,41 +674,6 @@ class System(object):
         self.n_max = n_max
         self.k_max = k_max
 
-    def generate_random_occupancy(self, species_count):
-        """generates initial occupancy list based on species count
-        :param species_count:
-        :return:
-        """
-        occupancy = []
-        for species_type_index, num_species in enumerate(species_count):
-            species_type = self.material.species_types[species_type_index]
-            species_site_element_list = (
-                    self.material.species_to_element_type_map[species_type])
-            species_site_element_type_index_list = [
-                        self.material.element_types.index(species_site_element)
-                        for species_site_element in species_site_element_list]
-            species_site_indices = []
-            for species_site_element_type_index in (
-                                        species_site_element_type_index_list):
-                system_element_index_offset_array = np.repeat(
-                            np.arange(
-                                0, (self.material.total_elements_per_unit_cell
-                                    * self.num_cells),
-                                self.material.total_elements_per_unit_cell),
-                            self.material.n_elements_per_unit_cell[
-                                            species_site_element_type_index])
-                site_indices = (
-                    np.tile(self.material.n_elements_per_unit_cell[
-                                :species_site_element_type_index].sum()
-                            + np.arange(0,
-                                        self.material.n_elements_per_unit_cell[
-                                            species_site_element_type_index]),
-                            self.num_cells)
-                    + system_element_index_offset_array)
-                species_site_indices.extend(list(site_indices))
-            occupancy.extend(rnd.sample(species_site_indices, num_species)[:])
-        return occupancy
-
     def charge_config(self, species_count, occupancy, ion_charge_type,
                       species_charge_type):
         """Returns charge distribution of the current configuration
@@ -852,6 +817,12 @@ class Run(object):
         self.doping = doping
         if np.any(doping['num_dopants']):
             self.doping_active = 1
+            self.dopant_species_types = []
+            for i_doping_element_map in self.doping['doping_element_map']:
+                [substitution_element_type, _] = (
+                    i_doping_element_map.split(self.material.element_type_delimiter))
+                self.dopant_species_types.append(
+                    self.material.element_type_to_species_map[substitution_element_type][0])
         else:
             self.doping_active = 0
 
@@ -1162,6 +1133,59 @@ class Run(object):
                                                                   num_dopants)[:]
         return dopant_site_indices
 
+    def generate_initial_occupancy(self, dopant_site_indices,
+                                   site_charge_initiation_active):
+        """generates initial occupancy list based on species count
+        :param species_count:
+        :return:
+        """
+        occupancy = []
+        for species_type_index, num_species in enumerate(self.species_count):
+            species_type = self.material.species_types[species_type_index]
+            if site_charge_initiation_active:
+                for map_index, dopant_species_type in enumerate(
+                                                    self.dopant_species_types):
+                    num_dopant_sites = self.doping['num_dopants'][map_index]
+                    if (self.doping['site_charge_initiation'][map_index] == 'yes'
+                        and dopant_species_type == species_type
+                        and num_dopant_sites and num_species):
+                        doping_element_map = self.doping['doping_element_map'][map_index]
+                        [_, doping_element_type] = doping_element_map.split(
+                                        self.material.element_type_delimiter)
+                        occupancy.extend(dopant_site_indices[doping_element_type][:num_species])
+                        num_species -= len(dopant_site_indices[doping_element_type][:num_species])
+
+            if num_species:
+                species_site_element_list = (
+                        self.material.species_to_element_type_map[species_type])
+                species_site_element_type_index_list = [
+                            self.material.element_types.index(species_site_element)
+                            for species_site_element in species_site_element_list]
+                species_site_indices = []
+                for species_site_element_type_index in (
+                                            species_site_element_type_index_list):
+                    system_element_index_offset_array = np.repeat(
+                                np.arange(
+                                    0, (self.material.total_elements_per_unit_cell
+                                        * self.system.num_cells),
+                                    self.material.total_elements_per_unit_cell),
+                                self.material.n_elements_per_unit_cell[
+                                                species_site_element_type_index])
+                    site_indices = (
+                        np.tile(self.material.n_elements_per_unit_cell[
+                                    :species_site_element_type_index].sum()
+                                + np.arange(0,
+                                            self.material.n_elements_per_unit_cell[
+                                                species_site_element_type_index]),
+                                self.system.num_cells)
+                        + system_element_index_offset_array)
+                    species_site_indices.extend(list(site_indices))
+                    species_site_indices = [index
+                                            for index in species_site_indices
+                                            if index not in occupancy]
+                occupancy.extend(rnd.sample(species_site_indices, num_species)[:])
+        return occupancy
+
     def do_kmc_steps(self, dst_path, random_seed, output_data):
         """Subroutine to run the KMC simulation by specified number
         of steps
@@ -1210,12 +1234,22 @@ class Run(object):
                     num_dopants = self.doping['num_dopants'][map_index]
                     if num_dopants != 0:
                         insertion_type = self.doping['insertion_type'][map_index]
-                        dopant_site_indices = self.get_doping_distribution(
-                            i_doping_element_map, insertion_type, num_dopants,
-                            dopant_site_indices)
+                        if insertion_type == 'manual':
+                            [_, doping_element_type] = (
+                                i_doping_element_map.split(self.material.element_type_delimiter))
+                            dopant_site_indices[doping_element_type] = (
+                                self.doping['dopant_site_indices'][map_index])
+                        else:
+                            dopant_site_indices = self.get_doping_distribution(
+                                i_doping_element_map, insertion_type, num_dopants,
+                                dopant_site_indices)
+                site_charge_initiation_active = 1
+            else:
+                dopant_site_indices = {}
+                site_charge_initiation_active = 0
 
-            current_state_occupancy = self.system.generate_random_occupancy(
-                                                            self.species_count)
+            current_state_occupancy = self.generate_initial_occupancy(
+                            dopant_site_indices, site_charge_initiation_active)
             current_state_charge_config = self.system.charge_config(
                                 self.species_count, current_state_occupancy,
                                 self.ion_charge_type, self.species_charge_type)
