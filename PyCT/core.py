@@ -798,11 +798,17 @@ class Run(object):
         if np.any(doping['num_dopants']):
             self.doping_active = 1
             self.dopant_species_types = []
+            self.dopant_element_types = []
+            self.substitution_element_types = []
+            self.dopant_to_substitution_element_type_map = {}
             for i_doping_element_map in self.doping['doping_element_map']:
-                [substitution_element_type, _] = (
+                [substitution_element_type, dopant_element_type] = (
                     i_doping_element_map.split(self.material.element_type_delimiter))
+                self.dopant_element_types.append(dopant_element_type)
+                self.substitution_element_types.append(substitution_element_type)
                 self.dopant_species_types.append(
                     self.material.element_type_to_species_map[substitution_element_type][0])
+                self.dopant_to_substitution_element_type_map[dopant_element_type] = substitution_element_type
         else:
             self.doping_active = 0
 
