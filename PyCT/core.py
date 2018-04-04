@@ -793,7 +793,7 @@ class Run(object):
         computing electrostatic interaction energies"""
     def __init__(self, system, precomputed_array, temp, ion_charge_type,
                  species_charge_type, n_traj, t_final, time_interval,
-                 species_count, relative_energies, external_field):
+                 species_count, relative_energies, external_field, doping):
         """Returns the PBC condition of the system
         :param system:
         :param precomputed_array:
@@ -847,6 +847,13 @@ class Run(object):
         else:
             self.electric_field_active = 0
             self.electric_field = np.zeros(self.neighbors.n_dim)
+
+        # doping
+        self.doping = doping
+        if np.any(doping['num_dopants']):
+            self.doping_active = 1
+        else:
+            self.doping_active = 0
 
         self.system_size = self.system.system_size
 
@@ -1129,6 +1136,32 @@ class Run(object):
             start_species_index = end_species_index
         return prefix_list
 
+    def get_doping_distribution(self, doping_element_map, insertion_type,
+                                num_dopants, dopant_site_indices):
+        [substitution_element_type, doping_element_type] = (
+            doping_element_map.split(self.material.element_type_delimiter))
+        substitution_element_type_index = self.material.element_types.index(
+                                                    substitution_element_type)
+        system_element_index_offset_array = np.repeat(
+                    np.arange(
+                        0, (self.material.total_elements_per_unit_cell
+                            * self.system.num_cells),
+                        self.material.total_elements_per_unit_cell),
+                    self.material.n_elements_per_unit_cell[
+                                    substitution_element_type_index])
+        site_indices = (
+            np.tile(self.material.n_elements_per_unit_cell[
+                        :substitution_element_type_index].sum()
+                    + np.arange(0,
+                                self.material.n_elements_per_unit_cell[
+                                    substitution_element_type_index]),
+                    self.system.num_cells)
+            + system_element_index_offset_array).tolist()
+        if insertion_type == 'random':
+            dopant_site_indices[doping_element_type] = rnd.sample(site_indices,
+                                                                  num_dopants)[:]
+        return dopant_site_indices
+
     def do_kmc_steps(self, dst_path, random_seed, output_data):
         """Subroutine to run the KMC simulation by specified number
         of steps
@@ -1170,6 +1203,17 @@ class Run(object):
         ewald_neut = - (np.pi * (system_charge**2)
                         / (2 * self.system.system_volume * self.system.alpha))
         for traj_index in range(self.n_traj):
+            if self.doping_active:
+                dopant_site_indices = {}
+                for map_index, i_doping_element_map in enumerate(
+                                            self.doping['doping_element_map']):
+                    num_dopants = self.doping['num_dopants'][map_index]
+                    if num_dopants != 0:
+                        insertion_type = self.doping['insertion_type'][map_index]
+                        dopant_site_indices = self.get_doping_distribution(
+                            i_doping_element_map, insertion_type, num_dopants,
+                            dopant_site_indices)
+
             current_state_occupancy = self.system.generate_random_occupancy(
                                                             self.species_count)
             current_state_charge_config = self.system.charge_config(
