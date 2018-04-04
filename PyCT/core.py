@@ -1094,10 +1094,10 @@ class Run(object):
             start_species_index = end_species_index
         return prefix_list
 
-    def get_doping_distribution(self, doping_element_map, insertion_type,
+    def get_doping_distribution(self, doping_element_type, insertion_type,
                                 num_dopants, dopant_site_indices):
-        [substitution_element_type, doping_element_type] = (
-            doping_element_map.split(self.material.element_type_delimiter))
+        map_index = self.dopant_element_types.index(doping_element_type)
+        substitution_element_type = self.substitution_element_types[map_index]
         substitution_element_type_index = self.material.element_types.index(
                                                     substitution_element_type)
         system_element_index_offset_array = np.repeat(
@@ -1167,9 +1167,7 @@ class Run(object):
                     if (self.doping['site_charge_initiation'][map_index] == 'yes'
                         and dopant_species_type == species_type
                         and num_dopant_sites and num_species):
-                        doping_element_map = self.doping['doping_element_map'][map_index]
-                        [_, doping_element_type] = doping_element_map.split(
-                                        self.material.element_type_delimiter)
+                        doping_element_type = self.dopant_element_types[map_index]
                         occupancy.extend(dopant_site_indices[doping_element_type][:num_species])
                         num_species -= len(dopant_site_indices[doping_element_type][:num_species])
 
@@ -1279,19 +1277,17 @@ class Run(object):
         for traj_index in range(self.n_traj):
             if self.doping_active:
                 dopant_site_indices = {}
-                for map_index, i_doping_element_map in enumerate(
-                                            self.doping['doping_element_map']):
+                for map_index, doping_element_type in enumerate(
+                                                    self.dopant_element_types):
                     num_dopants = self.doping['num_dopants'][map_index]
                     if num_dopants != 0:
                         insertion_type = self.doping['insertion_type'][map_index]
                         if insertion_type == 'manual':
-                            [_, doping_element_type] = (
-                                i_doping_element_map.split(self.material.element_type_delimiter))
                             dopant_site_indices[doping_element_type] = (
                                 self.doping['dopant_site_indices'][map_index])
                         else:
                             dopant_site_indices = self.get_doping_distribution(
-                                i_doping_element_map, insertion_type, num_dopants,
+                                doping_element_type, insertion_type, num_dopants,
                                 dopant_site_indices)
                 site_charge_initiation_active = 1
                 # update system_relative_energies
