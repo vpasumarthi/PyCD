@@ -1158,6 +1158,8 @@ class Run(object):
                             for current_shell_element in current_shell_elements
                             if (current_shell_element not in inner_shell_neighbor_indices)
                             and (current_shell_element not in shell_based_neighbors[dopant_element_type][0])]
+                    # avoid duplication within the shell
+                    current_shell_neighbors = list(set(current_shell_neighbors))
                     shell_based_neighbors[dopant_element_type].append(current_shell_neighbors)
         return shell_based_neighbors
 
