@@ -674,33 +674,6 @@ class System(object):
         self.n_max = n_max
         self.k_max = k_max
 
-    def charge_config(self, species_count, occupancy, ion_charge_type,
-                      species_charge_type):
-        """Returns charge distribution of the current configuration
-        :param occupancy:
-        :param ion_charge_type:
-        :param species_charge_type:
-        :return:
-        """
-
-        # generate lattice charge list
-        unit_cell_charge_list = np.array(
-            [self.material.charge_types[ion_charge_type][
-                 self.material.element_types[element_type_index]]
-             for element_type_index in self.material.element_type_index_list])
-        charge_list = np.tile(unit_cell_charge_list, self.num_cells)[
-                                                                :, np.newaxis]
-
-        for species_type_index in range(self.material.num_species_types):
-            start_index = 0 + species_count[:species_type_index].sum()
-            end_index = start_index + species_count[species_type_index]
-            center_site_system_element_indices = occupancy[
-                                                    start_index:end_index][:]
-            charge_list[center_site_system_element_indices] += (
-                    self.material.species_charge_list[species_charge_type][
-                                                        species_type_index])
-        return charge_list
-
     def ewald_sum_setup(self, dst_path):
         """
 
@@ -1186,6 +1159,38 @@ class Run(object):
                 occupancy.extend(rnd.sample(species_site_indices, num_species)[:])
         return occupancy
 
+    def charge_config(self, occupancy, dopant_site_indices):
+        """Returns charge distribution of the current configuration
+        :param occupancy:
+        :param ion_charge_type:
+        :param species_charge_type:
+        :return:
+        """
+
+        # generate lattice charge list
+        unit_cell_charge_list = np.array(
+            [self.material.charge_types[self.ion_charge_type][
+                 self.material.element_types[element_type_index]]
+             for element_type_index in self.material.element_type_index_list])
+        charge_list = np.tile(unit_cell_charge_list, self.system.num_cells)[
+                                                                :, np.newaxis]
+
+        if self.doping_active:
+            for dopant_element_type, site_indices in dopant_site_indices.items():
+                dopant_site_charge = self.doping['charge'][
+                                    self.ion_charge_type][dopant_element_type]
+                charge_list[site_indices] = dopant_site_charge
+
+        for species_type_index in range(self.material.num_species_types):
+            start_index = 0 + self.species_count[:species_type_index].sum()
+            end_index = start_index + self.species_count[species_type_index]
+            center_site_system_element_indices = occupancy[
+                                                    start_index:end_index][:]
+            charge_list[center_site_system_element_indices] += (
+                    self.material.species_charge_list[self.species_charge_type][
+                                                        species_type_index])
+        return charge_list
+
     def do_kmc_steps(self, dst_path, random_seed, output_data):
         """Subroutine to run the KMC simulation by specified number
         of steps
@@ -1250,9 +1255,8 @@ class Run(object):
 
             current_state_occupancy = self.generate_initial_occupancy(
                             dopant_site_indices, site_charge_initiation_active)
-            current_state_charge_config = self.system.charge_config(
-                                self.species_count, current_state_occupancy,
-                                self.ion_charge_type, self.species_charge_type)
+            current_state_charge_config = self.charge_config(
+                                current_state_occupancy, dopant_site_indices)
             current_state_charge_config_prod = np.multiply(
                                     current_state_charge_config.transpose(),
                                     current_state_charge_config)
