@@ -772,6 +772,12 @@ class Run(object):
         self.system_relative_energies = (
                 np.tile(unit_cell_relative_energies, self.system.num_cells))
 
+        self.num_shells_dopant = {}
+        for element_type, element_relative_energies in self.relative_energies['doping'].items():
+            self.num_shells_dopant[element_type] = [
+                len(dopant_element_relative_energies)
+                for dopant_element_relative_energies in element_relative_energies]
+
         # electric field
         electric_field = external_field['electric']
         self.electric_field_ld = electric_field['ld']
