@@ -925,9 +925,8 @@ class Run(object):
         # total number of species
         self.total_species = self.species_count.sum()
 
-    def get_element_type_element_index(self, i_proc, system_element_index):
-        site_element_type_index = self.n_proc_site_element_type_index_list[
-                                                                        i_proc]
+    def get_element_type_element_index(self, site_element_type_index,
+                                       system_element_index):
         element_index = (
             system_element_index % self.material.total_elements_per_unit_cell
             - self.head_start_n_elements_per_unit_cell_cum_sum[site_element_type_index])
@@ -945,9 +944,11 @@ class Run(object):
         for species_site_system_element_index in occupancy:
             species_index = self.n_proc_species_index_list[i_proc]
             hop_element_type = self.n_proc_hop_element_type_list[i_proc]
+            site_element_type_index = self.n_proc_site_element_type_index_list[i_proc]
             (element_type_element_index, element_index) = (
                                 self.get_element_type_element_index(
-                                    i_proc, species_site_system_element_index))
+                                    site_element_type_index,
+                                    species_site_system_element_index))
             site_element_type_index = self.n_proc_site_element_type_index_list[
                                                                         i_proc]
             class_index = self.material.unit_cell_class_list[
