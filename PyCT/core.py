@@ -773,10 +773,13 @@ class Run(object):
                 np.tile(unit_cell_relative_energies, self.system.num_cells))
 
         self.num_shells_dopant = {}
+        self.max_shells = 0
         for element_type, element_relative_energies in self.relative_energies['doping'].items():
             self.num_shells_dopant[element_type] = [
                 len(dopant_element_relative_energies)
                 for dopant_element_relative_energies in element_relative_energies]
+            for dopant_element_relative_energies in element_relative_energies:
+                self.max_shells = max(self.max_shells, len(dopant_element_relative_energies))  
 
         # electric field
         electric_field = external_field['electric']
