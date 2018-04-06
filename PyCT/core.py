@@ -1367,7 +1367,7 @@ class Run(object):
                         insertion_type = self.doping['insertion_type'][map_index]
                         if insertion_type == 'manual':
                             dopant_site_indices[dopant_element_type] = (
-                                self.doping['dopant_site_indices'][map_index])
+                                self.doping['dopant_site_indices'][map_index][:num_dopants])
                         else:
                             dopant_site_indices = self.get_doping_distribution(
                                 dopant_element_type, insertion_type, num_dopants,
