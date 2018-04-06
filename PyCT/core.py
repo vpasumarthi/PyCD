@@ -1374,13 +1374,22 @@ class Run(object):
                                 dopant_site_indices)
                 site_charge_initiation_active = 1
                 # update system_relative_energies
-                shell_based_neighbors = self.get_shell_based_neighbors(
-                                                        dopant_site_indices)
+                allow_overlap = 0
+                shell_based_neighbors = self.get_shell_based_neighbors(dopant_site_indices)
+                prefix_list.append(f'Trajectory {traj_index+1}:\n')
+                (shell_based_neighbors, prefix_list) = self.inspect_shell_overlap(
+                                    shell_based_neighbors, allow_overlap, prefix_list)
+
                 for dopant_element_type, dopant_shell_based_neighbors in shell_based_neighbors.items():
                     map_index = self.dopant_element_types.index(dopant_element_type)
-                    for shell_index, i_shell_based_neighbors in enumerate(dopant_shell_based_neighbors):
-                        substitution_element_type = self.substitution_element_types[map_index]
-                        self.system_relative_energies[i_shell_based_neighbors] += self.relative_energies['doping'][substitution_element_type][map_index][shell_index]
+                    for dopant_site_shell_based_neighbors in dopant_shell_based_neighbors:
+                        for shell_index, i_shell_based_neighbors in enumerate(
+                                            dopant_site_shell_based_neighbors):
+                            substitution_element_type = self.substitution_element_types[map_index]
+                            self.system_relative_energies[
+                                i_shell_based_neighbors] += self.relative_energies[
+                                    'doping'][substitution_element_type][
+                                        map_index][shell_index] * constants.EV2HARTREE
             else:
                 dopant_site_indices = {}
                 site_charge_initiation_active = 0
