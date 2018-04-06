@@ -1134,6 +1134,7 @@ class Run(object):
                                                 [substitution_element_type] * 2)
             shell_based_neighbors[dopant_element_type] = []
             for site_index in site_indices:
+                site_index_shell_neighbors = []
                 for shell_index in range(self.num_shells_dopant[
                                         substitution_element_type][map_index]):
                     current_shell_elements = []
@@ -1141,8 +1142,7 @@ class Run(object):
                         current_shell_elements.extend([site_index])
                         current_shell_neighbors = current_shell_elements
                     else:
-                        inner_shell_neighbor_indices = shell_based_neighbors[
-                                            dopant_element_type][shell_index - 1]
+                        inner_shell_neighbor_indices = site_index_shell_neighbors[shell_index - 1]
                         for system_element_index in inner_shell_neighbor_indices:
                             class_index = self.system.system_class_index_list[system_element_index]
                             (element_type_element_index, _) = (
@@ -1160,10 +1160,11 @@ class Run(object):
                             current_shell_element
                             for current_shell_element in current_shell_elements
                             if (current_shell_element not in inner_shell_neighbor_indices)
-                            and (current_shell_element not in shell_based_neighbors[dopant_element_type][0])]
+                            and (current_shell_element not in site_index_shell_neighbors[0])]
                     # avoid duplication within the shell
                     current_shell_neighbors = list(set(current_shell_neighbors))
-                    shell_based_neighbors[dopant_element_type].append(current_shell_neighbors)
+                    site_index_shell_neighbors.append(current_shell_neighbors)
+                shell_based_neighbors[dopant_element_type].append(site_index_shell_neighbors)
         return shell_based_neighbors
 
     def generate_initial_occupancy(self, dopant_site_indices,
