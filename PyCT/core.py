@@ -813,6 +813,7 @@ class Run(object):
                     self.material.element_type_to_species_map[substitution_element_type][0])
                 self.dopant_to_substitution_element_type_map[dopant_element_type] = substitution_element_type
             self.num_dopant_element_types = len(self.dopant_element_types)
+            self.allow_shell_neighbor_overlap = self.doping['allow_overlap']
         else:
             self.doping_active = 0
 
@@ -1174,7 +1175,7 @@ class Run(object):
                 shell_based_neighbors[dopant_element_type].append(site_index_shell_neighbors)
         return shell_based_neighbors
 
-    def inspect_shell_overlap(self, shell_based_neighbors, allow_overlap, prefix_list):
+    def inspect_shell_overlap(self, shell_based_neighbors, prefix_list):
         cumulative_neighbors = [
                 system_element_index
                 for _, dopant_shell_neighbors in shell_based_neighbors.items()
@@ -1210,7 +1211,7 @@ class Run(object):
                                     num_instances += 1
                     prefix_list.append('.\n')
             
-            if not allow_overlap:
+            if not self.allow_shell_neighbor_overlap:
                 for neighbor_site_index, neighbor_overlap_sites in overlap_sites.items():
                     min_shell_index = self.max_shells
                     for overlap_index, neighbor_overlap_site in enumerate(neighbor_overlap_sites):
@@ -1367,11 +1368,10 @@ class Run(object):
             if self.doping_active:
                 dopant_site_indices = self.get_doping_distribution()
                 # update system_relative_energies
-                allow_overlap = 0
                 shell_based_neighbors = self.get_shell_based_neighbors(dopant_site_indices)
                 prefix_list.append(f'Trajectory {traj_index+1}:\n')
                 (shell_based_neighbors, prefix_list) = self.inspect_shell_overlap(
-                                    shell_based_neighbors, allow_overlap, prefix_list)
+                                            shell_based_neighbors, prefix_list)
 
                 for dopant_element_type, dopant_shell_based_neighbors in shell_based_neighbors.items():
                     map_index = self.dopant_element_types.index(dopant_element_type)
