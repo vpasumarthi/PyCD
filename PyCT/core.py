@@ -1098,8 +1098,8 @@ class Run(object):
         return prefix_list
 
     def get_doping_distribution(self, dopant_element_type, insertion_type,
-                                num_dopants, dopant_site_indices):
-        map_index = self.dopant_element_types.index(dopant_element_type)
+                                map_index, dopant_site_indices):
+        num_dopants = self.doping['num_dopants'][map_index]
         substitution_element_type = self.substitution_element_types[map_index]
         substitution_element_type_index = self.material.element_types.index(
                                                     substitution_element_type)
@@ -1370,7 +1370,7 @@ class Run(object):
                                 self.doping['dopant_site_indices'][map_index][:num_dopants])
                         else:
                             dopant_site_indices = self.get_doping_distribution(
-                                dopant_element_type, insertion_type, num_dopants,
+                                dopant_element_type, insertion_type, map_index,
                                 dopant_site_indices)
                 site_charge_initiation_active = 1
                 # update system_relative_energies
