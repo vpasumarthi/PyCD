@@ -812,6 +812,7 @@ class Run(object):
                 self.dopant_species_types.append(
                     self.material.element_type_to_species_map[substitution_element_type][0])
                 self.dopant_to_substitution_element_type_map[dopant_element_type] = substitution_element_type
+            self.num_dopant_element_types = len(self.dopant_element_types)
         else:
             self.doping_active = 0
 
@@ -1097,9 +1098,10 @@ class Run(object):
             start_species_index = end_species_index
         return prefix_list
 
-    def get_doping_distribution(self, dopant_element_type, insertion_type,
-                                map_index, dopant_site_indices):
+    def get_doping_distribution(self, insertion_type, map_index,
+                                dopant_site_indices):
         num_dopants = self.doping['num_dopants'][map_index]
+        dopant_element_type = self.dopant_element_types[map_index]
         if insertion_type == 'manual':
             dopant_site_indices[dopant_element_type] = (
                 self.doping['dopant_site_indices'][map_index][:num_dopants])
@@ -1363,15 +1365,12 @@ class Run(object):
         for traj_index in range(self.n_traj):
             if self.doping_active:
                 dopant_site_indices = {}
-                for map_index, dopant_element_type in enumerate(
-                                                    self.dopant_element_types):
+                for map_index in range(self.num_dopant_element_types):
                     num_dopants = self.doping['num_dopants'][map_index]
-                    
                     if num_dopants != 0:
                         insertion_type = self.doping['insertion_type'][map_index]
                         dopant_site_indices = self.get_doping_distribution(
-                            dopant_element_type, insertion_type, map_index,
-                            dopant_site_indices)
+                                insertion_type, map_index, dopant_site_indices)
                 site_charge_initiation_active = 1
                 # update system_relative_energies
                 allow_overlap = 0
