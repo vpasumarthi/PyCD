@@ -1241,8 +1241,7 @@ class Run(object):
         prefix_list.append('\n')
         return (shell_based_neighbors, prefix_list)
 
-    def generate_initial_occupancy(self, dopant_site_indices,
-                                   site_charge_initiation_active):
+    def generate_initial_occupancy(self, dopant_site_indices):
         """generates initial occupancy list based on species count
         :param species_count:
         :return:
@@ -1250,7 +1249,7 @@ class Run(object):
         occupancy = []
         for species_type_index, num_species in enumerate(self.species_count):
             species_type = self.material.species_types[species_type_index]
-            if site_charge_initiation_active:
+            if self.doping_active:
                 for map_index, dopant_species_type in enumerate(
                                                     self.dopant_species_types):
                     num_dopant_sites = self.doping['num_dopants'][map_index]
@@ -1367,7 +1366,6 @@ class Run(object):
         for traj_index in range(self.n_traj):
             if self.doping_active:
                 dopant_site_indices = self.get_doping_distribution()
-                site_charge_initiation_active = 1
                 # update system_relative_energies
                 allow_overlap = 0
                 shell_based_neighbors = self.get_shell_based_neighbors(dopant_site_indices)
@@ -1387,10 +1385,9 @@ class Run(object):
                                         map_index][shell_index] * constants.EV2HARTREE
             else:
                 dopant_site_indices = {}
-                site_charge_initiation_active = 0
 
             current_state_occupancy = self.generate_initial_occupancy(
-                            dopant_site_indices, site_charge_initiation_active)
+                                                        dopant_site_indices)
             current_state_charge_config = self.charge_config(
                                 current_state_occupancy, dopant_site_indices)
             current_state_charge_config_prod = np.multiply(
