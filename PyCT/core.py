@@ -1100,25 +1100,28 @@ class Run(object):
     def get_doping_distribution(self, dopant_element_type, insertion_type,
                                 map_index, dopant_site_indices):
         num_dopants = self.doping['num_dopants'][map_index]
-        substitution_element_type = self.substitution_element_types[map_index]
-        substitution_element_type_index = self.material.element_types.index(
-                                                    substitution_element_type)
-        system_element_index_offset_array = np.repeat(
-                    np.arange(
-                        0, (self.material.total_elements_per_unit_cell
-                            * self.system.num_cells),
-                        self.material.total_elements_per_unit_cell),
-                    self.material.n_elements_per_unit_cell[
-                                    substitution_element_type_index])
-        site_indices = (
-            np.tile(self.material.n_elements_per_unit_cell[
-                        :substitution_element_type_index].sum()
-                    + np.arange(0,
-                                self.material.n_elements_per_unit_cell[
-                                    substitution_element_type_index]),
-                    self.system.num_cells)
-            + system_element_index_offset_array).tolist()
-        if insertion_type == 'random':
+        if insertion_type == 'manual':
+            dopant_site_indices[dopant_element_type] = (
+                self.doping['dopant_site_indices'][map_index][:num_dopants])
+        elif insertion_type == 'random':
+            substitution_element_type = self.substitution_element_types[map_index]
+            substitution_element_type_index = self.material.element_types.index(
+                                                        substitution_element_type)
+            system_element_index_offset_array = np.repeat(
+                        np.arange(
+                            0, (self.material.total_elements_per_unit_cell
+                                * self.system.num_cells),
+                            self.material.total_elements_per_unit_cell),
+                        self.material.n_elements_per_unit_cell[
+                                        substitution_element_type_index])
+            site_indices = (
+                np.tile(self.material.n_elements_per_unit_cell[
+                            :substitution_element_type_index].sum()
+                        + np.arange(0,
+                                    self.material.n_elements_per_unit_cell[
+                                        substitution_element_type_index]),
+                        self.system.num_cells)
+                + system_element_index_offset_array).tolist()
             dopant_site_indices[dopant_element_type] = rnd.sample(site_indices,
                                                                   num_dopants)[:]
         return dopant_site_indices
@@ -1363,15 +1366,12 @@ class Run(object):
                 for map_index, dopant_element_type in enumerate(
                                                     self.dopant_element_types):
                     num_dopants = self.doping['num_dopants'][map_index]
+                    
                     if num_dopants != 0:
                         insertion_type = self.doping['insertion_type'][map_index]
-                        if insertion_type == 'manual':
-                            dopant_site_indices[dopant_element_type] = (
-                                self.doping['dopant_site_indices'][map_index][:num_dopants])
-                        else:
-                            dopant_site_indices = self.get_doping_distribution(
-                                dopant_element_type, insertion_type, map_index,
-                                dopant_site_indices)
+                        dopant_site_indices = self.get_doping_distribution(
+                            dopant_element_type, insertion_type, map_index,
+                            dopant_site_indices)
                 site_charge_initiation_active = 1
                 # update system_relative_energies
                 allow_overlap = 0
