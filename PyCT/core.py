@@ -1100,9 +1100,8 @@ class Run(object):
 
     def get_doping_distribution(self):
         dopant_site_indices = {}
-        for map_index in range(self.num_dopant_element_types):
-            num_dopants = self.doping['num_dopants'][map_index]
-            if num_dopants != 0:
+        for map_index, num_dopants in enumerate(self.doping['num_dopants']):
+            if num_dopants:
                 insertion_type = self.doping['insertion_type'][map_index]
                 dopant_element_type = self.dopant_element_types[map_index]
                 if insertion_type == 'manual':
