@@ -1131,49 +1131,55 @@ class Run(object):
                                                                           num_dopants)[:]
         return dopant_site_indices
 
-    def get_shell_based_neighbors(self, dopant_site_indices):
-        shell_based_neighbors = {}
+    def get_shell_based_neighbors(self, site_system_element_index, num_shells):
+        shell_based_neighbors = []
+        site_element_type_index = self.neighbors.generate_quantum_indices(
+                                self.system_size, site_system_element_index)
+        substitution_element_type = self.material.element_types[site_element_type_index]
+        hop_element_type = self.material.element_type_delimiter.join(
+                                            [substitution_element_type] * 2)
+        for shell_index in range(num_shells):
+            current_shell_elements = []
+            if shell_index == 0:
+                current_shell_elements.extend([site_system_element_index])
+                current_shell_neighbors = current_shell_elements
+            else:
+                inner_shell_neighbor_indices = shell_based_neighbors[shell_index - 1]
+                for system_element_index in inner_shell_neighbor_indices:
+                    class_index = self.system.system_class_index_list[system_element_index]
+                    (element_type_element_index, _) = (
+                        self.get_element_type_element_index(
+                            site_element_type_index, system_element_index))
+                    local_neighbor_site_system_element_index_list = []
+                    for hop_dist_type_object in self.system.hop_neighbor_list[hop_element_type][class_index]:
+                        local_neighbor_site_system_element_index_list.extend(
+                            hop_dist_type_object.neighbor_system_element_indices[
+                                element_type_element_index].tolist())
+                    current_shell_elements.extend(
+                        local_neighbor_site_system_element_index_list)
+                # avoid duplication of inner_shell_neighbor_indices or dopant_site_index
+                current_shell_neighbors = [
+                    current_shell_element
+                    for current_shell_element in current_shell_elements
+                    if (current_shell_element not in inner_shell_neighbor_indices)
+                    and (current_shell_element not in shell_based_neighbors[0])]
+            # avoid duplication within the shell
+            current_shell_neighbors = list(set(current_shell_neighbors))
+            shell_based_neighbors.append(current_shell_neighbors)
+        return shell_based_neighbors
+
+    def get_system_shell_based_neighbors(self, dopant_site_indices):
+        system_shell_based_neighbors = {}
         for dopant_element_type, site_indices in dopant_site_indices.items():
             map_index = self.dopant_element_types.index(dopant_element_type)
             substitution_element_type = self.substitution_element_types[map_index]
-            site_element_type_index = self.material.element_types.index(
-                                                    substitution_element_type)
-            hop_element_type = self.material.element_type_delimiter.join(
-                                                [substitution_element_type] * 2)
-            shell_based_neighbors[dopant_element_type] = []
-            for site_index in site_indices:
-                site_index_shell_neighbors = []
-                for shell_index in range(self.num_shells_dopant[
-                                        substitution_element_type][map_index]):
-                    current_shell_elements = []
-                    if shell_index == 0:
-                        current_shell_elements.extend([site_index])
-                        current_shell_neighbors = current_shell_elements
-                    else:
-                        inner_shell_neighbor_indices = site_index_shell_neighbors[shell_index - 1]
-                        for system_element_index in inner_shell_neighbor_indices:
-                            class_index = self.system.system_class_index_list[system_element_index]
-                            (element_type_element_index, _) = (
-                                self.get_element_type_element_index(
-                                    site_element_type_index, system_element_index))
-                            local_neighbor_site_system_element_index_list = []
-                            for hop_dist_type_object in self.system.hop_neighbor_list[hop_element_type][class_index]:
-                                local_neighbor_site_system_element_index_list.extend(
-                                    hop_dist_type_object.neighbor_system_element_indices[
-                                        element_type_element_index].tolist())
-                            current_shell_elements.extend(
-                                local_neighbor_site_system_element_index_list)
-                        # avoid duplication of inner_shell_neighbor_indices or dopant_site_index
-                        current_shell_neighbors = [
-                            current_shell_element
-                            for current_shell_element in current_shell_elements
-                            if (current_shell_element not in inner_shell_neighbor_indices)
-                            and (current_shell_element not in site_index_shell_neighbors[0])]
-                    # avoid duplication within the shell
-                    current_shell_neighbors = list(set(current_shell_neighbors))
-                    site_index_shell_neighbors.append(current_shell_neighbors)
-                shell_based_neighbors[dopant_element_type].append(site_index_shell_neighbors)
-        return shell_based_neighbors
+            system_shell_based_neighbors[dopant_element_type] = []
+            for site_system_element_index in site_indices:
+                num_shells = self.num_shells_dopant[substitution_element_type][map_index]
+                shell_based_neighbors = self.get_shell_based_neighbors(
+                                        site_system_element_index, num_shells)
+                system_shell_based_neighbors[dopant_element_type].append(shell_based_neighbors)
+        return system_shell_based_neighbors
 
     def inspect_shell_overlap(self, shell_based_neighbors, prefix_list):
         cumulative_neighbors = [
@@ -1368,12 +1374,12 @@ class Run(object):
             if self.doping_active:
                 dopant_site_indices = self.get_doping_distribution()
                 # update system_relative_energies
-                shell_based_neighbors = self.get_shell_based_neighbors(dopant_site_indices)
+                system_shell_based_neighbors = self.get_system_shell_based_neighbors(dopant_site_indices)
                 prefix_list.append(f'Trajectory {traj_index+1}:\n')
-                (shell_based_neighbors, prefix_list) = self.inspect_shell_overlap(
-                                            shell_based_neighbors, prefix_list)
+                (system_shell_based_neighbors, prefix_list) = self.inspect_shell_overlap(
+                                            system_shell_based_neighbors, prefix_list)
 
-                for dopant_element_type, dopant_shell_based_neighbors in shell_based_neighbors.items():
+                for dopant_element_type, dopant_shell_based_neighbors in system_shell_based_neighbors.items():
                     map_index = self.dopant_element_types.index(dopant_element_type)
                     for dopant_site_shell_based_neighbors in dopant_shell_based_neighbors:
                         for shell_index, i_shell_based_neighbors in enumerate(
