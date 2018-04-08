@@ -1099,7 +1099,7 @@ class Run(object):
             start_species_index = end_species_index
         return prefix_list
 
-    def get_doping_distribution(self):
+    def get_doping_distribution(self, prefix_list):
         dopant_site_indices = {}
         for map_index, num_dopants in enumerate(self.doping['num_dopants']):
             if num_dopants:
@@ -1109,6 +1109,7 @@ class Run(object):
                     dopant_site_indices[dopant_element_type] = (
                         self.doping['dopant_site_indices'][map_index][:num_dopants])
                 elif insertion_type == 'random':
+                    dopant_site_indices[dopant_element_type] = []
                     substitution_element_type = self.substitution_element_types[map_index]
                     substitution_element_type_index = self.material.element_types.index(
                                                                 substitution_element_type)
@@ -1127,9 +1128,25 @@ class Run(object):
                                                 substitution_element_type_index]),
                                 self.system.num_cells)
                         + system_element_index_offset_array).tolist()
-                    dopant_site_indices[dopant_element_type] = rnd.sample(site_indices,
-                                                                          num_dopants)[:]
-        return dopant_site_indices
+                    available_site_indices = site_indices[:]
+                    num_dopant_sites_inserted = 0
+                    while (num_dopants - num_dopant_sites_inserted) and available_site_indices:
+                        dopant_site_index = rnd.choice(available_site_indices)
+                        dopant_site_indices[dopant_element_type].append(dopant_site_index)
+                        num_dopant_sites_inserted += 1
+                        num_neighbor_shells = self.num_shells_dopant[substitution_element_type][map_index] - 1
+                        num_shells_discard = num_neighbor_shells * 2 + 1
+                        long_neighbor_shell_indices = self.get_shell_based_neighbors(dopant_site_index, num_shells_discard)
+                        combined_long_neighbor_shell_indices = [
+                                system_element_index
+                                for shell_neighbors in long_neighbor_shell_indices
+                                for system_element_index in shell_neighbors]
+                        available_site_indices = [
+                            site_index
+                            for site_index in available_site_indices
+                            if site_index not in combined_long_neighbor_shell_indices]
+                    prefix_list.append(f'Inserted {num_dopant_sites_inserted} sites of dopant element type {dopant_element_type}')
+        return (dopant_site_indices, prefix_list)
 
     def get_shell_based_neighbors(self, site_system_element_index, num_shells):
         shell_based_neighbors = []
@@ -1372,10 +1389,11 @@ class Run(object):
                         / (2 * self.system.system_volume * self.system.alpha))
         for traj_index in range(self.n_traj):
             if self.doping_active:
-                dopant_site_indices = self.get_doping_distribution()
+                prefix_list.append(f'Trajectory {traj_index+1}:\n')
+                (dopant_site_indices, prefix_list) = self.get_doping_distribution(
+                                                                        prefix_list)
                 # update system_relative_energies
                 system_shell_based_neighbors = self.get_system_shell_based_neighbors(dopant_site_indices)
-                prefix_list.append(f'Trajectory {traj_index+1}:\n')
                 (system_shell_based_neighbors, prefix_list) = self.inspect_shell_overlap(
                                             system_shell_based_neighbors, prefix_list)
 
