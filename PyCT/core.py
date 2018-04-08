@@ -1134,7 +1134,7 @@ class Run(object):
     def get_shell_based_neighbors(self, site_system_element_index, num_shells):
         shell_based_neighbors = []
         site_element_type_index = self.neighbors.generate_quantum_indices(
-                                self.system_size, site_system_element_index)
+                                self.system_size, site_system_element_index)[3]
         substitution_element_type = self.material.element_types[site_element_type_index]
         hop_element_type = self.material.element_type_delimiter.join(
                                             [substitution_element_type] * 2)
