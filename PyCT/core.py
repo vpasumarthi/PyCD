@@ -1391,6 +1391,10 @@ class Run(object):
         if self.electric_field_active:
             drift_velocity_array = np.zeros((self.n_traj,
                                              self.total_species, 3))
+        if self.doping_active:
+            occupancy_dir_path = dst_path.joinpath('occupancy_data')
+            Path.mkdir(occupancy_dir_path, parents=True, exist_ok=True)
+            max_index_width = np.ceil(np.log10(self.neighbors.num_system_elements))
 
         prefix_list = []
         system_charge = np.dot(self.species_count,
@@ -1418,11 +1422,14 @@ class Run(object):
                                 i_shell_based_neighbors] += self.relative_energies[
                                     'doping'][substitution_element_type][
                                         map_index][shell_index] * constants.EV2HARTREE
+                occupancy_list = []
             else:
                 dopant_site_indices = {}
 
             current_state_occupancy = self.generate_initial_occupancy(
                                                         dopant_site_indices)
+            if self.doping_active:
+                occupancy_list.append(current_state_occupancy)
             current_state_charge_config = self.charge_config(
                                 current_state_occupancy, dopant_site_indices)
             current_state_charge_config_prod = np.multiply(
@@ -1472,6 +1479,8 @@ class Run(object):
                                 new_site_system_element_index_list[proc_index])
                 current_state_occupancy[species_index] = \
                     new_site_system_element_index
+                if self.doping_active:
+                    occupancy_list.append(current_state_occupancy)
                 species_displacement_vector_list[
                     0, species_index * 3:(species_index + 1) * 3] += \
                         nproc_hop_vector_array[proc_index]
@@ -1514,6 +1523,11 @@ class Run(object):
                             np.savetxt(output_file, delg_0_array)
                         elif output_data_type == 'potential':
                             np.savetxt(output_file, potential_array)
+            if self.doping_active:
+                output_file_name = occupancy_dir_path.joinpath(f'occupancy_{traj_index+1}.dat')
+                occupancy_array = np.asarray(occupancy_list, dtype=int)
+                with open(output_file_name, 'wb') as output_file:
+                    np.savetxt(output_file, occupancy_array, fmt=f'%{max_index_width}d')
 
         if self.electric_field_active:
             prefix_list = self.compute_drift_mobility(drift_velocity_array,
