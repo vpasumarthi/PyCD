@@ -1110,25 +1110,30 @@ class Run(object):
                         self.doping['dopant_site_indices'][map_index][:num_dopants])
                 elif insertion_type == 'random':
                     dopant_site_indices[dopant_element_type] = []
+                    if map_index == 0:
+                        substitution_element_type_index_list = []
+                        available_site_indices = []
                     substitution_element_type = self.substitution_element_types[map_index]
                     substitution_element_type_index = self.material.element_types.index(
                                                                 substitution_element_type)
-                    system_element_index_offset_array = np.repeat(
-                                np.arange(
-                                    0, (self.material.total_elements_per_unit_cell
-                                        * self.system.num_cells),
-                                    self.material.total_elements_per_unit_cell),
-                                self.material.n_elements_per_unit_cell[
-                                                substitution_element_type_index])
-                    site_indices = (
-                        np.tile(self.material.n_elements_per_unit_cell[
-                                    :substitution_element_type_index].sum()
-                                + np.arange(0,
-                                            self.material.n_elements_per_unit_cell[
-                                                substitution_element_type_index]),
-                                self.system.num_cells)
-                        + system_element_index_offset_array).tolist()
-                    available_site_indices = site_indices[:]
+                    if substitution_element_type_index not in substitution_element_type_index_list:
+                        system_element_index_offset_array = np.repeat(
+                                    np.arange(
+                                        0, (self.material.total_elements_per_unit_cell
+                                            * self.system.num_cells),
+                                        self.material.total_elements_per_unit_cell),
+                                    self.material.n_elements_per_unit_cell[
+                                                    substitution_element_type_index])
+                        site_indices = (
+                            np.tile(self.material.n_elements_per_unit_cell[
+                                        :substitution_element_type_index].sum()
+                                    + np.arange(0,
+                                                self.material.n_elements_per_unit_cell[
+                                                    substitution_element_type_index]),
+                                    self.system.num_cells)
+                            + system_element_index_offset_array).tolist()
+                        available_site_indices.extend(site_indices[:])
+                    substitution_element_type_index_list.append(substitution_element_type_index)
                     num_dopant_sites_inserted = 0
                     while (num_dopants - num_dopant_sites_inserted) and available_site_indices:
                         dopant_site_index = rnd.choice(available_site_indices)
@@ -1145,7 +1150,7 @@ class Run(object):
                             site_index
                             for site_index in available_site_indices
                             if site_index not in combined_long_neighbor_shell_indices]
-                    prefix_list.append(f'Inserted {num_dopant_sites_inserted} sites of dopant element type {dopant_element_type}')
+                    prefix_list.append(f'Inserted {num_dopant_sites_inserted} sites of dopant element type {dopant_element_type}\n')
         return (dopant_site_indices, prefix_list)
 
     def get_shell_based_neighbors(self, site_system_element_index, num_shells):
