@@ -12,7 +12,7 @@ class DataProfile(object):
                  variable_quantity_type_index, variable_quantity_index,
                  variable_quantity_list, species_count,
                  ion_charge_type, species_charge_type, temp, t_final,
-                 time_interval, n_traj, external_field):
+                 time_interval, n_traj, external_field, doping):
         self.dst_path = dst_path
         self.system_directory_path = system_directory_path
         self.variable_quantity_type_index = variable_quantity_type_index
@@ -37,6 +37,15 @@ class DataProfile(object):
         self.field_tag = (
                 ef_field_tag
                 if self.external_field['electric']['active'] else 'no_field')
+        self.doping = doping
+        if np.any(doping['num_dopants']):
+            for map_index, i_doping_element_map in enumerate(doping['doping_element_map']):
+                [_, dopant_element_type] = i_doping_element_map.split(':')
+                num_dopants = doping['num_dopants'][map_index]
+                if num_dopants:
+                    self.field_tag = '_'.join([self.field_tag, f'{dopant_element_type}{num_dopants}'])
+        else:
+            self.field_tag = '_'.join([self.field_tag, 'undoped'])
         return None
 
     def generate_work_dir_path(self, species_count):
@@ -161,17 +170,17 @@ class DataProfile(object):
             work_dir_path = self.generate_work_dir_path(species_count)
             run_log_file_path = work_dir_path / run_log_file_name
             with open(run_log_file_path, 'r') as run_log_file:
-                first_line = run_log_file.readline()
-            if 'days' in first_line:
-                num_days = float(first_line[14:16])
-                num_hours = float(first_line[23:25])
-                num_minutes = float(first_line[33:35])
-                num_seconds = float(first_line[45:47])
+                last_line = run_log_file.readlines()[-1]
+            if 'days' in last_line:
+                num_days = float(last_line[14:16])
+                num_hours = float(last_line[23:25])
+                num_minutes = float(last_line[33:35])
+                num_seconds = float(last_line[45:47])
             else:
                 num_days = 0
-                num_hours = float(first_line[14:16])
-                num_minutes = float(first_line[24:26])
-                num_seconds = float(first_line[36:38])
+                num_hours = float(last_line[14:16])
+                num_minutes = float(last_line[24:26])
+                num_seconds = float(last_line[36:38])
             elapsed_time = timedelta(days=num_days, hours=num_hours,
                                      minutes=num_minutes, seconds=num_seconds)
             elapsed_seconds_data[i_run, 1] = int(elapsed_time.total_seconds())
