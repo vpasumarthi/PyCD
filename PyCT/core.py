@@ -1429,7 +1429,7 @@ class Run(object):
             current_state_occupancy = self.generate_initial_occupancy(
                                                         dopant_site_indices)
             if self.doping_active:
-                occupancy_list.append(current_state_occupancy)
+                occupancy_list.append([index for index in current_state_occupancy])
             current_state_charge_config = self.charge_config(
                                 current_state_occupancy, dopant_site_indices)
             current_state_charge_config_prod = np.multiply(
@@ -1480,7 +1480,7 @@ class Run(object):
                 current_state_occupancy[species_index] = \
                     new_site_system_element_index
                 if self.doping_active:
-                    occupancy_list.append(current_state_occupancy)
+                    occupancy_list.append([index for index in current_state_occupancy])
                 species_displacement_vector_list[
                     0, species_index * 3:(species_index + 1) * 3] += \
                         nproc_hop_vector_array[proc_index]
