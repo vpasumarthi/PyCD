@@ -282,7 +282,7 @@ class Neighbors(object):
                                 system_size), self.material.lattice_matrix))
                     index += 1
 
-    def generate_system_element_index(self, system_size, quantum_indices):
+    def get_system_element_index(self, system_size, quantum_indices):
         """Returns the system_element_index of the element
         :param system_size:
         :param quantum_indices:
@@ -323,7 +323,7 @@ class Neighbors(object):
                                     * system_size[-index:].prod())
         return system_element_index
 
-    def generate_quantum_indices(self, system_size, system_element_index):
+    def get_quantum_indices(self, system_size, system_element_index):
         """Returns the quantum indices of the element
         :param system_size:
         :param system_element_index:
@@ -354,14 +354,14 @@ class Neighbors(object):
                                     * system_size[index+1:].prod())
         return quantum_indices
 
-    def compute_coordinates(self, system_size, system_element_index):
+    def get_coordinates(self, system_size, system_element_index):
         """Returns the coordinates in atomic units of the given
             system element index for a given system size
             :param system_size:
             :param system_element_index:
             :return: """
-        quantum_indices = self.generate_quantum_indices(system_size,
-                                                        system_element_index)
+        quantum_indices = self.get_quantum_indices(system_size,
+                                                   system_element_index)
         unit_cell_translation_vector = np.dot(quantum_indices[:3],
                                               self.material.lattice_matrix)
         coordinates = (unit_cell_translation_vector
@@ -379,11 +379,10 @@ class Neighbors(object):
             :param system_element_index_1:
             :param system_element_index_2:
             :return: """
-        center_coord = self.compute_coordinates(system_size,
-                                                system_element_index_1)
-        neighbor_coord = self.compute_coordinates(system_size,
-                                                  system_element_index_2)
-
+        center_coord = self.get_coordinates(system_size,
+                                            system_element_index_1)
+        neighbor_coord = self.get_coordinates(system_size,
+                                              system_element_index_2)
         neighbor_image_coords = (self.system_translational_vector_list
                                  + neighbor_coord)
         neighbor_image_displacement_vectors = (neighbor_image_coords
@@ -1161,7 +1160,7 @@ class Run(object):
 
     def get_shell_based_neighbors(self, site_system_element_index, num_shells):
         shell_based_neighbors = []
-        site_element_type_index = self.neighbors.generate_quantum_indices(
+        site_element_type_index = self.neighbors.get_quantum_indices(
                                 self.system_size, site_system_element_index)[3]
         substitution_element_type = self.material.element_types[site_element_type_index]
         hop_element_type = self.material.element_type_delimiter.join(
