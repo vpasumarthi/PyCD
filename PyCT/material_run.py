@@ -79,8 +79,9 @@ def material_run(dst_path):
             sim_params['ion_charge_type'],
             sim_params['species_charge_type'], sim_params['n_traj'],
             sim_params['t_final'], sim_params['time_interval'],
-            sim_params['species_count'], sim_params['relative_energies'],
-            sim_params['external_field'], sim_params['doping'])
+            sim_params['species_count'], sim_params['initial_occupancy'],
+            sim_params['relative_energies'], sim_params['external_field'],
+            sim_params['doping'])
         material_run.do_kmc_steps(dst_path, sim_params['random_seed'],
                                   sim_params['output_data'])
     else:

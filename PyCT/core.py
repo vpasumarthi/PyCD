@@ -730,7 +730,8 @@ class Run(object):
         computing electrostatic interaction energies"""
     def __init__(self, system, precomputed_array, temp, ion_charge_type,
                  species_charge_type, n_traj, t_final, time_interval,
-                 species_count, relative_energies, external_field, doping):
+                 species_count, initial_occupancy, relative_energies,
+                 external_field, doping):
         """Returns the PBC condition of the system
         :param system:
         :param precomputed_array:
@@ -754,6 +755,7 @@ class Run(object):
         self.t_final = t_final * constants.SEC2AUTIME
         self.time_interval = time_interval * constants.SEC2AUTIME
         self.species_count = species_count
+        self.initial_occupancy = initial_occupancy
         self.relative_energies = relative_energies
 
         # relative energies
@@ -1293,7 +1295,9 @@ class Run(object):
                         dopant_element_type = self.dopant_element_types[map_index]
                         occupancy.extend(dopant_site_indices[dopant_element_type][:num_species])
                         num_species -= len(dopant_site_indices[dopant_element_type][:num_species])
-
+            if species_type in self.initial_occupancy:
+                occupancy.extend([index for index in self.initial_occupancy[species_type]])
+                num_species -= len(self.initial_occupancy[species_type])
             if num_species:
                 species_site_element_list = (
                         self.material.species_to_element_type_map[species_type])
