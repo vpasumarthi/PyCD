@@ -1162,6 +1162,7 @@ class Run(object):
 
     def get_shell_based_neighbors(self, site_system_element_index, num_shells):
         shell_based_neighbors = []
+        inner_shell_neighbor_indices = []
         site_element_type_index = self.neighbors.get_quantum_indices(
                                 self.system_size, site_system_element_index)[3]
         substitution_element_type = self.material.element_types[site_element_type_index]
@@ -1173,7 +1174,6 @@ class Run(object):
                 current_shell_elements.extend([site_system_element_index])
                 current_shell_neighbors = current_shell_elements
             else:
-                inner_shell_neighbor_indices = shell_based_neighbors[shell_index - 1]
                 for system_element_index in inner_shell_neighbor_indices:
                     class_index = self.system.system_class_index_list[system_element_index]
                     (element_type_element_index, _) = (
@@ -1190,10 +1190,10 @@ class Run(object):
                 current_shell_neighbors = [
                     current_shell_element
                     for current_shell_element in current_shell_elements
-                    if (current_shell_element not in inner_shell_neighbor_indices)
-                    and (current_shell_element not in shell_based_neighbors[0])]
+                    if current_shell_element not in inner_shell_neighbor_indices]
             # avoid duplication within the shell
             current_shell_neighbors = list(set(current_shell_neighbors))
+            inner_shell_neighbor_indices.extend(current_shell_neighbors)
             shell_based_neighbors.append(current_shell_neighbors)
         return shell_based_neighbors
 
