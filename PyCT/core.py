@@ -1654,7 +1654,8 @@ class Analysis(object):
         file_name = (('%1.2E' % (self.msd_t_final * self.time_conversion))
                      + str(self.repr_time)
                      + (',n_traj: %1.2E' % num_traj_recorded
-                        if num_traj_recorded != self.n_traj else ''))
+                        if num_traj_recorded != self.n_traj else '')
+                     + '_trim=' + str(self.trim_length))
         msd_file_name = ''.join(['MSD_Data_', file_name, '.npy'])
         msd_file_path = dst_path.joinpath(msd_file_name)
         species_types = [species_type
@@ -1743,8 +1744,7 @@ class Analysis(object):
         ax.set_title('\n'.join(wrap(figure_title, 60)))
         plt.legend()
         plt.show()  # temp change
-        figure_name = ''.join(['MSD_Plot_', file_name + '_trim='
-                               + str(self.trim_length) + '.png'])
+        figure_name = ''.join(['MSD_Plot_', file_name + '.png'])
         figure_path = dst_path.joinpath(figure_name)
         plt.savefig(str(figure_path))
         return None
