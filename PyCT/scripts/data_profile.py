@@ -93,10 +93,12 @@ class DataProfile(object):
         plt.savefig(str(figure_path))
         return filename
 
-    def diffusion_profile(self, plot_error_bars, msd_t_final, repr_time):
+    def diffusion_profile(self, plot_error_bars, msd_t_final, trim_length,
+                          repr_time):
         diffusivity_profile_data = np.zeros((self.num_runs, 3))
         diffusivity_profile_data[:, 0] = np.copy(self.variable_quantity_list)
-        file_name = '%1.2E%s' % (msd_t_final, repr_time)
+        file_name = ('%1.2E%s' % (msd_t_final, repr_time)
+                     + '_trim=' + str(trim_length))
         msd_analysis_log_file_name = (
             'MSD_Analysis' + ('_' if file_name else '') + file_name + '.log')
 
