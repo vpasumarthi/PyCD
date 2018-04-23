@@ -944,6 +944,18 @@ class Run(object):
         # total number of species
         self.total_species = self.species_count.sum()
 
+        self.max_neighbor_shells = {}
+        for element_type_key in self.material.neighbor_cutoff_dist:
+            element_type = element_type_key.split(self.material.element_type_delimiter)[0]
+            element_type_index = self.material.element_types.index(element_type)
+            sample_site_quantum_indices = [0, 0, 0, element_type_index, 0]
+            sample_site_index = self.neighbors.get_system_element_index(
+                self.system_size, sample_site_quantum_indices)
+            num_shells = 0
+            while len(self.get_shell_based_neighbors(sample_site_index, num_shells+1)[-1]):
+                num_shells += 1
+            self.max_neighbor_shells[element_type] = num_shells - 1
+
     def get_element_type_element_index(self, site_element_type_index,
                                        system_element_index):
         element_index = (
