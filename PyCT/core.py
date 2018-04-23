@@ -1222,6 +1222,16 @@ class Run(object):
                 system_shell_based_neighbors[dopant_element_type].append(shell_based_neighbors)
         return system_shell_based_neighbors
 
+    def get_doping_distribution_shell_neighbors(self, dopant_site_indices):
+        dopant_site_shell_based_neighbors = {}
+        for dopant_element_type, dopant_site_indices in dopant_site_indices.items():
+            dopant_element_type_index = self.dopant_element_types.index(dopant_element_type)
+            substitution_element_type = self.substitution_element_types[dopant_element_type_index]
+            max_neighbor_shells = self.max_neighbor_shells[substitution_element_type]
+            for dopant_site_index in dopant_site_indices:
+                dopant_site_shell_based_neighbors[dopant_site_index] = self.get_shell_based_neighbors(dopant_site_index, max_neighbor_shells+1)
+        return dopant_site_shell_based_neighbors
+
     def inspect_shell_overlap(self, shell_based_neighbors, prefix_list):
         cumulative_neighbors = [
                 system_element_index
@@ -1422,6 +1432,8 @@ class Run(object):
                 prefix_list.append(f'Trajectory {traj_index+1}:\n')
                 (dopant_site_indices, prefix_list) = self.get_doping_distribution(
                                                                         prefix_list)
+                dopant_site_shell_based_neighbors = (
+                    self.get_doping_distribution_shell_neighbors(dopant_site_indices))
                 # update system_relative_energies
                 system_shell_based_neighbors = self.get_system_shell_based_neighbors(dopant_site_indices)
                 (system_shell_based_neighbors, prefix_list) = self.inspect_shell_overlap(
