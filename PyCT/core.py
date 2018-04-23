@@ -1224,13 +1224,16 @@ class Run(object):
 
     def get_doping_distribution_shell_neighbors(self, dopant_site_indices):
         dopant_site_shell_based_neighbors = {}
+        dopant_site_element_types = {}
         for dopant_element_type, dopant_site_indices in dopant_site_indices.items():
             dopant_element_type_index = self.dopant_element_types.index(dopant_element_type)
             substitution_element_type = self.substitution_element_types[dopant_element_type_index]
             max_neighbor_shells = self.max_neighbor_shells[substitution_element_type]
             for dopant_site_index in dopant_site_indices:
-                dopant_site_shell_based_neighbors[dopant_site_index] = self.get_shell_based_neighbors(dopant_site_index, max_neighbor_shells+1)
-        return dopant_site_shell_based_neighbors
+                dopant_site_shell_based_neighbors[dopant_site_index] = (
+                    self.get_shell_based_neighbors(dopant_site_index, max_neighbor_shells+1))
+                dopant_site_element_types[dopant_site_index] = dopant_element_type
+        return (dopant_site_element_types, dopant_site_shell_based_neighbors)
 
     def get_site_wise_shell_indices(self, dopant_site_shell_based_neighbors):
         element_type_index_list = []
@@ -1467,7 +1470,7 @@ class Run(object):
                 prefix_list.append(f'Trajectory {traj_index+1}:\n')
                 (dopant_site_indices, prefix_list) = self.get_doping_distribution(
                                                                         prefix_list)
-                dopant_site_shell_based_neighbors = (
+                (dopant_site_element_types, dopant_site_shell_based_neighbors) = (
                     self.get_doping_distribution_shell_neighbors(dopant_site_indices))
                 site_wise_shell_indices_array = (
                     self.get_site_wise_shell_indices(dopant_site_shell_based_neighbors))
