@@ -1235,15 +1235,19 @@ class Run(object):
                 dopant_site_element_types[dopant_site_index] = dopant_element_type
         return (dopant_site_element_types, dopant_site_shell_based_neighbors)
 
-    def get_site_wise_shell_indices(self, dopant_site_shell_based_neighbors):
+    def get_site_wise_shell_indices(self, dopant_site_element_types,
+                                    dopant_site_shell_based_neighbors):
         element_type_index_list = []
         site_indices_list = []
         site_wise_shell_indices = []
+        shell_element_type_list = []
+        dopant_site_index_list = []
         for site_index, shell_neighbors in dopant_site_shell_based_neighbors.items():
             element_type_index = self.neighbors.get_quantum_indices(
                                             self.system_size, site_index)[3]
             element_type = self.material.element_types[element_type_index]
             if element_type_index not in element_type_index_list:
+                element_type_index_list.append(element_type_index)
                 system_element_index_offset_array = np.repeat(
                     np.arange(0, (self.material.total_elements_per_unit_cell
                                   * self.system.num_cells),
@@ -1258,13 +1262,19 @@ class Run(object):
                 num_site_indices = len(site_indices)
                 site_wise_shell_indices.extend([self.max_neighbor_shells[element_type]]
                                                * num_site_indices)
+                shell_element_type_list.extend([element_type] * num_site_indices)
+                dopant_site_index_list.extend([0] * num_site_indices)
             for shell_index, neighbor_indices in enumerate(shell_neighbors):
                 for neighbor_index in neighbor_indices:
                     index = site_indices_list.index(neighbor_index)
-                    site_wise_shell_indices[index] = min(
-                                    shell_index, site_wise_shell_indices[index])
+                    if shell_index < site_wise_shell_indices[index]:
+                        site_wise_shell_indices[index] = shell_index
+                        shell_element_type_list[index] = dopant_site_element_types[site_index]
+                        dopant_site_index_list[index] = site_index
         site_wise_shell_indices_array = np.hstack(
                                 (np.asarray(site_indices_list)[:, None],
+                                 np.asarray(shell_element_type_list)[:, None],
+                                 np.asarray(dopant_site_index_list)[:, None],
                                  np.asarray(site_wise_shell_indices)[:, None]))
         return site_wise_shell_indices_array
 
@@ -1473,10 +1483,13 @@ class Run(object):
                 (dopant_site_element_types, dopant_site_shell_based_neighbors) = (
                     self.get_doping_distribution_shell_neighbors(dopant_site_indices))
                 site_wise_shell_indices_array = (
-                    self.get_site_wise_shell_indices(dopant_site_shell_based_neighbors))
-                output_file_name = site_indices_dir_path.joinpath(f'site_indices_{traj_index+1}.dat')
-                with open(output_file_name, 'wb') as output_file:
-                    np.savetxt(output_file, site_wise_shell_indices_array, fmt=f'%{max_index_width}d')
+                    self.get_site_wise_shell_indices(dopant_site_element_types,
+                                                     dopant_site_shell_based_neighbors))
+                output_file_name = site_indices_dir_path.joinpath(f'site_indices_{traj_index+1}.csv')
+                with open(output_file_name, 'w') as output_file:
+                    for site_info in site_wise_shell_indices_array:
+                        output_file.write(','.join(site_info))
+                        output_file.write('\n')
                 # update system_relative_energies
                 system_shell_based_neighbors = self.get_system_shell_based_neighbors(dopant_site_indices)
                 (system_shell_based_neighbors, prefix_list) = self.inspect_shell_overlap(
