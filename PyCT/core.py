@@ -1452,6 +1452,8 @@ class Run(object):
         if self.doping_active:
             occupancy_dir_path = dst_path.joinpath('occupancy_data')
             Path.mkdir(occupancy_dir_path, parents=True, exist_ok=True)
+            site_indices_dir_path = dst_path.joinpath('site_indices_data')
+            Path.mkdir(site_indices_dir_path, parents=True, exist_ok=True)
             max_index_width = np.ceil(np.log10(self.neighbors.num_system_elements))
 
         prefix_list = []
@@ -1467,6 +1469,11 @@ class Run(object):
                                                                         prefix_list)
                 dopant_site_shell_based_neighbors = (
                     self.get_doping_distribution_shell_neighbors(dopant_site_indices))
+                site_wise_shell_indices_array = (
+                    self.get_site_wise_shell_indices(dopant_site_shell_based_neighbors))
+                output_file_name = site_indices_dir_path.joinpath(f'site_indices_{traj_index+1}.dat')
+                with open(output_file_name, 'wb') as output_file:
+                    np.savetxt(output_file, site_wise_shell_indices_array, fmt=f'%{max_index_width}d')
                 # update system_relative_energies
                 system_shell_based_neighbors = self.get_system_shell_based_neighbors(dopant_site_indices)
                 (system_shell_based_neighbors, prefix_list) = self.inspect_shell_overlap(
