@@ -780,6 +780,16 @@ class Run(object):
                 (len(dopant_element_relative_energies) - 1)
                 for dopant_element_relative_energies in element_relative_energies]
 
+        # number of kinetic processes
+        self.n_proc = np.dot(self.species_count, self.system.num_neighbors)
+
+        # n_elements_per_unit_cell
+        self.head_start_n_elements_per_unit_cell_cum_sum = [
+                                self.material.n_elements_per_unit_cell[
+                                            :site_element_type_index].sum()
+                                for site_element_type_index in (
+                                        self.neighbors.element_type_indices)]
+
         # electric field
         electric_field = external_field['electric']
         self.electric_field_ld = electric_field['ld']
@@ -827,17 +837,6 @@ class Run(object):
             while len(self.get_shell_based_neighbors(sample_site_index, num_shells+1)[-1]):
                 num_shells += 1
             self.max_neighbor_shells[element_type] = num_shells - 1
-
-
-        # number of kinetic processes
-        self.n_proc = np.dot(self.species_count, self.system.num_neighbors)
-
-        # n_elements_per_unit_cell
-        self.head_start_n_elements_per_unit_cell_cum_sum = [
-                                self.material.n_elements_per_unit_cell[
-                                            :site_element_type_index].sum()
-                                for site_element_type_index in (
-                                        self.neighbors.element_type_indices)]
 
         # species_type_list
         self.species_type_list = [self.material.species_types[index]
