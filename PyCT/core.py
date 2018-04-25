@@ -1484,6 +1484,7 @@ class Run(object):
                 (site_wise_shell_indices_array, shell_element_type_list) = (
                     self.get_site_wise_shell_indices(dopant_site_element_types,
                                                      dopant_site_shell_based_neighbors))
+                num_site_indices = len(shell_element_type_list)
                 output_file_name = site_indices_dir_path.joinpath(f'site_indices_{traj_index+1}.csv')
                 with open(output_file_name, 'w') as output_file:
                     for site_index, site_info in enumerate(site_wise_shell_indices_array):
@@ -1496,16 +1497,17 @@ class Run(object):
                 (system_shell_based_neighbors, prefix_list) = self.inspect_shell_overlap(
                                             system_shell_based_neighbors, prefix_list)
 
-                for dopant_element_type, dopant_shell_based_neighbors in system_shell_based_neighbors.items():
+                for index in range(num_site_indices):
+                    (site_index, _, shell_index) = site_wise_shell_indices_array[index]
+                    dopant_element_type = shell_element_type_list[index]
                     map_index = self.dopant_element_types.index(dopant_element_type)
-                    for dopant_site_shell_based_neighbors in dopant_shell_based_neighbors:
-                        for shell_index, i_shell_based_neighbors in enumerate(
-                                            dopant_site_shell_based_neighbors):
-                            substitution_element_type = self.substitution_element_types[map_index]
-                            self.system_relative_energies[
-                                i_shell_based_neighbors] += self.relative_energies[
-                                    'doping'][substitution_element_type][
-                                        map_index][shell_index] * constants.EV2HARTREE
+                    substitution_element_type = self.substitution_element_types[map_index]
+                    if shell_index < len(self.relative_energies['doping'][
+                                        substitution_element_type][map_index]):
+                        self.system_relative_energies[site_index] += (
+                            self.relative_energies['doping'][
+                                substitution_element_type][map_index][shell_index]
+                            * constants.EV2HARTREE)
                 occupancy_list = []
             else:
                 dopant_site_indices = {}
