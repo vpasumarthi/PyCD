@@ -773,10 +773,10 @@ class Run(object):
         self.system_relative_energies = (
                 np.tile(unit_cell_relative_energies, self.system.num_cells))
 
-        self.num_shells_dopant = {}
+        self.num_shells = {}
         for element_type, element_relative_energies in self.relative_energies['doping'].items():
-            self.num_shells_dopant[element_type] = [
-                len(dopant_element_relative_energies)
+            self.num_shells[element_type] = [
+                (len(dopant_element_relative_energies) - 1)
                 for dopant_element_relative_energies in element_relative_energies]
 
         # electric field
@@ -1150,8 +1150,8 @@ class Run(object):
                         dopant_site_index = rnd.choice(available_site_indices)
                         dopant_site_indices[dopant_element_type].append(dopant_site_index)
                         num_dopant_sites_inserted += 1
-                        num_neighbor_shells = self.num_shells_dopant[substitution_element_type][map_index] - 1
-                        num_shells_discard = num_neighbor_shells * 2 + 1
+                        num_shells = self.num_shells[substitution_element_type][map_index]
+                        num_shells_discard = num_shells * 2 + 1
                         long_neighbor_shell_indices = self.get_shell_based_neighbors(dopant_site_index, num_shells_discard)
                         combined_long_neighbor_shell_indices = [
                                 system_element_index
@@ -1161,7 +1161,7 @@ class Run(object):
                             site_index
                             for site_index in available_site_indices
                             if site_index not in combined_long_neighbor_shell_indices]
-                        sub_prefix_list.append(long_neighbor_shell_indices[:num_neighbor_shells+1])
+                        sub_prefix_list.append(long_neighbor_shell_indices[:num_shells])
                     prefix_list.append(f'Inserted {num_dopant_sites_inserted} sites of dopant element type {dopant_element_type}\n')
         return (dopant_site_indices, prefix_list)
 
