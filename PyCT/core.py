@@ -1096,13 +1096,9 @@ class Run(object):
                 sem_drift_mobility = (np.std(species_avg_drift_mobility)
                                       / np.sqrt(self.n_traj))
                 prefix_list.append(
-                        'Estimated value of {:s} drift mobility is: '
-                        '{:4.3e} cm2/V.s.\n'.format(species_type,
-                                                    mean_drift_mobility))
+                        f'Estimated value of {species_type} drift mobility is: {mean_drift_mobility:4.3e} cm2/V.s.\n')
                 prefix_list.append(
-                    'Standard error of mean in {:s} drift mobility is: '
-                    '{:4.3e} cm2/V.s.\n'.format(species_type,
-                                                sem_drift_mobility))
+                    f'Standard error of mean in {species_type} drift mobility is: {sem_drift_mobility:4.3e} cm2/V.s.\n')
             start_species_index = end_species_index
         return prefix_list
 
@@ -1678,15 +1674,13 @@ class Analysis(object):
             species_diff = (slope * constants.ANG2UM ** 2
                             * constants.SEC2NS / (2 * self.n_dim))
             prefix_list.append(
-                        'Estimated value of {:s} diffusivity is: '
-                        '{:4.3f} um2/s\n'.format(species_type, species_diff))
+                        f'Estimated value of {species_type} diffusivity is: {species_diff:4.3f} um2/s\n')
             slope_sem = (np.std(slope_data[:, species_index])
                          / np.sqrt(num_traj_recorded))
             species_diff_sem = (slope_sem * constants.ANG2UM ** 2
                                 * constants.SEC2NS / (2 * self.n_dim))
             prefix_list.append(
-                'Standard error of mean in {:s} diffusivity is: '
-                '{:4.3f} um2/s\n'.format(species_type, species_diff_sem))
+                f'Standard error of mean in {species_type} diffusivity is: {species_diff_sem:4.3f} um2/s\n')
         prefix = ''.join(prefix_list)
         generate_report(self.start_time, dst_path, report_file_name, prefix)
 
