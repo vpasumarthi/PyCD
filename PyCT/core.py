@@ -878,9 +878,7 @@ class Run(object):
                                                             sample_site_index)
 
         self.n_proc_species_index_list = []
-        # NOTE: doesn't work with doping.
         self.n_proc_hop_element_type_list = []
-        # NOTE: doesn't work with doping.
         self.n_proc_site_element_type_index_list = []
         self.n_proc_hop_dist_type_list = {}
         self.n_proc_neighbor_index_list = {}
