@@ -1205,19 +1205,6 @@ class Run(object):
             shell_based_neighbors.append(current_shell_neighbors)
         return shell_based_neighbors
 
-    def get_system_shell_based_neighbors(self, dopant_site_indices):
-        system_shell_based_neighbors = {}
-        for dopant_element_type, site_indices in dopant_site_indices.items():
-            map_index = self.dopant_element_types.index(dopant_element_type)
-            substitution_element_type = self.substitution_element_types[map_index]
-            system_shell_based_neighbors[dopant_element_type] = []
-            for site_system_element_index in site_indices:
-                num_shells = self.num_shells_dopant[substitution_element_type][map_index]
-                shell_based_neighbors = self.get_shell_based_neighbors(
-                                        site_system_element_index, num_shells)
-                system_shell_based_neighbors[dopant_element_type].append(shell_based_neighbors)
-        return system_shell_based_neighbors
-
     def get_doping_distribution_shell_neighbors(self, dopant_site_indices):
         dopant_site_shell_based_neighbors = {}
         dopant_site_element_types = {}
