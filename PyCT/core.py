@@ -1273,10 +1273,9 @@ class Run(object):
                         dopant_site_index_list[index] = site_index
         site_wise_shell_indices_array = np.hstack(
                                 (np.asarray(site_indices_list)[:, None],
-                                 np.asarray(shell_element_type_list)[:, None],
                                  np.asarray(dopant_site_index_list)[:, None],
                                  np.asarray(site_wise_shell_indices)[:, None]))
-        return site_wise_shell_indices_array
+        return (site_wise_shell_indices_array, shell_element_type_list)
 
     def inspect_shell_overlap(self, shell_based_neighbors, prefix_list):
         cumulative_neighbors = [
@@ -1482,13 +1481,15 @@ class Run(object):
                                                                         prefix_list)
                 (dopant_site_element_types, dopant_site_shell_based_neighbors) = (
                     self.get_doping_distribution_shell_neighbors(dopant_site_indices))
-                site_wise_shell_indices_array = (
+                (site_wise_shell_indices_array, shell_element_type_list) = (
                     self.get_site_wise_shell_indices(dopant_site_element_types,
                                                      dopant_site_shell_based_neighbors))
                 output_file_name = site_indices_dir_path.joinpath(f'site_indices_{traj_index+1}.csv')
                 with open(output_file_name, 'w') as output_file:
-                    for site_info in site_wise_shell_indices_array:
-                        output_file.write(','.join(site_info))
+                    for site_index, site_info in enumerate(site_wise_shell_indices_array):
+                        output_list = site_info.tolist()
+                        output_list.insert(1, shell_element_type_list[site_index])
+                        output_file.write(','.join([str(element) for element in output_list]))
                         output_file.write('\n')
                 # update system_relative_energies
                 system_shell_based_neighbors = self.get_system_shell_based_neighbors(dopant_site_indices)
