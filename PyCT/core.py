@@ -1166,10 +1166,6 @@ class Run(object):
                             if site_index not in combined_long_neighbor_shell_indices]
                         sub_prefix_list.append(long_neighbor_shell_indices[:num_neighbor_shells+1])
                     prefix_list.append(f'Inserted {num_dopant_sites_inserted} sites of dopant element type {dopant_element_type}\n')
-                    prefix_list.append(f'System element indices of dopant sites: {dopant_site_indices[dopant_element_type]}\n')
-                    prefix_list.append('Shell-based neighbor indices of dopant sites:\n')
-                    for dopant_element_index in range(num_dopant_sites_inserted):
-                        prefix_list.append(f'{sub_prefix_list[dopant_element_index][:]}\n')
         return (dopant_site_indices, prefix_list)
 
     def get_shell_based_neighbors(self, site_system_element_index, num_shells):
