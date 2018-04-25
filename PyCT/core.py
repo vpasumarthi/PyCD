@@ -1232,12 +1232,13 @@ class Run(object):
         return (dopant_site_element_types, dopant_site_shell_based_neighbors)
 
     def get_site_wise_shell_indices(self, dopant_site_element_types,
-                                    dopant_site_shell_based_neighbors):
+                                    dopant_site_shell_based_neighbors, prefix_list):
         element_type_index_list = []
         site_indices_list = []
         site_wise_shell_indices = []
         shell_element_type_list = []
         dopant_site_index_list = []
+        overlap = 0
         for site_index, shell_neighbors in dopant_site_shell_based_neighbors.items():
             element_type_index = self.neighbors.get_quantum_indices(
                                             self.system_size, site_index)[3]
@@ -1265,13 +1266,21 @@ class Run(object):
                     index = site_indices_list.index(neighbor_index)
                     if shell_index < site_wise_shell_indices[index]:
                         site_wise_shell_indices[index] = shell_index
+                        if shell_element_type_list[index] != element_type:
+                            overlap = 1
                         shell_element_type_list[index] = dopant_site_element_types[site_index]
                         dopant_site_index_list[index] = site_index
         site_wise_shell_indices_array = np.hstack(
                                 (np.asarray(site_indices_list)[:, None],
                                  np.asarray(dopant_site_index_list)[:, None],
                                  np.asarray(site_wise_shell_indices)[:, None]))
-        return (site_wise_shell_indices_array, shell_element_type_list)
+        if overlap:
+            prefix_list.append(
+                            'All shell based neighbor sites are independent\n\n')
+        else:
+            prefix_list.append(
+                        'All shell based neighbor sites are NOT independent\n\n')
+        return (site_wise_shell_indices_array, shell_element_type_list, prefix_list)
 
     def inspect_shell_overlap(self, shell_based_neighbors, prefix_list):
         cumulative_neighbors = [
@@ -1477,9 +1486,10 @@ class Run(object):
                                                                         prefix_list)
                 (dopant_site_element_types, dopant_site_shell_based_neighbors) = (
                     self.get_doping_distribution_shell_neighbors(dopant_site_indices))
-                (site_wise_shell_indices_array, shell_element_type_list) = (
+                (site_wise_shell_indices_array, shell_element_type_list, prefix_list) = (
                     self.get_site_wise_shell_indices(dopant_site_element_types,
-                                                     dopant_site_shell_based_neighbors))
+                                                     dopant_site_shell_based_neighbors,
+                                                     prefix_list))
                 num_site_indices = len(shell_element_type_list)
                 output_file_name = site_indices_dir_path.joinpath(f'site_indices_{traj_index+1}.csv')
                 with open(output_file_name, 'w') as output_file:
@@ -1489,10 +1499,6 @@ class Run(object):
                         output_file.write(','.join([str(element) for element in output_list]))
                         output_file.write('\n')
                 # update system_relative_energies
-                system_shell_based_neighbors = self.get_system_shell_based_neighbors(dopant_site_indices)
-                (system_shell_based_neighbors, prefix_list) = self.inspect_shell_overlap(
-                                            system_shell_based_neighbors, prefix_list)
-
                 for index in range(num_site_indices):
                     (site_index, _, shell_index) = site_wise_shell_indices_array[index]
                     dopant_element_type = shell_element_type_list[index]
