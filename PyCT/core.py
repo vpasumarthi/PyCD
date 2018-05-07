@@ -1234,7 +1234,7 @@ class Run(object):
                     + system_element_index_offset_array)
                 site_indices_list.extend([index for index in site_indices])
                 num_site_indices = len(site_indices)
-                site_wise_shell_indices.extend([self.max_neighbor_shells[element_type]]
+                site_wise_shell_indices.extend([self.max_neighbor_shells[element_type] + 1]
                                                * num_site_indices)
                 shell_element_type_list.extend([element_type] * num_site_indices)
                 dopant_site_index_list.extend([0] * num_site_indices)
