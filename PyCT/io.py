@@ -93,26 +93,26 @@ def write_poscar(src_file_path, dst_file_path, file_format,
                 ''.join([
                     ' ' * 1,
                     [' ', '-'][element_coordinates[0] < 0],
-                    '%18.16f' % abs(element_coordinates[0]),
+                    f'{abs(element_coordinates[0]):18.16f}',
                     ' ' * 1,
                     [' ', '-'][element_coordinates[1] < 0],
-                    '%18.16f' % abs(element_coordinates[1]),
+                    f'{abs(element_coordinates[1]):18.16f}',
                     ' ' * 1,
                     [' ', '-'][element_coordinates[2] < 0],
-                    '%18.16f' % abs(element_coordinates[2])])
+                    f'{abs(element_coordinates[2]):18.16f}'])
                 + '\n')
         elif file_format == 'VESTA':
             line = (
                 ''.join([
                     ' ' * 4,
                     [' ', '-'][element_coordinates[0] < 0],
-                    '%11.9f' % abs(element_coordinates[0]),
+                    f'{abs(element_coordinates[0]):11.9f}',
                     ' ' * 8,
                     [' ', '-'][element_coordinates[1] < 0],
-                    '%11.9f' % abs(element_coordinates[1]),
+                    f'{abs(element_coordinates[1]):11.9f}',
                     ' ' * 8,
                     [' ', '-'][element_coordinates[2] < 0],
-                    '%11.9f' % abs(element_coordinates[2])])
+                    f'{abs(element_coordinates[2]):11.9f}'])
                 + '\n')
         dst_file.write(line)
     dst_file.close()
