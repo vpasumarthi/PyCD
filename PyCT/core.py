@@ -1104,8 +1104,10 @@ class Run(object):
 
     def get_doping_distribution(self, prefix_list):
         dopant_site_indices = {}
+        dopant_types_inserted = 0
         for map_index, num_dopants in enumerate(self.doping['num_dopants']):
             if num_dopants:
+                dopant_types_inserted += 1
                 insertion_type = self.doping['insertion_type'][map_index]
                 dopant_element_type = self.dopant_element_types[map_index]
                 if insertion_type == 'manual':
@@ -1113,7 +1115,7 @@ class Run(object):
                         self.doping['dopant_site_indices'][map_index][:num_dopants])
                 elif insertion_type == 'random':
                     dopant_site_indices[dopant_element_type] = []
-                    if map_index == 0:
+                    if dopant_types_inserted == 1:
                         substitution_element_type_index_list = []
                         available_site_indices = []
                     substitution_element_type = self.substitution_element_types[map_index]
