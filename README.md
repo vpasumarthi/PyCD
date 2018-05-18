@@ -25,6 +25,9 @@ $ pip install -e .
 # Create a new conda environment
 $ conda create -n pyct-env python=3.6
 
+# Activate the new conda environment
+$ source activate pyct-env
+
 # Clone this repository
 $ git clone https://github.com/vpasumarthi/PyCT.git
 
