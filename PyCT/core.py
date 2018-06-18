@@ -827,20 +827,40 @@ class Run(object):
             self.doping_active = 0
 
         self.max_neighbor_shells = {}
+        self.dist_based_shell_index_lookup = {}
+        tol_dist = 0.5 # angstrom
         for element_type_key in self.material.neighbor_cutoff_dist:
             element_type = element_type_key.split(self.material.element_type_delimiter)[0]
             element_type_index = self.material.element_types.index(element_type)
             sample_site_quantum_indices = [0, 0, 0, element_type_index, 0]
             sample_site_index = self.neighbors.get_system_element_index(
                 self.system_size, sample_site_quantum_indices)
+            pairwise_dist_list = []
+            shell_index_list = []
             num_shells = 0
             while True:
                 shell_based_neighbors = self.get_shell_based_neighbors(sample_site_index, num_shells)
                 outer_shell_neighbors = shell_based_neighbors[-1]
                 if len(outer_shell_neighbors):
+                    for outer_shell_neighbor in outer_shell_neighbors:
+                        dist_value = self.neighbors.compute_distance(self.system.system_size,
+                                                                     sample_site_index,
+                                                                     outer_shell_neighbor) / constants.ANG2BOHR
+                        pairwise_dist_list.append(dist_value)
+                        shell_index_list.append(num_shells)
                     num_shells += 1
                 else:
                     break
+            sort_indices = np.argsort(pairwise_dist_list)
+            sorted_pairwise_dist_array = np.asarray(pairwise_dist_list)[sort_indices]
+            sorted_shell_index_array = np.asarray(shell_index_list)[sort_indices]
+            temp_bins = sorted_pairwise_dist_array[:-1] + (sorted_pairwise_dist_array[1:] - sorted_pairwise_dist_array[:-1]) / 2
+            dist_bins = np.concatenate([[sorted_pairwise_dist_array[0] - tol_dist],
+                                        temp_bins,
+                                        [sorted_pairwise_dist_array[-1] + tol_dist]])
+            self.dist_based_shell_index_lookup[element_type_key] = {}
+            self.dist_based_shell_index_lookup[element_type_key]['dist_bins'] = dist_bins
+            self.dist_based_shell_index_lookup[element_type_key]['shell_index_list'] = sorted_shell_index_array
             self.max_neighbor_shells[element_type] = num_shells - 1
 
         # species_type_list
