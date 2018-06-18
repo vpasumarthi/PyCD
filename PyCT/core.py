@@ -834,8 +834,13 @@ class Run(object):
             sample_site_index = self.neighbors.get_system_element_index(
                 self.system_size, sample_site_quantum_indices)
             num_shells = 0
-            while len(self.get_shell_based_neighbors(sample_site_index, num_shells)[-1]):
-                num_shells += 1
+            while True:
+                shell_based_neighbors = self.get_shell_based_neighbors(sample_site_index, num_shells)
+                num_outer_shell_neighbors = len(shell_based_neighbors[-1])
+                if num_outer_shell_neighbors == 0:
+                    break
+                else:
+                    num_shells += 1
             self.max_neighbor_shells[element_type] = num_shells - 1
 
         # species_type_list
