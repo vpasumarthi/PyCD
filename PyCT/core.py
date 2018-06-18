@@ -834,7 +834,7 @@ class Run(object):
             sample_site_index = self.neighbors.get_system_element_index(
                 self.system_size, sample_site_quantum_indices)
             num_shells = 0
-            while len(self.get_shell_based_neighbors(sample_site_index, num_shells+1)[-1]):
+            while len(self.get_shell_based_neighbors(sample_site_index, num_shells)[-1]):
                 num_shells += 1
             self.max_neighbor_shells[element_type] = num_shells - 1
 
@@ -1146,7 +1146,7 @@ class Run(object):
                         dopant_site_indices[dopant_element_type].append(dopant_site_index)
                         num_dopant_sites_inserted += 1
                         num_shells = self.num_shells[substitution_element_type][map_index]
-                        num_shells_discard = num_shells * 2 + 1
+                        num_shells_discard = num_shells * 2
                         long_neighbor_shell_indices = self.get_shell_based_neighbors(dopant_site_index, num_shells_discard)
                         combined_long_neighbor_shell_indices = [
                                 system_element_index
@@ -1168,7 +1168,7 @@ class Run(object):
         substitution_element_type = self.material.element_types[site_element_type_index]
         hop_element_type = self.material.element_type_delimiter.join(
                                             [substitution_element_type] * 2)
-        for shell_index in range(num_shells):
+        for shell_index in range(num_shells+1):
             current_shell_elements = []
             if shell_index == 0:
                 current_shell_elements.extend([site_system_element_index])
@@ -1206,7 +1206,7 @@ class Run(object):
             max_neighbor_shells = self.max_neighbor_shells[substitution_element_type]
             for dopant_site_index in dopant_site_indices:
                 system_shell_based_neighbors[dopant_site_index] = (
-                    self.get_shell_based_neighbors(dopant_site_index, max_neighbor_shells+1))
+                    self.get_shell_based_neighbors(dopant_site_index, max_neighbor_shells))
                 dopant_site_element_types[dopant_site_index] = dopant_element_type
         return (dopant_site_element_types, system_shell_based_neighbors)
 
