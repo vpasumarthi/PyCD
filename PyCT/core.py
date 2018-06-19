@@ -1183,7 +1183,8 @@ class Run(object):
                             for site_index in available_site_indices
                             if site_index not in combined_long_neighbor_shell_indices]
                         sub_prefix_list.append(long_neighbor_shell_indices[:num_shells])
-                    prefix_list.append(f'Inserted {num_dopant_sites_inserted} sites of dopant element type {dopant_element_type}\n')
+                    tail = 's' if num_dopant_sites_inserted > 1 else ''
+                    prefix_list.append(f'Inserted {num_dopant_sites_inserted} site{tail} of dopant element type {dopant_element_type}\n')
                     dopant_index_precision = int(np.ceil(np.log10(num_dopant_sites_inserted + 1)))
                     dopant_type_precision = len(dopant_element_type)
                     entry_list = ['site1', 'site2', 'pairwise distance (ang.)', 'shells apart']
