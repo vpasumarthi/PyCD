@@ -1190,7 +1190,8 @@ class Run(object):
                     entry_width_list = [len(entry) for entry in entry_list]
                     num_decimals = 2
                     dopant_type_dopant_site_indices = dopant_site_indices[dopant_element_type]
-                    prefix_list.append(f'{entry_list[0]}\t{entry_list[1]}\t{entry_list[2]}\t{entry_list[3]}\n')
+                    if num_dopant_sites_inserted > 1:
+                        prefix_list.append(f'{entry_list[0]}\t{entry_list[1]}\t{entry_list[2]}\t{entry_list[3]}\n')
                     for index1, dopant_site_index_1 in enumerate(dopant_type_dopant_site_indices):
                         for index2, dopant_site_index_2 in enumerate(dopant_type_dopant_site_indices[index1+1:]):
                             inter_dopant_dist = self.neighbors.compute_distance(self.system.system_size,
@@ -1212,7 +1213,8 @@ class Run(object):
                                                       'site2': dopant_site_index_2,
                                                       'dist': inter_dopant_dist,
                                                       'shell_separation': shell_separation}
-                    prefix_list.append(f'All dopant sites of element type \'{dopant_element_type}\' are separated by at least {min_separation["shell_separation"]} shells\n')                                    
+                    if num_dopant_sites_inserted > 1:
+                        prefix_list.append(f'All dopant sites of element type \'{dopant_element_type}\' are separated by at least {min_separation["shell_separation"]} shells\n')                                    
         return (dopant_site_indices, prefix_list)
 
     def get_shell_based_neighbors(self, site_system_element_index, num_shells):
