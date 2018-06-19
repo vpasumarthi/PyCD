@@ -1215,7 +1215,12 @@ class Run(object):
                                                       'dist': inter_dopant_dist,
                                                       'shell_separation': shell_separation}
                     if num_dopant_sites_inserted > 1:
-                        prefix_list.append(f'All dopant sites of element type \'{dopant_element_type}\' are separated by at least {min_separation["shell_separation"]} shells\n')                                    
+                        prefix_list.append(f'All dopant sites of element type \'{dopant_element_type}\' are separated by at least {min_separation["shell_separation"]} shells\n')
+                elif insertion_type == 'gradient':
+                    gradient_params = self.doping['gradient'][map_index]
+                    ld = gradient_params['ld']
+                    step_length_ratio = gradient_params['step_length_ratio']
+                    num_dopants = gradient_params['num_dopants']
         return (dopant_site_indices, prefix_list)
 
     def get_shell_based_neighbors(self, site_system_element_index, num_shells):
