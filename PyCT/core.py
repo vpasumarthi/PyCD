@@ -1221,6 +1221,7 @@ class Run(object):
                     ld = gradient_params['ld']
                     step_length_ratio = gradient_params['step_length_ratio']
                     num_dopants = gradient_params['num_dopants']
+                    assert (self.system.system_size[ld] % sum(step_length_ratio) == 0), 'step system size must be an integer multiple of unit cell'
         return (dopant_site_indices, prefix_list)
 
     def get_shell_based_neighbors(self, site_system_element_index, num_shells):
