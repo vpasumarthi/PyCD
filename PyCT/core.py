@@ -1129,12 +1129,10 @@ class Run(object):
 
     def generate_random_doping_distribution(self, dopant_site_indices,
                                             prefix_list, dopant_element_type,
-                                            dopant_types_inserted, map_index,
+                                            substitution_element_type_index_list,
+                                            available_site_indices, map_index,
                                             num_dopants):
         dopant_site_indices[dopant_element_type] = []
-        if dopant_types_inserted == 1:
-            substitution_element_type_index_list = []
-            available_site_indices = []
         substitution_element_type = self.substitution_element_types[map_index]
         substitution_element_type_index = self.material.element_types.index(
                                                     substitution_element_type)
@@ -1222,10 +1220,14 @@ class Run(object):
                     dopant_site_indices[dopant_element_type] = (
                         self.doping['dopant_site_indices'][map_index][:num_dopants])
                 elif insertion_type == 'random':
+                    if dopant_types_inserted == 1:
+                        substitution_element_type_index_list = []
+                        available_site_indices = []
                     (dopant_site_indices, prefix_list) = (
                         self.generate_random_doping_distribution(
                             dopant_site_indices, prefix_list, dopant_element_type,
-                            dopant_types_inserted, map_index, num_dopants))
+                            substitution_element_type_index_list,
+                            available_site_indices, map_index, num_dopants))
                 elif insertion_type == 'gradient':
                     gradient_params = self.doping['gradient'][map_index]
                     ld = gradient_params['ld']
