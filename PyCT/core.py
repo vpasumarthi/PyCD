@@ -1206,7 +1206,8 @@ class Run(object):
                                           'shell_separation': shell_separation}
         if num_dopant_sites_inserted > 1:
             prefix_list.append(f'All dopant sites of element type \'{dopant_element_type}\' are separated by at least {min_separation["shell_separation"]} shells\n')
-        return (dopant_site_indices, prefix_list)
+        return (dopant_site_indices, prefix_list,
+                substitution_element_type_index_list, available_site_indices)
 
     def get_doping_distribution(self, prefix_list):
         dopant_site_indices = {}
@@ -1223,8 +1224,9 @@ class Run(object):
                     if dopant_types_inserted == 1:
                         substitution_element_type_index_list = []
                         available_site_indices = []
-                    (dopant_site_indices, prefix_list) = (
-                        self.generate_random_doping_distribution(
+                    (dopant_site_indices, prefix_list, substitution_element_type_index_list,
+                     available_site_indices) = (
+                         self.generate_random_doping_distribution(
                             dopant_site_indices, prefix_list, dopant_element_type,
                             substitution_element_type_index_list,
                             available_site_indices, map_index, num_dopants))
