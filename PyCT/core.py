@@ -1127,12 +1127,11 @@ class Run(object):
             start_species_index = end_species_index
         return prefix_list
 
-    def generate_random_doping_distribution(self, dopant_site_indices,
-                                            prefix_list, dopant_element_type,
+    def generate_random_doping_distribution(self, prefix_list, dopant_element_type,
                                             substitution_element_type_index_list,
                                             available_site_indices, map_index,
                                             num_dopants):
-        dopant_site_indices[dopant_element_type] = []
+        dopant_type_dopant_site_indices = []
         substitution_element_type = self.substitution_element_types[map_index]
         substitution_element_type_index = self.material.element_types.index(
                                                     substitution_element_type)
@@ -1159,7 +1158,7 @@ class Run(object):
         sub_prefix_list = []
         while (num_dopants - num_dopant_sites_inserted) and available_site_indices:
             dopant_site_index = rnd.choice(available_site_indices)
-            dopant_site_indices[dopant_element_type].append(dopant_site_index)
+            dopant_type_dopant_site_indices.append(dopant_site_index)
             num_dopant_sites_inserted += 1
             num_shells = self.num_shells[substitution_element_type][map_index]
             num_shells_discard = num_shells * 2
@@ -1180,7 +1179,6 @@ class Run(object):
         entry_list = ['site1', 'site2', 'pairwise distance (ang.)', 'shells apart']
         entry_width_list = [len(entry) for entry in entry_list]
         num_decimals = 2
-        dopant_type_dopant_site_indices = dopant_site_indices[dopant_element_type]
         if num_dopant_sites_inserted > 1:
             prefix_list.append(f'{entry_list[0]}\t{entry_list[1]}\t{entry_list[2]}\t{entry_list[3]}\n')
         for index1, dopant_site_index_1 in enumerate(dopant_type_dopant_site_indices):
@@ -1206,7 +1204,7 @@ class Run(object):
                                           'shell_separation': shell_separation}
         if num_dopant_sites_inserted > 1:
             prefix_list.append(f'All dopant sites of element type \'{dopant_element_type}\' are separated by at least {min_separation["shell_separation"]} shells\n')
-        return (dopant_site_indices, prefix_list,
+        return (dopant_type_dopant_site_indices, prefix_list,
                 substitution_element_type_index_list, available_site_indices)
 
     def get_doping_distribution(self, prefix_list):
@@ -1224,12 +1222,14 @@ class Run(object):
                     if dopant_types_inserted == 1:
                         substitution_element_type_index_list = []
                         available_site_indices = []
-                    (dopant_site_indices, prefix_list, substitution_element_type_index_list,
+                    (dopant_type_dopant_site_indices, prefix_list,
+                     substitution_element_type_index_list,
                      available_site_indices) = (
                          self.generate_random_doping_distribution(
-                            dopant_site_indices, prefix_list, dopant_element_type,
+                            prefix_list, dopant_element_type,
                             substitution_element_type_index_list,
                             available_site_indices, map_index, num_dopants))
+                    dopant_site_indices[dopant_element_type] = dopant_type_dopant_site_indices
                 elif insertion_type == 'gradient':
                     gradient_params = self.doping['gradient'][map_index]
                     ld = gradient_params['ld']
