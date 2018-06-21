@@ -1241,6 +1241,9 @@ class Run(object):
                 sum_step_length_ratio = sum(step_length_ratio)
                 assert (self.system.system_size[ld] % sum_step_length_ratio == 0), 'step system size must be an integer multiple of unit cell'
                 num_steps = len(step_length_ratio)
+                if map_index == 0:
+                    stepwise_substitution_element_type_index_list = [[] for _ in range(num_steps)]
+                    stepwise_available_site_indices = [[] for _ in range(num_steps)]
                 for step_index in range(num_steps):
                     step_system_size = np.copy(self.system.system_size)
                     step_system_size[ld] *= step_length_ratio[step_index] / sum_step_length_ratio
