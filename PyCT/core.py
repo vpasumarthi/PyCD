@@ -1214,14 +1214,13 @@ class Run(object):
         dopant_types_inserted = 0
         for map_index, num_dopants in enumerate(self.doping['num_dopants']):
             if num_dopants:
-                dopant_types_inserted += 1
                 insertion_type = self.doping['insertion_type'][map_index]
                 dopant_element_type = self.dopant_element_types[map_index]
                 if insertion_type == 'manual':
                     dopant_site_indices[dopant_element_type] = (
                         self.doping['dopant_site_indices'][map_index][:num_dopants])
                 elif insertion_type == 'random':
-                    if dopant_types_inserted == 1:
+                    if dopant_types_inserted == 0:
                         substitution_element_type_index_list = []
                         available_site_indices = []
                     system_size = self.system.system_size
@@ -1244,7 +1243,7 @@ class Run(object):
                     for step_index in range(num_steps):
                         step_system_size = np.copy(self.system.system_size)
                         step_system_size[ld] *= step_length_ratio[step_index] / sum_step_length_ratio
-                        if dopant_types_inserted == 1:
+                        if dopant_types_inserted == 0:
                             substitution_element_type_index_list = []
                             available_site_indices = []
                         (dopant_type_dopant_site_indices, prefix_list,
@@ -1255,6 +1254,7 @@ class Run(object):
                                 substitution_element_type_index_list,
                                 available_site_indices, map_index, num_dopants))
                         dopant_site_indices[dopant_element_type] = dopant_type_dopant_site_indices
+                dopant_types_inserted += 1
         return (dopant_site_indices, prefix_list)
 
     def get_shell_based_neighbors(self, site_system_element_index, num_shells):
