@@ -1213,9 +1213,9 @@ class Run(object):
         dopant_site_indices = {}
         dopant_types_inserted = 0
         for map_index, num_dopants in enumerate(self.doping['num_dopants']):
-            if num_dopants:
-                insertion_type = self.doping['insertion_type'][map_index]
-                dopant_element_type = self.dopant_element_types[map_index]
+            insertion_type = self.doping['insertion_type'][map_index]
+            dopant_element_type = self.dopant_element_types[map_index]
+            if insertion_type != 'gradient' and num_dopants:
                 if insertion_type == 'manual':
                     dopant_site_indices[dopant_element_type] = (
                         self.doping['dopant_site_indices'][map_index][:num_dopants])
@@ -1232,29 +1232,29 @@ class Run(object):
                             substitution_element_type_index_list,
                             available_site_indices, map_index, num_dopants))
                     dopant_site_indices[dopant_element_type] = dopant_type_dopant_site_indices
-                elif insertion_type == 'gradient':
-                    gradient_params = self.doping['gradient'][map_index]
-                    ld = gradient_params['ld']
-                    step_length_ratio = gradient_params['step_length_ratio']
-                    num_dopants = gradient_params['num_dopants']
-                    sum_step_length_ratio = sum(step_length_ratio)
-                    assert (self.system.system_size[ld] % sum_step_length_ratio == 0), 'step system size must be an integer multiple of unit cell'
-                    num_steps = len(step_length_ratio)
-                    for step_index in range(num_steps):
-                        step_system_size = np.copy(self.system.system_size)
-                        step_system_size[ld] *= step_length_ratio[step_index] / sum_step_length_ratio
-                        if dopant_types_inserted == 0:
-                            substitution_element_type_index_list = []
-                            available_site_indices = []
-                        (dopant_type_dopant_site_indices, prefix_list,
-                         substitution_element_type_index_list,
-                         available_site_indices) = (
-                             self.generate_random_doping_distribution(
-                                step_system_size, prefix_list, dopant_element_type,
-                                substitution_element_type_index_list,
-                                available_site_indices, map_index, num_dopants))
-                        dopant_site_indices[dopant_element_type] = dopant_type_dopant_site_indices
                 dopant_types_inserted += 1
+            elif insertion_type == 'gradient':
+                gradient_params = self.doping['gradient'][map_index]
+                ld = gradient_params['ld']
+                step_length_ratio = gradient_params['step_length_ratio']
+                num_dopants = gradient_params['num_dopants']
+                sum_step_length_ratio = sum(step_length_ratio)
+                assert (self.system.system_size[ld] % sum_step_length_ratio == 0), 'step system size must be an integer multiple of unit cell'
+                num_steps = len(step_length_ratio)
+                for step_index in range(num_steps):
+                    step_system_size = np.copy(self.system.system_size)
+                    step_system_size[ld] *= step_length_ratio[step_index] / sum_step_length_ratio
+                    if dopant_types_inserted == 0:
+                        substitution_element_type_index_list = []
+                        available_site_indices = []
+                    (dopant_type_dopant_site_indices, prefix_list,
+                     substitution_element_type_index_list,
+                     available_site_indices) = (
+                         self.generate_random_doping_distribution(
+                            step_system_size, prefix_list, dopant_element_type,
+                            substitution_element_type_index_list,
+                            available_site_indices, map_index, num_dopants))
+                    dopant_site_indices[dopant_element_type] = dopant_type_dopant_site_indices
         return (dopant_site_indices, prefix_list)
 
     def get_shell_based_neighbors(self, site_system_element_index, num_shells):
