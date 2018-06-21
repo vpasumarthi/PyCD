@@ -1244,6 +1244,17 @@ class Run(object):
                     for step_index in range(num_steps):
                         step_system_size = np.copy(self.system.system_size)
                         step_system_size[ld] *= step_length_ratio[step_index] / sum_step_length_ratio
+                        if dopant_types_inserted == 1:
+                            substitution_element_type_index_list = []
+                            available_site_indices = []
+                        (dopant_type_dopant_site_indices, prefix_list,
+                         substitution_element_type_index_list,
+                         available_site_indices) = (
+                             self.generate_random_doping_distribution(
+                                step_system_size, prefix_list, dopant_element_type,
+                                substitution_element_type_index_list,
+                                available_site_indices, map_index, num_dopants))
+                        dopant_site_indices[dopant_element_type] = dopant_type_dopant_site_indices
         return (dopant_site_indices, prefix_list)
 
     def get_shell_based_neighbors(self, site_system_element_index, num_shells):
