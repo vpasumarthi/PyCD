@@ -1137,7 +1137,6 @@ class Run(object):
         substitution_element_type = self.substitution_element_types[map_index]
         substitution_element_type_index = self.material.element_types.index(
                                                     substitution_element_type)
-        substitution_element_type_key = self.material.element_type_delimiter.join([substitution_element_type] * 2)
         if substitution_element_type_index not in substitution_element_type_index_list:
             system_element_index_offset_array = np.repeat(
                         np.arange(
@@ -1174,38 +1173,6 @@ class Run(object):
                 for site_index in available_site_indices
                 if site_index not in combined_long_neighbor_shell_indices]
             sub_prefix_list.append(long_neighbor_shell_indices[:num_shells])
-        tail = 's' if num_dopant_sites_inserted > 1 else ''
-        prefix_list.append(f'Inserted {num_dopant_sites_inserted} site{tail} of dopant element type {dopant_element_type}\n')
-        dopant_index_precision = int(np.ceil(np.log10(num_dopant_sites_inserted + 1)))
-        dopant_type_precision = len(dopant_element_type)
-        entry_list = ['site1', 'site2', 'pairwise distance (ang.)', 'shells apart']
-        entry_width_list = [len(entry) for entry in entry_list]
-        num_decimals = 2
-        if num_dopant_sites_inserted > 1:
-            prefix_list.append(f'{entry_list[0]}\t{entry_list[1]}\t{entry_list[2]}\t{entry_list[3]}\n')
-        for index1, dopant_site_index_1 in enumerate(dopant_type_dopant_site_indices):
-            for index2, dopant_site_index_2 in enumerate(dopant_type_dopant_site_indices[index1+1:]):
-                inter_dopant_dist = self.neighbors.compute_distance(self.system.system_size,
-                                                                    dopant_site_index_1,
-                                                                    dopant_site_index_2) / constants.ANG2BOHR
-                lookup_index = np.digitize(inter_dopant_dist,
-                                           self.dist_based_shell_index_lookup[substitution_element_type_key]['dist_bins']) - 1
-                # number of shells in between
-                shell_separation = self.dist_based_shell_index_lookup[substitution_element_type_key]['shell_index_list'][lookup_index] - 1
-                prefix_list.append(f'{dopant_element_type:>{entry_width_list[0]-dopant_index_precision}}{index1+1:0{dopant_type_precision}}\t{dopant_element_type:>{entry_width_list[1]-dopant_index_precision}}{index1+index2+2:0{dopant_type_precision}}\t{inter_dopant_dist:>{entry_width_list[2]}.{num_decimals}f}\t{shell_separation:{entry_width_list[3]}}\n')
-                if index1 == index2 == 0:
-                    min_separation = {'site1': dopant_site_index_1,
-                                      'site2': dopant_site_index_2,
-                                      'dist': inter_dopant_dist,
-                                      'shell_separation': shell_separation}
-                else:
-                    if shell_separation < min_separation['shell_separation']:
-                        min_separation = {'site1': dopant_site_index_1,
-                                          'site2': dopant_site_index_2,
-                                          'dist': inter_dopant_dist,
-                                          'shell_separation': shell_separation}
-        if num_dopant_sites_inserted > 1:
-            prefix_list.append(f'All dopant sites of element type \'{dopant_element_type}\' are separated by at least {min_separation["shell_separation"]} shells\n')
         return (dopant_type_dopant_site_indices, prefix_list,
                 substitution_element_type_index_list, available_site_indices)
 
@@ -1272,6 +1239,43 @@ class Run(object):
         return (dopant_site_indices, prefix_list)
 
     def get_doping_analysis(self, dopant_site_indices, prefix_list):
+        for dopant_element_type, dopant_type_dopant_site_indices in dopant_site_indices.items():
+            map_index = self.dopant_element_types.index(dopant_element_type)
+            substitution_element_type = self.substitution_element_types[map_index]
+            substitution_element_type_key = self.material.element_type_delimiter.join([substitution_element_type] * 2)
+            num_dopant_sites_inserted = len(dopant_type_dopant_site_indices)
+            tail = 's' if num_dopant_sites_inserted > 1 else ''
+            prefix_list.append(f'Inserted {num_dopant_sites_inserted} site{tail} of dopant element type {dopant_element_type}\n')
+            dopant_index_precision = int(np.ceil(np.log10(num_dopant_sites_inserted + 1)))
+            dopant_type_precision = len(dopant_element_type)
+            entry_list = ['site1', 'site2', 'pairwise distance (ang.)', 'shells apart']
+            entry_width_list = [len(entry) for entry in entry_list]
+            num_decimals = 2
+            if num_dopant_sites_inserted > 1:
+                prefix_list.append(f'{entry_list[0]}\t{entry_list[1]}\t{entry_list[2]}\t{entry_list[3]}\n')
+            for index1, dopant_site_index_1 in enumerate(dopant_type_dopant_site_indices):
+                for index2, dopant_site_index_2 in enumerate(dopant_type_dopant_site_indices[index1+1:]):
+                    inter_dopant_dist = self.neighbors.compute_distance(self.system.system_size,
+                                                                        dopant_site_index_1,
+                                                                        dopant_site_index_2) / constants.ANG2BOHR
+                    lookup_index = np.digitize(inter_dopant_dist,
+                                               self.dist_based_shell_index_lookup[substitution_element_type_key]['dist_bins']) - 1
+                    # number of shells in between
+                    shell_separation = self.dist_based_shell_index_lookup[substitution_element_type_key]['shell_index_list'][lookup_index] - 1
+                    prefix_list.append(f'{dopant_element_type:>{entry_width_list[0]-dopant_index_precision}}{index1+1:0{dopant_type_precision}}\t{dopant_element_type:>{entry_width_list[1]-dopant_index_precision}}{index1+index2+2:0{dopant_type_precision}}\t{inter_dopant_dist:>{entry_width_list[2]}.{num_decimals}f}\t{shell_separation:{entry_width_list[3]}}\n')
+                    if index1 == index2 == 0:
+                        min_separation = {'site1': dopant_site_index_1,
+                                          'site2': dopant_site_index_2,
+                                          'dist': inter_dopant_dist,
+                                          'shell_separation': shell_separation}
+                    else:
+                        if shell_separation < min_separation['shell_separation']:
+                            min_separation = {'site1': dopant_site_index_1,
+                                              'site2': dopant_site_index_2,
+                                              'dist': inter_dopant_dist,
+                                              'shell_separation': shell_separation}
+            if num_dopant_sites_inserted > 1:
+                prefix_list.append(f'All dopant sites of element type \'{dopant_element_type}\' are separated by at least {min_separation["shell_separation"]} shells\n')
         return prefix_list
 
     def get_shell_based_neighbors(self, site_system_element_index, num_shells):
