@@ -598,7 +598,7 @@ class System(object):
     """
     def __init__(self, material_info, material_neighbors,
                  hop_neighbor_list, cumulative_displacement_list, alpha, n_max,
-                 k_max):
+                 k_max, step_hop_neighbor_list):
         """Return a system object whose size is *size*
         :param material_info:
         :param material_neighbors:
@@ -614,6 +614,7 @@ class System(object):
         self.material = material_info
         self.neighbors = material_neighbors
         self.hop_neighbor_list = hop_neighbor_list
+        self.step_hop_neighbor_list = step_hop_neighbor_list
 
         self.pbc = self.neighbors.pbc
 
