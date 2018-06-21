@@ -1127,11 +1127,13 @@ class Run(object):
             start_species_index = end_species_index
         return prefix_list
 
-    def generate_random_doping_distribution(self, prefix_list, dopant_element_type,
+    def generate_random_doping_distribution(self, system_size, prefix_list,
+                                            dopant_element_type,
                                             substitution_element_type_index_list,
                                             available_site_indices, map_index,
                                             num_dopants):
         dopant_type_dopant_site_indices = []
+        num_cells = system_size.prod()
         substitution_element_type = self.substitution_element_types[map_index]
         substitution_element_type_index = self.material.element_types.index(
                                                     substitution_element_type)
@@ -1140,7 +1142,7 @@ class Run(object):
             system_element_index_offset_array = np.repeat(
                         np.arange(
                             0, (self.material.total_elements_per_unit_cell
-                                * self.system.num_cells),
+                                * num_cells),
                             self.material.total_elements_per_unit_cell),
                         self.material.n_elements_per_unit_cell[
                                         substitution_element_type_index])
@@ -1150,7 +1152,7 @@ class Run(object):
                         + np.arange(0,
                                     self.material.n_elements_per_unit_cell[
                                         substitution_element_type_index]),
-                        self.system.num_cells)
+                        num_cells)
                 + system_element_index_offset_array).tolist()
             available_site_indices.extend(site_indices[:])
         substitution_element_type_index_list.append(substitution_element_type_index)
@@ -1222,11 +1224,12 @@ class Run(object):
                     if dopant_types_inserted == 1:
                         substitution_element_type_index_list = []
                         available_site_indices = []
+                    system_size = self.system.system_size
                     (dopant_type_dopant_site_indices, prefix_list,
                      substitution_element_type_index_list,
                      available_site_indices) = (
                          self.generate_random_doping_distribution(
-                            prefix_list, dopant_element_type,
+                            system_size, prefix_list, dopant_element_type,
                             substitution_element_type_index_list,
                             available_site_indices, map_index, num_dopants))
                     dopant_site_indices[dopant_element_type] = dopant_type_dopant_site_indices
