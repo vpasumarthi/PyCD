@@ -1249,16 +1249,15 @@ class Run(object):
                     if num_dopants:
                         step_system_size = np.copy(self.system.system_size)
                         step_system_size[ld] *= step_length_ratio[step_index] / sum_step_length_ratio
-                        if dopant_types_inserted == 0:
-                            substitution_element_type_index_list = []
-                            available_site_indices = []
-                        (dopant_type_dopant_site_indices, prefix_list,
-                         substitution_element_type_index_list,
+                        substitution_element_type_index_list = stepwise_substitution_element_type_index_list[step_index]
+                        available_site_indices = stepwise_available_site_indices[step_index]
+                        (step_system_dopant_type_dopant_site_indices,
+                         prefix_list, substitution_element_type_index_list,
                          available_site_indices) = (
                              self.generate_random_doping_distribution(
                                 step_system_size, prefix_list, dopant_element_type,
                                 substitution_element_type_index_list,
-                                available_site_indices, map_index, num_dopants))
+                                available_site_indices, map_index, stepwise_num_dopants[step_index]))
                         dopant_site_indices[dopant_element_type] = dopant_type_dopant_site_indices
         return (dopant_site_indices, prefix_list)
 
