@@ -1271,6 +1271,9 @@ class Run(object):
                             dopant_site_indices[dopant_element_type] = full_system_dopant_type_dopant_site_indices
         return (dopant_site_indices, prefix_list)
 
+    def get_doping_analysis(self, dopant_site_indices, prefix_list):
+        return prefix_list
+
     def get_shell_based_neighbors(self, site_system_element_index, num_shells):
         shell_based_neighbors = []
         inner_shell_neighbor_indices = []
@@ -1507,6 +1510,8 @@ class Run(object):
                 prefix_list.append(f'Trajectory {traj_index+1}:\n')
                 (dopant_site_indices, prefix_list) = self.get_doping_distribution(
                                                                         prefix_list)
+                prefix_list = self.get_doping_analysis(dopant_site_indices,
+                                                       prefix_list)
                 (dopant_site_element_types, system_shell_based_neighbors) = (
                     self.get_system_shell_based_neighbors(dopant_site_indices))
                 (site_wise_shell_indices_array, shell_element_type_list, prefix_list) = (
