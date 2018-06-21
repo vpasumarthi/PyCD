@@ -1258,7 +1258,17 @@ class Run(object):
                                 step_system_size, prefix_list, dopant_element_type,
                                 substitution_element_type_index_list,
                                 available_site_indices, map_index, stepwise_num_dopants[step_index]))
-                        dopant_site_indices[dopant_element_type] = dopant_type_dopant_site_indices
+                        full_system_dopant_type_dopant_site_indices = []
+                        for index in step_system_dopant_type_dopant_site_indices:
+                            step_system_quantum_indices = self.neighbors.get_quantum_indices(step_system_size, index)
+                            full_system_quantum_indices = np.copy(step_system_quantum_indices)
+                            full_system_quantum_indices[ld] += step_index * step_system_size[ld]
+                            full_system_se_index = self.neighbors.get_system_element_index(self.system.system_size, full_system_quantum_indices)
+                            full_system_dopant_type_dopant_site_indices.append(full_system_se_index)
+                        if dopant_element_type in dopant_site_indices:
+                            dopant_site_indices[dopant_element_type].extend(full_system_dopant_type_dopant_site_indices)
+                        else:
+                            dopant_site_indices[dopant_element_type] = full_system_dopant_type_dopant_site_indices
         return (dopant_site_indices, prefix_list)
 
     def get_shell_based_neighbors(self, site_system_element_index, num_shells):
