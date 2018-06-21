@@ -65,10 +65,35 @@ def material_run(dst_path):
         alpha = config_params.alpha
         n_max = config_params.n_max
         k_max = config_params.k_max
+        
+        # Load step hop neighbor list if needed
+        if 'doping' in sim_params:
+            if any(insertion_type == 'gradient' for insertion_type in sim_params['doping']['insertion_type']):
+                # NOTE: Assumes identical step sizes and identical slicing direction within and across multiple dopant element types 
+                sample_map_index = sim_params['doping']['insertion_type'].index('gradient')
+                step_system_size = np.copy(sim_params['system_size'])
+                sample_gradient_params = sim_params['doping']['gradient'][sample_map_index]
+                ld = sample_gradient_params['ld']
+                step_length_ratio = sample_gradient_params['step_length_ratio']
+                step_index = 0  # Assumes all steps are identical
+                sum_step_length_ratio = sum(step_length_ratio)
+                step_system_size[ld] *= step_length_ratio[step_index] / sum_step_length_ratio
+                step_input_directory_path = (
+                    dst_path.resolve().parents[sim_params['doping']['step_work_dir_depth'] - 1]
+                    / ('SystemSize[' + ','.join(str(element) for element in step_system_size) + ']')
+                    / sim_params['input_file_directory_name'])
+                step_hop_neighbor_list_file_name = step_input_directory_path.joinpath(
+                                                            'hop_neighbor_list.npy')
+                step_hop_neighbor_list = np.load(step_hop_neighbor_list_file_name)[()]
+            else:
+                step_hop_neighbor_list = None
+        else:
+            step_hop_neighbor_list = None
 
         material_system = System(
             material_info, material_neighbors, hop_neighbor_list,
-            cumulative_displacement_list, alpha, n_max, k_max)
+            cumulative_displacement_list, alpha, n_max, k_max,
+            step_hop_neighbor_list)
 
         # Load precomputed array to instantiate run class
         precomputed_array_file_path = input_directory_path.joinpath(
