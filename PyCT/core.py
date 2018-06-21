@@ -1155,7 +1155,6 @@ class Run(object):
             available_site_indices.extend(site_indices[:])
         substitution_element_type_index_list.append(substitution_element_type_index)
         num_dopant_sites_inserted = 0
-        sub_prefix_list = []
         while (num_dopants - num_dopant_sites_inserted) and available_site_indices:
             dopant_site_index = rnd.choice(available_site_indices)
             dopant_type_dopant_site_indices.append(dopant_site_index)
@@ -1171,7 +1170,6 @@ class Run(object):
                 site_index
                 for site_index in available_site_indices
                 if site_index not in combined_long_neighbor_shell_indices]
-            sub_prefix_list.append(long_neighbor_shell_indices[:num_shells])
         return (dopant_type_dopant_site_indices,
                 substitution_element_type_index_list, available_site_indices)
 
