@@ -1237,7 +1237,7 @@ class Run(object):
                 gradient_params = self.doping['gradient'][map_index]
                 ld = gradient_params['ld']
                 step_length_ratio = gradient_params['step_length_ratio']
-                num_dopants = gradient_params['num_dopants']
+                stepwise_num_dopants = gradient_params['stepwise_num_dopants']
                 sum_step_length_ratio = sum(step_length_ratio)
                 assert (self.system.system_size[ld] % sum_step_length_ratio == 0), 'step system size must be an integer multiple of unit cell'
                 num_steps = len(step_length_ratio)
