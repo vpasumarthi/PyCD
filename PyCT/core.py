@@ -1131,6 +1131,8 @@ class Run(object):
         return prefix_list
 
     def generate_random_doping_distribution(self, system_size,
+                                            system_class_index_list,
+                                            hop_neighbor_list,
                                             substitution_element_type_index_list,
                                             available_site_indices, map_index,
                                             num_dopants):
@@ -1166,8 +1168,7 @@ class Run(object):
             num_shells_discard = num_shells * 2
             long_neighbor_shell_indices = self.get_shell_based_neighbors(
                             dopant_site_index, num_shells_discard, system_size,
-                            self.system.system_class_index_list,
-                            self.system.hop_neighbor_list)
+                            system_class_index_list, hop_neighbor_list)
             combined_long_neighbor_shell_indices = [
                     system_element_index
                     for shell_neighbors in long_neighbor_shell_indices
@@ -1198,7 +1199,9 @@ class Run(object):
                      substitution_element_type_index_list,
                      available_site_indices) = (
                          self.generate_random_doping_distribution(
-                            system_size, substitution_element_type_index_list,
+                            system_size, self.system.system_class_index_list,
+                            self.system.hop_neighbor_list,
+                            substitution_element_type_index_list,
                             available_site_indices, map_index, num_dopants))
                     dopant_site_indices[dopant_element_type] = dopant_type_dopant_site_indices
                 dopant_types_inserted += 1
@@ -1224,7 +1227,8 @@ class Run(object):
                          substitution_element_type_index_list,
                          available_site_indices) = (
                              self.generate_random_doping_distribution(
-                                step_system_size,
+                                step_system_size, self.system.system_class_index_list,
+                                self.system.hop_neighbor_list,
                                 substitution_element_type_index_list,
                                 available_site_indices, map_index, stepwise_num_dopants[step_index]))
                         full_system_dopant_type_dopant_site_indices = []
