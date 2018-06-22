@@ -1233,6 +1233,7 @@ class Run(object):
                 if map_index == 0:
                     stepwise_substitution_element_type_index_list = [[] for _ in range(num_steps)]
                     stepwise_available_site_indices = [[] for _ in range(num_steps)]
+                num_unit_cells_translated = 0
                 for step_index in range(num_steps):
                     num_dopants = stepwise_num_dopants[step_index]
                     if num_dopants:
@@ -1258,13 +1259,14 @@ class Run(object):
                         for index in step_system_dopant_type_dopant_site_indices:
                             step_system_quantum_indices = self.neighbors.get_quantum_indices(step_system_size, index)
                             full_system_quantum_indices = np.copy(step_system_quantum_indices)
-                            full_system_quantum_indices[ld] += step_index * step_system_size[ld]
+                            full_system_quantum_indices[ld] += num_unit_cells_translated
                             full_system_se_index = self.neighbors.get_system_element_index(self.system.system_size, full_system_quantum_indices)
                             full_system_dopant_type_dopant_site_indices.append(full_system_se_index)
                         if dopant_element_type in dopant_site_indices:
                             dopant_site_indices[dopant_element_type].extend(full_system_dopant_type_dopant_site_indices)
                         else:
                             dopant_site_indices[dopant_element_type] = full_system_dopant_type_dopant_site_indices
+                        num_unit_cells_translated += step_system_size[ld]
         return (dopant_site_indices, prefix_list)
 
     def get_doping_analysis(self, dopant_site_indices, prefix_list):
