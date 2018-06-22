@@ -650,6 +650,20 @@ class System(object):
         self.system_class_index_list = (
                 np.tile(self.material.unit_cell_class_list, self.num_cells))
 
+        # step system class list
+        self.step_system_class_index_master_list = []
+        if self.num_unique_step_systems == 1:
+            step_system_size = self.step_system_size_array
+            num_cells = step_system_size.prod()
+            self.step_system_class_index_master_list.append(
+                        np.tile(self.material.unit_cell_class_list, num_cells))
+        else:
+            for unique_step_system_index in range(self.num_unique_step_systems):
+                step_system_size = self.step_system_size_array[unique_step_system_index, :]
+                num_cells = step_system_size.prod()
+                self.step_system_class_index_master_list.append(
+                            np.tile(self.material.unit_cell_class_list, num_cells))
+
         # species-wise number of nearest neighbors
         self.num_neighbors = np.zeros(self.material.num_species_types, int)
         for species_type_index, species_type in enumerate(
