@@ -1245,11 +1245,12 @@ class Run(object):
                         else:
                             lookup_index = np.where((self.system.step_system_size_array == step_system_size).all(axis=1))[0][0]
                         step_system_hop_neighbor_list = self.system.step_hop_neighbor_master_list[lookup_index]
+                        step_system_class_index_list = self.system.step_system_class_index_master_list[lookup_index]
                         (step_system_dopant_type_dopant_site_indices,
                          substitution_element_type_index_list,
                          available_site_indices) = (
                              self.generate_random_doping_distribution(
-                                step_system_size, self.system.system_class_index_list,
+                                step_system_size, step_system_class_index_list,
                                 step_system_hop_neighbor_list,
                                 substitution_element_type_index_list,
                                 available_site_indices, map_index, stepwise_num_dopants[step_index]))
