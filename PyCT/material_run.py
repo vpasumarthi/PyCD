@@ -67,33 +67,53 @@ def material_run(dst_path):
         k_max = config_params.k_max
         
         # Load step hop neighbor list if needed
+        step_system_size_array = []
+        step_hop_neighbor_master_list = []
         if 'doping' in sim_params:
-            if any(insertion_type == 'gradient' for insertion_type in sim_params['doping']['insertion_type']):
-                # NOTE: Assumes identical step sizes and identical slicing direction within and across multiple dopant element types 
-                sample_map_index = sim_params['doping']['insertion_type'].index('gradient')
-                step_system_size = np.copy(sim_params['system_size'])
-                sample_gradient_params = sim_params['doping']['gradient'][sample_map_index]
-                ld = sample_gradient_params['ld']
-                step_length_ratio = sample_gradient_params['step_length_ratio']
-                step_index = 0  # Assumes all steps are identical
-                sum_step_length_ratio = sum(step_length_ratio)
-                step_system_size[ld] *= step_length_ratio[step_index] / sum_step_length_ratio
-                step_input_directory_path = (
-                    dst_path.resolve().parents[sim_params['doping']['step_work_dir_depth'] - 1]
-                    / ('SystemSize[' + ','.join(str(element) for element in step_system_size) + ']')
-                    / sim_params['input_file_directory_name'])
-                step_hop_neighbor_list_file_name = step_input_directory_path.joinpath(
-                                                            'hop_neighbor_list.npy')
-                step_hop_neighbor_list = np.load(step_hop_neighbor_list_file_name)[()]
-            else:
-                step_hop_neighbor_list = None
-        else:
-            step_hop_neighbor_list = None
+            for map_index, insertion_type in enumerate(sim_params['doping']['insertion_type']):
+                if insertion_type == 'gradient':
+                    gradient_params = sim_params['doping']['gradient'][map_index]
+                    ld = gradient_params['ld']
+                    step_length_ratio = gradient_params['step_length_ratio']
+                    sum_step_length_ratio = sum(step_length_ratio)
+                    stepwise_num_dopants = gradient_params['stepwise_num_dopants']
+                    if any(stepwise_num_dopants):
+                        num_steps = len(step_length_ratio)
+                    else:
+                        num_steps = 0
+                    for step_index in range(num_steps):
+                        import_flag = 0
+                        step_system_size = np.copy(sim_params['system_size'])
+                        step_system_size[ld] *= step_length_ratio[step_index] / sum_step_length_ratio
+                        if len(step_system_size_array) == 0:
+                            step_system_size_array = step_system_size
+                            import_flag = 1
+                        elif len(step_system_size_array.shape) == 1:
+                            if not np.array_equal(step_system_size_array,
+                                                  step_system_size):
+                                step_system_size_array = np.vstack((step_system_size_array,
+                                                                    step_system_size))
+                                import_flag = 1
+                        else:
+                            lookup_array = np.where((step_system_size_array == step_system_size).all(axis=1))[0]
+                            if len(lookup_array) == 0:
+                                step_system_size_array = np.vstack((step_system_size_array,
+                                                                    step_system_size))
+                                import_flag = 1
+                        if import_flag:
+                            step_input_directory_path = (
+                                dst_path.resolve().parents[sim_params['doping']['step_work_dir_depth'] - 1]
+                                / ('SystemSize[' + ','.join(str(element) for element in step_system_size) + ']')
+                                / sim_params['input_file_directory_name'])
+                            step_hop_neighbor_list_file_name = step_input_directory_path.joinpath(
+                                                                        'hop_neighbor_list.npy')
+                            step_hop_neighbor_list = np.load(step_hop_neighbor_list_file_name)[()]
+                            step_hop_neighbor_master_list.append(step_hop_neighbor_list)
 
         material_system = System(
             material_info, material_neighbors, hop_neighbor_list,
             cumulative_displacement_list, alpha, n_max, k_max,
-            step_hop_neighbor_list)
+            step_system_size_array, step_hop_neighbor_master_list)
 
         # Load precomputed array to instantiate run class
         precomputed_array_file_path = input_directory_path.joinpath(
