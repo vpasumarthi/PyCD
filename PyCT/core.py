@@ -1240,7 +1240,7 @@ class Run(object):
                         step_system_size[ld] *= step_length_ratio[step_index] / sum_step_length_ratio
                         substitution_element_type_index_list = stepwise_substitution_element_type_index_list[step_index]
                         available_site_indices = stepwise_available_site_indices[step_index]
-                        if len(self.system.step_system_size_array.shape) == 1:
+                        if self.system.num_unique_step_systems == 1:
                             lookup_index = 0
                         else:
                             lookup_index = np.where((self.system.step_system_size_array == step_system_size).all(axis=1))[0][0]
