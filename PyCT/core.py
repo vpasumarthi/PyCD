@@ -1189,13 +1189,35 @@ class Run(object):
                         substitution_element_type_index_list = []
                         available_site_indices = []
                     system_size = self.system.system_size
+                    num_cells = system_size.prod()
+
+                    substitution_element_type = self.substitution_element_types[map_index]
+                    substitution_element_type_index = self.material.element_types.index(
+                                                                substitution_element_type)
+                    if substitution_element_type_index not in substitution_element_type_index_list:
+                        system_element_index_offset_array = np.repeat(
+                                    np.arange(
+                                        0, (self.material.total_elements_per_unit_cell
+                                            * num_cells),
+                                        self.material.total_elements_per_unit_cell),
+                                    self.material.n_elements_per_unit_cell[
+                                                    substitution_element_type_index])
+                        site_indices = (
+                            np.tile(self.material.n_elements_per_unit_cell[
+                                        :substitution_element_type_index].sum()
+                                    + np.arange(0,
+                                                self.material.n_elements_per_unit_cell[
+                                                    substitution_element_type_index]),
+                                    num_cells)
+                            + system_element_index_offset_array).tolist()
+                        available_site_indices.extend(site_indices[:])
+                    substitution_element_type_index_list.append(substitution_element_type_index)
+
                     (dopant_type_dopant_site_indices,
-                     substitution_element_type_index_list,
                      available_site_indices) = (
                          self.generate_random_doping_distribution(
                             system_size, self.system.system_class_index_list,
                             self.system.hop_neighbor_list,
-                            substitution_element_type_index_list,
                             available_site_indices, map_index, num_dopants))
                     dopant_site_indices[dopant_element_type] = dopant_type_dopant_site_indices
                 dopant_types_inserted += 1
@@ -1218,6 +1240,30 @@ class Run(object):
                         step_system_size[ld] *= step_length_ratio[step_index] / sum_step_length_ratio
                         substitution_element_type_index_list = stepwise_substitution_element_type_index_list[step_index]
                         available_site_indices = stepwise_available_site_indices[step_index]
+
+                        num_cells = step_system_size.prod()
+                        substitution_element_type = self.substitution_element_types[map_index]
+                        substitution_element_type_index = self.material.element_types.index(
+                                                                    substitution_element_type)
+                        if substitution_element_type_index not in substitution_element_type_index_list:
+                            system_element_index_offset_array = np.repeat(
+                                        np.arange(
+                                            0, (self.material.total_elements_per_unit_cell
+                                                * num_cells),
+                                            self.material.total_elements_per_unit_cell),
+                                        self.material.n_elements_per_unit_cell[
+                                                        substitution_element_type_index])
+                            site_indices = (
+                                np.tile(self.material.n_elements_per_unit_cell[
+                                            :substitution_element_type_index].sum()
+                                        + np.arange(0,
+                                                    self.material.n_elements_per_unit_cell[
+                                                        substitution_element_type_index]),
+                                        num_cells)
+                                + system_element_index_offset_array).tolist()
+                            available_site_indices.extend(site_indices[:])
+                        substitution_element_type_index_list.append(substitution_element_type_index)
+
                         if self.system.num_unique_step_systems == 1:
                             lookup_index = 0
                         else:
@@ -1225,12 +1271,10 @@ class Run(object):
                         step_system_hop_neighbor_list = self.system.step_hop_neighbor_master_list[lookup_index]
                         step_system_class_index_list = self.system.step_system_class_index_master_list[lookup_index]
                         (step_system_dopant_type_dopant_site_indices,
-                         substitution_element_type_index_list,
                          available_site_indices) = (
                              self.generate_random_doping_distribution(
                                 step_system_size, step_system_class_index_list,
                                 step_system_hop_neighbor_list,
-                                substitution_element_type_index_list,
                                 available_site_indices, map_index, stepwise_num_dopants[step_index]))
                         full_system_dopant_type_dopant_site_indices = []
                         for index in step_system_dopant_type_dopant_site_indices:
