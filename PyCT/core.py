@@ -1150,32 +1150,10 @@ class Run(object):
     def generate_random_doping_distribution(self, system_size,
                                             system_class_index_list,
                                             hop_neighbor_list,
-                                            substitution_element_type_index_list,
                                             available_site_indices, map_index,
                                             num_dopants):
         dopant_type_dopant_site_indices = []
-        num_cells = system_size.prod()
         substitution_element_type = self.substitution_element_types[map_index]
-        substitution_element_type_index = self.material.element_types.index(
-                                                    substitution_element_type)
-        if substitution_element_type_index not in substitution_element_type_index_list:
-            system_element_index_offset_array = np.repeat(
-                        np.arange(
-                            0, (self.material.total_elements_per_unit_cell
-                                * num_cells),
-                            self.material.total_elements_per_unit_cell),
-                        self.material.n_elements_per_unit_cell[
-                                        substitution_element_type_index])
-            site_indices = (
-                np.tile(self.material.n_elements_per_unit_cell[
-                            :substitution_element_type_index].sum()
-                        + np.arange(0,
-                                    self.material.n_elements_per_unit_cell[
-                                        substitution_element_type_index]),
-                        num_cells)
-                + system_element_index_offset_array).tolist()
-            available_site_indices.extend(site_indices[:])
-        substitution_element_type_index_list.append(substitution_element_type_index)
         num_dopant_sites_inserted = 0
         while (num_dopants - num_dopant_sites_inserted) and available_site_indices:
             dopant_site_index = rnd.choice(available_site_indices)
@@ -1194,8 +1172,7 @@ class Run(object):
                 site_index
                 for site_index in available_site_indices
                 if site_index not in combined_long_neighbor_shell_indices]
-        return (dopant_type_dopant_site_indices,
-                substitution_element_type_index_list, available_site_indices)
+        return (dopant_type_dopant_site_indices, available_site_indices)
 
     def get_doping_distribution(self, prefix_list):
         dopant_site_indices = {}
