@@ -1569,10 +1569,16 @@ class Run(object):
         for traj_index in range(self.n_traj):
             if self.doping_active:
                 prefix_list.append(f'Trajectory {traj_index+1}:\n')
-                (dopant_site_indices, prefix_list) = self.get_doping_distribution(
-                                                                        prefix_list)
-                (prefix_list, min_shell_separation) = self.get_doping_analysis(
-                                                dopant_site_indices, prefix_list)
+                attempt_number = 1
+                min_shell_separation = 0
+                while (min_shell_separation < self.doping['min_shell_separation'] and attempt_number <= self.doping['max_attempts']):
+                    sub_prefix_list = []
+                    (dopant_site_indices, sub_prefix_list) = self.get_doping_distribution(
+                                                                            sub_prefix_list)
+                    (sub_prefix_list, min_shell_separation) = self.get_doping_analysis(
+                                                    dopant_site_indices, sub_prefix_list)
+                    attempt_number += 1
+                prefix_list.extend(sub_prefix_list)
                 (dopant_site_element_types, system_shell_based_neighbors) = (
                     self.get_system_shell_based_neighbors(dopant_site_indices))
                 (site_wise_shell_indices_array, shell_element_type_list, prefix_list) = (
