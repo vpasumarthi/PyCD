@@ -616,6 +616,7 @@ class System(object):
         self.hop_neighbor_list = hop_neighbor_list
         self.step_system_size_array = step_system_size_array
         self.step_hop_neighbor_master_list = step_hop_neighbor_master_list
+        self.num_unique_step_systems = len(self.step_hop_neighbor_master_list)
 
         self.pbc = self.neighbors.pbc
 
