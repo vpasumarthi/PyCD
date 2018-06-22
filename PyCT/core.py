@@ -1238,14 +1238,13 @@ class Run(object):
                     if num_dopants:
                         step_system_size = np.copy(self.system.system_size)
                         step_system_size[ld] *= step_length_ratio[step_index] / sum_step_length_ratio
-                        substitution_element_type_index_list = stepwise_substitution_element_type_index_list[step_index]
                         available_site_indices = stepwise_available_site_indices[step_index]
 
                         num_cells = step_system_size.prod()
                         substitution_element_type = self.substitution_element_types[map_index]
                         substitution_element_type_index = self.material.element_types.index(
                                                                     substitution_element_type)
-                        if substitution_element_type_index not in substitution_element_type_index_list:
+                        if substitution_element_type_index not in stepwise_substitution_element_type_index_list[step_index]:
                             system_element_index_offset_array = np.repeat(
                                         np.arange(
                                             0, (self.material.total_elements_per_unit_cell
@@ -1262,7 +1261,7 @@ class Run(object):
                                         num_cells)
                                 + system_element_index_offset_array).tolist()
                             available_site_indices.extend(site_indices[:])
-                        substitution_element_type_index_list.append(substitution_element_type_index)
+                        stepwise_substitution_element_type_index_list[step_index].append(substitution_element_type_index)
 
                         if self.system.num_unique_step_systems == 1:
                             lookup_index = 0
