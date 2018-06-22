@@ -1570,13 +1570,19 @@ class Run(object):
             if self.doping_active:
                 prefix_list.append(f'Trajectory {traj_index+1}:\n')
                 attempt_number = 1
-                min_shell_separation = 0
-                while (min_shell_separation < self.doping['min_shell_separation'] and attempt_number <= self.doping['max_attempts']):
-                    sub_prefix_list = []
-                    (dopant_site_indices, sub_prefix_list) = self.get_doping_distribution(
-                                                                            sub_prefix_list)
-                    (sub_prefix_list, min_shell_separation) = self.get_doping_analysis(
-                                                    dopant_site_indices, sub_prefix_list)
+                old_min_shell_separation = 0
+                while (old_min_shell_separation < self.doping['min_shell_separation'] and attempt_number <= self.doping['max_attempts']):
+                    temp_sub_prefix_list = []
+                    (temp_dopant_site_indices, temp_sub_prefix_list) = self.get_doping_distribution(
+                                                                            temp_sub_prefix_list)
+                    (temp_sub_prefix_list, new_min_shell_separation) = self.get_doping_analysis(
+                                                        temp_dopant_site_indices, temp_sub_prefix_list)
+                    if new_min_shell_separation > old_min_shell_separation:
+                        dopant_site_indices = {}
+                        for i_dopant_element_type, i_dopant_site_indices in temp_dopant_site_indices.items():
+                            dopant_site_indices[i_dopant_element_type] = [index for index in i_dopant_site_indices]
+                        sub_prefix_list = [prefix for prefix in temp_sub_prefix_list]
+                        old_min_shell_separation = new_min_shell_separation
                     attempt_number += 1
                 prefix_list.extend(sub_prefix_list)
                 (dopant_site_element_types, system_shell_based_neighbors) = (
