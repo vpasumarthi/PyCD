@@ -61,9 +61,14 @@ def material_setup(input_directory_path, system_size, pbc,
         n_max = config_params.n_max
         k_max = config_params.k_max
 
+        # dummy variables
+        step_system_size_array = []
+        step_hop_neighbor_master_list = []
+
         material_system = System(
             material_info, material_neighbors, hop_neighbor_list,
-            cumulative_displacement_list, alpha, n_max, k_max)
+            cumulative_displacement_list, alpha, n_max, k_max,
+            step_system_size_array, step_hop_neighbor_master_list)
         precomputed_array = material_system.ewald_sum_setup(
                                                 input_directory_path)
         precomputed_array_file_path = input_directory_path.joinpath(
