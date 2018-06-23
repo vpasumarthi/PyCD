@@ -1286,7 +1286,7 @@ class Run(object):
                             dopant_site_indices[dopant_element_type].extend(full_system_dopant_type_dopant_site_indices)
                         else:
                             dopant_site_indices[dopant_element_type] = full_system_dopant_type_dopant_site_indices
-                        num_unit_cells_translated += step_system_size[ld]
+                    num_unit_cells_translated += step_system_size[ld]
         return (dopant_site_indices, prefix_list)
 
     def get_doping_analysis(self, dopant_site_indices, prefix_list):
