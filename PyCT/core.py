@@ -1302,6 +1302,8 @@ class Run(object):
             entry_list = ['site1', 'site2', 'pairwise distance (ang.)', 'shells apart']
             entry_width_list = [len(entry) for entry in entry_list]
             num_decimals = 2
+            stat_width = 7
+            stat_decimals = 3
             if num_dopant_sites_inserted > 1:
                 prefix_list.append(f'{entry_list[0]}\t{entry_list[1]}\t{entry_list[2]}\t{entry_list[3]}\n')
             for index1, dopant_site_index_1 in enumerate(dopant_type_dopant_site_indices):
@@ -1328,6 +1330,15 @@ class Run(object):
             min_shell_separation = min_separation["shell_separation"]
             if num_dopant_sites_inserted > 1:
                 prefix_list.append(f'All dopant sites of element type \'{dopant_element_type}\' are separated by at least {min_shell_separation} shells\n')
+
+                site_coords = np.zeros((num_dopant_sites_inserted, self.neighbors.n_dim))
+                for index, dopant_site_index in enumerate(dopant_type_dopant_site_indices):
+                    site_coords[index, :] = self.neighbors.get_coordinates(self.system.system_size,
+                                                                           dopant_site_index)
+                mean_center = np.mean(site_coords, axis=0) / constants.ANG2BOHR
+                std_dist_dev = np.std(site_coords, axis=0) / constants.ANG2BOHR
+                prefix_list.append(f'Mean center of dopant sites of element type \'{dopant_element_type}\' is: [' + "".join(f'{val:{stat_width}.{stat_decimals}f}' for val in mean_center) + ']\n')
+                prefix_list.append(f'Standard distance deviation of dopant sites of element type \'{dopant_element_type}\' is: [' + "".join(f'{val:{stat_width}.{stat_decimals}f}' for val in std_dist_dev) + ']\n')
         return (prefix_list, min_shell_separation)
 
     def get_shell_based_neighbors(self, site_system_element_index, num_shells,
