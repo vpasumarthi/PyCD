@@ -1174,7 +1174,7 @@ class Run(object):
                 if site_index not in combined_long_neighbor_shell_indices]
         return (dopant_type_dopant_site_indices, available_site_indices)
 
-    def get_doping_distribution(self, prefix_list):
+    def get_doping_distribution(self):
         dopant_site_indices = {}
         dopant_types_inserted = 0
         for map_index, num_dopants in enumerate(self.doping['num_dopants']):
@@ -1287,7 +1287,7 @@ class Run(object):
                         else:
                             dopant_site_indices[dopant_element_type] = full_system_dopant_type_dopant_site_indices
                     num_unit_cells_translated += step_system_size[ld]
-        return (dopant_site_indices, prefix_list)
+        return (dopant_site_indices)
 
     def get_doping_analysis(self, dopant_site_indices, prefix_list):
         for dopant_element_type, dopant_type_dopant_site_indices in dopant_site_indices.items():
@@ -1584,8 +1584,7 @@ class Run(object):
                 old_min_shell_separation = 0
                 while (old_min_shell_separation < self.doping['min_shell_separation'] and attempt_number <= self.doping['max_attempts']):
                     temp_sub_prefix_list = []
-                    (temp_dopant_site_indices, temp_sub_prefix_list) = self.get_doping_distribution(
-                                                                            temp_sub_prefix_list)
+                    temp_dopant_site_indices = self.get_doping_distribution()
                     (temp_sub_prefix_list, new_min_shell_separation) = self.get_doping_analysis(
                                                         temp_dopant_site_indices, temp_sub_prefix_list)
                     if new_min_shell_separation > old_min_shell_separation:
