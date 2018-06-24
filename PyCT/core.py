@@ -1579,6 +1579,9 @@ class Run(object):
                         / (2 * self.system.system_volume * self.system.alpha))
         for traj_index in range(self.n_traj):
             if self.doping_active:
+                if traj_index == 0:
+                    dopant_site_indices_repo = {}
+                dopant_site_indices_repo[traj_index] = {}
                 prefix_list.append(f'Trajectory {traj_index+1}:\n')
                 attempt_number = 1
                 old_min_shell_separation = 0
@@ -1595,6 +1598,8 @@ class Run(object):
                         old_min_shell_separation = new_min_shell_separation
                     attempt_number += 1
                 prefix_list.extend(sub_prefix_list)
+                for i_dopant_element_type, i_dopant_site_indices in dopant_site_indices.items():
+                    dopant_site_indices_repo[traj_index][i_dopant_element_type] = [index for index in i_dopant_site_indices]
                 (dopant_site_element_types, system_shell_based_neighbors) = (
                     self.get_system_shell_based_neighbors(dopant_site_indices))
                 (site_wise_shell_indices_array, shell_element_type_list, prefix_list) = (
