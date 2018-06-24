@@ -1591,11 +1591,20 @@ class Run(object):
                     (temp_sub_prefix_list, new_min_shell_separation) = self.get_doping_analysis(
                                                         temp_dopant_site_indices, temp_sub_prefix_list)
                     if new_min_shell_separation > old_min_shell_separation:
-                        dopant_site_indices = {}
-                        for i_dopant_element_type, i_dopant_site_indices in temp_dopant_site_indices.items():
-                            dopant_site_indices[i_dopant_element_type] = [index for index in i_dopant_site_indices]
-                        sub_prefix_list = [prefix for prefix in temp_sub_prefix_list]
-                        old_min_shell_separation = new_min_shell_separation
+                        unique_flag = 1
+                        for traj_dopant_site_indices in dopant_site_indices_repo.values():
+                            for i_dopant_element_type, i_dopant_site_indices in traj_dopant_site_indices.items():
+                                if set(i_dopant_site_indices) == set(temp_dopant_site_indices[i_dopant_element_type]):
+                                    unique_flag = 0
+                                    break
+                            if not unique_flag:
+                                break
+                        if unique_flag:
+                            sub_prefix_list = [prefix for prefix in temp_sub_prefix_list]
+                            old_min_shell_separation = new_min_shell_separation
+                            dopant_site_indices = {}
+                            for i_dopant_element_type, i_dopant_site_indices in temp_dopant_site_indices.items():
+                                dopant_site_indices[i_dopant_element_type] = [index for index in i_dopant_site_indices]
                     attempt_number += 1
                 prefix_list.extend(sub_prefix_list)
                 for i_dopant_element_type, i_dopant_site_indices in dopant_site_indices.items():
