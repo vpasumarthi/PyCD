@@ -1235,12 +1235,11 @@ class Run(object):
                 num_unit_cells_translated = 0
                 for step_index in range(num_steps):
                     num_dopants = stepwise_num_dopants[step_index]
+                    step_system_size = np.copy(self.system.system_size)
+                    step_system_size[ld] *= step_length_ratio[step_index] / sum_step_length_ratio
+                    num_cells = step_system_size.prod()
                     if num_dopants:
-                        step_system_size = np.copy(self.system.system_size)
-                        step_system_size[ld] *= step_length_ratio[step_index] / sum_step_length_ratio
                         available_site_indices = stepwise_available_site_indices[step_index]
-
-                        num_cells = step_system_size.prod()
                         substitution_element_type = self.substitution_element_types[map_index]
                         substitution_element_type_index = self.material.element_types.index(
                                                                     substitution_element_type)
