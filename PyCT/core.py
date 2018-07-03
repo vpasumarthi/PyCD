@@ -1338,6 +1338,8 @@ class Run(object):
                 std_dist_dev = np.std(site_coords, axis=0) / constants.ANG2BOHR
                 prefix_list.append(f'Mean center of dopant sites of element type \'{dopant_element_type}\' is: [' + "".join(f'{val:{stat_width}.{stat_decimals}f}' for val in mean_center) + ']\n')
                 prefix_list.append(f'Standard distance deviation of dopant sites of element type \'{dopant_element_type}\' is: [' + "".join(f'{val:{stat_width}.{stat_decimals}f}' for val in std_dist_dev) + ']\n')
+            else:
+                min_shell_separation = self.doping['min_shell_separation']
         return (prefix_list, min_shell_separation)
 
     def get_shell_based_neighbors(self, site_system_element_index, num_shells,
