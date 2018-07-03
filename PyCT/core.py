@@ -1326,8 +1326,8 @@ class Run(object):
                                               'site2': dopant_site_index_2,
                                               'dist': inter_dopant_dist,
                                               'shell_separation': shell_separation}
-            min_shell_separation = min_separation["shell_separation"]
             if num_dopant_sites_inserted > 1:
+                min_shell_separation = min_separation["shell_separation"]
                 prefix_list.append(f'All dopant sites of element type \'{dopant_element_type}\' are separated by at least {min_shell_separation} shells\n')
 
                 site_coords = np.zeros((num_dopant_sites_inserted, self.neighbors.n_dim))
