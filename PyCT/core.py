@@ -788,8 +788,9 @@ class Run(object):
                     for class_index in self.material.unit_cell_class_list[start_index:end_index]]
             start_index = end_index
 
-        self.system_relative_energies = (
+        self.undoped_system_relative_energies = (
                 np.tile(unit_cell_relative_energies, self.system.num_cells))
+        self.system_relative_energies = np.copy(self.undoped_system_relative_energies)
 
         self.num_shells = {}
         for element_type, element_relative_energies in self.relative_energies['doping'].items():
@@ -1580,6 +1581,7 @@ class Run(object):
                         / (2 * self.system.system_volume * self.system.alpha))
         for traj_index in range(self.n_traj):
             if self.doping_active:
+                self.system_relative_energies = np.copy(self.undoped_system_relative_energies)
                 if traj_index == 0:
                     dopant_site_indices_repo = {}
                 dopant_site_indices_repo[traj_index] = {}
