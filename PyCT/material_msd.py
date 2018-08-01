@@ -22,9 +22,13 @@ def material_msd(dst_path):
 
     # Load material parameters
     config_file_name = 'sys_config.yml'
-    input_directory_path = (
-        dst_path.resolve().parents[sim_params['work_dir_depth'] - 1]
-        / sim_params['input_file_directory_name'])
+    if sim_params['work_dir_depth'] == 0:
+        input_directory_path = (
+                dst_path.resolve() / sim_params['input_file_directory_name'])
+    else:
+        input_directory_path = (
+            dst_path.resolve().parents[sim_params['work_dir_depth'] - 1]
+            / sim_params['input_file_directory_name'])
     config_file_path = input_directory_path.joinpath(config_file_name)
     with open(config_file_path, 'r') as stream:
         try:
