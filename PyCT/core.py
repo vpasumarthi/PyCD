@@ -17,6 +17,7 @@ from scipy.stats import linregress
 import matplotlib.pyplot as plt
 from matplotlib.offsetbox import AnchoredText
 from textwrap import wrap
+import pickle
 
 from PyCT.io import read_poscar, generate_report
 from PyCT import constants
@@ -1638,6 +1639,9 @@ class Run(object):
                 occupancy_list = []
             else:
                 dopant_site_indices = {}
+
+            random_state_file_path = traj_dir_path.joinpath(f'initial_rnd_state.dump')
+            pickle.dump(rnd.getstate(), open(random_state_file_path, 'wb'))
 
             current_state_occupancy = self.generate_initial_occupancy(
                                                         dopant_site_indices)
