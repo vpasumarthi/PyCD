@@ -1544,25 +1544,6 @@ class Run(object):
 
         rnd.seed(random_seed)
         num_path_steps_per_traj = int(self.t_final / self.time_interval) + 1
-        # Initialize data arrays
-        for output_data_type, output_attributes in output_data.items():
-            if output_attributes['write']:
-                output_file_name = dst_path.joinpath(output_attributes[
-                                                                'file_name'])
-                open(output_file_name, 'wb').close()
-                if output_data_type == 'unwrapped_traj':
-                    unwrapped_position_array = np.zeros(
-                            (num_path_steps_per_traj, self.total_species * 3))
-                elif output_data_type == 'wrapped_traj':
-                    wrapped_position_array = np.zeros((num_path_steps_per_traj,
-                                                       self.total_species * 3))
-                elif output_data_type == 'energy':
-                    energy_array = np.zeros(num_path_steps_per_traj)
-                elif output_data_type == 'delg_0':
-                    delg_0_array = np.zeros(num_path_steps_per_traj)
-                elif output_data_type == 'potential':
-                    potential_array = np.zeros((num_path_steps_per_traj,
-                                                self.total_species))
         if self.electric_field_active:
             drift_velocity_array = np.zeros((self.n_traj,
                                              self.total_species, 3))
@@ -1578,6 +1559,24 @@ class Run(object):
         for traj_index in range(self.n_traj):
             traj_dir_path = dst_path.joinpath(f'traj{traj_index+1}')
             Path.mkdir(traj_dir_path, parents=True, exist_ok=True)
+
+            # Initialize data arrays
+            for output_data_type, output_attributes in output_data.items():
+                if output_attributes['write']:
+                    if output_data_type == 'unwrapped_traj':
+                        unwrapped_position_array = np.zeros(
+                                (num_path_steps_per_traj, self.total_species * 3))
+                    elif output_data_type == 'wrapped_traj':
+                        wrapped_position_array = np.zeros((num_path_steps_per_traj,
+                                                           self.total_species * 3))
+                    elif output_data_type == 'energy':
+                        energy_array = np.zeros(num_path_steps_per_traj)
+                    elif output_data_type == 'delg_0':
+                        delg_0_array = np.zeros(num_path_steps_per_traj)
+                    elif output_data_type == 'potential':
+                        potential_array = np.zeros((num_path_steps_per_traj,
+                                                    self.total_species))
+
             if self.doping_active:
                 self.system_relative_energies = np.copy(self.undoped_system_relative_energies)
                 if traj_index == 0:
@@ -1724,8 +1723,8 @@ class Run(object):
             # Write output data arrays to disk
             for output_data_type, output_attributes in output_data.items():
                 if output_attributes['write']:
-                    output_file_name = dst_path.joinpath(output_attributes[
-                                                                'file_name'])
+                    output_file_name = traj_dir_path.joinpath(
+                                                output_attributes['file_name'])
                     with open(output_file_name, 'ab') as output_file:
                         if output_data_type == 'unwrapped_traj':
                             np.savetxt(output_file, unwrapped_position_array)
