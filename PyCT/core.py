@@ -1567,10 +1567,6 @@ class Run(object):
             drift_velocity_array = np.zeros((self.n_traj,
                                              self.total_species, 3))
         if self.doping_active:
-            occupancy_dir_path = dst_path.joinpath('occupancy_data')
-            Path.mkdir(occupancy_dir_path, parents=True, exist_ok=True)
-            site_indices_dir_path = dst_path.joinpath('site_indices_data')
-            Path.mkdir(site_indices_dir_path, parents=True, exist_ok=True)
             max_index_width = np.ceil(np.log10(self.neighbors.num_system_elements))
 
         prefix_list = []
@@ -1580,6 +1576,8 @@ class Run(object):
         ewald_neut = - (np.pi * (system_charge**2)
                         / (2 * self.system.system_volume * self.system.alpha))
         for traj_index in range(self.n_traj):
+            traj_dir_path = dst_path.joinpath(f'traj{traj_index+1}')
+            Path.mkdir(traj_dir_path, parents=True, exist_ok=True)
             if self.doping_active:
                 self.system_relative_energies = np.copy(self.undoped_system_relative_energies)
                 if traj_index == 0:
@@ -1619,7 +1617,7 @@ class Run(object):
                                                      system_shell_based_neighbors,
                                                      prefix_list))
                 num_site_indices = len(shell_element_type_list)
-                output_file_name = site_indices_dir_path.joinpath(f'site_indices_{traj_index+1}.csv')
+                output_file_name = traj_dir_path.joinpath(f'site_indices.csv')
                 with open(output_file_name, 'w') as output_file:
                     for site_index, site_info in enumerate(site_wise_shell_indices_array):
                         output_list = site_info.tolist()
@@ -1740,7 +1738,7 @@ class Run(object):
                         elif output_data_type == 'potential':
                             np.savetxt(output_file, potential_array)
             if self.doping_active:
-                output_file_name = occupancy_dir_path.joinpath(f'occupancy_{traj_index+1}.dat')
+                output_file_name = traj_dir_path.joinpath(f'occupancy.dat')
                 occupancy_array = np.asarray(occupancy_list, dtype=int)
                 with open(output_file_name, 'wb') as output_file:
                     np.savetxt(output_file, occupancy_array, fmt=f'%{max_index_width}d')
