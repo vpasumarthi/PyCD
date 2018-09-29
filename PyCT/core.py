@@ -1657,51 +1657,36 @@ class Run(object):
 
             if self.doping_active:
                 self.system_relative_energies = np.copy(self.undoped_system_relative_energies)
-                if traj_index == 0:
-                    dopant_site_indices_repo = {}
-                dopant_site_indices_repo[traj_index] = {}
-                prefix_list.append(f'Trajectory {traj_index+1}:\n')
-                attempt_number = 1
-                old_min_shell_separation = 0
-                while (old_min_shell_separation < self.doping['min_shell_separation'] and attempt_number <= self.doping['max_attempts']):
-                    temp_sub_prefix_list = []
-                    temp_dopant_site_indices = self.get_doping_distribution()
-                    (temp_sub_prefix_list, new_min_shell_separation) = self.get_doping_analysis(
-                                                        temp_dopant_site_indices, temp_sub_prefix_list)
-                    if new_min_shell_separation > old_min_shell_separation:
-                        unique_flag = 1
-                        for traj_dopant_site_indices in dopant_site_indices_repo.values():
-                            for i_dopant_element_type, i_dopant_site_indices in traj_dopant_site_indices.items():
-                                if set(i_dopant_site_indices) == set(temp_dopant_site_indices[i_dopant_element_type]):
-                                    unique_flag = 0
-                                    break
-                            if not unique_flag:
-                                break
-                        if unique_flag:
-                            sub_prefix_list = [prefix for prefix in temp_sub_prefix_list]
-                            old_min_shell_separation = new_min_shell_separation
-                            dopant_site_indices = {}
-                            for i_dopant_element_type, i_dopant_site_indices in temp_dopant_site_indices.items():
-                                dopant_site_indices[i_dopant_element_type] = [index for index in i_dopant_site_indices]
-                    attempt_number += 1
-                prefix_list.extend(sub_prefix_list)
-                for i_dopant_element_type, i_dopant_site_indices in dopant_site_indices.items():
-                    dopant_site_indices_repo[traj_index][i_dopant_element_type] = [index for index in i_dopant_site_indices]
-                (dopant_site_element_types, system_shell_based_neighbors) = (
-                    self.get_system_shell_based_neighbors(dopant_site_indices))
-                (site_wise_shell_indices_array, shell_element_type_list, prefix_list) = (
-                    self.get_site_wise_shell_indices(dopant_site_element_types,
-                                                     system_shell_based_neighbors,
-                                                     prefix_list))
-                num_site_indices = len(shell_element_type_list)
-                output_file_name = traj_dir_path.joinpath(f'site_indices.csv')
-                with open(output_file_name, 'w') as output_file:
-                    for site_index, site_info in enumerate(site_wise_shell_indices_array):
-                        output_list = site_info.tolist()
-                        output_list.insert(1, shell_element_type_list[site_index])
-                        output_file.write(','.join([str(element) for element in output_list]))
-                        output_file.write('\n')
+
+                # Load doping distribution
+                site_indices_file_path = traj_dir_path.joinpath('site_indices.csv')
+                site_indices_list = []
+                shell_element_type_list = []
+                dopant_site_index_list = []
+                site_wise_shell_indices = []
+                with open(site_indices_file_path, 'r') as site_indices_file:
+                    for line in site_indices_file:
+                        values = line.strip().split(',')
+                        site_indices_list.append(int(values[0]))
+                        shell_element_type_list.append(values[1])
+                        dopant_site_index_list.append(int(values[2]))
+                        site_wise_shell_indices.append(int(values[3]))
+                site_wise_shell_indices_array = np.hstack(
+                                (np.asarray(site_indices_list)[:, None],
+                                 np.asarray(dopant_site_index_list)[:, None],
+                                 np.asarray(site_wise_shell_indices)[:, None]))
+                dopant_site_indices = {}
+                array_indices = np.where(site_wise_shell_indices_array[:, 2] == 0)[0]
+                for array_index in array_indices:
+                    site_index = int(site_indices_list[array_index])
+                    dopant_element_type = shell_element_type_list[array_index]
+                    if dopant_element_type in dopant_site_indices:
+                        dopant_site_indices[dopant_element_type].append(site_index)
+                    else:
+                        dopant_site_indices[dopant_element_type] = [site_index]
+                
                 # update system_relative_energies
+                num_site_indices = len(shell_element_type_list)
                 for index in range(num_site_indices):
                     (site_index, _, shell_index) = site_wise_shell_indices_array[index]
                     dopant_element_type = shell_element_type_list[index]
@@ -1716,9 +1701,6 @@ class Run(object):
                 occupancy_list = []
             else:
                 dopant_site_indices = {}
-
-            random_state_file_path = traj_dir_path.joinpath(f'initial_rnd_state.dump')
-            pickle.dump(rnd.getstate(), open(random_state_file_path, 'wb'))
 
             current_state_occupancy = self.generate_initial_occupancy(
                                                         dopant_site_indices)
