@@ -119,7 +119,8 @@ def write_poscar(src_file_path, dst_file_path, file_format,
     return None
 
 
-def generate_report(start_time, dst_path, file_name, prefix=None):
+def generate_report(start_time, dst_path, file_name, print_time_elapsed,
+                    prefix=None):
     """Generates a report file to the output directory"""
     report_file_name = file_name + '.log'
     report_file_path = dst_path / report_file_name
@@ -128,10 +129,11 @@ def generate_report(start_time, dst_path, file_name, prefix=None):
     time_elapsed = end_time - start_time
     if prefix:
         report.write(prefix)
-    report.write('Time elapsed: ' + ('%2d days, ' % time_elapsed.days
-                                     if time_elapsed.days else '')
-                 + ('%2d hours' % ((time_elapsed.seconds // 3600) % 24))
-                 + (', %2d minutes' % ((time_elapsed.seconds // 60) % 60))
-                 + (', %2d seconds' % (time_elapsed.seconds % 60)))
+    if print_time_elapsed:
+        report.write('Time elapsed: ' + ('%2d days, ' % time_elapsed.days
+                                         if time_elapsed.days else '')
+                     + ('%2d hours' % ((time_elapsed.seconds // 3600) % 24))
+                     + (', %2d minutes' % ((time_elapsed.seconds // 60) % 60))
+                     + (', %2d seconds' % (time_elapsed.seconds % 60)))
     report.close()
     return None
