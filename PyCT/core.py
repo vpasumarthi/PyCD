@@ -1535,6 +1535,10 @@ class Run(object):
         return charge_list
 
     def preprod(self, dst_path, random_seed):
+        """Subroutine to setup input files to run the production stage of the simulation
+        :param dst_path:
+        :param random_seed:
+        :return: """
         return None
 
     def do_kmc_steps(self, dst_path, random_seed, output_data):
