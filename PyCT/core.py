@@ -1543,8 +1543,8 @@ class Run(object):
                           simulation output files needs to be saved'
 
         rnd.seed(random_seed)
-        prefix_list = []
         for traj_index in range(self.n_traj):
+            prefix_list = []
             traj_dir_path = dst_path.joinpath(f'traj{traj_index+1}')
             Path.mkdir(traj_dir_path, parents=True, exist_ok=True)
 
@@ -1595,6 +1595,10 @@ class Run(object):
 
             random_state_file_path = traj_dir_path.joinpath(f'initial_rnd_state.dump')
             pickle.dump(rnd.getstate(), open(random_state_file_path, 'wb'))
+
+            file_name = 'PreProd'
+            prefix = ''.join(prefix_list)
+            generate_report(self.start_time, traj_dir_path, file_name, prefix)
         return None
 
     def do_kmc_steps(self, dst_path, random_seed, output_data):
