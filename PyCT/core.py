@@ -1607,19 +1607,16 @@ class Run(object):
             random_state_file_path = traj_dir_path.joinpath(f'initial_rnd_state.dump')
             rnd.seed(random_seed_list[traj_index])
             pickle.dump(rnd.getstate(), open(random_state_file_path, 'wb'))
-
         return None
 
-    def do_kmc_steps(self, dst_path, random_seed, output_data):
+    def do_kmc_steps(self, dst_path, output_data):
         """Subroutine to run the KMC simulation by specified number
         of steps
         :param dst_path:
-        :param random_seed:
         :return: """
         assert dst_path, 'Please provide the destination path where \
                           simulation output files needs to be saved'
 
-        rnd.seed(random_seed)
         num_path_steps_per_traj = int(self.t_final / self.time_interval) + 1
         if self.electric_field_active:
             drift_velocity_array = np.zeros((self.n_traj,
@@ -1636,6 +1633,10 @@ class Run(object):
         for traj_index in range(self.n_traj):
             traj_dir_path = dst_path.joinpath(f'traj{traj_index+1}')
             Path.mkdir(traj_dir_path, parents=True, exist_ok=True)
+
+            # Load random state
+            random_state_file_path = traj_dir_path.joinpath(f'initial_rnd_state.dump')
+            rnd.setstate(pickle.load(open(random_state_file_path, 'rb')))
 
             # Initialize data arrays
             for output_data_type, output_attributes in output_data.items():
