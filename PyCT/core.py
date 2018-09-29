@@ -586,7 +586,8 @@ class Neighbors(object):
         np.save(hop_neighbor_list_file_path, hop_neighbor_list)
 
         file_name = 'neighbor_list'
-        generate_report(self.start_time, dst_path, file_name)
+        print_time_elapsed = 1
+        generate_report(self.start_time, dst_path, file_name, print_time_elapsed)
         return None
 
 
@@ -739,7 +740,8 @@ class System(object):
         precomputed_array /= self.material.dielectric_constant
 
         file_name = 'precomputed_array'
-        generate_report(self.start_time, dst_path, file_name)
+        print_time_elapsed = 1
+        generate_report(self.start_time, dst_path, file_name, print_time_elapsed)
         return precomputed_array
 
 
@@ -1596,7 +1598,9 @@ class Run(object):
 
             file_name = 'PreProd'
             prefix = ''.join(prefix_list)
-            generate_report(self.start_time, traj_dir_path, file_name, prefix)
+            print_time_elapsed = 0
+            generate_report(self.start_time, traj_dir_path, file_name,
+                            print_time_elapsed, prefix)
 
         for traj_index in range(self.n_traj):
             traj_dir_path = dst_path.joinpath(f'traj{traj_index+1}')
@@ -1824,7 +1828,9 @@ class Run(object):
 
         file_name = 'Run'
         prefix = ''.join(prefix_list)
-        generate_report(self.start_time, dst_path, file_name, prefix)
+        print_time_elapsed = 1
+        generate_report(self.start_time, dst_path, file_name, print_time_elapsed,
+                        prefix)
         return None
 
 
@@ -1973,7 +1979,9 @@ class Analysis(object):
             prefix_list.append(
                 f'Standard error of mean in {species_type} diffusivity is: {species_diff_sem:4.3f} um2/s\n')
         prefix = ''.join(prefix_list)
-        generate_report(self.start_time, dst_path, report_file_name, prefix)
+        print_time_elapsed = 1
+        generate_report(self.start_time, dst_path, report_file_name,
+                        print_time_elapsed, prefix)
 
         return_msd_data = ReturnValues(msd_data=msd_data,
                                        sem_data=sem_data,
