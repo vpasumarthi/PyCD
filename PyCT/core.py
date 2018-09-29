@@ -1534,6 +1534,9 @@ class Run(object):
                                                         species_type_index])
         return charge_list
 
+    def preprod(self, dst_path, random_seed):
+        return None
+
     def do_kmc_steps(self, dst_path, random_seed, output_data):
         """Subroutine to run the KMC simulation by specified number
         of steps
