@@ -24,12 +24,14 @@ def material_run(dst_path):
 
     # Load material parameters
     config_file_name = 'sys_config.yml'
-    if sim_params['work_dir_depth'] == 0:
+    work_dir_depth = (sim_params['work_dir_depth'] + 1
+                      if sim_params['compute_mode'] == 'parallel' else sim_params['work_dir_depth'])
+    if work_dir_depth == 0:
         input_directory_path = (
                 dst_path.resolve() / sim_params['input_file_directory_name'])
     else:
         input_directory_path = (
-            dst_path.resolve().parents[sim_params['work_dir_depth'] - 1]
+            dst_path.resolve().parents[work_dir_depth - 1]
             / sim_params['input_file_directory_name'])
     config_file_path = input_directory_path / config_file_name
     with open(config_file_path, 'r') as stream:
@@ -105,8 +107,11 @@ def material_run(dst_path):
                                                                     step_system_size))
                                 import_flag = 1
                         if import_flag:
+                            step_work_dir_depth = (
+                                sim_params['doping']['step_work_dir_depth'] + 1
+                                if sim_params['compute_mode'] == 'parallel' else sim_params['doping']['step_work_dir_depth']) 
                             step_input_directory_path = (
-                                dst_path.resolve().parents[sim_params['doping']['step_work_dir_depth'] - 1]
+                                dst_path.resolve().parents[step_work_dir_depth - 1]
                                 / ('SystemSize[' + ','.join(str(element) for element in step_system_size) + ']')
                                 / sim_params['input_file_directory_name'])
                             step_hop_neighbor_list_file_name = step_input_directory_path.joinpath(
