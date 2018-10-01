@@ -1882,7 +1882,13 @@ class Analysis(object):
                          'output files needs to be saved'
 
         coordinate_file_name = 'unwrapped_traj.dat'
-        position_array = np.loadtxt(dst_path / coordinate_file_name)
+        for traj_index in range(self.n_traj):
+            traj_coordinate_file_path = (dst_path / f'traj{traj_index+1}' / coordinate_file_name)
+            if traj_index == 0:
+                position_array = np.loadtxt(traj_coordinate_file_path)
+            else:
+                position_array = np.vstack((position_array, np.loadtxt(traj_coordinate_file_path)))
+
         position_array = (
             position_array[
                 :self.n_traj * self.num_path_steps_per_traj + 1].reshape(
