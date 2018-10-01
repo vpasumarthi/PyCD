@@ -126,7 +126,8 @@ def material_run(dst_path):
         material_run = Run(
             material_system, precomputed_array, sim_params['temp'],
             sim_params['ion_charge_type'],
-            sim_params['species_charge_type'], sim_params['n_traj'],
+            sim_params['species_charge_type'],
+            1 if sim_params['compute_mode'] == 'parallel' else sim_params['n_traj'],
             sim_params['t_final'], sim_params['time_interval'],
             sim_params['species_count'], sim_params['initial_occupancy'],
             sim_params['relative_energies'], sim_params['external_field'],
