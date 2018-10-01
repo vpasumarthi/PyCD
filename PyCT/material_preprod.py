@@ -131,7 +131,7 @@ def material_preprod(dst_path):
             sim_params['species_count'], sim_params['initial_occupancy'],
             sim_params['relative_energies'], sim_params['external_field'],
             sim_params['doping'])
-        material_run.preprod(dst_path, sim_params['random_seed'])
+        material_run.preproduction(dst_path, sim_params['random_seed'])
     else:
         print('Simulation files already exists in '
               + 'the destination directory')

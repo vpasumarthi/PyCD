@@ -1536,7 +1536,7 @@ class Run(object):
                                                         species_type_index])
         return charge_list
 
-    def preprod(self, dst_path, random_seed):
+    def preproduction(self, dst_path, random_seed):
         """Subroutine to setup input files to run the production stage of the simulation
         :param dst_path:
         :param random_seed:
@@ -1596,7 +1596,7 @@ class Run(object):
                         output_file.write(','.join([str(element) for element in output_list]))
                         output_file.write('\n')
 
-            file_name = 'PreProd'
+            file_name = 'PreProduction'
             prefix = ''.join(prefix_list)
             print_time_elapsed = 0
             generate_report(self.start_time, traj_dir_path, file_name,
