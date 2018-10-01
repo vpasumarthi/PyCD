@@ -1881,17 +1881,15 @@ class Analysis(object):
         assert dst_path, 'Please provide the destination path where MSD ' \
                          'output files needs to be saved'
         position_array = np.loadtxt(dst_path.joinpath('unwrapped_traj.dat'))
-        num_traj_recorded = int(len(position_array)
-                                / self.num_path_steps_per_traj)
         position_array = (
             position_array[
-                :num_traj_recorded * self.num_path_steps_per_traj + 1].reshape(
-                (num_traj_recorded * self.num_path_steps_per_traj,
+                :self.n_traj * self.num_path_steps_per_traj + 1].reshape(
+                (self.n_traj * self.num_path_steps_per_traj,
                  self.total_species, 3))
             * self.dist_conversion)
-        sd_array = np.zeros((num_traj_recorded, self.num_msd_steps_per_traj,
+        sd_array = np.zeros((self.n_traj, self.num_msd_steps_per_traj,
                              self.total_species))
-        for traj_index in range(num_traj_recorded):
+        for traj_index in range(self.n_traj):
             head_start = traj_index * self.num_path_steps_per_traj
             for time_step in range(1, self.num_msd_steps_per_traj):
                 num_disp = self.num_path_steps_per_traj - time_step
@@ -1903,7 +1901,7 @@ class Analysis(object):
                         axis=0)
         num_existent_species = (self.material.num_species_types
                                 - list(self.species_count).count(0))
-        species_avg_sd_array = np.zeros((num_traj_recorded,
+        species_avg_sd_array = np.zeros((self.n_traj,
                                          self.num_msd_steps_per_traj,
                                          num_existent_species))
         start_index = 0
@@ -1929,11 +1927,11 @@ class Analysis(object):
         msd_data[:, 0] = time_array
         msd_data[:, 1:] = np.mean(species_avg_sd_array, axis=0)
         sem_data = (np.std(species_avg_sd_array, axis=0)
-                    / np.sqrt(num_traj_recorded))
+                    / np.sqrt(self.n_traj))
         file_name = (('%1.2E' % (self.msd_t_final * self.time_conversion))
                      + str(self.repr_time)
-                     + (',n_traj: %1.2E' % num_traj_recorded
-                        if num_traj_recorded != self.n_traj else '')
+                     + (',n_traj: %1.2E' % self.n_traj
+                        if self.n_traj != self.n_traj else '')
                      + '_trim=' + str(self.trim_length))
         msd_file_name = ''.join(['MSD_Data_', file_name, '.npy'])
         msd_file_path = dst_path.joinpath(msd_file_name)
@@ -1945,10 +1943,10 @@ class Analysis(object):
 
         report_file_name = ''.join(['MSD_Analysis',
                              ('_' if file_name else ''), file_name])
-        slope_data = np.zeros((num_traj_recorded, num_existent_species))
+        slope_data = np.zeros((self.n_traj, num_existent_species))
         prefix_list = []
         for species_index, species_type in enumerate(species_types):
-            for traj_index in range(num_traj_recorded):
+            for traj_index in range(self.n_traj):
                 slope_data[traj_index, species_index], _, _, _, _ = \
                     linregress(msd_data[self.trim_length:-self.trim_length, 0],
                                species_avg_sd_array[traj_index,
@@ -1960,7 +1958,7 @@ class Analysis(object):
             prefix_list.append(
                         f'Estimated value of {species_type} diffusivity is: {species_diff:4.3f} um2/s\n')
             slope_sem = (np.std(slope_data[:, species_index])
-                         / np.sqrt(num_traj_recorded))
+                         / np.sqrt(self.n_traj))
             species_diff_sem = (slope_sem * constants.ANG2UM ** 2
                                 * constants.SEC2NS / (2 * self.n_dim))
             prefix_list.append(
