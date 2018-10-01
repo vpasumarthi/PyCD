@@ -137,7 +137,9 @@ def material_run(dst_path):
             sim_params['species_count'], sim_params['initial_occupancy'],
             sim_params['relative_energies'], sim_params['external_field'],
             sim_params['doping'])
-        material_run.do_kmc_steps(dst_path, sim_params['output_data'])
+        material_run.do_kmc_steps(dst_path, sim_params['output_data'],
+                                  sim_params['random_seed'],
+                                  sim_params['compute_mode'])
     else:
         print('Simulation files already exists in '
               + 'the destination directory')

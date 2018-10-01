@@ -1543,7 +1543,6 @@ class Run(object):
         :return: """
         assert dst_path, 'Please provide the destination path where \
                           simulation output files needs to be saved'
-
         rnd.seed(random_seed)
         random_seed_list = [rnd.random() for traj_index in range(self.n_traj)]
         for traj_index in range(self.n_traj):
@@ -1609,7 +1608,7 @@ class Run(object):
             pickle.dump(rnd.getstate(), open(random_state_file_path, 'wb'))
         return None
 
-    def do_kmc_steps(self, dst_path, output_data):
+    def do_kmc_steps(self, dst_path, output_data, random_seed, compute_mode):
         """Subroutine to run the KMC simulation by specified number
         of steps
         :param dst_path:
@@ -1617,6 +1616,8 @@ class Run(object):
         assert dst_path, 'Please provide the destination path where \
                           simulation output files needs to be saved'
 
+        if compute_mode != 'parallel':
+            self.preproduction(dst_path, random_seed)
         num_path_steps_per_traj = int(self.t_final / self.time_interval) + 1
         if self.electric_field_active:
             drift_velocity_array = np.zeros((self.n_traj,
