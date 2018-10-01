@@ -1632,8 +1632,11 @@ class Run(object):
         ewald_neut = - (np.pi * (system_charge**2)
                         / (2 * self.system.system_volume * self.system.alpha))
         for traj_index in range(self.n_traj):
-            traj_dir_path = dst_path.joinpath(f'traj{traj_index+1}')
-            Path.mkdir(traj_dir_path, parents=True, exist_ok=True)
+            if compute_mode != 'parallel':
+                traj_dir_path = dst_path.joinpath(f'traj{traj_index+1}')
+                Path.mkdir(traj_dir_path, parents=True, exist_ok=True)
+            else:
+                traj_dir_path = dst_path
 
             # Load random state
             random_state_file_path = traj_dir_path.joinpath(f'initial_rnd_state.dump')
