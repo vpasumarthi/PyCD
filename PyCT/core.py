@@ -1664,14 +1664,14 @@ class Run(object):
                 # Load doping distribution
                 site_indices_file_path = traj_dir_path.joinpath('site_indices.csv')
                 site_indices_list = []
-                shell_element_type_list = []
+                dopant_element_type_index_list = []
                 dopant_site_index_list = []
                 site_wise_shell_indices = []
                 with open(site_indices_file_path, 'r') as site_indices_file:
                     for line in site_indices_file:
                         values = line.strip().split(',')
                         site_indices_list.append(int(values[0]))
-                        shell_element_type_list.append(values[1])
+                        dopant_element_type_index_list.append(int(values[1]))
                         dopant_site_index_list.append(int(values[2]))
                         site_wise_shell_indices.append(int(values[3]))
                 site_wise_shell_indices_array = np.hstack(
@@ -1682,17 +1682,17 @@ class Run(object):
                 array_indices = np.where(site_wise_shell_indices_array[:, 2] == 0)[0]
                 for array_index in array_indices:
                     site_index = int(site_indices_list[array_index])
-                    dopant_element_type = shell_element_type_list[array_index]
+                    dopant_element_type = self.dopant_element_types[dopant_element_type_index_list[array_index]]
                     if dopant_element_type in dopant_site_indices:
                         dopant_site_indices[dopant_element_type].append(site_index)
                     else:
                         dopant_site_indices[dopant_element_type] = [site_index]
                 
                 # update system_relative_energies
-                num_site_indices = len(shell_element_type_list)
+                num_site_indices = len(dopant_element_type_index_list)
                 for index in range(num_site_indices):
                     (site_index, _, shell_index) = site_wise_shell_indices_array[index]
-                    dopant_element_type = shell_element_type_list[index]
+                    dopant_element_type = self.dopant_element_types[dopant_element_type_index_list[index]]
                     map_index = self.dopant_element_types.index(dopant_element_type)
                     substitution_element_type = self.substitution_element_types[map_index]
                     if shell_index < len(self.relative_energies['doping'][
