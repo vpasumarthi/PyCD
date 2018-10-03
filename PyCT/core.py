@@ -1622,8 +1622,6 @@ class Run(object):
         if self.electric_field_active:
             drift_velocity_array = np.zeros((self.n_traj,
                                              self.total_species, 3))
-        if self.doping_active:
-            max_index_width = np.ceil(np.log10(self.neighbors.num_system_elements))
 
         prefix_list = []
         system_charge = np.dot(self.species_count,
@@ -1807,7 +1805,7 @@ class Run(object):
                 output_file_name = traj_dir_path.joinpath(f'occupancy.dat')
                 occupancy_array = np.asarray(occupancy_list, dtype=int)
                 with open(output_file_name, 'wb') as output_file:
-                    np.savetxt(output_file, occupancy_array, fmt=f'%{max_index_width}d')
+                    np.save(output_file, occupancy_array)
 
         if self.electric_field_active:
             prefix_list = self.compute_drift_mobility(drift_velocity_array,
