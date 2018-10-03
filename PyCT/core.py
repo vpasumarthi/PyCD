@@ -1407,7 +1407,6 @@ class Run(object):
         site_indices_list = []
         site_wise_shell_indices = []
         shell_element_type_list = []
-        dopant_site_index_list = []
         overlap = 0
         for site_index, shell_neighbors in dopant_site_shell_based_neighbors.items():
             element_type_index = self.neighbors.get_quantum_indices(
@@ -1430,7 +1429,6 @@ class Run(object):
                 site_wise_shell_indices.extend([self.max_neighbor_shells[element_type] + 1]
                                                * num_site_indices)
                 shell_element_type_list.extend([element_type] * num_site_indices)
-                dopant_site_index_list.extend([0] * num_site_indices)
             for shell_index, neighbor_indices in enumerate(shell_neighbors):
                 for neighbor_index in neighbor_indices:
                     index = site_indices_list.index(neighbor_index)
@@ -1439,12 +1437,10 @@ class Run(object):
                         if shell_element_type_list[index] != element_type:
                             overlap = 1
                         shell_element_type_list[index] = dopant_site_element_types[site_index]
-                        dopant_site_index_list[index] = site_index
         dopant_element_type_index_list = [self.dopant_element_types.index(element_type) for element_type in shell_element_type_list]
         site_wise_shell_indices_array = np.hstack(
                                 (np.asarray(site_indices_list)[:, None],
                                  np.asarray(dopant_element_type_index_list)[:, None],
-                                 np.asarray(dopant_site_index_list)[:, None],
                                  np.asarray(site_wise_shell_indices)[:, None]))
         if overlap:
             prefix_list.append(
@@ -1662,7 +1658,7 @@ class Run(object):
                 site_indices_data = np.load(site_indices_file_path)
                 site_indices_list = site_indices_data[:, 0]
                 dopant_element_type_index_list = site_indices_data[:, 1]
-                site_wise_shell_indices = site_indices_data[:, 3]
+                site_wise_shell_indices = site_indices_data[:, 2]
                 dopant_site_indices = {}
                 array_indices = np.where(site_wise_shell_indices == 0)[0]
                 for array_index in array_indices:
