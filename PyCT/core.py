@@ -1440,8 +1440,10 @@ class Run(object):
                             overlap = 1
                         shell_element_type_list[index] = dopant_site_element_types[site_index]
                         dopant_site_index_list[index] = site_index
+        dopant_element_type_list = [self.dopant_element_types.index(element_type) for element_type in shell_element_type_list]
         site_wise_shell_indices_array = np.hstack(
                                 (np.asarray(site_indices_list)[:, None],
+                                 np.asarray(dopant_element_type_list)[:, None],
                                  np.asarray(dopant_site_index_list)[:, None],
                                  np.asarray(site_wise_shell_indices)[:, None]))
         if overlap:
@@ -1450,7 +1452,7 @@ class Run(object):
         else:
             prefix_list.append(
                         'All shell based neighbor sites are NOT independent\n\n')
-        return (site_wise_shell_indices_array, shell_element_type_list, prefix_list)
+        return (site_wise_shell_indices_array, prefix_list)
 
     def generate_initial_occupancy(self, dopant_site_indices):
         """generates initial occupancy list based on species count
@@ -1583,15 +1585,14 @@ class Run(object):
                     dopant_site_indices_repo[traj_index][i_dopant_element_type] = [index for index in i_dopant_site_indices]
                 (dopant_site_element_types, system_shell_based_neighbors) = (
                     self.get_system_shell_based_neighbors(dopant_site_indices))
-                (site_wise_shell_indices_array, shell_element_type_list, prefix_list) = (
+                (site_wise_shell_indices_array, prefix_list) = (
                     self.get_site_wise_shell_indices(dopant_site_element_types,
                                                      system_shell_based_neighbors,
                                                      prefix_list))
                 output_file_name = traj_dir_path.joinpath(f'site_indices.csv')
                 with open(output_file_name, 'w') as output_file:
-                    for site_index, site_info in enumerate(site_wise_shell_indices_array):
+                    for site_info in site_wise_shell_indices_array:
                         output_list = site_info.tolist()
-                        output_list.insert(1, shell_element_type_list[site_index])
                         output_file.write(','.join([str(element) for element in output_list]))
                         output_file.write('\n')
 
