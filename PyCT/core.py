@@ -1440,10 +1440,10 @@ class Run(object):
                             overlap = 1
                         shell_element_type_list[index] = dopant_site_element_types[site_index]
                         dopant_site_index_list[index] = site_index
-        dopant_element_type_list = [self.dopant_element_types.index(element_type) for element_type in shell_element_type_list]
+        dopant_element_type_index_list = [self.dopant_element_types.index(element_type) for element_type in shell_element_type_list]
         site_wise_shell_indices_array = np.hstack(
                                 (np.asarray(site_indices_list)[:, None],
-                                 np.asarray(dopant_element_type_list)[:, None],
+                                 np.asarray(dopant_element_type_index_list)[:, None],
                                  np.asarray(dopant_site_index_list)[:, None],
                                  np.asarray(site_wise_shell_indices)[:, None]))
         if overlap:
