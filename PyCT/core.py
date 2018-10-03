@@ -1881,13 +1881,13 @@ class Analysis(object):
         assert dst_path, 'Please provide the destination path where MSD ' \
                          'output files needs to be saved'
 
-        coordinate_file_name = 'unwrapped_traj.dat'
+        coordinate_file_name = 'unwrapped_traj.npy'
         for traj_index in range(self.n_traj):
             traj_coordinate_file_path = (dst_path / f'traj{traj_index+1}' / coordinate_file_name)
             if traj_index == 0:
-                position_array = np.loadtxt(traj_coordinate_file_path)
+                position_array = np.load(traj_coordinate_file_path)
             else:
-                position_array = np.vstack((position_array, np.loadtxt(traj_coordinate_file_path)))
+                position_array = np.vstack((position_array, np.load(traj_coordinate_file_path)))
 
         position_array = (
             position_array[
