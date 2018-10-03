@@ -1794,15 +1794,15 @@ class Run(object):
                                                 output_attributes['file_name'])
                     with open(output_file_name, 'ab') as output_file:
                         if output_data_type == 'unwrapped_traj':
-                            np.savetxt(output_file, unwrapped_position_array)
+                            np.save(output_file, unwrapped_position_array)
                         elif output_data_type == 'wrapped_traj':
-                            np.savetxt(output_file, wrapped_position_array)
+                            np.save(output_file, wrapped_position_array)
                         elif output_data_type == 'energy':
-                            np.savetxt(output_file, energy_array)
+                            np.save(output_file, energy_array)
                         elif output_data_type == 'delg_0':
-                            np.savetxt(output_file, delg_0_array)
+                            np.save(output_file, delg_0_array)
                         elif output_data_type == 'potential':
-                            np.savetxt(output_file, potential_array)
+                            np.save(output_file, potential_array)
             if self.doping_active:
                 output_file_name = traj_dir_path.joinpath(f'occupancy.dat')
                 occupancy_array = np.asarray(occupancy_list, dtype=int)
