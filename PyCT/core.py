@@ -1589,12 +1589,8 @@ class Run(object):
                     self.get_site_wise_shell_indices(dopant_site_element_types,
                                                      system_shell_based_neighbors,
                                                      prefix_list))
-                output_file_name = traj_dir_path.joinpath(f'site_indices.csv')
-                with open(output_file_name, 'w') as output_file:
-                    for site_info in site_wise_shell_indices_array:
-                        output_list = site_info.tolist()
-                        output_file.write(','.join([str(element) for element in output_list]))
-                        output_file.write('\n')
+                output_file_path = traj_dir_path / 'site_indices'
+                np.save(output_file_path, site_wise_shell_indices_array)
 
             file_name = 'PreProduction'
             prefix = ''.join(prefix_list)
@@ -1662,24 +1658,13 @@ class Run(object):
                 self.system_relative_energies = np.copy(self.undoped_system_relative_energies)
 
                 # Load doping distribution
-                site_indices_file_path = traj_dir_path.joinpath('site_indices.csv')
-                site_indices_list = []
-                dopant_element_type_index_list = []
-                dopant_site_index_list = []
-                site_wise_shell_indices = []
-                with open(site_indices_file_path, 'r') as site_indices_file:
-                    for line in site_indices_file:
-                        values = line.strip().split(',')
-                        site_indices_list.append(int(values[0]))
-                        dopant_element_type_index_list.append(int(values[1]))
-                        dopant_site_index_list.append(int(values[2]))
-                        site_wise_shell_indices.append(int(values[3]))
-                site_wise_shell_indices_array = np.hstack(
-                                (np.asarray(site_indices_list)[:, None],
-                                 np.asarray(dopant_site_index_list)[:, None],
-                                 np.asarray(site_wise_shell_indices)[:, None]))
+                site_indices_file_path = traj_dir_path / 'site_indices.npy'
+                site_indices_data = np.load(site_indices_file_path)
+                site_indices_list = site_indices_data[:, 0]
+                dopant_element_type_index_list = site_indices_data[:, 1]
+                site_wise_shell_indices = site_indices_data[:, 3]
                 dopant_site_indices = {}
-                array_indices = np.where(site_wise_shell_indices_array[:, 2] == 0)[0]
+                array_indices = np.where(site_wise_shell_indices == 0)[0]
                 for array_index in array_indices:
                     site_index = int(site_indices_list[array_index])
                     dopant_element_type = self.dopant_element_types[dopant_element_type_index_list[array_index]]
@@ -1691,7 +1676,8 @@ class Run(object):
                 # update system_relative_energies
                 num_site_indices = len(dopant_element_type_index_list)
                 for index in range(num_site_indices):
-                    (site_index, _, shell_index) = site_wise_shell_indices_array[index]
+                    site_index = site_indices_list[index]
+                    shell_index = site_wise_shell_indices[index]
                     dopant_element_type = self.dopant_element_types[dopant_element_type_index_list[index]]
                     map_index = self.dopant_element_types.index(dopant_element_type)
                     substitution_element_type = self.substitution_element_types[map_index]
