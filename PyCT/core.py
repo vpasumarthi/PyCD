@@ -1873,7 +1873,7 @@ class Analysis(object):
         self.num_msd_steps_per_traj = int(self.msd_t_final
                                           / self.time_interval) + 1
 
-    def compute_msd(self, dst_path):
+    def compute_msd(self, dst_path, output_data):
         """Returns the squared displacement of the trajectories
         :param dst_path:
         :return:
@@ -1881,7 +1881,7 @@ class Analysis(object):
         assert dst_path, 'Please provide the destination path where MSD ' \
                          'output files needs to be saved'
 
-        coordinate_file_name = 'unwrapped_traj.npy'
+        coordinate_file_name = output_data['unwrapped_traj']['file_name']
         for traj_index in range(self.n_traj):
             traj_coordinate_file_path = (dst_path / f'traj{traj_index+1}' / coordinate_file_name)
             if traj_index == 0:
