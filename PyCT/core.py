@@ -1944,13 +1944,13 @@ class Analysis(object):
             species_diff = (slope * constants.ANG2UM ** 2
                             * constants.SEC2NS / (2 * self.n_dim))
             prefix_list.append(
-                        f'Estimated value of {species_type} diffusivity is: {species_diff:4.3f} um2/s\n')
+                        f'Estimated value of {species_type} diffusivity is: {species_diff:.3e} um2/s\n')
             slope_sem = (np.std(slope_data[:, species_index])
                          / np.sqrt(self.n_traj))
             species_diff_sem = (slope_sem * constants.ANG2UM ** 2
                                 * constants.SEC2NS / (2 * self.n_dim))
             prefix_list.append(
-                f'Standard error of mean in {species_type} diffusivity is: {species_diff_sem:4.3f} um2/s\n')
+                f'Standard error of mean in {species_type} diffusivity is: {species_diff_sem:.3e} um2/s\n')
         prefix = ''.join(prefix_list)
         print_time_elapsed = 1
         generate_report(self.start_time, dst_path, report_file_name,
