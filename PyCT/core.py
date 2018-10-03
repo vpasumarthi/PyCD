@@ -1803,10 +1803,9 @@ class Run(object):
                         elif output_data_type == 'potential':
                             np.save(output_file, potential_array)
             if self.doping_active:
-                output_file_name = traj_dir_path.joinpath(f'occupancy.dat')
+                output_file_path = traj_dir_path / 'occupancy.npy'
                 occupancy_array = np.asarray(occupancy_list, dtype=int)
-                with open(output_file_name, 'wb') as output_file:
-                    np.save(output_file, occupancy_array)
+                np.save(output_file_path, occupancy_array)
 
         if self.electric_field_active:
             prefix_list = self.compute_drift_mobility(drift_velocity_array,
