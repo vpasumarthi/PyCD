@@ -1588,11 +1588,11 @@ class Run(object):
                 output_file_path = traj_dir_path / 'site_indices'
                 np.save(output_file_path, site_wise_shell_indices_array)
 
-            file_name = 'PreProduction'
-            prefix = ''.join(prefix_list)
-            print_time_elapsed = 0
-            generate_report(self.start_time, traj_dir_path, file_name,
-                            print_time_elapsed, prefix)
+                file_name = 'PreProduction'
+                prefix = ''.join(prefix_list)
+                print_time_elapsed = 0
+                generate_report(self.start_time, traj_dir_path, file_name,
+                                print_time_elapsed, prefix)
 
         for traj_index in range(self.n_traj):
             traj_dir_path = dst_path.joinpath(f'traj{traj_index+1}')
