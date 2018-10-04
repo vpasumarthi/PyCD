@@ -1804,7 +1804,7 @@ class Run(object):
 class Analysis(object):
     """Post-simulation analysis methods"""
     def __init__(self, material_info, n_dim, species_count, n_traj, t_final,
-                 time_interval, msd_t_final, trim_length, repr_time='ns',
+                 time_interval, msd_t_final, trim_length, temp, repr_time='ns',
                  repr_dist='Angstrom'):
         """
         :param material_info:
@@ -1828,6 +1828,7 @@ class Analysis(object):
         self.t_final = t_final * constants.SEC2AUTIME
         self.time_interval = time_interval * constants.SEC2AUTIME
         self.trim_length = trim_length
+        self.temp = temp
         self.num_path_steps_per_traj = (int(self.t_final / self.time_interval)
                                         + 1)
         self.repr_time = repr_time
@@ -1849,6 +1850,7 @@ class Analysis(object):
         elif repr_dist == 'angstrom':
             self.dist_conversion = 1E+00 / constants.ANG2BOHR
 
+        self.kBT = constants.KB * self.temp / constants.EV2J  # eV
         self.msd_t_final = msd_t_final / self.time_conversion
         self.num_msd_steps_per_traj = int(self.msd_t_final
                                           / self.time_interval) + 1
@@ -1941,16 +1943,16 @@ class Analysis(object):
                                                     self.trim_length:-self.trim_length,
                                                     species_index])
             slope = np.mean(slope_data[:, species_index])
-            species_diff = (slope * constants.ANG2UM ** 2
-                            * constants.SEC2NS / (2 * self.n_dim))
+            species_diff = (slope * constants.ANG2CM ** 2
+                            * constants.SEC2NS / (2 * self.n_dim) / self.kBT)
             prefix_list.append(
-                        f'Estimated value of {species_type} diffusivity is: {species_diff:.3e} um2/s\n')
+                        f'Estimated value of {species_type} diffusivity is: {species_diff:.3e} cm2/Vs\n')
             slope_sem = (np.std(slope_data[:, species_index])
                          / np.sqrt(self.n_traj))
-            species_diff_sem = (slope_sem * constants.ANG2UM ** 2
-                                * constants.SEC2NS / (2 * self.n_dim))
+            species_diff_sem = (slope_sem * constants.ANG2CM ** 2
+                                * constants.SEC2NS / (2 * self.n_dim) / self.kBT)
             prefix_list.append(
-                f'Standard error of mean in {species_type} diffusivity is: {species_diff_sem:.3e} um2/s\n')
+                f'Standard error of mean in {species_type} diffusivity is: {species_diff_sem:.3e} cm2/Vs\n')
         prefix = ''.join(prefix_list)
         print_time_elapsed = 1
         generate_report(self.start_time, dst_path, report_file_name,
