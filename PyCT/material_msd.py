@@ -50,8 +50,8 @@ def material_msd(dst_path):
         material_info, sim_params['n_dim'], sim_params['species_count'],
         sim_params['n_traj'], sim_params['t_final'],
         sim_params['time_interval'], sim_params['msd_t_final'],
-        sim_params['trim_length'], sim_params['repr_time'],
-        sim_params['repr_dist'])
+        sim_params['trim_length'], sim_params['temp'],
+        sim_params['repr_time'], sim_params['repr_dist'])
 
     msd_analysis_data = material_analysis.compute_msd(dst_path,
                                                       sim_params['output_data'])
