@@ -1993,12 +1993,12 @@ class Analysis(object):
                 linregress(msd_data[self.trim_length:-self.trim_length, 0],
                            msd_data[self.trim_length:-self.trim_length,
                            species_index + 1])
-            species_diff = (slope * constants.ANG2UM**2
-                            * constants.SEC2NS / (2 * self.n_dim))
+            species_diff = (slope * constants.ANG2CM ** 2
+                            * constants.SEC2NS / (2 * self.n_dim) / self.kBT)
             ax.add_artist(
-                AnchoredText('Est. $D_{{%s}}$ = %4.3f' % (species_type,
+                AnchoredText('Est. $D_{{%s}}$ = %.3e' % (species_type,
                                                           species_diff)
-                             + '  ${{\mu}}m^2/s$; $r^2$=%4.3e' % (r_value**2),
+                             + ' $cm^2/Vs$; $r^2$=%.3e' % (r_value**2),
                              loc=4))
             ax.plot(msd_data[self.trim_length:-self.trim_length, 0],
                     intercept + slope * msd_data[
