@@ -1623,6 +1623,8 @@ class Run(object):
         ewald_neut = - (np.pi * (system_charge**2)
                         / (2 * self.system.system_volume * self.system.alpha))
         for traj_index in range(self.n_traj):
+            if output_data['unwrapped_traj']['write_every_step']:
+                kmc_step_index = 0
             if compute_mode != 'parallel':
                 traj_dir_path = dst_path.joinpath(f'traj{traj_index+1}')
                 Path.mkdir(traj_dir_path, parents=True, exist_ok=True)
@@ -1637,8 +1639,12 @@ class Run(object):
             for output_data_type, output_attributes in output_data.items():
                 if output_attributes['write']:
                     if output_data_type == 'unwrapped_traj':
-                        unwrapped_position_array = np.zeros(
-                                (num_path_steps_per_traj, self.total_species * 3))
+                        if output_data[output_data_type]['write_every_step']:
+                            write_every_step = 1
+                            unwrapped_position_array = np.zeros((1, self.total_species * 3))
+                        else:
+                            unwrapped_position_array = np.zeros(
+                                    (num_path_steps_per_traj, self.total_species * 3))
                     elif output_data_type == 'wrapped_traj':
                         wrapped_position_array = np.zeros((num_path_steps_per_traj,
                                                            self.total_species * 3))
@@ -1754,18 +1760,34 @@ class Run(object):
                     self.species_charge_list[species_index]
                 current_state_charge_config[new_site_system_element_index] += \
                     self.species_charge_list[species_index]
+
+                if write_every_step:
+                    if kmc_step_index == 0:
+                        unwrapped_position_array = np.zeros(
+                                                    (1, self.total_species * 3))
+                    else:
+                        unwrapped_position_array = np.vstack(
+                                    (unwrapped_position_array,
+                                     unwrapped_position_array[kmc_step_index-1]
+                                     + species_displacement_vector_list))
+                    kmc_step_index += 1
+                    species_displacement_vector_list = np.zeros(
+                                                    (1, self.total_species * 3))
+
                 # Update data arrays for each path step
                 if end_path_index >= start_path_index + 1:
                     if end_path_index >= num_path_steps_per_traj:
                         end_path_index = num_path_steps_per_traj
-                    unwrapped_position_array[start_path_index:end_path_index] \
-                        = (unwrapped_position_array[start_path_index-1]
-                           + species_displacement_vector_list)
+                    if not write_every_step:
+                        unwrapped_position_array[start_path_index:end_path_index] \
+                            = (unwrapped_position_array[start_path_index-1]
+                               + species_displacement_vector_list)
                     if output_data['energy']['write']:
                         energy_array[start_path_index:end_path_index] = \
                             current_state_energy
-                    species_displacement_vector_list = np.zeros(
-                                                (1, self.total_species * 3))
+                    if not write_every_step:
+                        species_displacement_vector_list = np.zeros(
+                                                    (1, self.total_species * 3))
                     start_path_index = end_path_index
 
             # Write output data arrays to disk
