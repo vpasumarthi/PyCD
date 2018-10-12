@@ -1643,6 +1643,7 @@ class Run(object):
                             write_every_step = 1
                             unwrapped_position_array = np.zeros((1, self.total_species * 3))
                         else:
+                            write_every_step = 0
                             unwrapped_position_array = np.zeros(
                                     (num_path_steps_per_traj, self.total_species * 3))
                     elif output_data_type == 'wrapped_traj':
