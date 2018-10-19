@@ -1636,6 +1636,7 @@ class Run(object):
             rnd.setstate(pickle.load(open(random_state_file_path, 'rb')))
 
             # Initialize data arrays
+            write_time_data = 0
             for output_data_type, output_attributes in output_data.items():
                 if output_attributes['write']:
                     if output_data_type == 'unwrapped_traj':
@@ -1646,6 +1647,9 @@ class Run(object):
                             write_every_step = 0
                             unwrapped_position_array = np.zeros(
                                     (num_path_steps_per_traj, self.total_species * 3))
+                    elif output_data_type == 'time':
+                        time_data = [0.0]
+                        write_time_data = 1
                     elif output_data_type == 'wrapped_traj':
                         wrapped_position_array = np.zeros((num_path_steps_per_traj,
                                                            self.total_species * 3))
@@ -1774,6 +1778,8 @@ class Run(object):
                     kmc_step_index += 1
                     species_displacement_vector_list = np.zeros(
                                                     (1, self.total_species * 3))
+                if write_time_data:
+                    time_data.append(sim_time)
 
                 # Update data arrays for each path step
                 if end_path_index >= start_path_index + 1:
@@ -1799,6 +1805,8 @@ class Run(object):
                     with open(output_file_name, 'ab') as output_file:
                         if output_data_type == 'unwrapped_traj':
                             np.save(output_file, unwrapped_position_array)
+                        elif output_data_type == 'time':
+                            np.save(output_file, np.asarray(time_data))
                         elif output_data_type == 'wrapped_traj':
                             np.save(output_file, wrapped_position_array)
                         elif output_data_type == 'energy':
