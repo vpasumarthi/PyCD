@@ -1554,7 +1554,7 @@ class Run(object):
                 dopant_site_indices_repo[traj_index] = {}
                 prefix_list.append(f'Trajectory {traj_index+1}:\n')
                 attempt_number = 1
-                old_min_shell_separation = 0
+                old_min_shell_separation = -1
                 while (old_min_shell_separation < self.doping['min_shell_separation'] and attempt_number <= self.doping['max_attempts']):
                     temp_sub_prefix_list = []
                     temp_dopant_site_indices = self.get_doping_distribution()
