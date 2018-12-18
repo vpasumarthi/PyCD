@@ -1055,6 +1055,22 @@ class Run(object):
         return process_attributes
 
     @jit(nopython=True, parallel=True)
+    def get_first_terms(self, old_site_system_element_index_list,
+                        new_site_system_element_index_list,
+                        charge_config):
+        first_term_list = np.zeros(self.n_proc)
+        for i_proc in range(self.n_proc):
+            species_site_system_element_index = \
+                                    old_site_system_element_index_list[i_proc]
+            neighbor_site_system_element_index = \
+                                    new_site_system_element_index_list[i_proc]
+            first_term_list[i_proc] = 2 * np.dot(
+                charge_config[:, 0],
+                (self.precomputed_array[neighbor_site_system_element_index, :]
+                 - self.precomputed_array[species_site_system_element_index, :]
+                 ))
+        return first_term_list
+
     def get_process_rates(self, process_attributes, charge_config):
         nproc_delg_0_array = np.zeros(self.n_proc)
         nproc_hop_vector_array = np.zeros((self.n_proc, self.neighbors.n_dim))
@@ -1063,6 +1079,9 @@ class Run(object):
          new_site_system_element_index_list,
          element_type_element_index_list) = process_attributes
 
+        first_term_list = self.get_first_terms(
+            self, old_site_system_element_index_list,
+            new_site_system_element_index_list, charge_config)
         for i_proc in range(self.n_proc):
             species_site_system_element_index = \
                                     old_site_system_element_index_list[i_proc]
@@ -1070,11 +1089,8 @@ class Run(object):
                                     new_site_system_element_index_list[i_proc]
             species_index = self.n_proc_species_index_list[i_proc]
             species_proc_index = self.n_proc_species_proc_list[i_proc]
-            term01 = 2 * np.dot(
-                charge_config[:, 0],
-                (self.precomputed_array[neighbor_site_system_element_index, :]
-                 - self.precomputed_array[species_site_system_element_index, :]
-                 ))
+
+            term01 = first_term_list[i_proc]
             term02 = (
                 self.species_charge_list[species_index]
                 * (self.precomputed_array[species_site_system_element_index,
