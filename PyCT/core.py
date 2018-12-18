@@ -1080,7 +1080,7 @@ class Run(object):
          element_type_element_index_list) = process_attributes
 
         first_term_list = self.get_first_terms(
-            self, old_site_system_element_index_list,
+            old_site_system_element_index_list,
             new_site_system_element_index_list, charge_config)
         for i_proc in range(self.n_proc):
             species_site_system_element_index = \
