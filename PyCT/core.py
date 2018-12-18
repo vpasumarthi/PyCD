@@ -18,6 +18,7 @@ import matplotlib.pyplot as plt
 from matplotlib.offsetbox import AnchoredText
 from textwrap import wrap
 import pickle
+from numba import jit
 
 from PyCT.io import read_poscar, generate_report
 from PyCT import constants
@@ -1053,6 +1054,7 @@ class Run(object):
                               element_type_element_index_list)
         return process_attributes
 
+    @jit(nopython=True, parallel=True)
     def get_process_rates(self, process_attributes, charge_config):
         nproc_delg_0_array = np.zeros(self.n_proc)
         nproc_hop_vector_array = np.zeros((self.n_proc, self.neighbors.n_dim))
