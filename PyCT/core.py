@@ -1055,10 +1055,10 @@ class Run(object):
         return process_attributes
 
     @jit(nopython=True, parallel=True)
-    def get_first_terms(self, old_site_system_element_index_list,
+    def get_first_terms(self, first_term_list,
+                        old_site_system_element_index_list,
                         new_site_system_element_index_list,
                         charge_config):
-        first_term_list = np.zeros(self.n_proc)
         for i_proc in range(self.n_proc):
             species_site_system_element_index = \
                                     old_site_system_element_index_list[i_proc]
@@ -1079,7 +1079,9 @@ class Run(object):
          new_site_system_element_index_list,
          element_type_element_index_list) = process_attributes
 
+        initial_first_term_list = np.zeros(self.n_proc)
         first_term_list = self.get_first_terms(
+            initial_first_term_list,
             old_site_system_element_index_list,
             new_site_system_element_index_list, charge_config)
         for i_proc in range(self.n_proc):
