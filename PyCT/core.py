@@ -746,6 +746,24 @@ class System(object):
         return precomputed_array
 
 
+@jit(nopython=True, parallel=True)
+def _get_first_terms(first_term_list, n_proc, precomputed_array,
+                     old_site_system_element_index_list,
+                     new_site_system_element_index_list,
+                     charge_config):
+    for i_proc in range(n_proc):
+        species_site_system_element_index = \
+                                old_site_system_element_index_list[i_proc]
+        neighbor_site_system_element_index = \
+                                new_site_system_element_index_list[i_proc]
+        first_term_list[i_proc] = 2 * np.dot(
+            charge_config[:, 0],
+            (precomputed_array[neighbor_site_system_element_index, :]
+             - precomputed_array[species_site_system_element_index, :]
+             ))
+    return first_term_list
+
+
 class Run(object):
     """defines the subroutines for running Kinetic Monte Carlo and
         computing electrostatic interaction energies"""
@@ -1054,23 +1072,6 @@ class Run(object):
                               element_type_element_index_list)
         return process_attributes
 
-    @jit(nopython=True, parallel=True)
-    def get_first_terms(self, first_term_list, n_proc, precomputed_array,
-                        old_site_system_element_index_list,
-                        new_site_system_element_index_list,
-                        charge_config):
-        for i_proc in range(n_proc):
-            species_site_system_element_index = \
-                                    old_site_system_element_index_list[i_proc]
-            neighbor_site_system_element_index = \
-                                    new_site_system_element_index_list[i_proc]
-            first_term_list[i_proc] = 2 * np.dot(
-                charge_config[:, 0],
-                (precomputed_array[neighbor_site_system_element_index, :]
-                 - precomputed_array[species_site_system_element_index, :]
-                 ))
-        return first_term_list
-
     def get_process_rates(self, process_attributes, charge_config):
         nproc_delg_0_array = np.zeros(self.n_proc)
         nproc_hop_vector_array = np.zeros((self.n_proc, self.neighbors.n_dim))
@@ -1080,7 +1081,7 @@ class Run(object):
          element_type_element_index_list) = process_attributes
 
         initial_first_term_list = np.zeros(self.n_proc)
-        first_term_list = self.get_first_terms(
+        first_term_list = _get_first_terms(
             initial_first_term_list, self.n_proc, self.precomputed_array,
             old_site_system_element_index_list,
             new_site_system_element_index_list, charge_config)
