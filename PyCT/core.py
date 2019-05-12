@@ -1405,12 +1405,14 @@ class Run(object):
                                     dopant_site_shell_based_neighbors, prefix_list):
         element_type_index_list = []
         site_indices_list = []
+        dopant_element_index_list = []
         site_wise_shell_indices = []
         shell_element_type_list = []
         overlap = 0
-        for site_index, shell_neighbors in dopant_site_shell_based_neighbors.items():
+        for dopant_element_index, dopant_site_index in enumerate(dopant_site_shell_based_neighbors):
+            shell_neighbors = dopant_site_shell_based_neighbors[dopant_site_index]
             element_type_index = self.neighbors.get_quantum_indices(
-                                            self.system_size, site_index)[3]
+                                            self.system_size, dopant_site_index)[3]
             element_type = self.material.element_types[element_type_index]
             if element_type_index not in element_type_index_list:
                 element_type_index_list.append(element_type_index)
@@ -1428,19 +1430,22 @@ class Run(object):
                 num_site_indices = len(site_indices)
                 site_wise_shell_indices.extend([self.max_neighbor_shells[element_type] + 1]
                                                * num_site_indices)
+                dopant_element_index_list.extend([-1] * num_site_indices)
                 shell_element_type_list.extend([element_type] * num_site_indices)
             for shell_index, neighbor_indices in enumerate(shell_neighbors):
                 for neighbor_index in neighbor_indices:
                     index = site_indices_list.index(neighbor_index)
                     if shell_index < site_wise_shell_indices[index]:
                         site_wise_shell_indices[index] = shell_index
+                        dopant_element_index_list[index] = dopant_element_index
                         if shell_element_type_list[index] != element_type:
                             overlap = 1
-                        shell_element_type_list[index] = dopant_site_element_types[site_index]
+                        shell_element_type_list[index] = dopant_site_element_types[dopant_site_index]
         dopant_element_type_index_list = [self.dopant_element_types.index(element_type) for element_type in shell_element_type_list]
         site_wise_shell_indices_array = np.hstack(
                                 (np.asarray(site_indices_list)[:, None],
                                  np.asarray(dopant_element_type_index_list)[:, None],
+                                 np.asarray(dopant_element_index_list)[:, None],
                                  np.asarray(site_wise_shell_indices)[:, None]))
         if overlap:
             prefix_list.append(
@@ -1669,7 +1674,7 @@ class Run(object):
                 site_indices_data = np.load(site_indices_file_path)
                 site_indices_list = site_indices_data[:, 0]
                 dopant_element_type_index_list = site_indices_data[:, 1]
-                site_wise_shell_indices = site_indices_data[:, 2]
+                site_wise_shell_indices = site_indices_data[:, 3]
                 dopant_site_indices = {}
                 array_indices = np.where(site_wise_shell_indices == 0)[0]
                 for array_index in array_indices:
