@@ -1388,11 +1388,11 @@ class Run(object):
     def get_system_shell_based_neighbors(self, dopant_site_indices):
         system_shell_based_neighbors = {}
         dopant_site_element_types = {}
-        for dopant_element_type, dopant_site_indices in dopant_site_indices.items():
+        for dopant_element_type, dopant_element_type_site_indices in dopant_site_indices.items():
             dopant_element_type_index = self.dopant_element_types.index(dopant_element_type)
             substitution_element_type = self.substitution_element_types[dopant_element_type_index]
             max_neighbor_shells = self.max_neighbor_shells[substitution_element_type]
-            for dopant_site_index in dopant_site_indices:
+            for dopant_site_index in dopant_element_type_site_indices:
                 system_shell_based_neighbors[dopant_site_index] = (
                     self.get_shell_based_neighbors(dopant_site_index, max_neighbor_shells,
                                                    self.system_size,
