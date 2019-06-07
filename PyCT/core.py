@@ -843,7 +843,6 @@ class Run(object):
                     self.material.element_type_to_species_map[substitution_element_type][0])
                 self.dopant_to_substitution_element_type_map[dopant_element_type] = substitution_element_type
             self.num_dopant_element_types = len(self.dopant_element_types)
-            self.allow_shell_neighbor_overlap = self.doping['allow_overlap']
         else:
             self.doping_active = 0
 
