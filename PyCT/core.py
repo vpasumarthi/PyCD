@@ -1573,7 +1573,7 @@ class Run(object):
                         unique_flag = 1
                         for traj_dopant_site_indices in dopant_site_indices_repo.values():
                             for i_dopant_element_type, i_dopant_site_indices in traj_dopant_site_indices.items():
-                                if set(i_dopant_site_indices) == set(temp_dopant_site_indices[i_dopant_element_type]):
+                                if ((set(i_dopant_site_indices) == set(temp_dopant_site_indices[i_dopant_element_type])) & (i_dopant_element_type != 'X')):
                                     unique_flag = 0
                                     break
                             if not unique_flag:
