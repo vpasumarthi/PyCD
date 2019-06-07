@@ -1293,6 +1293,7 @@ class Run(object):
         return (dopant_site_indices)
 
     def get_doping_analysis(self, dopant_site_indices, prefix_list):
+        min_shell_separation = self.doping['min_shell_separation'][:]
         for dopant_element_type, dopant_type_dopant_site_indices in dopant_site_indices.items():
             map_index = self.dopant_element_types.index(dopant_element_type)
             substitution_element_type = self.substitution_element_types[map_index]
@@ -1331,8 +1332,8 @@ class Run(object):
                                               'dist': inter_dopant_dist,
                                               'shell_separation': shell_separation}
             if num_dopant_sites_inserted > 1:
-                min_shell_separation = min_separation["shell_separation"]
-                prefix_list.append(f'All dopant sites of element type \'{dopant_element_type}\' are separated by at least {min_shell_separation} shells\n')
+                min_shell_separation[map_index] = min_separation["shell_separation"]
+                prefix_list.append(f'All dopant sites of element type \'{dopant_element_type}\' are separated by at least {min_shell_separation[map_index]} shells\n')
 
                 site_coords = np.zeros((num_dopant_sites_inserted, self.neighbors.n_dim))
                 for index, dopant_site_index in enumerate(dopant_type_dopant_site_indices):
@@ -1562,8 +1563,8 @@ class Run(object):
                 dopant_site_indices_repo[traj_index] = {}
                 prefix_list.append(f'Trajectory {traj_index+1}:\n')
                 attempt_number = 1
-                old_min_shell_separation = -1
-                while (old_min_shell_separation < self.doping['min_shell_separation'] and attempt_number <= self.doping['max_attempts']):
+                old_min_shell_separation = [-1] * len(self.doping['num_dopants'])
+                while (np.any(old_min_shell_separation < self.doping['min_shell_separation']) and attempt_number <= self.doping['max_attempts']):
                     temp_sub_prefix_list = []
                     temp_dopant_site_indices = self.get_doping_distribution()
                     (temp_sub_prefix_list, new_min_shell_separation) = self.get_doping_analysis(
