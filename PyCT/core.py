@@ -1225,6 +1225,10 @@ class Run(object):
                     dopant_site_indices[dopant_element_type] = dopant_type_dopant_site_indices
                 dopant_types_inserted += 1
             elif insertion_type == 'gradient':
+                # NOTE: 'available_site_indices' is populated based on an isolated step system size.
+                # NOTE: This implementation is inefficient as overlap between doping regions across interface
+                # are not avoided and can only be eliminated through multiple attempts of doping distribution.
+                # NOTE: However, this implementation is chosen because of its simplicity.
                 gradient_params = self.doping['gradient'][map_index]
                 ld = gradient_params['ld']
                 step_length_ratio = gradient_params['step_length_ratio']
