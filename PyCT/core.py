@@ -1156,14 +1156,12 @@ class Run(object):
                                             available_site_indices, map_index,
                                             num_dopants):
         dopant_type_dopant_site_indices = []
-        substitution_element_type = self.substitution_element_types[map_index]
         num_dopant_sites_inserted = 0
         while (num_dopants - num_dopant_sites_inserted) and available_site_indices:
             dopant_site_index = rnd.choice(available_site_indices)
             dopant_type_dopant_site_indices.append(dopant_site_index)
             num_dopant_sites_inserted += 1
-            num_shells = self.num_shells[substitution_element_type][map_index]
-            num_shells_discard = num_shells * 2
+            num_shells_discard = self.doping['min_shell_separation'][map_index]
             long_neighbor_shell_indices = self.get_shell_based_neighbors(
                             dopant_site_index, num_shells_discard, system_size,
                             system_class_index_list, hop_neighbor_list)
