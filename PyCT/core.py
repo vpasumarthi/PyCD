@@ -1068,7 +1068,7 @@ class Run(object):
                                     new_site_system_element_index_list[i_proc]
             species_index = self.n_proc_species_index_list[i_proc]
             species_proc_index = self.n_proc_species_proc_list[i_proc]
-            term01 = 2 * np.dot(
+            term01 = np.dot(
                 charge_config[:, 0],
                 (self.precomputed_array[neighbor_site_system_element_index, :]
                  - self.precomputed_array[species_site_system_element_index, :]
@@ -1077,13 +1077,10 @@ class Run(object):
                 self.species_charge_list[species_index]
                 * (self.precomputed_array[species_site_system_element_index,
                                           species_site_system_element_index]
-                   + self.precomputed_array[neighbor_site_system_element_index,
-                                            neighbor_site_system_element_index]
-                   - 2 * self.precomputed_array[
-                                       species_site_system_element_index,
-                                       neighbor_site_system_element_index]))
+                   - self.precomputed_array[species_site_system_element_index,
+                                            neighbor_site_system_element_index]))
 
-            delg_0_ewald = (self.species_charge_list[species_index]
+            delg_0_ewald = (2 * self.species_charge_list[species_index]
                             * (term01 + term02))
             class_index = self.system.system_class_index_list[
                                             species_site_system_element_index]
