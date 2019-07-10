@@ -737,6 +737,7 @@ class System(object):
                                             k_vector, axes=([2], [0])))
                                         / k_vector_2)
 
+        precomputed_array -= np.eye(len(precomputed_array)) * np.sqrt(self.alpha / np.pi)
         precomputed_array /= self.material.dielectric_constant
 
         file_name = 'precomputed_array'
