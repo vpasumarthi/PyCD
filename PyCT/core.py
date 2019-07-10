@@ -1715,14 +1715,10 @@ class Run(object):
             current_state_charge_config_prod = np.multiply(
                                     current_state_charge_config.transpose(),
                                     current_state_charge_config)
-            ewald_self = - (
-                        np.sqrt(self.system.alpha / np.pi)
-                        * np.einsum('ii', current_state_charge_config_prod))
             # TODO: How helpful is recording precomputed_array?
-            current_state_energy = (
-                        ewald_neut + ewald_self
-                        + np.sum(np.multiply(current_state_charge_config_prod,
-                                             self.precomputed_array)))
+            current_state_energy = (ewald_neut
+                                    + np.sum(np.multiply(current_state_charge_config_prod,
+                                                         self.precomputed_array)))
             start_path_index = end_path_index = 1
             if output_data['energy']['write']:
                 energy_array[0] = current_state_energy
