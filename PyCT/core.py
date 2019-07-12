@@ -1510,6 +1510,16 @@ class Run(object):
                 occupancy.extend(rnd.sample(species_site_indices, num_species)[:])
         return occupancy
 
+    def base_charge_config(self):
+        # generate lattice charge list
+        unit_cell_charge_list = np.array(
+            [self.material.charge_types[self.ion_charge_type][
+                 self.material.element_types[element_type_index]]
+             for element_type_index in self.material.element_type_index_list])
+        charge_list = np.tile(unit_cell_charge_list, self.system.num_cells)[
+                                                                :, np.newaxis]
+        return charge_list
+
     def charge_config(self, occupancy, dopant_site_indices):
         """Returns charge distribution of the current configuration
         :param occupancy:
