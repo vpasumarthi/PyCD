@@ -1609,6 +1609,9 @@ class Run(object):
             pickle.dump(rnd.getstate(), open(random_state_file_path, 'wb'))
         return None
 
+    def ewald_error_of_accuracy(self):
+        return None
+
     def do_kmc_steps(self, dst_path, output_data, random_seed, compute_mode):
         """Subroutine to run the KMC simulation by specified number
         of steps
