@@ -1527,14 +1527,8 @@ class Run(object):
         :param species_charge_type:
         :return:
         """
-
-        # generate lattice charge list
-        unit_cell_charge_list = np.array(
-            [self.material.charge_types[self.ion_charge_type][
-                 self.material.element_types[element_type_index]]
-             for element_type_index in self.material.element_type_index_list])
-        charge_list = np.tile(unit_cell_charge_list, self.system.num_cells)[
-                                                                :, np.newaxis]
+        
+        charge_list = self.base_charge_config()
 
         if self.doping_active:
             for dopant_element_type, site_indices in dopant_site_indices.items():
