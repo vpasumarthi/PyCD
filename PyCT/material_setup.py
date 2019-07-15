@@ -69,7 +69,7 @@ def material_setup(input_directory_path, system_size, pbc,
             material_info, material_neighbors, hop_neighbor_list,
             cumulative_displacement_list, alpha, n_max, k_max,
             step_system_size_array, step_hop_neighbor_master_list)
-        precomputed_array = material_system.ewald_sum_setup(
+        precomputed_array = material_system.get_precomputed_array(
                                                 input_directory_path)
         precomputed_array_file_path = input_directory_path.joinpath(
                                             'precomputed_array.npy')

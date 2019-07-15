@@ -739,7 +739,7 @@ class System(object):
                                         / k_vector_2)
         return precomputed_array
 
-    def ewald_sum_setup(self, dst_path):
+    def get_precomputed_array(self, dst_path):
         """
 
         :param dst_path:
