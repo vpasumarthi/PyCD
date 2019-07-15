@@ -692,18 +692,11 @@ class System(object):
         self.n_max = n_max
         self.k_max = k_max
 
-    def ewald_sum_setup(self, dst_path):
-        """
+    def pot_r_ewald(self, precomputed_array):
+        """Updates precomputed array with potential energy contributions from
+           real-space"""
 
-        :param dst_path:
-        :return:
-        """
         sqrt_alpha = np.sqrt(self.alpha)
-        alpha4 = 4 * self.alpha
-        fourier_sum_coeff = (2 * np.pi) / self.system_volume
-        precomputed_array = np.zeros((self.neighbors.num_system_elements,
-                                      self.neighbors.num_system_elements))
-
         for i in range(-self.n_max, self.n_max+1):
             for j in range(-self.n_max, self.n_max+1):
                 for k in range(-self.n_max, self.n_max+1):
@@ -721,7 +714,20 @@ class System(object):
                                     precomputed_array[a][b] /= temp_array[a][b]
                     else:
                         precomputed_array /= temp_array
+        return precomputed_array
 
+    def ewald_sum_setup(self, dst_path):
+        """
+
+        :param dst_path:
+        :return:
+        """
+        alpha4 = 4 * self.alpha
+        fourier_sum_coeff = (2 * np.pi) / self.system_volume
+        precomputed_array = np.zeros((self.neighbors.num_system_elements,
+                                      self.neighbors.num_system_elements))
+
+        precomputed_array = self.pot_r_ewald(precomputed_array)
         for i in range(-self.k_max, self.k_max+1):
             for j in range(-self.k_max, self.k_max+1):
                 for k in range(-self.k_max, self.k_max+1):
