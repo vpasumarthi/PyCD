@@ -716,18 +716,13 @@ class System(object):
                         precomputed_array /= temp_array
         return precomputed_array
 
-    def ewald_sum_setup(self, dst_path):
-        """
+    def pot_k_ewald(self, precomputed_array):
+        """Updates precomputed array with potential energy contributions from
+           reciprocal-space"""
 
-        :param dst_path:
-        :return:
-        """
         alpha4 = 4 * self.alpha
         fourier_sum_coeff = (2 * np.pi) / self.system_volume
-        precomputed_array = np.zeros((self.neighbors.num_system_elements,
-                                      self.neighbors.num_system_elements))
 
-        precomputed_array = self.pot_r_ewald(precomputed_array)
         for i in range(-self.k_max, self.k_max+1):
             for j in range(-self.k_max, self.k_max+1):
                 for k in range(-self.k_max, self.k_max+1):
@@ -742,6 +737,19 @@ class System(object):
                                             self.cumulative_displacement_list,
                                             k_vector, axes=([2], [0])))
                                         / k_vector_2)
+        return precomputed_array
+
+    def ewald_sum_setup(self, dst_path):
+        """
+
+        :param dst_path:
+        :return:
+        """
+        precomputed_array = np.zeros((self.neighbors.num_system_elements,
+                                      self.neighbors.num_system_elements))
+
+        precomputed_array = self.pot_r_ewald(precomputed_array)
+        precomputed_array = self.pot_k_ewald(precomputed_array)
 
         precomputed_array -= np.eye(len(precomputed_array)) * np.sqrt(self.alpha / np.pi)
         precomputed_array /= self.material.dielectric_constant
