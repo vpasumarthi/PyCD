@@ -485,12 +485,12 @@ class Neighbors(object):
             num_neighbors=num_neighbors)
         return return_neighbors
 
-    def generate_cumulative_displacement_list(self, dst_path):
+    def generate_pairwise_min_image_vector_data(self, dst_path):
         """Returns cumulative displacement list for the given system size
             printed out to disk
             :param dst_path:
             :return: """
-        cumulative_displacement_list = np.zeros((self.num_system_elements,
+        pairwise_min_image_vector_data = np.zeros((self.num_system_elements,
                                                  self.num_system_elements, 3))
         for center_site_index, center_coord in enumerate(
                                             self.bulk_sites.cell_coordinates):
@@ -506,14 +506,14 @@ class Neighbors(object):
             cumulative_neighbor_image_displacements = np.linalg.norm(
                                 cumulative_neighbor_image_displacement_vectors,
                                 axis=2)
-            cumulative_displacement_list[center_site_index] = \
+            pairwise_min_image_vector_data[center_site_index] = \
                 cumulative_neighbor_image_displacement_vectors[
                     np.arange(self.num_system_elements),
                     np.argmin(cumulative_neighbor_image_displacements, axis=1)]
-        cumulative_displacement_list_file_path = dst_path.joinpath(
-                                            'cumulative_displacement_list.npy')
-        np.save(cumulative_displacement_list_file_path,
-                cumulative_displacement_list)
+        pairwise_min_image_vector_data_file_path = dst_path.joinpath(
+                                            'pairwise_min_image_vector_data.npy')
+        np.save(pairwise_min_image_vector_data_file_path,
+                pairwise_min_image_vector_data)
         return None
 
     def generate_neighbor_list(self, dst_path, local_system_size):
@@ -599,13 +599,13 @@ class System(object):
     unit cells
     """
     def __init__(self, material_info, material_neighbors,
-                 hop_neighbor_list, cumulative_displacement_list, alpha, r_cut,
+                 hop_neighbor_list, pairwise_min_image_vector_data, alpha, r_cut,
                  k_cut, step_system_size_array, step_hop_neighbor_master_list):
         """Return a system object whose size is *size*
         :param material_info:
         :param material_neighbors:
         :param hop_neighbor_list:
-        :param cumulative_displacement_list:
+        :param pairwise_min_image_vector_data:
         :param species_count:
         :param alpha:
         :param n_max:
@@ -626,7 +626,7 @@ class System(object):
         self.system_size = self.neighbors.system_size
         self.num_cells = self.system_size.prod()
 
-        self.cumulative_displacement_list = cumulative_displacement_list
+        self.pairwise_min_image_vector_data = pairwise_min_image_vector_data
 
         # variables for ewald sum
         self.translational_matrix = np.multiply(
@@ -703,7 +703,7 @@ class System(object):
             for j in range(-n_max[1], n_max[1]+1):
                 for k in range(-n_max[2], n_max[2]+1):
                     temp_array = np.linalg.norm(
-                                        (self.cumulative_displacement_list
+                                        (self.pairwise_min_image_vector_data
                                          + np.dot(np.array([i, j, k]),
                                                   self.translational_matrix)),
                                         axis=2)
@@ -739,7 +739,7 @@ class System(object):
                                             fourier_sum_coeff
                                             * np.exp(-k_vector_2 / alpha4)
                                             * np.cos(np.tensordot(
-                                                self.cumulative_displacement_list,
+                                                self.pairwise_min_image_vector_data,
                                                 k_vector, axes=([2], [0])))
                                             / k_vector_2)
         return precomputed_array

@@ -7,7 +7,7 @@ from PyCT.core import Material, Neighbors, System
 
 
 def material_setup(input_directory_path, system_size, pbc,
-                   generate_hop_neighbor_list, generate_cum_disp_list,
+                   generate_hop_neighbor_list, generate_pairwise_min_image_vector_data,
                    generate_precomputed_array):
     """Prepare material class object file, neighbor list and \
         saves to the provided destination path"""
@@ -41,8 +41,8 @@ def material_setup(input_directory_path, system_size, pbc,
                                                   local_system_size)
 
     # generate cumulative displacement list
-    if generate_cum_disp_list:
-        material_neighbors.generate_cumulative_displacement_list(
+    if generate_pairwise_min_image_vector_data:
+        material_neighbors.generate_pairwise_min_image_vector_data(
                                                 input_directory_path)
 
     # Build precomputed array and save to disk
@@ -51,11 +51,11 @@ def material_setup(input_directory_path, system_size, pbc,
         hop_neighbor_list_file_name = input_directory_path.joinpath(
                                             'hop_neighbor_list.npy')
         hop_neighbor_list = np.load(hop_neighbor_list_file_name)[()]
-        cumulative_displacement_list_file_path = (
+        pairwise_min_image_vector_data_file_path = (
                             input_directory_path.joinpath(
-                                'cumulative_displacement_list.npy'))
-        cumulative_displacement_list = np.load(
-                                cumulative_displacement_list_file_path)
+                                'pairwise_min_image_vector_data.npy'))
+        pairwise_min_image_vector_data = np.load(
+                                pairwise_min_image_vector_data_file_path)
 
         alpha = config_params.alpha
         r_cut = config_params.r_cut
@@ -67,7 +67,7 @@ def material_setup(input_directory_path, system_size, pbc,
 
         material_system = System(
             material_info, material_neighbors, hop_neighbor_list,
-            cumulative_displacement_list, alpha, r_cut, k_cut,
+            pairwise_min_image_vector_data, alpha, r_cut, k_cut,
             step_system_size_array, step_hop_neighbor_master_list)
         precomputed_array = material_system.get_precomputed_array(
                                                 input_directory_path)
