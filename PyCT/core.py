@@ -763,10 +763,7 @@ class System(object):
         time_ratio = time_elapsed_r_seconds / time_elapsed_f_seconds
         return (tau_ratio, time_ratio)
 
-    def base_charge_config(self):
-        # Assumption for the accuracy analysis
-        ion_charge_type = 'full'
-
+    def base_charge_config(self, ion_charge_type):
         # generate lattice charge list
         unit_cell_charge_list = np.array(
             [self.material.charge_types[ion_charge_type][
@@ -817,9 +814,10 @@ class System(object):
         prefix_list.append(f'k_max: [{k_max[0]}, {k_max[1]}, {k_max[2]}]\n')
         prefix_list.append(f'number of k-vectors: {num_k_vectors}\n')
 
-        charge_list = self.base_charge_config()
-        charge_list_prod = np.multiply(charge_list.transpose(),
-                                       charge_list)
+        # Assumption for the accuracy analysis
+        ion_charge_type = 'full'
+        charge_list = self.base_charge_config(ion_charge_type)
+        charge_list_prod = np.multiply(charge_list.transpose(), charge_list)
         charge_list_einsum = np.einsum('ii', charge_list_prod)
         x_real = alpha * r_cut
         real_space_cutoff_error = charge_list_einsum * np.sqrt(r_cut / (2 * self.system_volume)) * (np.exp(-x_real**2) / x_real**2)
