@@ -599,7 +599,7 @@ class System(object):
     unit cells
     """
     def __init__(self, material_info, material_neighbors,
-                 hop_neighbor_list, cumulative_displacement_list, alpha, n_max,
+                 hop_neighbor_list, cumulative_displacement_list, alpha, r_cut,
                  k_cut, step_system_size_array, step_hop_neighbor_master_list):
         """Return a system object whose size is *size*
         :param material_info:
@@ -689,17 +689,19 @@ class System(object):
 
         # ewald parameters:
         self.alpha = alpha
-        self.n_max = n_max
+        self.r_cut = r_cut * constants.ANG2BOHR
         self.k_cut = k_cut
 
     def pot_r_ewald(self, precomputed_array):
         """Updates precomputed array with potential energy contributions from
            real-space"""
 
+        # 0.49999 used instead of 0.5 to avoid boundary issues when using r_cut exactly equal to L/2
+        n_max = self.r_cut / self.translational_vector_length - 0.49999
         sqrt_alpha = np.sqrt(self.alpha)
-        for i in range(-self.n_max, self.n_max+1):
-            for j in range(-self.n_max, self.n_max+1):
-                for k in range(-self.n_max, self.n_max+1):
+        for i in range(-n_max[0], n_max[0]+1):
+            for j in range(-n_max[1], n_max[1]+1):
+                for k in range(-n_max[2], n_max[2]+1):
                     temp_array = np.linalg.norm(
                                         (self.cumulative_displacement_list
                                          + np.dot(np.array([i, j, k]),

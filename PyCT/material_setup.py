@@ -58,7 +58,7 @@ def material_setup(input_directory_path, system_size, pbc,
                                 cumulative_displacement_list_file_path)
 
         alpha = config_params.alpha
-        n_max = config_params.n_max
+        r_cut = config_params.r_cut
         k_cut = config_params.k_cut
 
         # dummy variables
@@ -67,7 +67,7 @@ def material_setup(input_directory_path, system_size, pbc,
 
         material_system = System(
             material_info, material_neighbors, hop_neighbor_list,
-            cumulative_displacement_list, alpha, n_max, k_cut,
+            cumulative_displacement_list, alpha, r_cut, k_cut,
             step_system_size_array, step_hop_neighbor_master_list)
         precomputed_array = material_system.get_precomputed_array(
                                                 input_directory_path)
