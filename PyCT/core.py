@@ -600,7 +600,7 @@ class System(object):
     """
     def __init__(self, material_info, material_neighbors,
                  hop_neighbor_list, cumulative_displacement_list, alpha, n_max,
-                 k_max, step_system_size_array, step_hop_neighbor_master_list):
+                 k_cut, step_system_size_array, step_hop_neighbor_master_list):
         """Return a system object whose size is *size*
         :param material_info:
         :param material_neighbors:
@@ -690,7 +690,7 @@ class System(object):
         # ewald parameters:
         self.alpha = alpha
         self.n_max = n_max
-        self.k_max = k_max
+        self.k_cut = k_cut
 
     def pot_r_ewald(self, precomputed_array):
         """Updates precomputed array with potential energy contributions from
@@ -722,21 +722,24 @@ class System(object):
 
         alpha4 = 4 * self.alpha
         fourier_sum_coeff = (2 * np.pi) / self.system_volume
+        k_cut_2 = self.k_cut**2
+        k_max = self.pbc * np.ceil(self.k_cut)
 
-        for i in range(-self.k_max, self.k_max+1):
-            for j in range(-self.k_max, self.k_max+1):
-                for k in range(-self.k_max, self.k_max+1):
+        for i in range(-k_max[0], k_max[0]+1):
+            for j in range(-k_max[1], k_max[1]+1):
+                for k in range(-k_max[2], k_max[2]+1):
                     if not np.all(np.array([i, j, k]) == 0):
                         k_vector = np.dot(np.array([i, j, k]),
                                           self.reciprocal_lattice_matrix)
                         k_vector_2 = np.dot(k_vector, k_vector)
-                        precomputed_array += (
-                                        fourier_sum_coeff
-                                        * np.exp(-k_vector_2 / alpha4)
-                                        * np.cos(np.tensordot(
-                                            self.cumulative_displacement_list,
-                                            k_vector, axes=([2], [0])))
-                                        / k_vector_2)
+                        if k_vector_2 < k_cut_2:
+                            precomputed_array += (
+                                            fourier_sum_coeff
+                                            * np.exp(-k_vector_2 / alpha4)
+                                            * np.cos(np.tensordot(
+                                                self.cumulative_displacement_list,
+                                                k_vector, axes=([2], [0])))
+                                            / k_vector_2)
         return precomputed_array
 
     def get_precomputed_array(self, dst_path):
