@@ -697,7 +697,7 @@ class System(object):
            real-space"""
 
         # 0.49999 used instead of 0.5 to avoid boundary issues when using r_cut exactly equal to L/2
-        n_max = self.r_cut / self.translational_vector_length - 0.49999
+        n_max = np.ceil(self.r_cut / self.translational_vector_length - 0.49999).astype(int)
         sqrt_alpha = np.sqrt(self.alpha)
         for i in range(-n_max[0], n_max[0]+1):
             for j in range(-n_max[1], n_max[1]+1):
