@@ -692,12 +692,10 @@ class System(object):
         self.r_cut = r_cut * constants.ANG2BOHR
         self.k_cut = k_cut  # cutoff magnitude of vector in k-space
 
-    def pot_r_ewald(self, precomputed_array):
+    def pot_r_ewald(self, precomputed_array, n_max):
         """Updates precomputed array with potential energy contributions from
            real-space"""
 
-        # 0.49999 used instead of 0.5 to avoid boundary issues when using r_cut exactly equal to L/2
-        n_max = np.ceil(self.r_cut / self.translational_vector_length - 0.49999).astype(int)
         sqrt_alpha = np.sqrt(self.alpha)
         for i in range(-n_max[0], n_max[0]+1):
             for j in range(-n_max[1], n_max[1]+1):
@@ -751,7 +749,9 @@ class System(object):
         precomputed_array = np.zeros((self.neighbors.num_system_elements,
                                       self.neighbors.num_system_elements))
 
-        precomputed_array = self.pot_r_ewald(precomputed_array)
+        # 0.49999 used instead of 0.5 to avoid boundary issues when using r_cut exactly equal to L/2
+        n_max = np.ceil(self.r_cut / self.translational_vector_length - 0.49999).astype(int)
+        precomputed_array = self.pot_r_ewald(precomputed_array, n_max)
         precomputed_array = self.pot_k_ewald(precomputed_array)
 
         precomputed_array -= np.eye(len(precomputed_array)) * np.sqrt(self.alpha / np.pi)
