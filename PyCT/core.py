@@ -777,6 +777,10 @@ class System(object):
         k_max = np.ones(self.pbc.shape, int)
         num_repeats = int(1E+00)
         (tau_ratio, time_ratio) = self.benchmark_ewald(precomputed_array, num_repeats, n_max, k_max)
+        prefix_list = []
+        prefix_list.append(f'tau_ratio, (tau_r/tau_f): {tau_ratio:.3e}\n')
+        prefix_list.append(f'time_ratio, (time_r/time_f): {time_ratio:.3e}\n')
+        prefix = ''.join(prefix_list)
 
         # 0.49999 used instead of 0.5 to avoid boundary issues when using r_cut exactly equal to L/2
         n_max = np.ceil(self.r_cut / self.translational_vector_length - 0.49999).astype(int)
@@ -790,7 +794,7 @@ class System(object):
 
         file_name = 'precomputed_array'
         print_time_elapsed = 1
-        generate_report(self.start_time, dst_path, file_name, print_time_elapsed)
+        generate_report(self.start_time, dst_path, file_name, print_time_elapsed, prefix)
         return precomputed_array
 
 
