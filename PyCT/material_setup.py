@@ -42,7 +42,7 @@ def material_setup(input_directory_path, system_size, pbc,
 
     # generate cumulative displacement list
     if generate_pairwise_min_image_vector_data:
-        material_neighbors.generate_pairwise_min_image_vector_data(
+        material_neighbors.get_pairwise_min_image_vector_data(
                                                 input_directory_path)
 
     # Build precomputed array and save to disk

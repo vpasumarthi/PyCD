@@ -485,7 +485,7 @@ class Neighbors(object):
             num_neighbors=num_neighbors)
         return return_neighbors
 
-    def generate_pairwise_min_image_vector_data(self, dst_path):
+    def get_pairwise_min_image_vector_data(self, dst_path):
         """Returns cumulative displacement list for the given system size
             printed out to disk
             :param dst_path:
