@@ -786,8 +786,9 @@ class System(object):
 
         s = 2.2912E+00  # results in eps=1.E-03
         r_cut = s / alpha
-        n_cut = s * alpha * self.translational_vector_length / np.pi
-        k_cut = 2 * np.pi / np.dot(self.translational_vector_length, n_cut)
+        volume_averaged_length = np.power(self.system_volume, 1/3)
+        n_cut = s * alpha * volume_averaged_length / np.pi
+        k_cut = 2 * np.pi / (volume_averaged_length * n_cut)
         prefix_list.append(f'r_cut: {r_cut / constants.ANG2BOHR:.3e} angstrom\n')
         prefix_list.append(f'k_cut: {k_cut:.3e}\n')
 
@@ -808,7 +809,6 @@ class System(object):
         charge_list_prod = np.multiply(charge_list.transpose(),
                                        charge_list)
         charge_list_einsum = np.einsum('ii', charge_list_prod)
-        volume_averaged_length = np.power(self.system.system_volume, 1/3)
         x_real = alpha * r_cut
         real_space_cutoff_error = charge_list_einsum * np.sqrt(r_cut / (2 * self.system_volume)) * (np.exp(-x_real**2) / x_real**2)
 
