@@ -710,9 +710,10 @@ class System(object):
 
                     # avoid division for diagonal elements for original simulation cell
                     if np.all(np.array([i, j, k]) == 0):
+                        num_neighbor_pairs = cutoff_neighbor_pairs.sum()
                         np.fill_diagonal(dr_translated, 1)
                     precomputed_array[cutoff_neighbor_pairs] /= dr_translated[cutoff_neighbor_pairs]
-        return precomputed_array
+        return (precomputed_array, num_neighbor_pairs)
 
     def pot_k_ewald(self, precomputed_array, k_max):
         """Updates precomputed array with potential energy contributions from
@@ -747,8 +748,8 @@ class System(object):
         end_time_r = datetime.now()
         time_elapsed_r = end_time_r - start_time_r
         time_elapsed_r_seconds = time_elapsed_r.total_seconds()
-        num_pairs = precomputed_array.size
-        tau_r = time_elapsed_r_seconds / num_repeats / num_pairs
+        num_neighbor_pairs = self.pot_r_ewald(precomputed_array, n_max)[1]
+        tau_r = time_elapsed_r_seconds / num_repeats / num_neighbor_pairs
 
         k_max = np.ones(self.pbc.shape, int)
         start_time_f = datetime.now()
@@ -777,7 +778,7 @@ class System(object):
 
         # 0.49999 used instead of 0.5 to avoid boundary issues when using r_cut exactly equal to L/2
         n_max = np.ceil(self.r_cut / self.translational_vector_length - 0.49999).astype(int)
-        precomputed_array = self.pot_r_ewald(precomputed_array, n_max)
+        precomputed_array = self.pot_r_ewald(precomputed_array, n_max)[0]
 
         k_max = np.ceil(self.k_cut / self.reciprocal_lattice_vector_length).astype(int)  # max number of multiples of reciprocal lattice length vectors
         precomputed_array = self.pot_k_ewald(precomputed_array, k_max)
