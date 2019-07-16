@@ -801,8 +801,7 @@ class System(object):
         prefix_list.append(f'r_cut: {r_cut / constants.ANG2BOHR:.3e} angstrom\n')
         prefix_list.append(f'k_cut: {k_cut:.3e}\n')
 
-        # 0.49999 used instead of 0.5 to avoid boundary issues when using r_cut exactly equal to L/2
-        n_max = np.ceil(self.r_cut / self.translational_vector_length - 0.49999).astype(int)
+        n_max = np.ceil(2 * self.r_cut / self.translational_vector_length).astype(int)
         precomputed_array = self.pot_r_ewald(precomputed_array, n_max)[0]
 
         prefix_list.append(f'n_max: [{n_max[0]}, {n_max[1]}, {n_max[2]}]\n')
