@@ -725,7 +725,7 @@ class System(object):
         alpha4 = 4 * self.alpha
         fourier_sum_coeff = (2 * np.pi) / self.system_volume
         k_cut_2 = self.k_cut**2
-        k_max = self.pbc * np.ceil(self.k_cut)
+        k_max = np.ceil(self.k_cut / self.reciprocal_lattice_vector_length).astype(int)  # max number of multiples of reciprocal lattice length vectors
 
         for i in range(-k_max[0], k_max[0]+1):
             for j in range(-k_max[1], k_max[1]+1):
