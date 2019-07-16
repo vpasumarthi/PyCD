@@ -771,7 +771,9 @@ class System(object):
         """
         precomputed_array = np.zeros((self.neighbors.num_system_elements,
                                       self.neighbors.num_system_elements))
+        # real-space calculation limited to original simulation cell
         n_max = np.zeros(self.pbc.shape, int)
+        # k_max = 1 on all dimensions making (27 - 1) = 26 k-vectors in total
         k_max = np.ones(self.pbc.shape, int)
         num_repeats = int(1E+00)
         (tau_ratio, time_ratio) = self.benchmark_ewald(precomputed_array, num_repeats, n_max, k_max)
