@@ -709,13 +709,10 @@ class System(object):
                                         axis=2)
                     precomputed_array += erfc(sqrt_alpha * dr_translated) / 2
 
+                    # avoid division for diagonal elements for original simulation cell
                     if np.all(np.array([i, j, k]) == 0):
-                        for a in range(self.neighbors.num_system_elements):
-                            for b in range(self.neighbors.num_system_elements):
-                                if a != b:
-                                    precomputed_array[a][b] /= dr_translated[a][b]
-                    else:
-                        precomputed_array /= dr_translated
+                        np.fill_diagonal(dr_translated, 1)
+                    precomputed_array /= dr_translated
         return precomputed_array
 
     def pot_k_ewald(self, precomputed_array):
