@@ -702,20 +702,20 @@ class System(object):
         for i in range(-n_max[0], n_max[0]+1):
             for j in range(-n_max[1], n_max[1]+1):
                 for k in range(-n_max[2], n_max[2]+1):
-                    temp_array = np.linalg.norm(
+                    dr_translated = np.linalg.norm(
                                         (self.pairwise_min_image_vector_data
                                          + np.dot(np.array([i, j, k]),
                                                   self.translational_matrix)),
                                         axis=2)
-                    precomputed_array += erfc(sqrt_alpha * temp_array) / 2
+                    precomputed_array += erfc(sqrt_alpha * dr_translated) / 2
 
                     if np.all(np.array([i, j, k]) == 0):
                         for a in range(self.neighbors.num_system_elements):
                             for b in range(self.neighbors.num_system_elements):
                                 if a != b:
-                                    precomputed_array[a][b] /= temp_array[a][b]
+                                    precomputed_array[a][b] /= dr_translated[a][b]
                     else:
-                        precomputed_array /= temp_array
+                        precomputed_array /= dr_translated
         return precomputed_array
 
     def pot_k_ewald(self, precomputed_array):
