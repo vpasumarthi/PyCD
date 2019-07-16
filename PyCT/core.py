@@ -763,6 +763,18 @@ class System(object):
         time_ratio = time_elapsed_r_seconds / time_elapsed_f_seconds
         return (tau_ratio, time_ratio)
 
+    def base_charge_config(self):
+        # Assumption for the accuracy analysis
+        ion_charge_type = 'full'
+
+        # generate lattice charge list
+        unit_cell_charge_list = np.array(
+            [self.material.charge_types[ion_charge_type][
+                 self.material.element_types[element_type_index]]
+             for element_type_index in self.material.element_type_index_list])
+        charge_list = np.tile(unit_cell_charge_list, self.num_cells)[:, np.newaxis]
+        return charge_list
+
     def get_precomputed_array(self, dst_path):
         """
 
