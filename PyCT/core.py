@@ -714,14 +714,13 @@ class System(object):
                     precomputed_array[cutoff_neighbor_pairs] /= dr_translated[cutoff_neighbor_pairs]
         return precomputed_array
 
-    def pot_k_ewald(self, precomputed_array):
+    def pot_k_ewald(self, precomputed_array, k_max):
         """Updates precomputed array with potential energy contributions from
            reciprocal-space"""
 
         alpha4 = 4 * self.alpha
         fourier_sum_coeff = (2 * np.pi) / self.system_volume
         k_cut_2 = self.k_cut**2
-        k_max = np.ceil(self.k_cut / self.reciprocal_lattice_vector_length).astype(int)  # max number of multiples of reciprocal lattice length vectors
 
         for i in range(-k_max[0], k_max[0]+1):
             for j in range(-k_max[1], k_max[1]+1):
@@ -752,7 +751,9 @@ class System(object):
         # 0.49999 used instead of 0.5 to avoid boundary issues when using r_cut exactly equal to L/2
         n_max = np.ceil(self.r_cut / self.translational_vector_length - 0.49999).astype(int)
         precomputed_array = self.pot_r_ewald(precomputed_array, n_max)
-        precomputed_array = self.pot_k_ewald(precomputed_array)
+
+        k_max = np.ceil(self.k_cut / self.reciprocal_lattice_vector_length).astype(int)  # max number of multiples of reciprocal lattice length vectors
+        precomputed_array = self.pot_k_ewald(precomputed_array, k_max)
 
         precomputed_array -= np.eye(len(precomputed_array)) * np.sqrt(self.alpha / np.pi)
         precomputed_array /= self.material.dielectric_constant
