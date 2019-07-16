@@ -690,7 +690,7 @@ class System(object):
         # ewald parameters:
         self.alpha = alpha
         self.r_cut = r_cut * constants.ANG2BOHR
-        self.k_cut = k_cut
+        self.k_cut = k_cut  # cutoff magnitude of vector in k-space
 
     def pot_r_ewald(self, precomputed_array):
         """Updates precomputed array with potential energy contributions from
