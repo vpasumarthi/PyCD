@@ -774,7 +774,7 @@ class System(object):
         precomputed_array = np.zeros((self.neighbors.num_system_elements,
                                       self.neighbors.num_system_elements))
         num_repeats = int(1E+00)
-        (tau_ratio, time_ratio) = self.time_profile_ewald(precomputed_array, num_repeats)
+        (tau_ratio, time_ratio) = self.benchmark_ewald(precomputed_array, num_repeats)
 
         # 0.49999 used instead of 0.5 to avoid boundary issues when using r_cut exactly equal to L/2
         n_max = np.ceil(self.r_cut / self.translational_vector_length - 0.49999).astype(int)
