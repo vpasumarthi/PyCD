@@ -804,6 +804,19 @@ class System(object):
         prefix_list.append(f'k_max: [{k_max[0]}, {k_max[1]}, {k_max[2]}]\n')
         prefix_list.append(f'number of k-vectors: {num_k_vectors}\n\n')
 
+        charge_list = self.base_charge_config()
+        charge_list_prod = np.multiply(charge_list.transpose(),
+                                       charge_list)
+        charge_list_einsum = np.einsum('ii', charge_list_prod)
+        volume_averaged_length = np.power(self.system.system_volume, 1/3)
+        x_real = alpha * r_cut
+        real_space_cutoff_error = charge_list_einsum * np.sqrt(r_cut / (2 * self.system.system_volume)) * (np.exp(-x_real**2) / x_real**2)
+
+        x_fourier = np.pi * n_cut / (self.system.alpha * volume_averaged_length)
+        fourier_space_cutoff_error = charge_list_einsum * (np.sqrt(n_cut) / (self.system.alpha * volume_averaged_length**2)) * (np.exp(-x_fourier**2) / x_fourier**2)
+        prefix_list.append(f'Real-space cutoff error: {real_space_cutoff_error:.3e}\n')
+        prefix_list.append(f'Fourier-space cutoff error: {fourier_space_cutoff_error:.3e}\n')
+
         precomputed_array -= np.eye(len(precomputed_array)) * np.sqrt(self.alpha / np.pi)
         precomputed_array /= self.material.dielectric_constant
 
