@@ -782,6 +782,9 @@ class System(object):
         prefix_list.append(f'time_ratio, (time_r/time_f): {time_ratio:.3e}\n')
         prefix = ''.join(prefix_list)
 
+        alpha = (tau_ratio * np.pi**3 * self.neighbors.num_system_elements / self.system_volume**2)**(1/6)
+        prefix_list.append(f'alpha: {alpha:.3e}\n')
+
         # 0.49999 used instead of 0.5 to avoid boundary issues when using r_cut exactly equal to L/2
         n_max = np.ceil(self.r_cut / self.translational_vector_length - 0.49999).astype(int)
         precomputed_array = self.pot_r_ewald(precomputed_array, n_max)[0]
