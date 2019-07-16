@@ -740,8 +740,7 @@ class System(object):
                                             / k_vector_2)
         return precomputed_array
 
-    def benchmark_ewald(self, precomputed_array, num_repeats):
-        n_max = np.zeros(self.pbc.shape, int)
+    def benchmark_ewald(self, precomputed_array, num_repeats, n_max, k_max):
         start_time_r = datetime.now()
         for _ in range(num_repeats):
             self.pot_r_ewald(precomputed_array, n_max)
@@ -751,7 +750,6 @@ class System(object):
         num_neighbor_pairs = self.pot_r_ewald(precomputed_array, n_max)[1]
         tau_r = time_elapsed_r_seconds / num_repeats / num_neighbor_pairs
 
-        k_max = np.ones(self.pbc.shape, int)
         start_time_f = datetime.now()
         for _ in range(num_repeats):
             self.pot_k_ewald(precomputed_array, k_max)
@@ -773,8 +771,10 @@ class System(object):
         """
         precomputed_array = np.zeros((self.neighbors.num_system_elements,
                                       self.neighbors.num_system_elements))
+        n_max = np.zeros(self.pbc.shape, int)
+        k_max = np.ones(self.pbc.shape, int)
         num_repeats = int(1E+00)
-        (tau_ratio, time_ratio) = self.benchmark_ewald(precomputed_array, num_repeats)
+        (tau_ratio, time_ratio) = self.benchmark_ewald(precomputed_array, num_repeats, n_max, k_max)
 
         # 0.49999 used instead of 0.5 to avoid boundary issues when using r_cut exactly equal to L/2
         n_max = np.ceil(self.r_cut / self.translational_vector_length - 0.49999).astype(int)
