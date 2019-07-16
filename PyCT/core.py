@@ -780,10 +780,16 @@ class System(object):
         prefix_list = []
         prefix_list.append(f'tau_ratio, (tau_r/tau_f): {tau_ratio:.3e}\n')
         prefix_list.append(f'time_ratio, (time_r/time_f): {time_ratio:.3e}\n')
-        prefix = ''.join(prefix_list)
 
         alpha = (tau_ratio * np.pi**3 * self.neighbors.num_system_elements / self.system_volume**2)**(1/6)
         prefix_list.append(f'alpha: {alpha:.3e}\n')
+
+        s = 2.2912E+00  # results in eps=1.E-03
+        r_cut = s / alpha
+        n_cut = s * alpha * self.translational_vector_length / np.pi
+        k_cut = 2 * np.pi / np.dot(self.translational_vector_length, n_cut)
+        prefix_list.append(f'r_cut: {r_cut / constants.ANG2BOHR:.3e} angstrom\n')
+        prefix_list.append(f'k_cut: {k_cut:.3e}\n')
 
         # 0.49999 used instead of 0.5 to avoid boundary issues when using r_cut exactly equal to L/2
         n_max = np.ceil(self.r_cut / self.translational_vector_length - 0.49999).astype(int)
@@ -797,6 +803,7 @@ class System(object):
 
         file_name = 'precomputed_array'
         print_time_elapsed = 1
+        prefix = ''.join(prefix_list)
         generate_report(self.start_time, dst_path, file_name, print_time_elapsed, prefix)
         return precomputed_array
 
