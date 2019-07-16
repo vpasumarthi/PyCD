@@ -758,7 +758,7 @@ class System(object):
         end_time_f = datetime.now()
         time_elapsed_f = end_time_f - start_time_f
         time_elapsed_f_seconds = time_elapsed_f.total_seconds()
-        num_k_vectors = np.prod(2 * k_max + 1)
+        num_k_vectors = np.prod(2 * k_max + 1) - 1
         tau_f = time_elapsed_f_seconds / num_repeats / self.neighbors.num_system_elements / num_k_vectors
 
         tau_ratio = tau_r / tau_f
