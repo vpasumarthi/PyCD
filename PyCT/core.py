@@ -707,12 +707,13 @@ class System(object):
                                          + np.dot(np.array([i, j, k]),
                                                   self.translational_matrix)),
                                         axis=2)
-                    precomputed_array += erfc(sqrt_alpha * dr_translated) / 2
+                    cutoff_neighbor_pairs = dr_translated < self.r_cut
+                    precomputed_array[cutoff_neighbor_pairs] += erfc(sqrt_alpha * dr_translated[cutoff_neighbor_pairs]) / 2
 
                     # avoid division for diagonal elements for original simulation cell
                     if np.all(np.array([i, j, k]) == 0):
                         np.fill_diagonal(dr_translated, 1)
-                    precomputed_array /= dr_translated
+                    precomputed_array[cutoff_neighbor_pairs] /= dr_translated[cutoff_neighbor_pairs]
         return precomputed_array
 
     def pot_k_ewald(self, precomputed_array):
