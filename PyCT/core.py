@@ -791,22 +791,29 @@ class System(object):
         x_real_optimal = fsolve(real_space_cutoff_error, x_real_initial_guess)[0]
         return (x_real_optimal, charge_list_einsum)
 
-    def get_cutoff_parameters(self, alpha, charge_list_einsum, x_real):
+    def get_cutoff_parameters(self, alpha, charge_list_einsum, x_real, prefix_list):
         r_cut = x_real / alpha
         volume_derived_length = np.power(self.system_volume, 1/3)
         n_cut = x_real * alpha * volume_derived_length / np.pi
 
+        if np.isreal(self.r_cut):
+            prefix_list.append(f'r_cut: {r_cut / constants.ANG2BOHR:.3e} angstrom (user-specified)\n')
+        else:
+            prefix_list.append(f'r_cut: {r_cut / constants.ANG2BOHR:.3e} angstrom (optimal)\n')
+
         if np.isreal(self.k_cut):
             k_cut = self.k_cut
             n_cut = 2 * np.pi / (volume_derived_length * k_cut)
+            prefix_list.append(f'k_cut: {k_cut:.3e} (user-specified)\n\n')
         else:
             k_cut = 2 * np.pi / (volume_derived_length * n_cut)
+            prefix_list.append(f'k_cut: {k_cut:.3e} (optimal value)\n\n')
 
         real_space_cutoff_error = charge_list_einsum * np.sqrt(r_cut / (2 * self.system_volume)) * (np.exp(-x_real**2) / x_real**2)
 
         x_fourier = np.pi * n_cut / (alpha * volume_derived_length)
         fourier_space_cutoff_error = charge_list_einsum * (np.sqrt(n_cut) / (alpha * volume_derived_length**2)) * (np.exp(-x_fourier**2) / x_fourier**2)
-        return (r_cut, k_cut, real_space_cutoff_error, fourier_space_cutoff_error)
+        return (r_cut, k_cut, real_space_cutoff_error, fourier_space_cutoff_error, prefix_list)
 
     def get_ewald_parameters(self, prefix_list):
 
@@ -836,7 +843,7 @@ class System(object):
 
         if np.isreal(self.alpha):
             alpha = self.alpha
-            prefix_list.append(f'alpha: {alpha:.3e} (user-provided)\n')
+            prefix_list.append(f'alpha: {alpha:.3e} (user-specified)\n')
         else:
             alpha = (tau_ratio * np.pi**3 / self.system_volume**2)**(1/6)
             prefix_list.append(f'alpha: {alpha:.3e} (optimal value)\n')
@@ -848,10 +855,8 @@ class System(object):
             x_real = self.r_cut * alpha
         else:
             x_real = x_real_optimal
-        (r_cut, k_cut, real_space_cutoff_error, fourier_space_cutoff_error) = self.get_cutoff_parameters(alpha, charge_list_einsum, x_real)
+        (r_cut, k_cut, real_space_cutoff_error, fourier_space_cutoff_error, prefix_list) = self.get_cutoff_parameters(alpha, charge_list_einsum, x_real, prefix_list)
 
-        prefix_list.append(f'r_cut: {r_cut / constants.ANG2BOHR:.3e} angstrom\n')
-        prefix_list.append(f'k_cut: {k_cut:.3e}\n\n')
         prefix_list.append(f'Real-space cutoff error: {real_space_cutoff_error:.3e}\n')
         prefix_list.append(f'Fourier-space cutoff error: {fourier_space_cutoff_error:.3e}\n\n')
 
