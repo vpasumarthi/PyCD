@@ -824,23 +824,26 @@ class System(object):
         """
         prefix_list = []
         (ewald_parameters, prefix_list) = self.get_ewald_parameters(prefix_list)
+        alpha = ewald_parameters['alpha']
+        r_cut = ewald_parameters['r_cut']
+        k_cut = ewald_parameters['k_cut']
 
         precomputed_array = np.zeros((self.neighbors.num_system_elements,
                                       self.neighbors.num_system_elements))
 
-        n_max = np.round(self.r_cut / self.translational_vector_length).astype(int)
+        n_max = np.round(r_cut / self.translational_vector_length).astype(int)
         precomputed_array = self.pot_r_ewald(precomputed_array, n_max)[0]
 
         prefix_list.append(f'n_max: [{n_max[0]}, {n_max[1]}, {n_max[2]}]\n')
 
-        k_max = np.ceil(self.k_cut / self.reciprocal_lattice_vector_length).astype(int)  # max number of multiples of reciprocal lattice length vectors
+        k_max = np.ceil(k_cut / self.reciprocal_lattice_vector_length).astype(int)  # max number of multiples of reciprocal lattice length vectors
         num_k_vectors = np.prod(2 * k_max + 1) - 1
         precomputed_array = self.pot_k_ewald(precomputed_array, k_max)
 
         prefix_list.append(f'k_max: [{k_max[0]}, {k_max[1]}, {k_max[2]}]\n')
         prefix_list.append(f'number of k-vectors: {num_k_vectors}\n')
 
-        precomputed_array -= np.eye(len(precomputed_array)) * np.sqrt(self.alpha / np.pi)
+        precomputed_array -= np.eye(len(precomputed_array)) * np.sqrt(alpha / np.pi)
         precomputed_array /= self.material.dielectric_constant
 
         file_name = 'precomputed_array'
