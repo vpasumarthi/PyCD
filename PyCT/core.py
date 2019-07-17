@@ -690,7 +690,10 @@ class System(object):
 
         # ewald parameters:
         self.alpha = alpha
-        self.r_cut = r_cut * constants.ANG2BOHR
+        if np.isreal(r_cut):
+            self.r_cut = r_cut * constants.ANG2BOHR
+        else:
+            self.r_cut = r_cut
         self.k_cut = k_cut  # cutoff magnitude of vector in k-space
         self.err_tol = err_tol
 
