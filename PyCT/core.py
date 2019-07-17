@@ -823,8 +823,8 @@ class System(object):
 
         err_tol = 1E-03
         x_real_initial_guess = 0.5
-        (x_real_optimal, charge_list_einsum) = self.get_cutoff_parameters(alpha, err_tol, x_real_initial_guess)
-        (r_cut, k_cut, real_space_cutoff_error, fourier_space_cutoff_error) = self.accuracy_defined_ewald_parameters(alpha, charge_list_einsum, x_real_optimal)
+        (x_real_optimal, charge_list_einsum) = self.optimize_real_space_cutoff_error(alpha, err_tol, x_real_initial_guess)
+        (r_cut, k_cut, real_space_cutoff_error, fourier_space_cutoff_error) = self.get_cutoff_parameters(alpha, charge_list_einsum, x_real_optimal)
 
         pdb.set_trace()
         prefix_list.append(f'r_cut: {r_cut / constants.ANG2BOHR:.3e} angstrom\n')
