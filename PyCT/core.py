@@ -763,7 +763,7 @@ class System(object):
         time_ratio = time_elapsed_r_seconds / time_elapsed_f_seconds
         return (tau_ratio, time_ratio)
 
-    def base_charge_config(self, ion_charge_type):
+    def base_charge_config_for_accuracy_analysis(self, ion_charge_type):
         # generate lattice charge list
         unit_cell_charge_list = np.array(
             [self.material.charge_types[ion_charge_type][
@@ -800,7 +800,7 @@ class System(object):
 
         # Assumption for the accuracy analysis
         ion_charge_type = 'full'
-        charge_list = self.base_charge_config(ion_charge_type)
+        charge_list = self.base_charge_config_for_accuracy_analysis(ion_charge_type)
         charge_list_prod = np.multiply(charge_list.transpose(), charge_list)
         charge_list_einsum = np.einsum('ii', charge_list_prod)
         x_real = alpha * r_cut
