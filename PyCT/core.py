@@ -1720,24 +1720,6 @@ class Run(object):
             pickle.dump(rnd.getstate(), open(random_state_file_path, 'wb'))
         return None
 
-    def ewald_error_of_accuracy(self):
-        charge_list = self.base_charge_config()
-        charge_list_prod = np.multiply(charge_list.transpose(),
-                                       charge_list)
-        charge_list_einsum = np.einsum('ii', charge_list_prod)
-
-        volume_averaged_length = np.power(self.system.system_volume, 1/3)
-        r_cut = (2 * self.system.n_max + 1) * min(self.system.translational_vector_length) / 2
-        x_real = self.system.alpha * r_cut
-
-        k_cut = (2 * self.system.k_max + 1) * min(self.system.reciprocal_lattice_vector_length) / 2
-        n_cut = 2 * np.pi / (volume_averaged_length * k_cut)
-        x_fourier = np.pi * n_cut / (self.system.alpha * volume_averaged_length)
-
-        real_space_cutoff_error = charge_list_einsum * np.sqrt(r_cut / (2 * self.system.system_volume)) * (np.exp(-x_real**2) / x_real**2)
-        fourier_space_cutoff_error = charge_list_einsum * (np.sqrt(n_cut) / (self.system.alpha * volume_averaged_length**2)) * (np.exp(-x_fourier**2) / x_fourier**2)
-        return (real_space_cutoff_error, fourier_space_cutoff_error)
-
     def do_kmc_steps(self, dst_path, output_data, random_seed, compute_mode):
         """Subroutine to run the KMC simulation by specified number
         of steps
