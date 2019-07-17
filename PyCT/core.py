@@ -829,7 +829,7 @@ class System(object):
         prefix_list.append(f'tau_ratio, (tau_r/tau_f): {tau_ratio:.3e}\n')
         prefix_list.append(f'time_ratio, (time_r/time_f): {time_ratio:.3e}\n')
 
-        if np.real(self.alpha):
+        if np.isreal(self.alpha):
             alpha = self.alpha
             prefix_list.append(f'alpha: {alpha:.3e} (user-provided)\n')
         else:
