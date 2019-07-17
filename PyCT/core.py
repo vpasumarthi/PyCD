@@ -757,7 +757,7 @@ class System(object):
         time_elapsed_f = end_time_f - start_time_f
         time_elapsed_f_seconds = time_elapsed_f.total_seconds()
         num_k_vectors = np.prod(2 * k_max + 1) - 1
-        tau_f = time_elapsed_f_seconds / num_repeats / self.neighbors.num_system_elements / num_k_vectors
+        tau_f = time_elapsed_f_seconds / num_repeats / self.neighbors.num_system_elements**2 / num_k_vectors
 
         tau_ratio = tau_r / tau_f
         time_ratio = time_elapsed_r_seconds / time_elapsed_f_seconds
@@ -790,7 +790,7 @@ class System(object):
         prefix_list.append(f'tau_ratio, (tau_r/tau_f): {tau_ratio:.3e}\n')
         prefix_list.append(f'time_ratio, (time_r/time_f): {time_ratio:.3e}\n')
 
-        alpha = (tau_ratio * np.pi**3 * self.neighbors.num_system_elements / self.system_volume**2)**(1/6)
+        alpha = (tau_ratio * np.pi**3 / self.system_volume**2)**(1/6)
         prefix_list.append(f'alpha: {alpha:.3e}\n')
 
         s = 2.2912E+00  # results in eps=1.E-03
