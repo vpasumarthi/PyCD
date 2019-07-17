@@ -827,7 +827,7 @@ class System(object):
         (tau_ratio, time_ratio) = self.benchmark_ewald(benchmark_precomputed_array,
                                                        num_repeats, benchmark_parameters)
         prefix_list.append(f'tau_ratio, (tau_r/tau_f): {tau_ratio:.3e}\n')
-        prefix_list.append(f'time_ratio, (time_r/time_f): {time_ratio:.3e}\n')
+        prefix_list.append(f'time_ratio, (time_r/time_f): {time_ratio:.3e}\n\n')
 
         if np.isreal(self.alpha):
             alpha = self.alpha
@@ -841,7 +841,7 @@ class System(object):
         (r_cut, k_cut, real_space_cutoff_error, fourier_space_cutoff_error) = self.get_cutoff_parameters(alpha, charge_list_einsum, x_real_optimal)
 
         prefix_list.append(f'r_cut: {r_cut / constants.ANG2BOHR:.3e} angstrom\n')
-        prefix_list.append(f'k_cut: {k_cut:.3e}\n')
+        prefix_list.append(f'k_cut: {k_cut:.3e}\n\n')
         prefix_list.append(f'Real-space cutoff error: {real_space_cutoff_error:.3e}\n')
         prefix_list.append(f'Fourier-space cutoff error: {fourier_space_cutoff_error:.3e}\n\n')
 
@@ -875,7 +875,7 @@ class System(object):
         precomputed_array = self.pot_k_ewald(precomputed_array, k_max, alpha, k_cut)
 
         prefix_list.append(f'k_max: [{k_max[0]}, {k_max[1]}, {k_max[2]}]\n')
-        prefix_list.append(f'number of k-vectors: {num_k_vectors}\n')
+        prefix_list.append(f'number of k-vectors: {num_k_vectors}\n\n')
 
         precomputed_array -= np.eye(len(precomputed_array)) * np.sqrt(alpha / np.pi)
         precomputed_array /= self.material.dielectric_constant
