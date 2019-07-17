@@ -795,7 +795,12 @@ class System(object):
         r_cut = x_real / alpha
         volume_derived_length = np.power(self.system_volume, 1/3)
         n_cut = x_real * alpha * volume_derived_length / np.pi
-        k_cut = 2 * np.pi / (volume_derived_length * n_cut)
+
+        if np.isreal(self.k_cut):
+            k_cut = self.k_cut
+            n_cut = 2 * np.pi / (volume_derived_length * k_cut)
+        else:
+            k_cut = 2 * np.pi / (volume_derived_length * n_cut)
 
         real_space_cutoff_error = charge_list_einsum * np.sqrt(r_cut / (2 * self.system_volume)) * (np.exp(-x_real**2) / x_real**2)
 
