@@ -813,7 +813,10 @@ class System(object):
 
         x_fourier = np.pi * n_cut / (alpha * volume_derived_length)
         fourier_space_cutoff_error = charge_list_einsum * (np.sqrt(n_cut) / (alpha * volume_derived_length**2)) * (np.exp(-x_fourier**2) / x_fourier**2)
-        return (r_cut, k_cut, real_space_cutoff_error, fourier_space_cutoff_error, prefix_list)
+
+        prefix_list.append(f'Real-space cutoff error: {real_space_cutoff_error:.3e}\n')
+        prefix_list.append(f'Fourier-space cutoff error: {fourier_space_cutoff_error:.3e}\n\n')
+        return (r_cut, k_cut, prefix_list)
 
     def get_ewald_parameters(self, prefix_list):
 
@@ -855,10 +858,7 @@ class System(object):
             x_real = self.r_cut * alpha
         else:
             x_real = x_real_optimal
-        (r_cut, k_cut, real_space_cutoff_error, fourier_space_cutoff_error, prefix_list) = self.get_cutoff_parameters(alpha, charge_list_einsum, x_real, prefix_list)
-
-        prefix_list.append(f'Real-space cutoff error: {real_space_cutoff_error:.3e}\n')
-        prefix_list.append(f'Fourier-space cutoff error: {fourier_space_cutoff_error:.3e}\n\n')
+        (r_cut, k_cut, prefix_list) = self.get_cutoff_parameters(alpha, charge_list_einsum, x_real, prefix_list)
 
         ewald_parameters = {'alpha': alpha,
                             'r_cut': r_cut,
