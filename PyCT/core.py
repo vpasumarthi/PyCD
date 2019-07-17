@@ -742,7 +742,13 @@ class System(object):
                                             / k_vector_2)
         return precomputed_array
 
-    def benchmark_ewald(self, precomputed_array, num_repeats, n_max, k_max, alpha, r_cut, k_cut):
+    def benchmark_ewald(self, precomputed_array, num_repeats, benchmark_parameters):
+        n_max = benchmark_parameters['n_max']
+        k_max = benchmark_parameters['k_max']
+        alpha = benchmark_parameters['alpha']
+        r_cut = benchmark_parameters['r_cut']
+        k_cut = benchmark_parameters['k_cut']
+
         start_time_r = datetime.now()
         for _ in range(num_repeats):
             self.pot_r_ewald(precomputed_array, n_max, alpha, r_cut)
@@ -803,19 +809,23 @@ class System(object):
                                                 self.neighbors.num_system_elements))
 
         # real-space calculation limited to original simulation cell
-        n_max = np.zeros(self.pbc.shape, int)
+        n_max_benchmark = np.zeros(self.pbc.shape, int)
         # k_max = 1 on all dimensions making (27 - 1) = 26 k-vectors in total
-        k_max = np.ones(self.pbc.shape, int)
-        alpha = 0.5
+        k_max_benchmark = np.ones(self.pbc.shape, int)
+        alpha_benchmark = 0.5
         # slightly less than half of minimum box length
-        r_cut = min(self.translational_vector_length) / 2.1
+        r_cut_benchmark = min(self.translational_vector_length) / 2.1
         # maximum reciprocal box length
-        k_cut = max(self.reciprocal_lattice_vector_length)
+        k_cut_benchmark = max(self.reciprocal_lattice_vector_length)
+        benchmark_parameters = {'n_max': n_max_benchmark,
+                                'k_max': k_max_benchmark,
+                                'alpha': alpha_benchmark,
+                                'r_cut': r_cut_benchmark,
+                                'k_cut': k_cut_benchmark}
         num_repeats = int(1E+00)
 
         (tau_ratio, time_ratio) = self.benchmark_ewald(benchmark_precomputed_array,
-                                                       num_repeats, n_max, k_max, alpha,
-                                                       r_cut, k_cut)
+                                                       num_repeats, benchmark_parameters)
         prefix_list.append(f'tau_ratio, (tau_r/tau_f): {tau_ratio:.3e}\n')
         prefix_list.append(f'time_ratio, (time_r/time_f): {time_ratio:.3e}\n')
 
