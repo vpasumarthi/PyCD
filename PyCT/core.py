@@ -780,7 +780,7 @@ class System(object):
         charge_list = np.tile(unit_cell_charge_list, self.num_cells)[:, np.newaxis]
         return charge_list
 
-    def optimize_real_space_cutoff_error(self, alpha, x_real_initial_guess):
+    def minimize_real_space_cutoff_error(self, alpha, x_real_initial_guess):
         # Assumption for the accuracy analysis
         ion_charge_type = 'full'
         charge_list = self.base_charge_config_for_accuracy_analysis(ion_charge_type)
@@ -837,7 +837,7 @@ class System(object):
             prefix_list.append(f'alpha: {alpha:.3e} (optimal value)\n')
 
         x_real_initial_guess = 0.5
-        (x_real_optimal, charge_list_einsum) = self.optimize_real_space_cutoff_error(alpha, x_real_initial_guess)
+        (x_real_optimal, charge_list_einsum) = self.minimize_real_space_cutoff_error(alpha, x_real_initial_guess)
         (r_cut, k_cut, real_space_cutoff_error, fourier_space_cutoff_error) = self.get_cutoff_parameters(alpha, charge_list_einsum, x_real_optimal)
 
         prefix_list.append(f'r_cut: {r_cut / constants.ANG2BOHR:.3e} angstrom\n')
