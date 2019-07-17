@@ -601,7 +601,7 @@ class System(object):
     """
     def __init__(self, material_info, material_neighbors,
                  hop_neighbor_list, pairwise_min_image_vector_data, alpha, r_cut,
-                 k_cut, step_system_size_array, step_hop_neighbor_master_list):
+                 k_cut, err_tol, step_system_size_array, step_hop_neighbor_master_list):
         """Return a system object whose size is *size*
         :param material_info:
         :param material_neighbors:
@@ -692,6 +692,7 @@ class System(object):
         self.alpha = alpha
         self.r_cut = r_cut * constants.ANG2BOHR
         self.k_cut = k_cut  # cutoff magnitude of vector in k-space
+        self.err_tol = err_tol
 
     def pot_r_ewald(self, precomputed_array, n_max, alpha, r_cut):
         """Updates precomputed array with potential energy contributions from
@@ -773,14 +774,14 @@ class System(object):
         charge_list = np.tile(unit_cell_charge_list, self.num_cells)[:, np.newaxis]
         return charge_list
 
-    def optimize_real_space_cutoff_error(self, alpha, err_tol, x_real_initial_guess):
+    def optimize_real_space_cutoff_error(self, alpha, x_real_initial_guess):
         # Assumption for the accuracy analysis
         ion_charge_type = 'full'
         charge_list = self.base_charge_config_for_accuracy_analysis(ion_charge_type)
         charge_list_prod = np.multiply(charge_list.transpose(), charge_list)
         charge_list_einsum = np.einsum('ii', charge_list_prod)
 
-        real_space_cutoff_error = lambda x_real: charge_list_einsum * np.sqrt(x_real / alpha / (2 * self.system_volume)) * (np.exp(-x_real**2) / x_real**2) - err_tol
+        real_space_cutoff_error = lambda x_real: charge_list_einsum * np.sqrt(x_real / alpha / (2 * self.system_volume)) * (np.exp(-x_real**2) / x_real**2) - self.err_tol
         x_real_optimal = fsolve(real_space_cutoff_error, x_real_initial_guess)[0]
         return (x_real_optimal, charge_list_einsum)
 
@@ -821,12 +822,10 @@ class System(object):
         alpha = (tau_ratio * np.pi**3 / self.system_volume**2)**(1/6)
         prefix_list.append(f'alpha: {alpha:.3e}\n')
 
-        err_tol = 1E-03
         x_real_initial_guess = 0.5
-        (x_real_optimal, charge_list_einsum) = self.optimize_real_space_cutoff_error(alpha, err_tol, x_real_initial_guess)
+        (x_real_optimal, charge_list_einsum) = self.optimize_real_space_cutoff_error(alpha, x_real_initial_guess)
         (r_cut, k_cut, real_space_cutoff_error, fourier_space_cutoff_error) = self.get_cutoff_parameters(alpha, charge_list_einsum, x_real_optimal)
 
-        pdb.set_trace()
         prefix_list.append(f'r_cut: {r_cut / constants.ANG2BOHR:.3e} angstrom\n')
         prefix_list.append(f'k_cut: {k_cut:.3e}\n')
         prefix_list.append(f'Real-space cutoff error: {real_space_cutoff_error:.3e}\n')
