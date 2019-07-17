@@ -838,7 +838,12 @@ class System(object):
 
         x_real_initial_guess = 0.5
         (x_real_optimal, charge_list_einsum) = self.minimize_real_space_cutoff_error(alpha, x_real_initial_guess)
-        (r_cut, k_cut, real_space_cutoff_error, fourier_space_cutoff_error) = self.get_cutoff_parameters(alpha, charge_list_einsum, x_real_optimal)
+
+        if np.isreal(self.r_cut):
+            x_real = self.r_cut * alpha
+        else:
+            x_real = x_real_optimal
+        (r_cut, k_cut, real_space_cutoff_error, fourier_space_cutoff_error) = self.get_cutoff_parameters(alpha, charge_list_einsum, x_real)
 
         prefix_list.append(f'r_cut: {r_cut / constants.ANG2BOHR:.3e} angstrom\n')
         prefix_list.append(f'k_cut: {k_cut:.3e}\n\n')
