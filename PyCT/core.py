@@ -829,8 +829,12 @@ class System(object):
         prefix_list.append(f'tau_ratio, (tau_r/tau_f): {tau_ratio:.3e}\n')
         prefix_list.append(f'time_ratio, (time_r/time_f): {time_ratio:.3e}\n')
 
-        alpha = (tau_ratio * np.pi**3 / self.system_volume**2)**(1/6)
-        prefix_list.append(f'alpha: {alpha:.3e}\n')
+        if np.real(self.alpha):
+            alpha = self.alpha
+            prefix_list.append(f'alpha: {alpha:.3e} (user-provided)\n')
+        else:
+            alpha = (tau_ratio * np.pi**3 / self.system_volume**2)**(1/6)
+            prefix_list.append(f'alpha: {alpha:.3e} (optimal value)\n')
 
         x_real_initial_guess = 0.5
         (x_real_optimal, charge_list_einsum) = self.optimize_real_space_cutoff_error(alpha, x_real_initial_guess)
