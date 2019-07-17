@@ -14,6 +14,7 @@ import pdb
 import numpy as np
 from scipy.special import erfc
 from scipy.stats import linregress
+from scipy.optimize import fsolve
 import matplotlib.pyplot as plt
 from matplotlib.offsetbox import AnchoredText
 from textwrap import wrap
@@ -815,7 +816,10 @@ class System(object):
         alpha = (tau_ratio * np.pi**3 / self.system_volume**2)**(1/6)
         prefix_list.append(f'alpha: {alpha:.3e}\n')
 
-        s = 2.2912E+00  # results in eps=1.E-03
+        err_tol = 1E-03
+        base_error_func = lambda x : err_tol - np.exp(-x**2) / x**2
+        s_initial_guess = 0.5
+        s = fsolve(base_error_func, s_initial_guess)[0]
         (r_cut, k_cut, real_space_cutoff_error, fourier_space_cutoff_error) = self.accuracy_defined_ewald_parameters(alpha, s)
 
         prefix_list.append(f'r_cut: {r_cut / constants.ANG2BOHR:.3e} angstrom\n')
