@@ -63,11 +63,11 @@ def material_run(dst_path):
         hop_neighbor_list_file_name = input_directory_path.joinpath(
                                             'hop_neighbor_list.npy')
         hop_neighbor_list = np.load(hop_neighbor_list_file_name)[()]
-        cumulative_displacement_list_file_path = (
+        pairwise_min_image_vector_data_file_path = (
                             input_directory_path.joinpath(
-                                'cumulative_displacement_list.npy'))
-        cumulative_displacement_list = np.load(
-                                cumulative_displacement_list_file_path)
+                                'pairwise_min_image_vector_data.npy'))
+        pairwise_min_image_vector_data = np.load(
+                                pairwise_min_image_vector_data_file_path)
         alpha = config_params.alpha
         n_max = config_params.n_max
         k_max = config_params.k_max
@@ -121,7 +121,7 @@ def material_run(dst_path):
 
         material_system = System(
             material_info, material_neighbors, hop_neighbor_list,
-            cumulative_displacement_list, alpha, n_max, k_max,
+            pairwise_min_image_vector_data, alpha, n_max, k_max,
             step_system_size_array, step_hop_neighbor_master_list)
 
         # Load precomputed array to instantiate run class
