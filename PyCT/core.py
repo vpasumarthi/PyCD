@@ -784,7 +784,7 @@ class System(object):
         x_real_optimal = fsolve(real_space_cutoff_error, x_real_initial_guess)[0]
         return (x_real_optimal, charge_list_einsum)
 
-    def accuracy_defined_ewald_parameters(self, alpha, charge_list_einsum, x_real):
+    def get_cutoff_parameters(self, alpha, charge_list_einsum, x_real):
         r_cut = x_real / alpha
         volume_averaged_length = np.power(self.system_volume, 1/3)
         n_cut = x_real * alpha * volume_averaged_length / np.pi
@@ -823,7 +823,7 @@ class System(object):
 
         err_tol = 1E-03
         x_real_initial_guess = 0.5
-        (x_real_optimal, charge_list_einsum) = self.optimize_real_space_cutoff_error(alpha, err_tol, x_real_initial_guess)
+        (x_real_optimal, charge_list_einsum) = self.get_cutoff_parameters(alpha, err_tol, x_real_initial_guess)
         (r_cut, k_cut, real_space_cutoff_error, fourier_space_cutoff_error) = self.accuracy_defined_ewald_parameters(alpha, charge_list_einsum, x_real_optimal)
 
         pdb.set_trace()
