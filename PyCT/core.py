@@ -778,14 +778,14 @@ class System(object):
         :param dst_path:
         :return:
         """
-        precomputed_array = np.zeros((self.neighbors.num_system_elements,
-                                      self.neighbors.num_system_elements))
+        benchmark_precomputed_array = np.zeros((self.neighbors.num_system_elements,
+                                                self.neighbors.num_system_elements))
         # real-space calculation limited to original simulation cell
         n_max = np.zeros(self.pbc.shape, int)
         # k_max = 1 on all dimensions making (27 - 1) = 26 k-vectors in total
         k_max = np.ones(self.pbc.shape, int)
         num_repeats = int(1E+00)
-        (tau_ratio, time_ratio) = self.benchmark_ewald(precomputed_array, num_repeats, n_max, k_max)
+        (tau_ratio, time_ratio) = self.benchmark_ewald(benchmark_precomputed_array, num_repeats, n_max, k_max)
         prefix_list = []
         prefix_list.append(f'tau_ratio, (tau_r/tau_f): {tau_ratio:.3e}\n')
         prefix_list.append(f'time_ratio, (time_r/time_f): {time_ratio:.3e}\n')
@@ -800,6 +800,9 @@ class System(object):
         k_cut = 2 * np.pi / (volume_averaged_length * n_cut)
         prefix_list.append(f'r_cut: {r_cut / constants.ANG2BOHR:.3e} angstrom\n')
         prefix_list.append(f'k_cut: {k_cut:.3e}\n')
+
+        precomputed_array = np.zeros((self.neighbors.num_system_elements,
+                                      self.neighbors.num_system_elements))
 
         n_max = np.round(self.r_cut / self.translational_vector_length).astype(int)
         precomputed_array = self.pot_r_ewald(precomputed_array, n_max)[0]
