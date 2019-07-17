@@ -772,21 +772,18 @@ class System(object):
         charge_list = np.tile(unit_cell_charge_list, self.num_cells)[:, np.newaxis]
         return charge_list
 
-    def get_precomputed_array(self, dst_path):
-        """
+    def get_ewald_parameters(self, prefix_list):
 
-        :param dst_path:
-        :return:
-        """
         benchmark_precomputed_array = np.zeros((self.neighbors.num_system_elements,
                                                 self.neighbors.num_system_elements))
+
         # real-space calculation limited to original simulation cell
         n_max = np.zeros(self.pbc.shape, int)
         # k_max = 1 on all dimensions making (27 - 1) = 26 k-vectors in total
         k_max = np.ones(self.pbc.shape, int)
         num_repeats = int(1E+00)
+
         (tau_ratio, time_ratio) = self.benchmark_ewald(benchmark_precomputed_array, num_repeats, n_max, k_max)
-        prefix_list = []
         prefix_list.append(f'tau_ratio, (tau_r/tau_f): {tau_ratio:.3e}\n')
         prefix_list.append(f'time_ratio, (time_r/time_f): {time_ratio:.3e}\n')
 
@@ -800,6 +797,33 @@ class System(object):
         k_cut = 2 * np.pi / (volume_averaged_length * n_cut)
         prefix_list.append(f'r_cut: {r_cut / constants.ANG2BOHR:.3e} angstrom\n')
         prefix_list.append(f'k_cut: {k_cut:.3e}\n')
+
+        # Assumption for the accuracy analysis
+        ion_charge_type = 'full'
+        charge_list = self.base_charge_config(ion_charge_type)
+        charge_list_prod = np.multiply(charge_list.transpose(), charge_list)
+        charge_list_einsum = np.einsum('ii', charge_list_prod)
+        x_real = alpha * r_cut
+        real_space_cutoff_error = charge_list_einsum * np.sqrt(r_cut / (2 * self.system_volume)) * (np.exp(-x_real**2) / x_real**2)
+
+        x_fourier = np.pi * n_cut / (alpha * volume_averaged_length)
+        fourier_space_cutoff_error = charge_list_einsum * (np.sqrt(n_cut) / (alpha * volume_averaged_length**2)) * (np.exp(-x_fourier**2) / x_fourier**2)
+        prefix_list.append(f'Real-space cutoff error: {real_space_cutoff_error:.3e}\n')
+        prefix_list.append(f'Fourier-space cutoff error: {fourier_space_cutoff_error:.3e}\n\n')
+
+        ewald_parameters = {'alpha': alpha,
+                            'r_cut': r_cut,
+                            'k_cut': k_cut}
+        return (ewald_parameters, prefix_list)
+
+    def get_precomputed_array(self, dst_path):
+        """
+
+        :param dst_path:
+        :return:
+        """
+        prefix_list = []
+        (ewald_parameters, prefix_list) = self.get_ewald_parameters(prefix_list)
 
         precomputed_array = np.zeros((self.neighbors.num_system_elements,
                                       self.neighbors.num_system_elements))
@@ -815,19 +839,6 @@ class System(object):
 
         prefix_list.append(f'k_max: [{k_max[0]}, {k_max[1]}, {k_max[2]}]\n')
         prefix_list.append(f'number of k-vectors: {num_k_vectors}\n')
-
-        # Assumption for the accuracy analysis
-        ion_charge_type = 'full'
-        charge_list = self.base_charge_config(ion_charge_type)
-        charge_list_prod = np.multiply(charge_list.transpose(), charge_list)
-        charge_list_einsum = np.einsum('ii', charge_list_prod)
-        x_real = alpha * r_cut
-        real_space_cutoff_error = charge_list_einsum * np.sqrt(r_cut / (2 * self.system_volume)) * (np.exp(-x_real**2) / x_real**2)
-
-        x_fourier = np.pi * n_cut / (alpha * volume_averaged_length)
-        fourier_space_cutoff_error = charge_list_einsum * (np.sqrt(n_cut) / (alpha * volume_averaged_length**2)) * (np.exp(-x_fourier**2) / x_fourier**2)
-        prefix_list.append(f'Real-space cutoff error: {real_space_cutoff_error:.3e}\n')
-        prefix_list.append(f'Fourier-space cutoff error: {fourier_space_cutoff_error:.3e}\n\n')
 
         precomputed_array -= np.eye(len(precomputed_array)) * np.sqrt(self.alpha / np.pi)
         precomputed_array /= self.material.dielectric_constant
