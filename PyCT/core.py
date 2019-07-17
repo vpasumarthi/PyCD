@@ -802,8 +802,8 @@ class System(object):
         alpha = 0.5
         # slightly less than half of minimum box length
         r_cut = min(self.translational_vector_length) / 2.1
-        # half of maximum reciprocal box length
-        k_cut = max(self.reciprocal_lattice_vector_length) / 2.0
+        # maximum reciprocal box length
+        k_cut = max(self.reciprocal_lattice_vector_length)
         num_repeats = int(1E+00)
 
         (tau_ratio, time_ratio) = self.benchmark_ewald(benchmark_precomputed_array,
