@@ -810,7 +810,7 @@ class System(object):
             prefix_list.append(f'k_cut: {k_cut:.3e} (user-specified)\n\n')
         else:
             k_cut = 2 * np.pi / (volume_derived_length * n_cut)
-            prefix_list.append(f'k_cut: {k_cut:.3e} (optimal value)\n\n')
+            prefix_list.append(f'k_cut: {k_cut:.3e} (optimal)\n\n')
 
         real_space_cutoff_error = charge_list_einsum * np.sqrt(r_cut / (2 * self.system_volume)) * (np.exp(-x_real**2) / x_real**2)
 
@@ -852,7 +852,7 @@ class System(object):
             prefix_list.append(f'alpha: {alpha:.3e} (user-specified)\n')
         else:
             alpha = (tau_ratio * np.pi**3 / self.system_volume**2)**(1/6)
-            prefix_list.append(f'alpha: {alpha:.3e} (optimal value)\n')
+            prefix_list.append(f'alpha: {alpha:.3e} (optimal)\n')
 
         x_real_initial_guess = 0.5
         (x_real_optimal, charge_list_einsum) = self.minimize_real_space_cutoff_error(alpha, x_real_initial_guess)
