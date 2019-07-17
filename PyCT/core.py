@@ -773,18 +773,23 @@ class System(object):
         charge_list = np.tile(unit_cell_charge_list, self.num_cells)[:, np.newaxis]
         return charge_list
 
-    def accuracy_defined_ewald_parameters(self, alpha, s):
-        r_cut = s / alpha
-        volume_averaged_length = np.power(self.system_volume, 1/3)
-        n_cut = s * alpha * volume_averaged_length / np.pi
-        k_cut = 2 * np.pi / (volume_averaged_length * n_cut)
-
+    def optimize_real_space_cutoff_error(self, alpha, err_tol, x_real_initial_guess):
         # Assumption for the accuracy analysis
         ion_charge_type = 'full'
         charge_list = self.base_charge_config_for_accuracy_analysis(ion_charge_type)
         charge_list_prod = np.multiply(charge_list.transpose(), charge_list)
         charge_list_einsum = np.einsum('ii', charge_list_prod)
-        x_real = alpha * r_cut
+
+        real_space_cutoff_error = lambda x_real: charge_list_einsum * np.sqrt(x_real / alpha / (2 * self.system_volume)) * (np.exp(-x_real**2) / x_real**2) - err_tol
+        x_real_optimal = fsolve(real_space_cutoff_error, x_real_initial_guess)[0]
+        return (x_real_optimal, charge_list_einsum)
+
+    def accuracy_defined_ewald_parameters(self, alpha, charge_list_einsum, x_real):
+        r_cut = x_real / alpha
+        volume_averaged_length = np.power(self.system_volume, 1/3)
+        n_cut = x_real * alpha * volume_averaged_length / np.pi
+        k_cut = 2 * np.pi / (volume_averaged_length * n_cut)
+
         real_space_cutoff_error = charge_list_einsum * np.sqrt(r_cut / (2 * self.system_volume)) * (np.exp(-x_real**2) / x_real**2)
 
         x_fourier = np.pi * n_cut / (alpha * volume_averaged_length)
@@ -817,11 +822,11 @@ class System(object):
         prefix_list.append(f'alpha: {alpha:.3e}\n')
 
         err_tol = 1E-03
-        base_error_func = lambda x : err_tol - np.exp(-x**2) / x**2
-        s_initial_guess = 0.5
-        s = fsolve(base_error_func, s_initial_guess)[0]
-        (r_cut, k_cut, real_space_cutoff_error, fourier_space_cutoff_error) = self.accuracy_defined_ewald_parameters(alpha, s)
+        x_real_initial_guess = 0.5
+        (x_real_optimal, charge_list_einsum) = self.optimize_real_space_cutoff_error(alpha, err_tol, x_real_initial_guess)
+        (r_cut, k_cut, real_space_cutoff_error, fourier_space_cutoff_error) = self.accuracy_defined_ewald_parameters(alpha, charge_list_einsum, x_real_optimal)
 
+        pdb.set_trace()
         prefix_list.append(f'r_cut: {r_cut / constants.ANG2BOHR:.3e} angstrom\n')
         prefix_list.append(f'k_cut: {k_cut:.3e}\n')
         prefix_list.append(f'Real-space cutoff error: {real_space_cutoff_error:.3e}\n')
