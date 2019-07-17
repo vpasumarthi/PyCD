@@ -69,8 +69,9 @@ def material_run(dst_path):
         pairwise_min_image_vector_data = np.load(
                                 pairwise_min_image_vector_data_file_path)
         alpha = config_params.alpha
-        n_max = config_params.n_max
-        k_max = config_params.k_max
+        r_cut = config_params.r_cut
+        k_cut = config_params.k_cut
+        err_tol = config_params.err_tol
         
         # Load step hop neighbor list if needed
         step_system_size_array = []
@@ -121,7 +122,7 @@ def material_run(dst_path):
 
         material_system = System(
             material_info, material_neighbors, hop_neighbor_list,
-            pairwise_min_image_vector_data, alpha, n_max, k_max,
+            pairwise_min_image_vector_data, alpha, r_cut, k_cut, err_tol,
             step_system_size_array, step_hop_neighbor_master_list)
 
         # Load precomputed array to instantiate run class
