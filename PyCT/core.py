@@ -692,11 +692,11 @@ class System(object):
         self.r_cut = r_cut * constants.ANG2BOHR
         self.k_cut = k_cut  # cutoff magnitude of vector in k-space
 
-    def pot_r_ewald(self, precomputed_array, n_max):
+    def pot_r_ewald(self, precomputed_array, n_max, alpha, r_cut):
         """Updates precomputed array with potential energy contributions from
            real-space"""
 
-        sqrt_alpha = np.sqrt(self.alpha)
+        sqrt_alpha = np.sqrt(alpha)
         for i in range(-n_max[0], n_max[0]+1):
             for j in range(-n_max[1], n_max[1]+1):
                 for k in range(-n_max[2], n_max[2]+1):
@@ -705,7 +705,7 @@ class System(object):
                                          + np.dot(np.array([i, j, k]),
                                                   self.translational_matrix)),
                                         axis=2)
-                    cutoff_neighbor_pairs = dr_translated < self.r_cut
+                    cutoff_neighbor_pairs = dr_translated < r_cut
                     precomputed_array[cutoff_neighbor_pairs] += erfc(sqrt_alpha * dr_translated[cutoff_neighbor_pairs]) / 2
 
                     # avoid division for diagonal elements for original simulation cell
@@ -715,13 +715,13 @@ class System(object):
                     precomputed_array[cutoff_neighbor_pairs] /= dr_translated[cutoff_neighbor_pairs]
         return (precomputed_array, num_neighbor_pairs)
 
-    def pot_k_ewald(self, precomputed_array, k_max):
+    def pot_k_ewald(self, precomputed_array, k_max, alpha, k_cut):
         """Updates precomputed array with potential energy contributions from
            reciprocal-space"""
 
-        alpha4 = 4 * self.alpha
+        alpha4 = 4 * alpha
         fourier_sum_coeff = (2 * np.pi) / self.system_volume
-        k_cut_2 = self.k_cut**2
+        k_cut_2 = k_cut**2
 
         for i in range(-k_max[0], k_max[0]+1):
             for j in range(-k_max[1], k_max[1]+1):
@@ -740,19 +740,19 @@ class System(object):
                                             / k_vector_2)
         return precomputed_array
 
-    def benchmark_ewald(self, precomputed_array, num_repeats, n_max, k_max):
+    def benchmark_ewald(self, precomputed_array, num_repeats, n_max, k_max, alpha, r_cut, k_cut):
         start_time_r = datetime.now()
         for _ in range(num_repeats):
-            self.pot_r_ewald(precomputed_array, n_max)
+            self.pot_r_ewald(precomputed_array, n_max, alpha, r_cut)
         end_time_r = datetime.now()
         time_elapsed_r = end_time_r - start_time_r
         time_elapsed_r_seconds = time_elapsed_r.total_seconds()
-        num_neighbor_pairs = self.pot_r_ewald(precomputed_array, n_max)[1]
+        num_neighbor_pairs = self.pot_r_ewald(precomputed_array, n_max, alpha, r_cut)[1]
         tau_r = time_elapsed_r_seconds / num_repeats / num_neighbor_pairs
 
         start_time_f = datetime.now()
         for _ in range(num_repeats):
-            self.pot_k_ewald(precomputed_array, k_max)
+            self.pot_k_ewald(precomputed_array, k_max, alpha, k_cut)
         end_time_f = datetime.now()
         time_elapsed_f = end_time_f - start_time_f
         time_elapsed_f_seconds = time_elapsed_f.total_seconds()
@@ -799,9 +799,16 @@ class System(object):
         n_max = np.zeros(self.pbc.shape, int)
         # k_max = 1 on all dimensions making (27 - 1) = 26 k-vectors in total
         k_max = np.ones(self.pbc.shape, int)
+        alpha = 0.5
+        # slightly less than half of minimum box length
+        r_cut = min(self.translational_vector_length) / 2.1
+        # half of maximum reciprocal box length
+        k_cut = max(self.reciprocal_lattice_vector_length) / 2.0
         num_repeats = int(1E+00)
 
-        (tau_ratio, time_ratio) = self.benchmark_ewald(benchmark_precomputed_array, num_repeats, n_max, k_max)
+        (tau_ratio, time_ratio) = self.benchmark_ewald(benchmark_precomputed_array,
+                                                       num_repeats, n_max, k_max, alpha,
+                                                       r_cut, k_cut)
         prefix_list.append(f'tau_ratio, (tau_r/tau_f): {tau_ratio:.3e}\n')
         prefix_list.append(f'time_ratio, (time_r/time_f): {time_ratio:.3e}\n')
 
@@ -837,13 +844,13 @@ class System(object):
                                       self.neighbors.num_system_elements))
 
         n_max = np.round(r_cut / self.translational_vector_length).astype(int)
-        precomputed_array = self.pot_r_ewald(precomputed_array, n_max)[0]
+        precomputed_array = self.pot_r_ewald(precomputed_array, n_max, alpha, r_cut)[0]
 
         prefix_list.append(f'n_max: [{n_max[0]}, {n_max[1]}, {n_max[2]}]\n')
 
         k_max = np.ceil(k_cut / self.reciprocal_lattice_vector_length).astype(int)  # max number of multiples of reciprocal lattice length vectors
         num_k_vectors = np.prod(2 * k_max + 1) - 1
-        precomputed_array = self.pot_k_ewald(precomputed_array, k_max)
+        precomputed_array = self.pot_k_ewald(precomputed_array, k_max, alpha, k_cut)
 
         prefix_list.append(f'k_max: [{k_max[0]}, {k_max[1]}, {k_max[2]}]\n')
         prefix_list.append(f'number of k-vectors: {num_k_vectors}\n')
