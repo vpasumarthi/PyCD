@@ -892,7 +892,7 @@ class System(object):
 
         real_space_cutoff_error = charge_list_einsum * np.sqrt(r_cut / (2 * self.system_volume)) * (np.exp(-(alpha * r_cut)**2) / (alpha * r_cut)**2) - self.err_tol
         n_cut = k_cut * volume_derived_length / (2 * np.pi)
-        fourier_space_cutoff_error = charge_list_einsum * np.sqrt(n_cut) / (alpha * volume_derived_length**2) (np.exp(-(np.pi * n_cut / (alpha * volume_derived_length))**2) / (np.pi * n_cut / (alpha * volume_derived_length))**2) - self.err_tol
+        fourier_space_cutoff_error = charge_list_einsum * np.sqrt(n_cut) / (alpha * volume_derived_length**2) * (np.exp(-(np.pi * n_cut / (alpha * volume_derived_length))**2) / (np.pi * n_cut / (alpha * volume_derived_length))**2) - self.err_tol
 
         prefix_list.append(f'Real-space cutoff error: {real_space_cutoff_error:.3e}\n')
         prefix_list.append(f'Fourier-space cutoff error: {fourier_space_cutoff_error:.3e}\n\n')
