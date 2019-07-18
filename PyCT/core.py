@@ -791,7 +791,7 @@ class System(object):
         x_real_optimal = fsolve(real_space_cutoff_error, x_real_initial_guess)[0]
         return x_real_optimal
 
-    def get_cutoff_parameters(self, prefix_list):
+    def get_cutoff_parameters(self, tau_ratio, prefix_list):
         real_space_parameters = {}
         fourier_space_parameters = {}
         if self.alpha:
@@ -908,7 +908,7 @@ class System(object):
         prefix_list.append(f'tau_ratio, (tau_r/tau_f): {tau_ratio:.3e}\n')
         prefix_list.append(f'time_ratio, (time_r/time_f): {time_ratio:.3e}\n\n')
 
-        (alpha, r_cut, k_cut, prefix_list) = self.get_cutoff_parameters(prefix_list)
+        (alpha, r_cut, k_cut, prefix_list) = self.get_cutoff_parameters(tau_ratio, prefix_list)
 
         ewald_parameters = {'alpha': alpha,
                             'r_cut': r_cut,
