@@ -791,7 +791,37 @@ class System(object):
         x_real_optimal = fsolve(real_space_cutoff_error, x_real_initial_guess)[0]
         return x_real_optimal
 
-    def get_cutoff_parameters(self, charge_list_einsum, real_space_parameters, fourier_space_parameters, prefix_list):
+    def get_cutoff_parameters(self, prefix_list):
+        real_space_parameters = {}
+        fourier_space_parameters = {}
+        if self.alpha:
+            alpha = self.alpha
+            alpha_choice = 'user-specified'
+            real_space_parameters['alpha'] = self.alpha
+            fourier_space_parameters['alpha'] = self.alpha
+        else:
+            alpha_choice = 'optimal'
+
+        if self.r_cut:
+            r_cut = self.r_cut
+            r_cut_choice = 'user-specified'
+            real_space_parameters['r_cut'] = self.r_cut
+        else:
+            r_cut_choice = 'optimal'
+
+        if self.k_cut:
+            k_cut = self.k_cut
+            k_cut_choice = 'user-specified'
+            fourier_space_parameters['k_cut'] = self.k_cut
+        else:
+            k_cut_choice = 'optimal'
+
+        # Assumption for the accuracy analysis
+        ion_charge_type = 'full'
+        charge_list = self.base_charge_config_for_accuracy_analysis(ion_charge_type)
+        charge_list_prod = np.multiply(charge_list.transpose(), charge_list)
+        charge_list_einsum = np.einsum('ii', charge_list_prod)
+
         x_real_initial_guess = 0.5
         x_fourier_initial_guess = 0.5
         volume_derived_length = np.power(self.system_volume, 1/3)
@@ -850,7 +880,7 @@ class System(object):
 
         prefix_list.append(f'Real-space cutoff error: {real_space_cutoff_error:.3e}\n')
         prefix_list.append(f'Fourier-space cutoff error: {fourier_space_cutoff_error:.3e}\n\n')
-        return (r_cut, k_cut, prefix_list)
+        return (alpha, r_cut, k_cut, prefix_list)
 
     def get_ewald_parameters(self, prefix_list):
 
@@ -878,39 +908,7 @@ class System(object):
         prefix_list.append(f'tau_ratio, (tau_r/tau_f): {tau_ratio:.3e}\n')
         prefix_list.append(f'time_ratio, (time_r/time_f): {time_ratio:.3e}\n\n')
 
-        real_space_parameters = {}
-        fourier_space_parameters = {}
-        if self.alpha:
-            alpha = self.alpha
-            alpha_choice = 'user-specified'
-            real_space_parameters['alpha'] = self.alpha
-            fourier_space_parameters['alpha'] = self.alpha
-        else:
-            alpha_choice = 'optimal'
-
-        if self.r_cut:
-            r_cut = self.r_cut
-            r_cut_choice = 'user-specified'
-            real_space_parameters['r_cut'] = self.r_cut
-        else:
-            r_cut_choice = 'optimal'
-
-        if self.k_cut:
-            k_cut = self.k_cut
-            k_cut_choice = 'user-specified'
-            fourier_space_parameters['k_cut'] = self.k_cut
-        else:
-            k_cut_choice = 'optimal'
-
-        # Assumption for the accuracy analysis
-        ion_charge_type = 'full'
-        charge_list = self.base_charge_config_for_accuracy_analysis(ion_charge_type)
-        charge_list_prod = np.multiply(charge_list.transpose(), charge_list)
-        charge_list_einsum = np.einsum('ii', charge_list_prod)
-
-
-        (r_cut, k_cut, prefix_list) = self.get_cutoff_parameters(
-            charge_list_einsum, real_space_parameters, fourier_space_parameters, prefix_list)
+        (alpha, r_cut, k_cut, prefix_list) = self.get_cutoff_parameters(prefix_list)
 
         ewald_parameters = {'alpha': alpha,
                             'r_cut': r_cut,
