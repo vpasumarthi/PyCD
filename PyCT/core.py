@@ -963,7 +963,7 @@ class System(object):
         prefix_list.append(f'n_max: [{n_max[0]}, {n_max[1]}, {n_max[2]}]\n')
 
         k_max = np.ceil(k_cut / self.reciprocal_lattice_vector_length).astype(int)  # max number of multiples of reciprocal lattice length vectors
-        num_k_vectors = np.prod(2 * k_max + 1) - 1
+        num_k_vectors = np.prod(2 * k_max + 1) * np.pi / 6 - 1
         precomputed_array = self.pot_k_ewald(precomputed_array, k_max, alpha, k_cut)
 
         prefix_list.append(f'k_max: [{k_max[0]}, {k_max[1]}, {k_max[2]}]\n')
