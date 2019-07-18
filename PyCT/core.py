@@ -874,23 +874,33 @@ class System(object):
         else:
             k_cut_choice = 'optimal'
 
+        x_real_initial_guess = 0.5
         if not np.isreal(self.alpha) & np.isreal(self.r_cut) & np.isreal(self.k_cut):
             if np.isreal(self.alpha) & np.isreal(self.r_cut):
                 # optimize fourier-space cutoff error for k_cut
             elif np.isreal(self.alpha) & np.isreal(self.k_cut):
                 # optimize real-space cutoff error for r_cut
+                (x_real_optimal, charge_list_einsum) = self.minimize_real_space_cutoff_error(real_space_parameters, x_real_initial_guess)
+                r_cut = x_real_optimal / alpha
             elif np.isreal(self.r_cut) & np.isreal(self.k_cut):
                 # optimize real-space cutoff error for alpha
             elif np.isreal(self.alpha):
                 # optimize real-space cutoff error for r_cut
+                (x_real_optimal, charge_list_einsum) = self.minimize_real_space_cutoff_error(real_space_parameters, x_real_initial_guess)
+                r_cut = x_real_optimal / alpha
             elif np.isreal(self.r_cut):
                 # optimize real-space cutoff error for alpha
                 # optimize fourier-space cutoff error for k_cut
             elif np.isreal(self.k_cut):
                 # optimize fourier-space cutoff error for alpha
                 # optimize real-space cutoff error for r_cut
+                (x_real_optimal, charge_list_einsum) = self.minimize_real_space_cutoff_error(real_space_parameters, x_real_initial_guess)
+                r_cut = x_real_optimal / alpha
             else:
+                alpha = (tau_ratio * np.pi**3 / self.system_volume**2)**(1/6)
                 # optimize real-space cutoff error for r_cut
+                (x_real_optimal, charge_list_einsum) = self.minimize_real_space_cutoff_error(real_space_parameters, x_real_initial_guess)
+                r_cut = x_real_optimal / alpha
                 # optimize fourier-space cutoff error for k_cut
 
         if np.isreal(self.alpha):
@@ -901,7 +911,6 @@ class System(object):
             alpha = (tau_ratio * np.pi**3 / self.system_volume**2)**(1/6)
             prefix_list.append(f'alpha: {alpha:.3e} (optimal)\n')
 
-        x_real_initial_guess = 0.5
         (x_real_optimal, charge_list_einsum) = self.minimize_real_space_cutoff_error(real_space_parameters, x_real_initial_guess)
 
         if np.isreal(self.r_cut):
