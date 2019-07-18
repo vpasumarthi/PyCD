@@ -879,8 +879,8 @@ class System(object):
                 alpha = (tau_ratio * np.pi**3 / self.system_volume**2)**(1/6)
                 real_space_parameters['alpha'] = alpha
                 # optimize real-space cutoff error for r_cut
-                x_real_optimal = self.minimize_real_space_cutoff_error(charge_list_einsum, real_space_parameters, x_real_initial_guess)
-                r_cut = x_real_optimal / alpha
+                real_space_parameters = self.minimize_real_space_cutoff_error(charge_list_einsum, real_space_parameters, x_real_initial_guess)
+                r_cut = real_space_parameters['r_cut']
                 # optimize fourier-space cutoff error for k_cut
                 fourier_space_parameters = self.minimize_fourier_space_cutoff_error(charge_list_einsum, volume_derived_length, fourier_space_parameters, x_fourier_initial_guess)
                 k_cut = fourier_space_parameters['k_cut']
