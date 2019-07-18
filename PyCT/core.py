@@ -925,16 +925,6 @@ class System(object):
         prefix_list.append(f'alpha: {r_cut:.3e} ({r_cut_choice})\n')
         prefix_list.append(f'alpha: {k_cut:.3e} ({k_cut_choice})\n')
 
-        if np.isreal(self.alpha):
-            alpha = self.alpha
-            prefix_list.append(f'alpha: {alpha:.3e} (user-specified)\n')
-            real_space_parameters['alpha'] = alpha
-        else:
-            alpha = (tau_ratio * np.pi**3 / self.system_volume**2)**(1/6)
-            prefix_list.append(f'alpha: {alpha:.3e} (optimal)\n')
-
-        (x_real_optimal, charge_list_einsum) = self.minimize_real_space_cutoff_error(real_space_parameters, x_real_initial_guess)
-
         if np.isreal(self.r_cut):
             x_real = self.r_cut * alpha
         else:
