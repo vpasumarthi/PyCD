@@ -796,6 +796,20 @@ class System(object):
             real_space_parameters['alpha'] = fsolve(real_space_cutoff_error, alpha0)[0]
         return real_space_parameters
 
+    def minimize_fourier_space_cutoff_error(self, charge_list_einsum, volume_derived_length, fourier_space_parameters, x_fourier_initial_guess):
+        if 'alpha' in fourier_space_parameters:
+            alpha = fourier_space_parameters['alpha']
+            fourier_space_cutoff_error = lambda n_cut: charge_list_einsum * np.sqrt(n_cut) / (alpha * volume_derived_length**2) (np.exp(-(np.pi * n_cut / (alpha * volume_derived_length))**2) / (np.pi * n_cut / (alpha * volume_derived_length))**2) - self.err_tol
+            n_cut0 = x_fourier_initial_guess * volume_derived_length * alpha / np.pi 
+            fourier_space_parameters['k_cut'] = 2 * np.pi / volume_derived_length * fsolve(fourier_space_cutoff_error, n_cut0)[0]
+        else:
+            k_cut = fourier_space_parameters['k_cut']
+            n_cut = k_cut * volume_derived_length / (2 * np.pi)
+            fourier_space_cutoff_error = lambda alpha: charge_list_einsum * np.sqrt(n_cut) / (alpha * volume_derived_length**2) (np.exp(-(np.pi * n_cut / (alpha * volume_derived_length))**2) / (np.pi * n_cut / (alpha * volume_derived_length))**2) - self.err_tol
+            alpha0 = np.pi * n_cut / (x_fourier_initial_guess * volume_derived_length)
+            fourier_space_parameters['alpha'] = fsolve(fourier_space_cutoff_error, alpha0)[0]
+        return fourier_space_parameters
+
     def get_cutoff_parameters(self, tau_ratio, prefix_list):
         real_space_parameters = {}
         fourier_space_parameters = {}
