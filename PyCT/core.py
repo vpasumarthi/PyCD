@@ -888,9 +888,9 @@ class System(object):
         prefix_list.append(f'r_cut: {r_cut / constants.ANG2BOHR:.3e} angstrom ({r_cut_choice})\n')
         prefix_list.append(f'k_cut: {k_cut * constants.ANG2BOHR:.3e} / angstrom ({k_cut_choice})\n')
 
-        real_space_cutoff_error = charge_list_einsum * np.sqrt(r_cut / (2 * self.system_volume)) * (np.exp(-(alpha * r_cut)**2) / (alpha * r_cut)**2) - self.err_tol
+        real_space_cutoff_error = charge_list_einsum * np.sqrt(r_cut / (2 * self.system_volume)) * (np.exp(-(alpha * r_cut)**2) / (alpha * r_cut)**2)
         n_cut = k_cut * volume_derived_length / (2 * np.pi)
-        fourier_space_cutoff_error = charge_list_einsum * np.sqrt(n_cut) / (alpha * volume_derived_length**2) * (np.exp(-(np.pi * n_cut / (alpha * volume_derived_length))**2) / (np.pi * n_cut / (alpha * volume_derived_length))**2) - self.err_tol
+        fourier_space_cutoff_error = charge_list_einsum * np.sqrt(n_cut) / (alpha * volume_derived_length**2) * (np.exp(-(np.pi * n_cut / (alpha * volume_derived_length))**2) / (np.pi * n_cut / (alpha * volume_derived_length))**2)
 
         prefix_list.append(f'Real-space cutoff error: {real_space_cutoff_error:.3e}\n')
         prefix_list.append(f'Fourier-space cutoff error: {fourier_space_cutoff_error:.3e}\n\n')
