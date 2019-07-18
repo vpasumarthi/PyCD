@@ -873,6 +873,7 @@ class System(object):
         prefix_list.append(f'r_cut: {r_cut / constants.ANG2BOHR:.3e} angstrom ({r_cut_choice})\n')
         prefix_list.append(f'k_cut: {k_cut:.3e} ({k_cut_choice})\n')
 
+        x_real = alpha * r_cut
         real_space_cutoff_error = charge_list_einsum * np.sqrt(r_cut / (2 * self.system_volume)) * (np.exp(-x_real**2) / x_real**2)
 
         x_fourier = np.pi * n_cut / (alpha * volume_derived_length)
