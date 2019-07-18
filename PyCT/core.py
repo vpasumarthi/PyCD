@@ -783,7 +783,10 @@ class System(object):
         charge_list = np.tile(unit_cell_charge_list, self.num_cells)[:, np.newaxis]
         return charge_list
 
-    def minimize_real_space_cutoff_error(self, alpha, x_real_initial_guess):
+    def minimize_real_space_cutoff_error(self, real_space_parameters, x_real_initial_guess):
+        if 'alpha' in real_space_parameters:
+            alpha = real_space_parameters['alpha']
+
         # Assumption for the accuracy analysis
         ion_charge_type = 'full'
         charge_list = self.base_charge_config_for_accuracy_analysis(ion_charge_type)
@@ -847,15 +850,17 @@ class System(object):
         prefix_list.append(f'tau_ratio, (tau_r/tau_f): {tau_ratio:.3e}\n')
         prefix_list.append(f'time_ratio, (time_r/time_f): {time_ratio:.3e}\n\n')
 
+        real_space_parameters = {}
         if np.isreal(self.alpha):
             alpha = self.alpha
             prefix_list.append(f'alpha: {alpha:.3e} (user-specified)\n')
+            real_space_parameters['alpha'] = alpha
         else:
             alpha = (tau_ratio * np.pi**3 / self.system_volume**2)**(1/6)
             prefix_list.append(f'alpha: {alpha:.3e} (optimal)\n')
 
         x_real_initial_guess = 0.5
-        (x_real_optimal, charge_list_einsum) = self.minimize_real_space_cutoff_error(alpha, x_real_initial_guess)
+        (x_real_optimal, charge_list_einsum) = self.minimize_real_space_cutoff_error(real_space_parameters, x_real_initial_guess)
 
         if np.isreal(self.r_cut):
             x_real = self.r_cut * alpha
