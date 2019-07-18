@@ -872,6 +872,10 @@ class System(object):
         else:
             alpha = (tau_ratio * np.pi**3 / self.system_volume**2)**(1/6)
 
+        alpha_choice = 'user-specified' if np.isreal(self.alpha) else 'optimal'
+        r_cut_choice = 'user-specified' if np.isreal(self.r_cut) else 'optimal'
+        k_cut_choice = 'user-specified' if np.isreal(self.k_cut) else 'optimal'
+            
         real_space_parameters = {}
         if np.isreal(self.alpha):
             alpha = self.alpha
