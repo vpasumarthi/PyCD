@@ -889,18 +889,25 @@ class System(object):
                 r_cut = x_real_optimal / alpha
             elif np.isreal(self.r_cut) & np.isreal(self.k_cut):
                 # optimize real-space cutoff error for alpha
+                x_real_optimal = self.minimize_real_space_cutoff_error(charge_list_einsum, real_space_parameters, x_real_initial_guess)
+                alpha = x_real_optimal / r_cut
             elif np.isreal(self.alpha):
                 # optimize real-space cutoff error for r_cut
                 x_real_optimal = self.minimize_real_space_cutoff_error(charge_list_einsum, real_space_parameters, x_real_initial_guess)
                 r_cut = x_real_optimal / alpha
             elif np.isreal(self.r_cut):
                 # optimize real-space cutoff error for alpha
+                x_real_optimal = self.minimize_real_space_cutoff_error(charge_list_einsum, real_space_parameters, x_real_initial_guess)
+                alpha = x_real_optimal / r_cut
                 # optimize fourier-space cutoff error for k_cut
                 x_fourier_optimal = self.minimize_fourier_space_cutoff_error(charge_list_einsum, fourier_space_parameters, x_fourier_initial_guess)
                 n_cut = x_fourier_optimal * alpha * volume_derived_length / np.pi
                 k_cut = 2 * np.pi / volume_derived_length * n_cut
             elif np.isreal(self.k_cut):
                 # optimize fourier-space cutoff error for alpha
+                x_fourier_optimal = self.minimize_fourier_space_cutoff_error(charge_list_einsum, fourier_space_parameters, x_fourier_initial_guess)
+                n_cut = volume_derived_length / (2 * np.pi) * k_cut
+                alpha = np.pi * n_cut / (x_fourier_optimal * volume_derived_length) 
                 # optimize real-space cutoff error for r_cut
                 x_real_optimal = self.minimize_real_space_cutoff_error(charge_list_einsum, real_space_parameters, x_real_initial_guess)
                 r_cut = x_real_optimal / alpha
