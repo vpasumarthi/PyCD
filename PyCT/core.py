@@ -814,7 +814,6 @@ class System(object):
         real_space_parameters = {}
         fourier_space_parameters = {}
         if np.isreal(self.alpha):
-            alpha = self.alpha
             alpha_choice = 'user-specified'
             real_space_parameters['alpha'] = self.alpha
             fourier_space_parameters['alpha'] = self.alpha
@@ -822,14 +821,12 @@ class System(object):
             alpha_choice = 'optimal'
 
         if np.isreal(self.r_cut):
-            r_cut = self.r_cut
             r_cut_choice = 'user-specified'
             real_space_parameters['r_cut'] = self.r_cut
         else:
             r_cut_choice = 'optimal'
 
         if np.isreal(self.k_cut):
-            k_cut = self.k_cut
             k_cut_choice = 'user-specified'
             fourier_space_parameters['k_cut'] = self.k_cut
         else:
@@ -925,7 +922,6 @@ class System(object):
         prefix_list.append(f'time_ratio, (time_r/time_f): {time_ratio:.3e}\n\n')
 
         (alpha, r_cut, k_cut, prefix_list) = self.get_cutoff_parameters(tau_ratio, prefix_list)
-        pdb.set_trace()
 
         ewald_parameters = {'alpha': alpha,
                             'r_cut': r_cut,
