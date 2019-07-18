@@ -786,12 +786,12 @@ class System(object):
     def minimize_real_space_cutoff_error(self, charge_list_einsum, real_space_parameters, x_real_initial_guess):
         if 'alpha' in real_space_parameters:
             alpha = real_space_parameters['alpha']
-            real_space_cutoff_error = lambda r_cut: charge_list_einsum * np.sqrt(r_cut / (2 * self.system_volume / constants.ANG2BOHR**3)) * (np.exp(-(alpha * r_cut)**2) / (alpha * r_cut)**2) - self.err_tol
+            real_space_cutoff_error = lambda r_cut: charge_list_einsum * np.sqrt(r_cut / (2 * self.system_volume)) * (np.exp(-(alpha * r_cut)**2) / (alpha * r_cut)**2) - self.err_tol
             r_cut0 = x_real_initial_guess / alpha 
             real_space_parameters['r_cut'] = fsolve(real_space_cutoff_error, r_cut0)[0]
         else:
             r_cut = real_space_parameters['r_cut']
-            real_space_cutoff_error = lambda alpha: charge_list_einsum * np.sqrt(r_cut / (2 * self.system_volume / constants.ANG2BOHR**3)) * (np.exp(-(alpha * r_cut)**2) / (alpha * r_cut)**2) - self.err_tol
+            real_space_cutoff_error = lambda alpha: charge_list_einsum * np.sqrt(r_cut / (2 * self.system_volume)) * (np.exp(-(alpha * r_cut)**2) / (alpha * r_cut)**2) - self.err_tol
             alpha0 = x_real_initial_guess / r_cut
             real_space_parameters['alpha'] = fsolve(real_space_cutoff_error, alpha0)[0]
         return real_space_parameters
@@ -815,20 +815,20 @@ class System(object):
         fourier_space_parameters = {}
         if np.isreal(self.alpha):
             alpha_choice = 'user-specified'
-            real_space_parameters['alpha'] = self.alpha
-            fourier_space_parameters['alpha'] = self.alpha
+            real_space_parameters['alpha'] = self.alpha / constants.ANG2BOHR
+            fourier_space_parameters['alpha'] = self.alpha / constants.ANG2BOHR
         else:
             alpha_choice = 'optimal'
 
         if np.isreal(self.r_cut):
             r_cut_choice = 'user-specified'
-            real_space_parameters['r_cut'] = self.r_cut
+            real_space_parameters['r_cut'] = self.r_cut * constants.ANG2BOHR
         else:
             r_cut_choice = 'optimal'
 
         if np.isreal(self.k_cut):
             k_cut_choice = 'user-specified'
-            fourier_space_parameters['k_cut'] = self.k_cut
+            fourier_space_parameters['k_cut'] = self.k_cut / constants.ANG2BOHR
         else:
             k_cut_choice = 'optimal'
 
@@ -840,7 +840,7 @@ class System(object):
 
         x_real_initial_guess = 0.5
         x_fourier_initial_guess = 0.5
-        volume_derived_length = np.power(self.system_volume / constants.ANG2BOHR**3, 1/3)
+        volume_derived_length = np.power(self.system_volume, 1/3)
         if not np.isreal(self.alpha) & np.isreal(self.r_cut) & np.isreal(self.k_cut):
             if np.isreal(self.alpha) & np.isreal(self.r_cut):
                 # optimize fourier-space cutoff error for k_cut
@@ -873,7 +873,7 @@ class System(object):
                 real_space_parameters = self.minimize_real_space_cutoff_error(charge_list_einsum, real_space_parameters, x_real_initial_guess)
                 r_cut = real_space_parameters['r_cut']
             else:
-                alpha = (tau_ratio * np.pi**3 / self.system_volume**2)**(1/6)
+                alpha = (tau_ratio * np.pi**3 / (self.system_volume)**2)**(1/6)
                 real_space_parameters['alpha'] = alpha
                 fourier_space_parameters['alpha'] = alpha
                 # optimize real-space cutoff error for r_cut
@@ -883,9 +883,9 @@ class System(object):
                 fourier_space_parameters = self.minimize_fourier_space_cutoff_error(charge_list_einsum, volume_derived_length, fourier_space_parameters, x_fourier_initial_guess)
                 k_cut = fourier_space_parameters['k_cut']
 
-        prefix_list.append(f'alpha: {alpha:.3e} ({alpha_choice})\n')
+        prefix_list.append(f'alpha: {alpha * constants.ANG2BOHR:.3e} / angstrom ({alpha_choice})\n')
         prefix_list.append(f'r_cut: {r_cut / constants.ANG2BOHR:.3e} angstrom ({r_cut_choice})\n')
-        prefix_list.append(f'k_cut: {k_cut:.3e} ({k_cut_choice})\n')
+        prefix_list.append(f'k_cut: {k_cut * constants.ANG2BOHR:.3e} / angstrom ({k_cut_choice})\n')
 
         real_space_cutoff_error = charge_list_einsum * np.sqrt(r_cut / (2 * self.system_volume)) * (np.exp(-(alpha * r_cut)**2) / (alpha * r_cut)**2) - self.err_tol
         n_cut = k_cut * volume_derived_length / (2 * np.pi)
