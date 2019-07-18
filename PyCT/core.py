@@ -893,9 +893,6 @@ class System(object):
                 # optimize real-space cutoff error for r_cut
                 # optimize fourier-space cutoff error for k_cut
 
-        real_space_parameters['alpha'] = self.alpha if np.isreal(self.alpha) else ''
-        real_space_parameters['r_cut'] = self.alpha if np.isreal(self.r_cut) else ''
-        pdb.set_trace()
         if np.isreal(self.alpha):
             alpha = self.alpha
             prefix_list.append(f'alpha: {alpha:.3e} (user-specified)\n')
