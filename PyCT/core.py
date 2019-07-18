@@ -921,6 +921,10 @@ class System(object):
                 n_cut = x_fourier_optimal * alpha * volume_derived_length / np.pi
                 k_cut = 2 * np.pi / volume_derived_length * n_cut
 
+        prefix_list.append(f'alpha: {alpha:.3e} ({alpha_choice})\n')
+        prefix_list.append(f'alpha: {r_cut:.3e} ({r_cut_choice})\n')
+        prefix_list.append(f'alpha: {k_cut:.3e} ({k_cut_choice})\n')
+
         if np.isreal(self.alpha):
             alpha = self.alpha
             prefix_list.append(f'alpha: {alpha:.3e} (user-specified)\n')
