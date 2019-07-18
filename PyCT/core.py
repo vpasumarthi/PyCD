@@ -872,11 +872,25 @@ class System(object):
         else:
             alpha = (tau_ratio * np.pi**3 / self.system_volume**2)**(1/6)
 
-        alpha_choice = 'user-specified' if np.isreal(self.alpha) else 'optimal'
-        r_cut_choice = 'user-specified' if np.isreal(self.r_cut) else 'optimal'
-        k_cut_choice = 'user-specified' if np.isreal(self.k_cut) else 'optimal'
-            
         real_space_parameters = {}
+        if self.alpha:
+            alpha_choice = 'user-specified'
+        else:
+            alpha_choice = 'optimal'
+
+        if self.r_cut:
+            r_cut_choice = 'user-specified'
+        else:
+            r_cut_choice = 'optimal'
+
+        if self.k_cut:
+            k_cut_choice = 'user-specified'
+        else:
+            k_cut_choice = 'optimal'
+
+        real_space_parameters['alpha'] = self.alpha if np.isreal(self.alpha) else ''
+        real_space_parameters['r_cut'] = self.alpha if np.isreal(self.r_cut) else ''
+        pdb.set_trace()
         if np.isreal(self.alpha):
             alpha = self.alpha
             prefix_list.append(f'alpha: {alpha:.3e} (user-specified)\n')
