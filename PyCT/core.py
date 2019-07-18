@@ -868,6 +868,9 @@ class System(object):
                 # optimize real-space cutoff error for r_cut
                 real_space_parameters = self.minimize_real_space_cutoff_error(charge_list_einsum, real_space_parameters, x_real_initial_guess)
                 r_cut = real_space_parameters['r_cut']
+                # optimize fourier-space cutoff error for k_cut
+                fourier_space_parameters = self.minimize_fourier_space_cutoff_error(charge_list_einsum, volume_derived_length, fourier_space_parameters, x_fourier_initial_guess)
+                k_cut = fourier_space_parameters['k_cut']
             elif np.isreal(self.r_cut):
                 # optimize real-space cutoff error for alpha
                 real_space_parameters = self.minimize_real_space_cutoff_error(charge_list_einsum, real_space_parameters, x_real_initial_guess)
