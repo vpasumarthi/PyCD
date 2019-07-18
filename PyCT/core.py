@@ -689,7 +689,7 @@ class System(object):
                                                 hop_dist_type].num_neighbors[0])
 
         # ewald parameters:
-        if np.isreal(self.alpha):
+        if np.isreal(alpha):
             self.alpha = alpha / constants.ANG2BOHR
         else:
             self.alpha = alpha
