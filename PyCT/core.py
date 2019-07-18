@@ -689,12 +689,22 @@ class System(object):
                                                 hop_dist_type].num_neighbors[0])
 
         # ewald parameters:
-        self.alpha = alpha
+        if np.isreal(self.alpha):
+            self.alpha = alpha / constants.ANG2BOHR
+        else:
+            self.alpha = alpha
+
         if np.isreal(r_cut):
             self.r_cut = r_cut * constants.ANG2BOHR
         else:
             self.r_cut = r_cut
-        self.k_cut = k_cut  # cutoff magnitude of vector in k-space
+
+        # k_cut: cutoff radius in k-space
+        if np.isreal(k_cut):
+            self.k_cut = k_cut / constants.ANG2BOHR
+        else:
+            self.k_cut = k_cut
+
         self.err_tol = err_tol
 
     def pot_r_ewald(self, precomputed_array, n_max, alpha, r_cut):
@@ -815,20 +825,20 @@ class System(object):
         fourier_space_parameters = {}
         if np.isreal(self.alpha):
             alpha_choice = 'user-specified'
-            real_space_parameters['alpha'] = self.alpha / constants.ANG2BOHR
-            fourier_space_parameters['alpha'] = self.alpha / constants.ANG2BOHR
+            real_space_parameters['alpha'] = self.alpha
+            fourier_space_parameters['alpha'] = self.alpha
         else:
             alpha_choice = 'optimal'
 
         if np.isreal(self.r_cut):
             r_cut_choice = 'user-specified'
-            real_space_parameters['r_cut'] = self.r_cut * constants.ANG2BOHR
+            real_space_parameters['r_cut'] = self.r_cut
         else:
             r_cut_choice = 'optimal'
 
         if np.isreal(self.k_cut):
             k_cut_choice = 'user-specified'
-            fourier_space_parameters['k_cut'] = self.k_cut / constants.ANG2BOHR
+            fourier_space_parameters['k_cut'] = self.k_cut
         else:
             k_cut_choice = 'optimal'
 
