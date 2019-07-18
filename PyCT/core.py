@@ -909,11 +909,8 @@ class System(object):
         charge_list_einsum = np.einsum('ii', charge_list_prod)
 
 
-        if np.isreal(self.r_cut):
-            x_real = self.r_cut * alpha
-        else:
-            x_real = x_real_optimal
-        (r_cut, k_cut, prefix_list) = self.get_cutoff_parameters(alpha, charge_list_einsum, x_real, prefix_list)
+        (r_cut, k_cut, prefix_list) = self.get_cutoff_parameters(
+            charge_list_einsum, real_space_parameters, fourier_space_parameters, prefix_list)
 
         ewald_parameters = {'alpha': alpha,
                             'r_cut': r_cut,
