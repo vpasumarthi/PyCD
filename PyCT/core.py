@@ -825,20 +825,20 @@ class System(object):
         fourier_space_parameters = {}
         if np.isreal(self.alpha):
             alpha_choice = 'user-specified'
-            real_space_parameters['alpha'] = self.alpha
+            alpha = real_space_parameters['alpha'] = self.alpha
             fourier_space_parameters['alpha'] = self.alpha
         else:
             alpha_choice = 'optimal'
 
         if np.isreal(self.r_cut):
             r_cut_choice = 'user-specified'
-            real_space_parameters['r_cut'] = self.r_cut
+            r_cut = real_space_parameters['r_cut'] = self.r_cut
         else:
             r_cut_choice = 'optimal'
 
         if np.isreal(self.k_cut):
             k_cut_choice = 'user-specified'
-            fourier_space_parameters['k_cut'] = self.k_cut
+            k_cut = fourier_space_parameters['k_cut'] = self.k_cut
         else:
             k_cut_choice = 'optimal'
 
