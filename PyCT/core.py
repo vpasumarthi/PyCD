@@ -850,31 +850,32 @@ class System(object):
         prefix_list.append(f'tau_ratio, (tau_r/tau_f): {tau_ratio:.3e}\n')
         prefix_list.append(f'time_ratio, (time_r/time_f): {time_ratio:.3e}\n\n')
 
-        if np.isreal(self.alpha) & np.isreal(self.r_cut) & np.isreal(self.k_cut):
-            alpha = self.alpha
-            r_cut = self.r_cut
-            k_cut = self.k_cut
-        elif np.isreal(self.alpha) & np.isreal(self.r_cut):
-            alpha = self.alpha
-            r_cut = self.r_cut
-        elif np.isreal(self.alpha) & np.isreal(self.k_cut):
-            alpha = self.alpha
-            k_cut = self.k_cut
-        elif np.isreal(self.r_cut) & np.isreal(self.k_cut):
-            r_cut = self.r_cut
-            k_cut = self.k_cut
-        elif np.isreal(self.alpha):
-            alpha = self.alpha
-        elif np.isreal(self.r_cut):
-            r_cut = self.r_cut
-        elif np.isreal(self.k_cut):
-            k_cut = self.k_cut
-        else:
-            alpha = (tau_ratio * np.pi**3 / self.system_volume**2)**(1/6)
+#         if np.isreal(self.alpha) & np.isreal(self.r_cut) & np.isreal(self.k_cut):
+#             alpha = self.alpha
+#             r_cut = self.r_cut
+#             k_cut = self.k_cut
+#         elif np.isreal(self.alpha) & np.isreal(self.r_cut):
+#             alpha = self.alpha
+#             r_cut = self.r_cut
+#         elif np.isreal(self.alpha) & np.isreal(self.k_cut):
+#             alpha = self.alpha
+#             k_cut = self.k_cut
+#         elif np.isreal(self.r_cut) & np.isreal(self.k_cut):
+#             r_cut = self.r_cut
+#             k_cut = self.k_cut
+#         elif np.isreal(self.alpha):
+#             alpha = self.alpha
+#         elif np.isreal(self.r_cut):
+#             r_cut = self.r_cut
+#         elif np.isreal(self.k_cut):
+#             k_cut = self.k_cut
+#         else:
+#             alpha = (tau_ratio * np.pi**3 / self.system_volume**2)**(1/6)
 
         real_space_parameters = {}
         fourier_space_parameters = {}
         if self.alpha:
+            alpha = self.alpha
             alpha_choice = 'user-specified'
             real_space_parameters['alpha'] = self.alpha
             fourier_space_parameters['alpha'] = self.alpha
@@ -882,12 +883,14 @@ class System(object):
             alpha_choice = 'optimal'
 
         if self.r_cut:
+            r_cut = self.r_cut
             r_cut_choice = 'user-specified'
             real_space_parameters['r_cut'] = self.r_cut
         else:
             r_cut_choice = 'optimal'
 
         if self.k_cut:
+            k_cut = self.k_cut
             k_cut_choice = 'user-specified'
             fourier_space_parameters['k_cut'] = self.k_cut
         else:
