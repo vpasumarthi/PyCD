@@ -786,10 +786,15 @@ class System(object):
     def minimize_real_space_cutoff_error(self, charge_list_einsum, real_space_parameters, x_real_initial_guess):
         if 'alpha' in real_space_parameters:
             alpha = real_space_parameters['alpha']
-
-        real_space_cutoff_error = lambda x_real: charge_list_einsum * np.sqrt(x_real / alpha / (2 * self.system_volume)) * (np.exp(-x_real**2) / x_real**2) - self.err_tol
-        x_real_optimal = fsolve(real_space_cutoff_error, x_real_initial_guess)[0]
-        return x_real_optimal
+            real_space_cutoff_error = lambda r_cut: charge_list_einsum * np.sqrt(r_cut / (2 * self.system_volume)) * (np.exp(-(alpha * r_cut)**2) / (alpha * r_cut)**2) - self.err_tol
+            r_cut0 = x_real_initial_guess / alpha 
+            real_space_parameters['r_cut'] = fsolve(real_space_cutoff_error, r_cut0)[0]
+        else:
+            r_cut = real_space_parameters['r_cut']
+            real_space_cutoff_error = lambda alpha: charge_list_einsum * np.sqrt(r_cut / (2 * self.system_volume)) * (np.exp(-(alpha * r_cut)**2) / (alpha * r_cut)**2) - self.err_tol
+            alpha0 = x_real_initial_guess / r_cut
+            real_space_parameters['alpha'] = fsolve(real_space_cutoff_error, alpha0)[0]
+        return real_space_parameters
 
     def get_cutoff_parameters(self, tau_ratio, prefix_list):
         real_space_parameters = {}
