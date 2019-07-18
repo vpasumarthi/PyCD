@@ -68,7 +68,13 @@ def material_run(dst_path):
                                 'pairwise_min_image_vector_data.npy'))
         pairwise_min_image_vector_data = np.load(
                                 pairwise_min_image_vector_data_file_path)
-        alpha = config_params.alpha
+        precomputed_array_log_file_path = input_directory_path.joinpath(
+                                            'precomputed_array.log')
+        precomputed_array_log_file = open(precomputed_array_log_file_path, 'r')
+        for line_index, line in enumerate(precomputed_array_log_file):
+            if line_index == 3:
+                alpha = float(line[7:16])
+
         r_cut = config_params.r_cut
         k_cut = config_params.k_cut
         err_tol = config_params.err_tol
