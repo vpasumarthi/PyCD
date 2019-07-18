@@ -806,10 +806,10 @@ class System(object):
 
         if np.isreal(self.k_cut):
             k_cut = self.k_cut
-            n_cut = 2 * np.pi / (volume_derived_length * k_cut)
+            n_cut = 2 * np.pi / volume_derived_length * k_cut
             prefix_list.append(f'k_cut: {k_cut:.3e} (user-specified)\n\n')
         else:
-            k_cut = 2 * np.pi / (volume_derived_length * n_cut)
+            k_cut = 2 * np.pi / volume_derived_length * n_cut
             prefix_list.append(f'k_cut: {k_cut:.3e} (optimal)\n\n')
 
         real_space_cutoff_error = charge_list_einsum * np.sqrt(r_cut / (2 * self.system_volume)) * (np.exp(-x_real**2) / x_real**2)
