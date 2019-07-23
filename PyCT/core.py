@@ -964,7 +964,7 @@ class System(object):
         prefix_list.append(f'number of k-vectors: {num_k_vectors}\n\n')
         return (precomputed_array_fourier, prefix_list)
 
-    def get_precomputed_array(self, dst_path):
+    def get_precomputed_array(self, dst_path, compute_energies=True):
         """
 
         :param dst_path:
@@ -983,6 +983,21 @@ class System(object):
         precomputed_array_self = - np.eye(self.neighbors.num_system_elements) * np.sqrt(alpha / np.pi) / self.material.dielectric_constant
 
         precomputed_array = precomputed_array_real + precomputed_array_fourier + precomputed_array_self
+
+        if compute_energies:
+            # Assumption for the accuracy analysis
+            ion_charge_type = 'full'
+            charge_list = self.base_charge_config_for_accuracy_analysis(ion_charge_type)
+            charge_list_prod = np.multiply(charge_list.transpose(), charge_list)
+
+            real_space_energy = np.sum(np.multiply(charge_list_prod, precomputed_array_real))
+            prefix_list.append(f'Energy contribution from Real space: {real_space_energy}\n')
+
+            fourier_space_energy = np.sum(np.multiply(charge_list_prod, precomputed_array_fourier))
+            prefix_list.append(f'Energy contribution from Fourier-space: {fourier_space_energy}\n')
+
+            self_interaction_energy = np.sum(np.multiply(charge_list_prod, precomputed_array_self))
+            prefix_list.append(f'Energy contribution from self-interactions: {self_interaction_energy}\n')
 
         file_name = 'precomputed_array'
         print_time_elapsed = 1
