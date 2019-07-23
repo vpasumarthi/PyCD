@@ -942,15 +942,13 @@ class System(object):
                             'k_cut': k_cut}
         return (ewald_parameters, prefix_list)
 
-    def get_precompted_array_real(self, alpha, r_cut, prefix_list):
+    def get_precompted_array_real(self, alpha, r_cut):
         precomputed_array_real = np.zeros((self.neighbors.num_system_elements,
                                            self.neighbors.num_system_elements))
 
         n_max = np.round(r_cut / self.translational_vector_length).astype(int)
         precomputed_array_real = self.pot_r_ewald(precomputed_array_real, n_max, alpha, r_cut)[0] / self.material.dielectric_constant
-
-        prefix_list.append(f'n_max: [{n_max[0]}, {n_max[1]}, {n_max[2]}]\n')
-        return (precomputed_array_real, prefix_list)
+        return (precomputed_array_real, n_max)
 
     def get_precompted_array_fourier(self, alpha, k_cut, prefix_list):
         precomputed_array_fourier = np.zeros((self.neighbors.num_system_elements,
@@ -959,10 +957,7 @@ class System(object):
         k_max = np.ceil(k_cut / self.reciprocal_lattice_vector_length).astype(int)  # max number of multiples of reciprocal lattice length vectors
         num_k_vectors = np.ceil(np.prod(2 * k_max + 1) * np.pi / 6 - 1)
         precomputed_array_fourier = self.pot_k_ewald(precomputed_array_fourier, k_max, alpha, k_cut) / self.material.dielectric_constant
-
-        prefix_list.append(f'k_max: [{k_max[0]}, {k_max[1]}, {k_max[2]}]\n')
-        prefix_list.append(f'number of k-vectors: {num_k_vectors}\n\n')
-        return (precomputed_array_fourier, prefix_list)
+        return (precomputed_array_fourier, k_max, num_k_vectors)
 
     def get_precomputed_array(self, dst_path, compute_energies=True):
         """
@@ -976,9 +971,12 @@ class System(object):
         r_cut = ewald_parameters['r_cut']
         k_cut = ewald_parameters['k_cut']
 
-        (precomputed_array_real, prefix_list) = self.get_precompted_array_real(alpha, r_cut, prefix_list)
+        (precomputed_array_real, n_max) = self.get_precompted_array_real(alpha, r_cut)
+        prefix_list.append(f'n_max: [{n_max[0]}, {n_max[1]}, {n_max[2]}]\n')
 
-        (precomputed_array_fourier, prefix_list) = self.get_precompted_array_fourier(alpha, k_cut, prefix_list)
+        (precomputed_array_fourier, k_max, num_k_vectors) = self.get_precompted_array_fourier(alpha, k_cut)
+        prefix_list.append(f'k_max: [{k_max[0]}, {k_max[1]}, {k_max[2]}]\n')
+        prefix_list.append(f'number of k-vectors: {num_k_vectors}\n\n')
 
         precomputed_array_self = - np.eye(self.neighbors.num_system_elements) * np.sqrt(alpha / np.pi) / self.material.dielectric_constant
 
