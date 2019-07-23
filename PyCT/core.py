@@ -954,23 +954,26 @@ class System(object):
         r_cut = ewald_parameters['r_cut']
         k_cut = ewald_parameters['k_cut']
 
-        precomputed_array = np.zeros((self.neighbors.num_system_elements,
-                                      self.neighbors.num_system_elements))
+        precomputed_array_real = np.zeros((self.neighbors.num_system_elements,
+                                           self.neighbors.num_system_elements))
 
         n_max = np.round(r_cut / self.translational_vector_length).astype(int)
-        precomputed_array = self.pot_r_ewald(precomputed_array, n_max, alpha, r_cut)[0]
+        precomputed_array_real = self.pot_r_ewald(precomputed_array_real, n_max, alpha, r_cut)[0] / self.material.dielectric_constant
 
         prefix_list.append(f'n_max: [{n_max[0]}, {n_max[1]}, {n_max[2]}]\n')
 
+        precomputed_array_fourier = np.zeros((self.neighbors.num_system_elements,
+                                              self.neighbors.num_system_elements))
+
         k_max = np.ceil(k_cut / self.reciprocal_lattice_vector_length).astype(int)  # max number of multiples of reciprocal lattice length vectors
         num_k_vectors = np.ceil(np.prod(2 * k_max + 1) * np.pi / 6 - 1)
-        precomputed_array = self.pot_k_ewald(precomputed_array, k_max, alpha, k_cut)
+        precomputed_array_fourier = self.pot_k_ewald(precomputed_array_fourier, k_max, alpha, k_cut) / self.material.dielectric_constant
 
         prefix_list.append(f'k_max: [{k_max[0]}, {k_max[1]}, {k_max[2]}]\n')
         prefix_list.append(f'number of k-vectors: {num_k_vectors}\n\n')
 
-        precomputed_array -= np.eye(len(precomputed_array)) * np.sqrt(alpha / np.pi)
-        precomputed_array /= self.material.dielectric_constant
+        precomputed_array_self = - np.eye(self.neighbors.num_system_elements) * np.sqrt(alpha / np.pi) / self.material.dielectric_constant
+        precomputed_array = precomputed_array_real + precomputed_array_fourier + precomputed_array_self
 
         file_name = 'precomputed_array'
         print_time_elapsed = 1
