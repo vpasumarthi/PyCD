@@ -953,7 +953,7 @@ class System(object):
         precomputed_array_fourier = self.pot_k_ewald(k_max, alpha, k_cut) / self.material.dielectric_constant
         return (precomputed_array_fourier, k_max, num_k_vectors)
 
-    def get_precomputed_array(self, dst_path, compute_energies=True):
+    def get_precomputed_array(self, dst_path, compute_energy_contributions):
         """
 
         :param dst_path:
@@ -976,7 +976,7 @@ class System(object):
 
         precomputed_array = precomputed_array_real + precomputed_array_fourier + precomputed_array_self
 
-        if compute_energies:
+        if compute_energy_contributions:
             # Assumption for the accuracy analysis
             ion_charge_type = 'full'
             charge_list = self.base_charge_config_for_accuracy_analysis(ion_charge_type)
