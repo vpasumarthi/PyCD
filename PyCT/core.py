@@ -846,6 +846,8 @@ class System(object):
         if np.isreal(self.r_cut):
             r_cut_choice = 'user-specified'
             r_cut = real_space_parameters['r_cut'] = self.r_cut
+        elif self.r_cut == 'simulation_cell':
+            r_cut_choice = 'simulation_cell'
         else:
             r_cut_choice = 'optimal'
 
