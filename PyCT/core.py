@@ -833,7 +833,7 @@ class System(object):
         prefix_list.append(f'Fourier-space cutoff error: {fourier_space_cutoff_error:.3e}\n\n')
         return prefix_list
 
-    def get_cutoff_parameters(self, tau_ratio, prefix_list):
+    def get_cutoff_parameters(self, tau_ratio):
         real_space_parameters = {}
         fourier_space_parameters = {}
         if np.isreal(self.alpha):
@@ -854,6 +854,10 @@ class System(object):
             k_cut = fourier_space_parameters['k_cut'] = self.k_cut
         else:
             k_cut_choice = 'optimal'
+
+        choice_parameters = {'alpha': alpha_choice,
+                             'r_cut': r_cut_choice,
+                             'k_cut': k_cut_choice}
 
         # Assumption for the accuracy analysis
         ion_charge_type = 'full'
@@ -909,13 +913,7 @@ class System(object):
                 # optimize fourier-space cutoff error for k_cut
                 fourier_space_parameters = self.minimize_fourier_space_cutoff_error(charge_list_einsum, volume_derived_length, fourier_space_parameters, x_fourier_initial_guess)
                 k_cut = fourier_space_parameters['k_cut']
-
-        prefix_list.append(f'alpha: {alpha * constants.ANG2BOHR:.3e} / angstrom ({alpha_choice})\n')
-        prefix_list.append(f'r_cut: {r_cut / constants.ANG2BOHR:.3e} angstrom ({r_cut_choice})\n')
-        prefix_list.append(f'k_cut: {k_cut * constants.ANG2BOHR:.3e} / angstrom ({k_cut_choice})\n')
-
-        prefix_list = self.compute_cutoff_errors(charge_list_einsum, alpha, r_cut, k_cut, volume_derived_length, prefix_list)
-        return (alpha, r_cut, k_cut, prefix_list)
+        return (alpha, r_cut, k_cut, choice_parameters, charge_list_einsum, volume_derived_length)
 
     def get_ewald_parameters(self, prefix_list):
 
@@ -939,7 +937,13 @@ class System(object):
         prefix_list.append(f'tau_ratio, (tau_r/tau_f): {tau_ratio:.3e}\n')
         prefix_list.append(f'time_ratio, (time_r/time_f): {time_ratio:.3e}\n\n')
 
-        (alpha, r_cut, k_cut, prefix_list) = self.get_cutoff_parameters(tau_ratio, prefix_list)
+        (alpha, r_cut, k_cut, choice_parameters, charge_list_einsum, volume_derived_length) = self.get_cutoff_parameters(tau_ratio)
+
+        prefix_list.append(f'alpha: {alpha * constants.ANG2BOHR:.3e} / angstrom ({choice_parameters["alpha"]})\n')
+        prefix_list.append(f'r_cut: {r_cut / constants.ANG2BOHR:.3e} angstrom ({choice_parameters["r_cut"]})\n')
+        prefix_list.append(f'k_cut: {k_cut * constants.ANG2BOHR:.3e} / angstrom ({choice_parameters["k_cut"]})\n')
+
+        prefix_list = self.compute_cutoff_errors(charge_list_einsum, alpha, r_cut, k_cut, volume_derived_length, prefix_list)
 
         ewald_parameters = {'alpha': alpha,
                             'r_cut': r_cut,
