@@ -950,7 +950,7 @@ class System(object):
         precomputed_array_real = self.pot_r_ewald(precomputed_array_real, n_max, alpha, r_cut)[0] / self.material.dielectric_constant
         return (precomputed_array_real, n_max)
 
-    def get_precompted_array_fourier(self, alpha, k_cut, prefix_list):
+    def get_precompted_array_fourier(self, alpha, k_cut):
         precomputed_array_fourier = np.zeros((self.neighbors.num_system_elements,
                                               self.neighbors.num_system_elements))
 
