@@ -870,7 +870,7 @@ class System(object):
         x_real_initial_guess = 0.5
         x_fourier_initial_guess = 0.5
         volume_derived_length = np.power(self.system_volume, 1/3)
-        if self.alpha == 'simulation_cell':
+        if self.r_cut == 'simulation_cell':
             r_cut_max = min(self.translational_vector_length) / 2
             real_space_parameters['r_cut'] = 0.75 * r_cut_max
             # optimize real-space cutoff error for alpha
