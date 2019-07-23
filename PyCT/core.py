@@ -870,7 +870,13 @@ class System(object):
         x_real_initial_guess = 0.5
         x_fourier_initial_guess = 0.5
         volume_derived_length = np.power(self.system_volume, 1/3)
-        if not np.isreal(self.alpha) & np.isreal(self.r_cut) & np.isreal(self.k_cut):
+        if self.alpha == 'simulation_cell':
+            r_cut_max = min(self.translational_vector_length) / 2
+            real_space_parameters['r_cut'] = 0.75 * r_cut_max
+            # optimize real-space cutoff error for alpha
+            real_space_parameters = self.minimize_real_space_cutoff_error(charge_list_einsum, real_space_parameters, x_real_initial_guess)
+            alpha = real_space_parameters['alpha']
+        elif not np.isreal(self.alpha) & np.isreal(self.r_cut) & np.isreal(self.k_cut):
             if np.isreal(self.alpha) & np.isreal(self.r_cut):
                 # optimize fourier-space cutoff error for k_cut
                 fourier_space_parameters = self.minimize_fourier_space_cutoff_error(charge_list_einsum, volume_derived_length, fourier_space_parameters, x_fourier_initial_guess)
