@@ -824,6 +824,15 @@ class System(object):
             fourier_space_parameters['alpha'] = fsolve(fourier_space_cutoff_error, alpha0)[0]
         return fourier_space_parameters
 
+    def compute_cutoff_errors(self, charge_list_einsum, alpha, r_cut, k_cut, volume_derived_length, prefix_list):
+        real_space_cutoff_error = charge_list_einsum * np.sqrt(r_cut / (2 * self.system_volume)) * (np.exp(-(alpha * r_cut)**2) / (alpha * r_cut)**2)
+        n_cut = k_cut * volume_derived_length / (2 * np.pi)
+        fourier_space_cutoff_error = charge_list_einsum * np.sqrt(n_cut) / (alpha * volume_derived_length**2) * (np.exp(-(np.pi * n_cut / (alpha * volume_derived_length))**2) / (np.pi * n_cut / (alpha * volume_derived_length))**2)
+
+        prefix_list.append(f'Real-space cutoff error: {real_space_cutoff_error:.3e}\n')
+        prefix_list.append(f'Fourier-space cutoff error: {fourier_space_cutoff_error:.3e}\n\n')
+        return prefix_list
+
     def get_cutoff_parameters(self, tau_ratio, prefix_list):
         real_space_parameters = {}
         fourier_space_parameters = {}
@@ -905,12 +914,7 @@ class System(object):
         prefix_list.append(f'r_cut: {r_cut / constants.ANG2BOHR:.3e} angstrom ({r_cut_choice})\n')
         prefix_list.append(f'k_cut: {k_cut * constants.ANG2BOHR:.3e} / angstrom ({k_cut_choice})\n')
 
-        real_space_cutoff_error = charge_list_einsum * np.sqrt(r_cut / (2 * self.system_volume)) * (np.exp(-(alpha * r_cut)**2) / (alpha * r_cut)**2)
-        n_cut = k_cut * volume_derived_length / (2 * np.pi)
-        fourier_space_cutoff_error = charge_list_einsum * np.sqrt(n_cut) / (alpha * volume_derived_length**2) * (np.exp(-(np.pi * n_cut / (alpha * volume_derived_length))**2) / (np.pi * n_cut / (alpha * volume_derived_length))**2)
-
-        prefix_list.append(f'Real-space cutoff error: {real_space_cutoff_error:.3e}\n')
-        prefix_list.append(f'Fourier-space cutoff error: {fourier_space_cutoff_error:.3e}\n\n')
+        prefix_list = self.compute_cutoff_errors(charge_list_einsum, alpha, r_cut, k_cut, volume_derived_length, prefix_list)
         return (alpha, r_cut, k_cut, prefix_list)
 
     def get_ewald_parameters(self, prefix_list):
