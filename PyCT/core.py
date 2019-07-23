@@ -942,6 +942,16 @@ class System(object):
                             'k_cut': k_cut}
         return (ewald_parameters, prefix_list)
 
+    def get_precompted_array_real(self, alpha, r_cut, prefix_list):
+        precomputed_array_real = np.zeros((self.neighbors.num_system_elements,
+                                           self.neighbors.num_system_elements))
+
+        n_max = np.round(r_cut / self.translational_vector_length).astype(int)
+        precomputed_array_real = self.pot_r_ewald(precomputed_array_real, n_max, alpha, r_cut)[0] / self.material.dielectric_constant
+
+        prefix_list.append(f'n_max: [{n_max[0]}, {n_max[1]}, {n_max[2]}]\n')
+        return (precomputed_array_real, prefix_list)
+
     def get_precomputed_array(self, dst_path):
         """
 
@@ -954,13 +964,7 @@ class System(object):
         r_cut = ewald_parameters['r_cut']
         k_cut = ewald_parameters['k_cut']
 
-        precomputed_array_real = np.zeros((self.neighbors.num_system_elements,
-                                           self.neighbors.num_system_elements))
-
-        n_max = np.round(r_cut / self.translational_vector_length).astype(int)
-        precomputed_array_real = self.pot_r_ewald(precomputed_array_real, n_max, alpha, r_cut)[0] / self.material.dielectric_constant
-
-        prefix_list.append(f'n_max: [{n_max[0]}, {n_max[1]}, {n_max[2]}]\n')
+        (precomputed_array_real, prefix_list) = self.get_precompted_array_real(alpha, r_cut, prefix_list)
 
         precomputed_array_fourier = np.zeros((self.neighbors.num_system_elements,
                                               self.neighbors.num_system_elements))
