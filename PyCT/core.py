@@ -873,6 +873,62 @@ class System(object):
             r_cut_convergence = r_cut_data[indices_of_non_convergence.max() + 1]
         return r_cut_convergence
 
+    def get_simulation_cell_real_space_parameters(self, charge_list_prod, charge_list_einsum, real_space_parameters, x_real_initial_guess, dst_path):
+        r_cut_max = min(self.translational_vector_length) / 2
+        initial_fractional_r_cut = 0.75
+        real_space_parameters['r_cut'] = initial_fractional_r_cut * r_cut_max
+        # optimize real-space cutoff error for alpha
+        real_space_parameters = self.minimize_real_space_cutoff_error(charge_list_einsum, real_space_parameters, x_real_initial_guess)
+        alpha = real_space_parameters['alpha']
+
+        lower_bound = 0.7500
+        upper_bound = 0.9999
+        threshold_fractional_r_cut = 0.9000
+        alpha_percent_increase = 10
+        while not self.check_for_convergence(charge_list_prod, alpha, r_cut_max,
+                                             threshold_fractional_r_cut, upper_bound):
+            alpha = (1 + alpha_percent_increase / 100) * alpha
+
+        r_cut_convergence = 0
+        alpha_vs_fraction_r_cut_convergence = []
+        alpha_percent_decrease = 5
+        while r_cut_convergence / r_cut_max < threshold_fractional_r_cut:
+            alpha_convergence = alpha
+            r_cut_convergence = self.get_convergence_rcut(charge_list_prod, alpha_convergence, r_cut_max, lower_bound, upper_bound)
+            alpha_vs_fraction_r_cut_convergence.append([alpha_convergence, r_cut_convergence / r_cut_max])
+            alpha = (1 - alpha_percent_decrease / 100) * alpha
+
+        real_space_parameters['r_cut'] = r_cut_convergence
+        real_space_parameters['alpha'] = alpha_convergence
+        alpha_vs_fraction_r_cut_convergence = np.asarray(alpha_vs_fraction_r_cut_convergence)
+
+        num_data_points = 5.00E+01
+        (r_cut_data, real_space_energy_data) = self.get_energy_profile_with_r_cut(
+            charge_list_prod, alpha_convergence, r_cut_max, lower_bound, upper_bound, num_data_points)
+
+        plt.switch_backend('Agg')
+        fig1 = plt.figure()        
+        ax = fig1.add_subplot(111)
+        ax.plot(r_cut_data / r_cut_max, real_space_energy_data, 'o-', color='#2ca02c', mec='black')
+        ax.set_xlabel('Fraction of $max(r_{{cut}})$')
+        ax.set_ylabel(f'Energy (Hartree)')
+        ax.set_title('Real-space energy convergence in $r_{{cut}}$')
+        figure_name = 'Real-space energy convergence with r_cut.png'
+        figure_path = dst_path.joinpath(figure_name)
+        plt.savefig(str(figure_path))
+
+        plt.switch_backend('Agg')
+        fig2 = plt.figure()        
+        ax = fig2.add_subplot(111)
+        ax.plot(alpha_vs_fraction_r_cut_convergence[:, 0], alpha_vs_fraction_r_cut_convergence[:, 1], 'o-', color='#2ca02c', mec='black')
+        ax.set_xlabel('alpha')
+        ax.set_ylabel(f'Fraction of $max(r_{{cut}})$')
+        ax.set_title('Convergence in fractional $r_{{cut}}$ with alpha')
+        figure_name = 'Convergence in fractional r_cut with alpha.png'
+        figure_path = dst_path.joinpath(figure_name)
+        plt.savefig(str(figure_path))
+        return real_space_parameters
+
     def get_cutoff_parameters(self, tau_ratio, dst_path):
         real_space_parameters = {}
         fourier_space_parameters = {}
@@ -912,58 +968,7 @@ class System(object):
         volume_derived_length = np.power(self.system_volume, 1/3)
         # real space contribution confined to the simulation cell
         if self.r_cut == 'simulation_cell':
-            r_cut_max = min(self.translational_vector_length) / 2
-            initial_fractional_r_cut = 0.75
-            real_space_parameters['r_cut'] = initial_fractional_r_cut * r_cut_max
-            # optimize real-space cutoff error for alpha
-            real_space_parameters = self.minimize_real_space_cutoff_error(charge_list_einsum, real_space_parameters, x_real_initial_guess)
-            alpha = real_space_parameters['alpha']
-
-            lower_bound = 0.7500
-            upper_bound = 0.9999
-            threshold_fractional_r_cut = 0.9000
-            alpha_percent_increase = 10
-            while not self.check_for_convergence(charge_list_prod, alpha, r_cut_max,
-                                                 threshold_fractional_r_cut, upper_bound):
-                alpha = (1 + alpha_percent_increase / 100) * alpha
-
-            r_cut_convergence = 0
-            alpha_vs_fraction_r_cut_convergence = []
-            alpha_percent_decrease = 5
-            while r_cut_convergence / r_cut_max < threshold_fractional_r_cut:
-                alpha_convergence = alpha
-                r_cut_convergence = self.get_convergence_rcut(charge_list_prod, alpha_convergence, r_cut_max, lower_bound, upper_bound)
-                alpha_vs_fraction_r_cut_convergence.append([alpha_convergence, r_cut_convergence / r_cut_max])
-                alpha = (1 - alpha_percent_decrease / 100) * alpha
-            r_cut = r_cut_convergence
-            alpha = alpha_convergence
-            alpha_vs_fraction_r_cut_convergence = np.asarray(alpha_vs_fraction_r_cut_convergence)
-
-            num_data_points = 5.00E+01
-            (r_cut_data, real_space_energy_data) = self.get_energy_profile_with_r_cut(
-                charge_list_prod, alpha, r_cut_max, lower_bound, upper_bound, num_data_points)
-
-            plt.switch_backend('Agg')
-            fig1 = plt.figure()        
-            ax = fig1.add_subplot(111)
-            ax.plot(r_cut_data / r_cut_max, real_space_energy_data, 'o-', color='#2ca02c', mec='black')
-            ax.set_xlabel('Fraction of $max(r_{{cut}})$')
-            ax.set_ylabel(f'Energy (Hartree)')
-            ax.set_title('Real-space energy convergence in $r_{{cut}}$')
-            figure_name = 'Real-space energy convergence with r_cut.png'
-            figure_path = dst_path.joinpath(figure_name)
-            plt.savefig(str(figure_path))
-
-            plt.switch_backend('Agg')
-            fig2 = plt.figure()        
-            ax = fig2.add_subplot(111)
-            ax.plot(alpha_vs_fraction_r_cut_convergence[:, 0], alpha_vs_fraction_r_cut_convergence[:, 1], 'o-', color='#2ca02c', mec='black')
-            ax.set_xlabel('alpha')
-            ax.set_ylabel(f'Fraction of $max(r_{{cut}})$')
-            ax.set_title('Convergence in fractional $r_{{cut}}$ with alpha')
-            figure_name = 'Convergence in fractional r_cut with alpha.png'
-            figure_path = dst_path.joinpath(figure_name)
-            plt.savefig(str(figure_path))
+            real_space_parameters = self.get_simulation_cell_real_space_parameters(charge_list_prod, charge_list_einsum, real_space_parameters, x_real_initial_guess, dst_path)
         elif not np.isreal(self.alpha) & np.isreal(self.r_cut) & np.isreal(self.k_cut):
             if np.isreal(self.alpha) & np.isreal(self.r_cut):
                 # optimize fourier-space cutoff error for k_cut
