@@ -850,7 +850,7 @@ class System(object):
             convergence_status = 0
         return convergence_status
 
-    def get_convergence_rcut(self, charge_list_prod, alpha, r_cut_max, lower_bound, upper_bound):
+    def get_energy_profile_with_r_cut(self, charge_list_prod, alpha, r_cut_max, lower_bound, upper_bound):
         # analyze real-space energy convergence by varying r_cut
         num_data_points = 1.00E+01
 
@@ -861,6 +861,11 @@ class System(object):
         for r_cut_index, r_cut in enumerate(r_cut_data):
             precomputed_array_real = self.get_precomputed_array_real(alpha, r_cut)[0]
             real_space_energy_data[r_cut_index] = np.sum(np.multiply(charge_list_prod, precomputed_array_real))
+        return (r_cut_data, real_space_energy_data)
+
+    def get_convergence_rcut(self, charge_list_prod, alpha, r_cut_max, lower_bound, upper_bound):
+
+        (r_cut_data, real_space_energy_data) = self.get_energy_profile_with_r_cut(charge_list_prod, alpha, r_cut_max, lower_bound, upper_bound)
 
         real_space_energy_deviation = np.abs(real_space_energy_data - real_space_energy_data[-1])
         indices_of_non_convergence = np.where(real_space_energy_deviation > self.err_tol)[0]
