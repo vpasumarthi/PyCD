@@ -861,13 +861,13 @@ class System(object):
             real_space_energy_data[r_cut_index] = np.sum(np.multiply(charge_list_prod, precomputed_array_real))
         return (r_cut_data, real_space_energy_data)
 
-    def check_for_k_cut_convergence(self, charge_list_prod, alpha, k_cut_lower, k_cut_upper, convergence_tolerance):
+    def check_for_k_cut_convergence(self, charge_list_prod, alpha, k_cut_lower, k_cut_upper):
         precomputed_array_fourier = self.get_precomputed_array_fourier(alpha, k_cut_lower)[0]
         fourier_space_energy_lower = np.sum(np.multiply(charge_list_prod, precomputed_array_fourier))
 
         precomputed_array_fourier = self.get_precomputed_array_fourier(alpha, k_cut_upper)[0]
         fourier_space_energy_upper = np.sum(np.multiply(charge_list_prod, precomputed_array_fourier))
-        if abs(fourier_space_energy_lower - fourier_space_energy_upper) < convergence_tolerance:
+        if abs(fourier_space_energy_lower - fourier_space_energy_upper) < self.err_tol:
             convergence_status = 1
         else:
             convergence_status = 0
@@ -1051,12 +1051,11 @@ class System(object):
             threshold_fractional_k_cut = 0.9000
             percent_increase_in_k_cut_upper = 10
             num_data_points = 5.00E+01
-            convergence_tolerance = 1.00E-08
 
             k_cut_threshold = threshold_fractional_k_cut * k_cut_estimate
             k_cut_upper = upper_bound * k_cut_estimate
             # check for convergence in the absolute value of energy with k_cut
-            while not self.check_for_k_cut_convergence(charge_list_prod, alpha, k_cut_threshold, k_cut_upper, convergence_tolerance):
+            while not self.check_for_k_cut_convergence(charge_list_prod, alpha, k_cut_threshold, k_cut_upper):
                 k_cut_upper = (1 + percent_increase_in_k_cut_upper / 100) * k_cut_upper
 
             k_cut_lower = lower_bound * k_cut_estimate
