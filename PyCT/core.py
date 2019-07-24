@@ -919,8 +919,12 @@ class System(object):
             while not self.check_for_convergence(charge_list_prod, alpha, r_cut_max):
                 alpha = 1.10 * alpha
 
-            r_cut_convergence = self.get_convergence_rcut(charge_list_prod, alpha, r_cut_max)
-
+            r_cut_convergence = max_r_cut_convergence = 0
+            while r_cut_convergence / r_cut_max < 0.90:
+                r_cut_convergence = self.get_convergence_rcut(charge_list_prod, alpha, r_cut_max)
+                max_r_cut_convergence = max(max_r_cut_convergence, r_cut_convergence)
+                alpha = 0.95 * alpha
+            r_cut = max_r_cut_convergence
         elif not np.isreal(self.alpha) & np.isreal(self.r_cut) & np.isreal(self.k_cut):
             if np.isreal(self.alpha) & np.isreal(self.r_cut):
                 # optimize fourier-space cutoff error for k_cut
