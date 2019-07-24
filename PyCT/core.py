@@ -1066,13 +1066,11 @@ class System(object):
                 plt.tight_layout()
                 plt.savefig(str(figure_path))
 
-                fourier_space_energy_data_diff = np.diff(fourier_space_energy_data)
-                indices0_of_step_change = np.where(fourier_space_energy_data_diff != 0)[0]
-                indices1_of_step_change = indices0_of_step_change + 1
+                (k_cut0_of_step_change, k_cut1_of_step_change, energy_changes) = self.get_step_change_analysis_with_k_cut(k_cut_data, fourier_space_energy_data)[:-1]
+                k_cut0_of_step_change_refined.extend(k_cut0_of_step_change.tolist())
+                k_cut1_of_step_change_refined.extend(k_cut1_of_step_change.tolist())
+                energy_changes_refined.extend(energy_changes.tolist())
 
-                k_cut0_of_step_change_refined.extend(k_cut_data[indices0_of_step_change].tolist())
-                k_cut1_of_step_change_refined.extend(k_cut_data[indices1_of_step_change].tolist())
-                energy_changes_refined.extend(np.nonzero(fourier_space_energy_data_diff).tolist())
             k_cut0_of_step_change_refined = np.asarray(k_cut0_of_step_change_refined)
             k_cut1_of_step_change_refined = np.asarray(k_cut1_of_step_change_refined)
             energy_changes_refined = np.asarray(energy_changes_refined)
