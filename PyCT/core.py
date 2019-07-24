@@ -920,11 +920,14 @@ class System(object):
                 alpha = 1.10 * alpha
 
             r_cut_convergence = 0
+            alpha_vs_fraction_r_cut_convergence = []
             while r_cut_convergence / r_cut_max < 0.90:
                 alpha_convergence = alpha
                 r_cut_convergence = self.get_convergence_rcut(charge_list_prod, alpha_convergence, r_cut_max)
+                alpha_vs_fraction_r_cut_convergence.append([alpha_convergence, r_cut_convergence / r_cut_max])
                 alpha = 0.95 * alpha
             r_cut = r_cut_convergence
+            alpha_vs_fraction_r_cut_convergence = np.asarray(alpha_vs_fraction_r_cut_convergence)
 
             lower_bound = 0.50
             upper_bound = 0.9999
@@ -946,6 +949,17 @@ class System(object):
             ax.set_ylabel(f'Energy (Hartree)')
             ax.set_title('Real-space energy convergence in $r_{{cut}}$')
             figure_name = 'Real-space energy convergence with r_cut.png'
+            figure_path = dst_path.joinpath(figure_name)
+            plt.savefig(str(figure_path))
+
+            plt.switch_backend('Agg')
+            fig2 = plt.figure()        
+            ax = fig2.add_subplot(111)
+            ax.plot(alpha_vs_fraction_r_cut_convergence[:, 0], alpha_vs_fraction_r_cut_convergence[:, 1], 'o-', color='#2ca02c', mec='black')
+            ax.set_xlabel('alpha')
+            ax.set_ylabel(f'Fraction of $max(r_{{cut}})$')
+            ax.set_title('Convergence in fractional $r_{{cut}}$ with alpha')
+            figure_name = 'Convergence in fractional r_cut with alpha.png'
             figure_path = dst_path.joinpath(figure_name)
             plt.savefig(str(figure_path))
         elif not np.isreal(self.alpha) & np.isreal(self.r_cut) & np.isreal(self.k_cut):
