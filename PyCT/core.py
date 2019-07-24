@@ -1040,6 +1040,15 @@ class System(object):
             energy_changes = np.nonzero(fourier_space_energy_data_diff)
             k_cut0_of_step_change = k_cut_data[indices0_of_step_change]
             k_cut1_of_step_change = k_cut_data[indices1_of_step_change]
+
+            k_cut0_of_step_change_refined = []
+            k_cut1_of_step_change_refined = []
+            for step_index in range(num_steps):
+                lower_bound = k_cut0_of_step_change[step_index] / k_cut_estimate
+                upper_bound = k_cut1_of_step_change[step_index] / k_cut_estimate
+                (k_cut_data, fourier_space_energy_data) = self.get_energy_profile_with_k_cut(
+                            charge_list_prod, alpha, k_cut_estimate, lower_bound, upper_bound, num_data_points)
+
         elif not np.isreal(self.alpha) & np.isreal(self.r_cut) & np.isreal(self.k_cut):
             if np.isreal(self.alpha) & np.isreal(self.r_cut):
                 # optimize fourier-space cutoff error for k_cut
