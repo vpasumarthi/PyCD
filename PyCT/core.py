@@ -936,6 +936,7 @@ class System(object):
                 alpha_vs_fraction_r_cut_convergence.append([alpha_convergence, r_cut_convergence / r_cut_max])
                 alpha = (1 - alpha_percent_decrease / 100) * alpha
             r_cut = r_cut_convergence
+            alpha = alpha_convergence
             alpha_vs_fraction_r_cut_convergence = np.asarray(alpha_vs_fraction_r_cut_convergence)
 
             num_data_points = 5.00E+01
