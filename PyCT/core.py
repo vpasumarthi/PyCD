@@ -1002,7 +1002,7 @@ class System(object):
             # optimize fourier-space cutoff error for k_cut
             fourier_space_parameters = self.minimize_fourier_space_cutoff_error(charge_list_einsum, volume_derived_length, fourier_space_parameters, x_fourier_initial_guess)
             k_cut_estimate = fourier_space_parameters['k_cut']
-        elif self.k_cut == 'converge':
+        elif self.k_cut == 'converge' & np.array_equal(self.system_size, np.ones(self.neighbors.n_dim, int)):
             alpha = real_space_parameters['alpha']
             k_cut_input_directory_path = dst_path.joinpath(f'alpha={alpha * constants.ANG2BOHR:.3e}')
             Path.mkdir(k_cut_input_directory_path, parents=True, exist_ok=True)
