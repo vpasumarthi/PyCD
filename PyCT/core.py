@@ -850,10 +850,9 @@ class System(object):
             convergence_status = 0
         return convergence_status
 
-    def get_energy_profile_with_r_cut(self, charge_list_prod, alpha, r_cut_max, lower_bound, upper_bound):
-        # analyze real-space energy convergence by varying r_cut
-        num_data_points = 1.00E+01
-
+    def get_energy_profile_with_r_cut(self, charge_list_prod, alpha, r_cut_max,
+                                      lower_bound, upper_bound, num_data_points):
+        # compute real-space energy by varying r_cut
         r_cut_lower = lower_bound * r_cut_max
         r_cut_upper = upper_bound * r_cut_max
         r_cut_data = np.linspace(r_cut_lower, r_cut_upper, num_data_points)
@@ -865,7 +864,9 @@ class System(object):
 
     def get_convergence_rcut(self, charge_list_prod, alpha, r_cut_max, lower_bound, upper_bound):
 
-        (r_cut_data, real_space_energy_data) = self.get_energy_profile_with_r_cut(charge_list_prod, alpha, r_cut_max, lower_bound, upper_bound)
+        num_data_points = 1.00E+01
+        (r_cut_data, real_space_energy_data) = self.get_energy_profile_with_r_cut(
+            charge_list_prod, alpha, r_cut_max, lower_bound, upper_bound, num_data_points)
 
         real_space_energy_deviation = np.abs(real_space_energy_data - real_space_energy_data[-1])
         indices_of_non_convergence = np.where(real_space_energy_deviation > self.err_tol)[0]
@@ -938,7 +939,9 @@ class System(object):
             r_cut = r_cut_convergence
             alpha_vs_fraction_r_cut_convergence = np.asarray(alpha_vs_fraction_r_cut_convergence)
 
-            (r_cut_data, real_space_energy_data) = self.get_energy_profile_with_r_cut(charge_list_prod, alpha, r_cut_max, lower_bound, upper_bound)
+            num_data_points = 5.00E+01
+            (r_cut_data, real_space_energy_data) = self.get_energy_profile_with_r_cut(
+                charge_list_prod, alpha, r_cut_max, lower_bound, upper_bound, num_data_points)
 
             plt.switch_backend('Agg')
             fig1 = plt.figure()        
