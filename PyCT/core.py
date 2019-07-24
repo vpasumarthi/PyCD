@@ -994,6 +994,13 @@ class System(object):
             alpha = real_space_parameters['alpha']
             k_cut_input_directory_path = dst_path.joinpath(f'alpha={alpha * constants.ANG2BOHR:.3e}')
             Path.mkdir(k_cut_input_directory_path, parents=True, exist_ok=True)
+
+            # re-initialize fourier_space_parameters
+            fourier_space_parameters = {}
+            fourier_space_parameters['alpha'] = alpha
+            # optimize fourier-space cutoff error for k_cut
+            fourier_space_parameters = self.minimize_fourier_space_cutoff_error(charge_list_einsum, volume_derived_length, fourier_space_parameters, x_fourier_initial_guess)
+            k_cut_estimate = fourier_space_parameters['k_cut']
         elif not np.isreal(self.alpha) & np.isreal(self.r_cut) & np.isreal(self.k_cut):
             if np.isreal(self.alpha) & np.isreal(self.r_cut):
                 # optimize fourier-space cutoff error for k_cut
