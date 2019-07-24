@@ -1026,7 +1026,7 @@ class System(object):
             ax.plot(k_cut_data * constants.ANG2BOHR, fourier_space_energy_data / constants.EV2HARTREE, 'o-', color='#2ca02c', mec='black')
             ax.set_xlabel('$k_{{cut}}$ (1/$\AA$)')
             ax.set_ylabel(f'Energy (eV)')
-            ax.set_title('Fourier-space energy convergence in $k_{{cut}}$')
+            plt.title('Fourier-space energy convergence in $k_{{cut}}$', y=1.08)
             figure_name = f'Fourier-space energy convergence with k_cut_{int(lower_bound)}x-{int(upper_bound)}x k_estimate.png'
             figure_path = dst_path.joinpath(figure_name)
             plt.tight_layout()
