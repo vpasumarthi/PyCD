@@ -1071,6 +1071,8 @@ class System(object):
             k_cut1_of_step_change_refined = np.asarray(k_cut1_of_step_change_refined)
             energy_changes_refined = np.asarray(energy_changes_refined)
             num_steps_refined = len(energy_changes_refined)
+            k_cut = k_cut1_of_step_change_refined[-1]
+            factor_of_increase_from_estimation = k_cut / k_cut_estimate
         elif not np.isreal(self.alpha) & np.isreal(self.r_cut) & np.isreal(self.k_cut):
             if np.isreal(self.alpha) & np.isreal(self.r_cut):
                 # optimize fourier-space cutoff error for k_cut
