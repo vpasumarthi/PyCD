@@ -939,7 +939,7 @@ class System(object):
         plt.savefig(str(figure_path))
         return real_space_parameters
 
-    def get_cutoff_parameters(self, tau_ratio, dst_path):
+    def get_cutoff_parameters(self, tau_ratio, dst_path, prefix_list):
         real_space_parameters = {}
         fourier_space_parameters = {}
         if np.isreal(self.alpha):
@@ -1073,6 +1073,8 @@ class System(object):
             num_steps_refined = len(energy_changes_refined)
             k_cut = k_cut1_of_step_change_refined[-1]
             factor_of_increase_from_estimation = k_cut / k_cut_estimate
+            prefix_list.append(f'Number of step changes in Fourier-space energy with varying k_cut: {num_steps_refined}\n')
+            prefix_list.append(f'Factor of increase in the value of converged k_cut from estimation: {factor_of_increase_from_estimation:.3e}\n')
         elif not np.isreal(self.alpha) & np.isreal(self.r_cut) & np.isreal(self.k_cut):
             if np.isreal(self.alpha) & np.isreal(self.r_cut):
                 # optimize fourier-space cutoff error for k_cut
@@ -1118,7 +1120,7 @@ class System(object):
                 # optimize fourier-space cutoff error for k_cut
                 fourier_space_parameters = self.minimize_fourier_space_cutoff_error(charge_list_einsum, volume_derived_length, fourier_space_parameters, x_fourier_initial_guess)
                 k_cut = fourier_space_parameters['k_cut']
-        return (alpha, r_cut, k_cut, choice_parameters, charge_list_einsum, volume_derived_length)
+        return (alpha, r_cut, k_cut, choice_parameters, charge_list_einsum, volume_derived_length, prefix_list)
 
     def get_ewald_parameters(self, prefix_list, dst_path):
 
@@ -1142,7 +1144,7 @@ class System(object):
         prefix_list.append(f'tau_ratio, (tau_r/tau_f): {tau_ratio:.3e}\n')
         prefix_list.append(f'time_ratio, (time_r/time_f): {time_ratio:.3e}\n\n')
 
-        (alpha, r_cut, k_cut, choice_parameters, charge_list_einsum, volume_derived_length) = self.get_cutoff_parameters(tau_ratio, dst_path)
+        (alpha, r_cut, k_cut, choice_parameters, charge_list_einsum, volume_derived_length, prefix_list) = self.get_cutoff_parameters(tau_ratio, dst_path, prefix_list)
 
         prefix_list.append(f'alpha: {alpha * constants.ANG2BOHR:.3e} / angstrom ({choice_parameters["alpha"]})\n')
         prefix_list.append(f'r_cut: {r_cut / constants.ANG2BOHR:.3e} angstrom ({choice_parameters["r_cut"]})\n')
