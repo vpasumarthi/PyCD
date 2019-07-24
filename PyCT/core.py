@@ -972,6 +972,14 @@ class System(object):
             alpha = real_space_parameters['alpha']
             r_cut = real_space_parameters['r_cut']
 
+            # use k_cut convergence information from unit cell
+            k_cut_convergence_system_size = np.ones(self.neighbors.n_dim, int)
+            input_file_directory_name = dst_path.parts[-1]
+            k_cut_input_directory_path = (
+                dst_path.resolve().parents[1]
+                / ('SystemSize[' + ','.join(str(element) for element in k_cut_convergence_system_size) + ']')
+                / input_file_directory_name
+                / f'alpha={alpha:.3e}')
             # re-initialize fourier_space_parameters
             fourier_space_parameters = {}
             fourier_space_parameters['alpha'] = alpha
