@@ -23,6 +23,8 @@ import pickle
 from PyCT.io import read_poscar, generate_report
 from PyCT import constants
 
+plt.switch_backend('Agg')
+
 
 class Material(object):
     """Defines the properties and structure of working material
@@ -916,7 +918,6 @@ class System(object):
         (r_cut_data, real_space_energy_data) = self.get_energy_profile_with_r_cut(
             charge_list_prod, alpha_convergence, r_cut_max, lower_bound, upper_bound, num_data_points)
 
-        plt.switch_backend('Agg')
         fig1 = plt.figure()        
         ax = fig1.add_subplot(111)
         ax.plot(r_cut_data / r_cut_max, real_space_energy_data / constants.EV2HARTREE, 'o-', color='#2ca02c', mec='black')
@@ -927,7 +928,6 @@ class System(object):
         figure_path = dst_path.joinpath(figure_name)
         plt.savefig(str(figure_path))
 
-        plt.switch_backend('Agg')
         fig2 = plt.figure()        
         ax = fig2.add_subplot(111)
         ax.plot(alpha_vs_fraction_r_cut_convergence[:, 0] * constants.ANG2BOHR, alpha_vs_fraction_r_cut_convergence[:, 1], 'o-', color='#2ca02c', mec='black')
@@ -951,7 +951,6 @@ class System(object):
         return (k_cut0_of_step_change, k_cut1_of_step_change, energy_changes, num_steps)
 
     def plot_energy_profile_in_bounded_k_cut(self, k_cut_data, fourier_space_energy_data, title_suffix, dst_path):
-        plt.switch_backend('Agg')
         fig1 = plt.figure()        
         ax = fig1.add_subplot(111)
         ax.plot(k_cut_data * constants.ANG2BOHR, fourier_space_energy_data / constants.EV2HARTREE, 'o-', color='#2ca02c', mec='black')
@@ -2482,7 +2481,6 @@ class Analysis(object):
         """
         assert dst_path, 'Please provide the destination path where MSD Plot ' \
                         'files needs to be saved'
-        plt.switch_backend('Agg')
         fig = plt.figure()
         ax = fig.add_subplot(111)
         for species_index, species_type in enumerate(species_types):
