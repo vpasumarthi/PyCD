@@ -859,11 +859,9 @@ class System(object):
             real_space_energy_data[r_cut_index] = np.sum(np.multiply(charge_list_prod, precomputed_array_real))
         return (r_cut_data, real_space_energy_data)
 
-    def get_energy_profile_with_k_cut(self, charge_list_prod, alpha, k_cut_max,
-                                      lower_bound, upper_bound, num_data_points):
+    def get_energy_profile_with_k_cut(self, charge_list_prod, alpha, k_cut_lower,
+                                      k_cut_upper, num_data_points):
         # compute fourier-space energy by varying r_cut
-        k_cut_lower = lower_bound * k_cut_max
-        k_cut_upper = upper_bound * k_cut_max
         k_cut_data = np.linspace(k_cut_lower, k_cut_upper, num_data_points)
         fourier_space_energy_data = np.zeros(int(num_data_points))
         for k_cut_index, k_cut in enumerate(k_cut_data):
@@ -1016,9 +1014,11 @@ class System(object):
 
             lower_bound = 0.0000
             upper_bound = 100.0000
+            k_cut_lower = lower_bound * k_cut_estimate
+            k_cut_upper = upper_bound * k_cut_estimate
             num_data_points = 5.00E+01
             (k_cut_data, fourier_space_energy_data) = self.get_energy_profile_with_k_cut(
-                        charge_list_prod, alpha, k_cut_estimate, lower_bound, upper_bound, num_data_points)
+                        charge_list_prod, alpha, k_cut_lower, k_cut_upper, num_data_points)
 
             plt.switch_backend('Agg')
             fig1 = plt.figure()        
@@ -1044,10 +1044,10 @@ class System(object):
             k_cut0_of_step_change_refined = []
             k_cut1_of_step_change_refined = []
             for step_index in range(num_steps):
-                lower_bound = k_cut0_of_step_change[step_index] / k_cut_estimate
-                upper_bound = k_cut1_of_step_change[step_index] / k_cut_estimate
+                k_cut_lower = k_cut0_of_step_change[step_index]
+                k_cut_upper = k_cut1_of_step_change[step_index]
                 (k_cut_data, fourier_space_energy_data) = self.get_energy_profile_with_k_cut(
-                            charge_list_prod, alpha, k_cut_estimate, lower_bound, upper_bound, num_data_points)
+                            charge_list_prod, alpha, k_cut_lower, k_cut_upper, num_data_points)
 
         elif not np.isreal(self.alpha) & np.isreal(self.r_cut) & np.isreal(self.k_cut):
             if np.isreal(self.alpha) & np.isreal(self.r_cut):
