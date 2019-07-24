@@ -850,10 +850,8 @@ class System(object):
             convergence_status = 0
         return convergence_status
 
-    def get_convergence_rcut(self, charge_list_prod, alpha, r_cut_max):
+    def get_convergence_rcut(self, charge_list_prod, alpha, r_cut_max, lower_bound, upper_bound):
         # analyze real-space energy convergence by varying r_cut
-        lower_bound = 0.50
-        upper_bound = 0.9999
         num_data_points = 1.00E+01
 
         r_cut_lower = lower_bound * r_cut_max
@@ -911,28 +909,31 @@ class System(object):
         volume_derived_length = np.power(self.system_volume, 1/3)
         if self.r_cut == 'simulation_cell':
             r_cut_max = min(self.translational_vector_length) / 2
-            real_space_parameters['r_cut'] = 0.75 * r_cut_max
+            initial_fractional_r_cut = 0.75
+            real_space_parameters['r_cut'] = initial_fractional_r_cut * r_cut_max
             # optimize real-space cutoff error for alpha
             real_space_parameters = self.minimize_real_space_cutoff_error(charge_list_einsum, real_space_parameters, x_real_initial_guess)
             alpha = real_space_parameters['alpha']
 
+            alpha_percent_increase = 10
             while not self.check_for_convergence(charge_list_prod, alpha, r_cut_max):
-                alpha = 1.10 * alpha
+                alpha = (1 + alpha_percent_increase / 100) * alpha
 
             r_cut_convergence = 0
             alpha_vs_fraction_r_cut_convergence = []
-            while r_cut_convergence / r_cut_max < 0.90:
+            lower_bound = 0.7500
+            upper_bound = 0.9999
+            threshold_fractional_r_cut = 0.9000
+            alpha_percent_decrease = 5
+            while r_cut_convergence / r_cut_max < threshold_fractional_r_cut:
                 alpha_convergence = alpha
-                r_cut_convergence = self.get_convergence_rcut(charge_list_prod, alpha_convergence, r_cut_max)
+                r_cut_convergence = self.get_convergence_rcut(charge_list_prod, alpha_convergence, r_cut_max, lower_bound, upper_bound)
                 alpha_vs_fraction_r_cut_convergence.append([alpha_convergence, r_cut_convergence / r_cut_max])
-                alpha = 0.95 * alpha
+                alpha = (1 - alpha_percent_decrease / 100) * alpha
             r_cut = r_cut_convergence
             alpha_vs_fraction_r_cut_convergence = np.asarray(alpha_vs_fraction_r_cut_convergence)
 
-            lower_bound = 0.50
-            upper_bound = 0.9999
             num_data_points = 5.00E+01
-    
             r_cut_lower = lower_bound * r_cut_max
             r_cut_upper = upper_bound * r_cut_max
             r_cut_data = np.linspace(r_cut_lower, r_cut_upper, num_data_points)
