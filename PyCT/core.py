@@ -911,7 +911,6 @@ class System(object):
         volume_derived_length = np.power(self.system_volume, 1/3)
         if self.r_cut == 'simulation_cell':
             r_cut_max = min(self.translational_vector_length) / 2
-            r_cut_max_next_after = 0.9999 * r_cut_max
             real_space_parameters['r_cut'] = 0.75 * r_cut_max
             # optimize real-space cutoff error for alpha
             real_space_parameters = self.minimize_real_space_cutoff_error(charge_list_einsum, real_space_parameters, x_real_initial_guess)
