@@ -859,6 +859,18 @@ class System(object):
             real_space_energy_data[r_cut_index] = np.sum(np.multiply(charge_list_prod, precomputed_array_real))
         return (r_cut_data, real_space_energy_data)
 
+    def get_energy_profile_with_k_cut(self, charge_list_prod, alpha, k_cut_max,
+                                      lower_bound, upper_bound, num_data_points):
+        # compute real-space energy by varying r_cut
+        k_cut_lower = lower_bound * k_cut_max
+        k_cut_upper = upper_bound * k_cut_max
+        k_cut_data = np.linspace(k_cut_lower, k_cut_upper, num_data_points)
+        fourier_space_energy_data = np.zeros(int(num_data_points))
+        for k_cut_index, k_cut in enumerate(k_cut_data):
+            precomputed_array_fourier = self.get_precomputed_array_fourier(alpha, k_cut)[0]
+            fourier_space_energy_data[k_cut_index] = np.sum(np.multiply(charge_list_prod, precomputed_array_fourier))
+        return (k_cut_data, fourier_space_energy_data)
+
     def get_convergence_rcut(self, charge_list_prod, alpha, r_cut_max, lower_bound, upper_bound):
 
         num_data_points = 1.00E+01
