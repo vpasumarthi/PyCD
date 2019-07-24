@@ -861,7 +861,7 @@ class System(object):
 
     def get_energy_profile_with_k_cut(self, charge_list_prod, alpha, k_cut_max,
                                       lower_bound, upper_bound, num_data_points):
-        # compute real-space energy by varying r_cut
+        # compute fourier-space energy by varying r_cut
         k_cut_lower = lower_bound * k_cut_max
         k_cut_upper = upper_bound * k_cut_max
         k_cut_data = np.linspace(k_cut_lower, k_cut_upper, num_data_points)
