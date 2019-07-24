@@ -992,6 +992,8 @@ class System(object):
             k_cut_estimate = fourier_space_parameters['k_cut']
         elif self.k_cut == 'converge':
             alpha = real_space_parameters['alpha']
+            k_cut_input_directory_path = dst_path.joinpath(f'alpha={alpha * constants.ANG2BOHR:.3e}')
+            Path.mkdir(k_cut_input_directory_path, parents=True, exist_ok=True)
         elif not np.isreal(self.alpha) & np.isreal(self.r_cut) & np.isreal(self.k_cut):
             if np.isreal(self.alpha) & np.isreal(self.r_cut):
                 # optimize fourier-space cutoff error for k_cut
