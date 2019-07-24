@@ -950,6 +950,20 @@ class System(object):
         num_steps = len(energy_changes)
         return (k_cut0_of_step_change, k_cut1_of_step_change, energy_changes, num_steps)
 
+    def plot_energy_profile_in_bounded_k_cut(self, k_cut_data, fourier_space_energy_data, title_suffix, dst_path):
+        plt.switch_backend('Agg')
+        fig1 = plt.figure()        
+        ax = fig1.add_subplot(111)
+        ax.plot(k_cut_data * constants.ANG2BOHR, fourier_space_energy_data / constants.EV2HARTREE, 'o-', color='#2ca02c', mec='black')
+        ax.set_xlabel('$k_{{cut}}$ (1/$\AA$)')
+        ax.set_ylabel(f'Energy (eV)')
+        plt.title('Fourier-space energy convergence in $k_{{cut}}$', y=1.08)
+        figure_name = f'Fourier-space energy convergence with k_cut{title_suffix}.png'
+        figure_path = dst_path.joinpath(figure_name)
+        plt.tight_layout()
+        plt.savefig(str(figure_path))
+        return None
+
     def get_cutoff_parameters(self, tau_ratio, dst_path, prefix_list):
         real_space_parameters = {}
         fourier_space_parameters = {}
@@ -1031,18 +1045,8 @@ class System(object):
 
             (k_cut_data, fourier_space_energy_data) = self.get_energy_profile_with_k_cut(
                         charge_list_prod, alpha, k_cut_lower, k_cut_upper, num_data_points)
-
-            plt.switch_backend('Agg')
-            fig1 = plt.figure()        
-            ax = fig1.add_subplot(111)
-            ax.plot(k_cut_data * constants.ANG2BOHR, fourier_space_energy_data / constants.EV2HARTREE, 'o-', color='#2ca02c', mec='black')
-            ax.set_xlabel('$k_{{cut}}$ (1/$\AA$)')
-            ax.set_ylabel(f'Energy (eV)')
-            plt.title('Fourier-space energy convergence in $k_{{cut}}$', y=1.08)
-            figure_name = f'Fourier-space energy convergence with k_cut_{int(lower_bound)}x-{int(upper_bound)}x k_estimate.png'
-            figure_path = dst_path.joinpath(figure_name)
-            plt.tight_layout()
-            plt.savefig(str(figure_path))
+            title_suffix = f'_{int(lower_bound)}x-{int(upper_bound)}x k_estimate'
+            self.plot_energy_profile_in_bounded_k_cut(k_cut_data, fourier_space_energy_data, title_suffix, dst_path)
 
             (k_cut0_of_step_change, k_cut1_of_step_change, _, num_steps) = self.get_step_change_analysis_with_k_cut(k_cut_data, fourier_space_energy_data)
 
