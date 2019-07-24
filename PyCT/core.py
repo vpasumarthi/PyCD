@@ -872,7 +872,7 @@ class System(object):
             r_cut_convergence = r_cut_data[indices_of_non_convergence.max() + 1]
         return r_cut_convergence
 
-    def get_cutoff_parameters(self, tau_ratio):
+    def get_cutoff_parameters(self, tau_ratio, dst_path):
         real_space_parameters = {}
         fourier_space_parameters = {}
         if np.isreal(self.alpha):
@@ -937,6 +937,17 @@ class System(object):
             for r_cut_index, r_cut in enumerate(r_cut_data):
                 precomputed_array_real = self.get_precomputed_array_real(alpha_convergence, r_cut)[0]
                 real_space_energy_data[r_cut_index] = np.sum(np.multiply(charge_list_prod, precomputed_array_real))
+
+            plt.switch_backend('Agg')
+            fig1 = plt.figure()        
+            ax = fig1.add_subplot(111)
+            ax.plot(r_cut_data / r_cut_max, real_space_energy_data, 'o-', color='#2ca02c', mec='black')
+            ax.set_xlabel('Fraction of $max(r_{{cut}})$')
+            ax.set_ylabel(f'Energy (Hartree)')
+            ax.set_title('Real-space energy convergence in $r_{{cut}}$')
+            figure_name = 'Real-space energy convergence with r_cut.png'
+            figure_path = dst_path.joinpath(figure_name)
+            plt.savefig(str(figure_path))
         elif not np.isreal(self.alpha) & np.isreal(self.r_cut) & np.isreal(self.k_cut):
             if np.isreal(self.alpha) & np.isreal(self.r_cut):
                 # optimize fourier-space cutoff error for k_cut
@@ -984,7 +995,7 @@ class System(object):
                 k_cut = fourier_space_parameters['k_cut']
         return (alpha, r_cut, k_cut, choice_parameters, charge_list_einsum, volume_derived_length)
 
-    def get_ewald_parameters(self, prefix_list):
+    def get_ewald_parameters(self, prefix_list, dst_path):
 
         # real-space calculation limited to original simulation cell
         n_max_benchmark = np.zeros(self.pbc.shape, int)
@@ -1006,7 +1017,7 @@ class System(object):
         prefix_list.append(f'tau_ratio, (tau_r/tau_f): {tau_ratio:.3e}\n')
         prefix_list.append(f'time_ratio, (time_r/time_f): {time_ratio:.3e}\n\n')
 
-        (alpha, r_cut, k_cut, choice_parameters, charge_list_einsum, volume_derived_length) = self.get_cutoff_parameters(tau_ratio)
+        (alpha, r_cut, k_cut, choice_parameters, charge_list_einsum, volume_derived_length) = self.get_cutoff_parameters(tau_ratio, dst_path)
 
         prefix_list.append(f'alpha: {alpha * constants.ANG2BOHR:.3e} / angstrom ({choice_parameters["alpha"]})\n')
         prefix_list.append(f'r_cut: {r_cut / constants.ANG2BOHR:.3e} angstrom ({choice_parameters["r_cut"]})\n')
@@ -1037,7 +1048,7 @@ class System(object):
         :return:
         """
         prefix_list = []
-        (ewald_parameters, prefix_list) = self.get_ewald_parameters(prefix_list)
+        (ewald_parameters, prefix_list) = self.get_ewald_parameters(prefix_list, dst_path)
         alpha = ewald_parameters['alpha']
         r_cut = ewald_parameters['r_cut']
         k_cut = ewald_parameters['k_cut']
