@@ -894,6 +894,9 @@ class System(object):
             # optimize real-space cutoff error for alpha
             real_space_parameters = self.minimize_real_space_cutoff_error(charge_list_einsum, real_space_parameters, x_real_initial_guess)
             alpha = real_space_parameters['alpha']
+
+            while not self.check_for_convergence(charge_list_prod, alpha, r_cut_max):
+                alpha = 1.10 * alpha
         elif not np.isreal(self.alpha) & np.isreal(self.r_cut) & np.isreal(self.k_cut):
             if np.isreal(self.alpha) & np.isreal(self.r_cut):
                 # optimize fourier-space cutoff error for k_cut
