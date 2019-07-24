@@ -979,10 +979,10 @@ class System(object):
                 dst_path.resolve().parents[1]
                 / ('SystemSize[' + ','.join(str(element) for element in k_cut_convergence_system_size) + ']')
                 / input_file_directory_name
-                / f'alpha={alpha:.3e}')
+                / f'alpha={alpha * constants.ANG2BOHR:.3e}')
 
             if not k_cut_input_directory_path.exists():
-                print(f'Please re-run after converging k_cut at alpha={alpha:.3e} for system size [{",".join(str(element) for element in k_cut_convergence_system_size)}]')
+                print(f'Please re-run after converging k_cut at alpha={alpha * constants.ANG2BOHR:.3e} for system size [{",".join(str(element) for element in k_cut_convergence_system_size)}]')
                 exit()
             # re-initialize fourier_space_parameters
             fourier_space_parameters = {}
