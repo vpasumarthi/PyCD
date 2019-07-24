@@ -939,6 +939,17 @@ class System(object):
         plt.savefig(str(figure_path))
         return real_space_parameters
 
+    def get_step_change_analysis_with_k_cut(self, k_cut_data, fourier_space_energy_data):
+        fourier_space_energy_data_diff = np.diff(fourier_space_energy_data)
+        indices0_of_step_change = np.where(fourier_space_energy_data_diff != 0)[0]
+        indices1_of_step_change = indices0_of_step_change + 1
+
+        k_cut0_of_step_change = k_cut_data[indices0_of_step_change]
+        k_cut1_of_step_change = k_cut_data[indices1_of_step_change]
+        energy_changes = np.nonzero(fourier_space_energy_data_diff)
+        num_steps = len(energy_changes)
+        return (k_cut0_of_step_change, k_cut1_of_step_change, energy_changes, num_steps)
+
     def get_cutoff_parameters(self, tau_ratio, dst_path, prefix_list):
         real_space_parameters = {}
         fourier_space_parameters = {}
@@ -1017,6 +1028,7 @@ class System(object):
             k_cut_lower = lower_bound * k_cut_estimate
             k_cut_upper = upper_bound * k_cut_estimate
             num_data_points = 5.00E+01
+
             (k_cut_data, fourier_space_energy_data) = self.get_energy_profile_with_k_cut(
                         charge_list_prod, alpha, k_cut_lower, k_cut_upper, num_data_points)
 
@@ -1032,13 +1044,7 @@ class System(object):
             plt.tight_layout()
             plt.savefig(str(figure_path))
 
-            fourier_space_energy_data_diff = np.diff(fourier_space_energy_data)
-            indices0_of_step_change = np.where(fourier_space_energy_data_diff != 0)[0]
-            indices1_of_step_change = indices0_of_step_change + 1
-            num_steps = len(indices0_of_step_change)
-
-            k_cut0_of_step_change = k_cut_data[indices0_of_step_change]
-            k_cut1_of_step_change = k_cut_data[indices1_of_step_change]
+            (k_cut0_of_step_change, k_cut1_of_step_change, _, num_steps) = self.get_step_change_analysis_with_k_cut(k_cut_data, fourier_space_energy_data)
 
             k_cut0_of_step_change_refined = []
             k_cut1_of_step_change_refined = []
