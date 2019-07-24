@@ -984,6 +984,8 @@ class System(object):
         if np.isreal(self.k_cut):
             k_cut_choice = 'user-specified'
             k_cut = fourier_space_parameters['k_cut'] = self.k_cut
+        elif self.k_cut == 'converge' and np.array_equal(self.system_size, np.ones(self.neighbors.n_dim, int)):
+            k_cut_choice = 'converge'
         else:
             k_cut_choice = 'optimal'
 
