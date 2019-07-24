@@ -1027,7 +1027,7 @@ class System(object):
             ax.set_xlabel('$k_{{cut}}$ (1/$\AA$)')
             ax.set_ylabel(f'Energy (eV)')
             ax.set_title('Fourier-space energy convergence in $k_{{cut}}$')
-            figure_name = 'Fourier-space energy convergence with k_cut.png'
+            figure_name = f'Fourier-space energy convergence with k_cut_{int(lower_bound)}x-{int(upper_bound)}x k_estimate.png'
             figure_path = dst_path.joinpath(figure_name)
             plt.tight_layout()
             plt.savefig(str(figure_path))
