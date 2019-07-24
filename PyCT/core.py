@@ -910,6 +910,7 @@ class System(object):
         x_real_initial_guess = 0.5
         x_fourier_initial_guess = 0.5
         volume_derived_length = np.power(self.system_volume, 1/3)
+        # real space contribution confined to the simulation cell
         if self.r_cut == 'simulation_cell':
             r_cut_max = min(self.translational_vector_length) / 2
             initial_fractional_r_cut = 0.75
