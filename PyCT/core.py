@@ -938,14 +938,7 @@ class System(object):
             r_cut = r_cut_convergence
             alpha_vs_fraction_r_cut_convergence = np.asarray(alpha_vs_fraction_r_cut_convergence)
 
-            num_data_points = 5.00E+01
-            r_cut_lower = lower_bound * r_cut_max
-            r_cut_upper = upper_bound * r_cut_max
-            r_cut_data = np.linspace(r_cut_lower, r_cut_upper, num_data_points)
-            real_space_energy_data = np.zeros(int(num_data_points))
-            for r_cut_index, r_cut in enumerate(r_cut_data):
-                precomputed_array_real = self.get_precomputed_array_real(alpha_convergence, r_cut)[0]
-                real_space_energy_data[r_cut_index] = np.sum(np.multiply(charge_list_prod, precomputed_array_real))
+            (r_cut_data, real_space_energy_data) = self.get_energy_profile_with_r_cut(charge_list_prod, alpha, r_cut_max, lower_bound, upper_bound)
 
             plt.switch_backend('Agg')
             fig1 = plt.figure()        
