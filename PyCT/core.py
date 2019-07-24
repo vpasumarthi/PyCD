@@ -1031,6 +1031,15 @@ class System(object):
             figure_path = dst_path.joinpath(figure_name)
             plt.tight_layout()
             plt.savefig(str(figure_path))
+
+            fourier_space_energy_data_diff = np.diff(fourier_space_energy_data)
+            indices0_of_step_change = np.where(fourier_space_energy_data_diff != 0)[0]
+            indices1_of_step_change = indices0_of_step_change + 1
+            num_steps = len(indices0_of_step_change)
+
+            energy_changes = np.nonzero(fourier_space_energy_data_diff)
+            k_cut0_of_step_change = k_cut_data[indices0_of_step_change]
+            k_cut1_of_step_change = k_cut_data[indices1_of_step_change]
         elif not np.isreal(self.alpha) & np.isreal(self.r_cut) & np.isreal(self.k_cut):
             if np.isreal(self.alpha) & np.isreal(self.r_cut):
                 # optimize fourier-space cutoff error for k_cut
