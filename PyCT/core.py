@@ -921,9 +921,9 @@ class System(object):
         plt.switch_backend('Agg')
         fig1 = plt.figure()        
         ax = fig1.add_subplot(111)
-        ax.plot(r_cut_data / r_cut_max, real_space_energy_data, 'o-', color='#2ca02c', mec='black')
+        ax.plot(r_cut_data / r_cut_max, real_space_energy_data / constants.EV2HARTREE, 'o-', color='#2ca02c', mec='black')
         ax.set_xlabel('Fraction of $max(r_{{cut}})$')
-        ax.set_ylabel(f'Energy (Hartree)')
+        ax.set_ylabel(f'Energy (eV)')
         ax.set_title('Real-space energy convergence in $r_{{cut}}$')
         figure_name = 'Real-space energy convergence with r_cut.png'
         figure_path = dst_path.joinpath(figure_name)
@@ -932,8 +932,8 @@ class System(object):
         plt.switch_backend('Agg')
         fig2 = plt.figure()        
         ax = fig2.add_subplot(111)
-        ax.plot(alpha_vs_fraction_r_cut_convergence[:, 0], alpha_vs_fraction_r_cut_convergence[:, 1], 'o-', color='#2ca02c', mec='black')
-        ax.set_xlabel('alpha')
+        ax.plot(alpha_vs_fraction_r_cut_convergence[:, 0] * constants.ANG2BOHR, alpha_vs_fraction_r_cut_convergence[:, 1], 'o-', color='#2ca02c', mec='black')
+        ax.set_xlabel('alpha (1/$\AA$)')
         ax.set_ylabel(f'Fraction of $max(r_{{cut}})$')
         ax.set_title('Convergence in fractional $r_{{cut}}$ with alpha')
         figure_name = 'Convergence in fractional r_cut with alpha.png'
