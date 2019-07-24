@@ -1070,6 +1070,7 @@ class System(object):
             k_cut0_of_step_change_refined = []
             k_cut1_of_step_change_refined = []
             energy_changes_refined = []
+            max_divergent_k_cut = 0
             for step_index in range(num_steps):
                 k_cut_lower = k_cut0_of_step_change[step_index]
                 k_cut_upper = k_cut1_of_step_change[step_index]
@@ -1078,11 +1079,18 @@ class System(object):
                 title_suffix = f'_step{step_index+1}'
                 self.plot_energy_profile_in_bounded_k_cut(step_k_cut_data, step_fourier_space_energy_data, title_suffix, dst_path)
 
+                divergent_k_cut = step_k_cut_data[abs(step_fourier_space_energy_data - converged_fourier_energy) > self.err_tol]
+                if len(divergent_k_cut) != 0:
+                    max_divergent_k_cut = max(divergent_k_cut)
                 (k_cut0_of_step_change_temp, k_cut1_of_step_change_temp, energy_changes) = self.get_step_change_analysis_with_k_cut(step_k_cut_data, step_fourier_space_energy_data)[:-1]
                 k_cut0_of_step_change_refined.extend(k_cut0_of_step_change_temp.tolist())
                 k_cut1_of_step_change_refined.extend(k_cut1_of_step_change_temp.tolist())
                 energy_changes_refined.extend(energy_changes.tolist())
 
+            if max_divergent_k_cut > 0:
+                k_cut_gentle = k_cut_data[k_cut_data > max_divergent_k_cut][0]
+            else:
+                k_cut_gentle = 0
             k_cut0_of_step_change_refined = np.asarray(k_cut0_of_step_change_refined)
             k_cut1_of_step_change_refined = np.asarray(k_cut1_of_step_change_refined)
             energy_changes_refined = np.asarray(energy_changes_refined)
@@ -1101,10 +1109,14 @@ class System(object):
             plt.tight_layout()
             plt.savefig(str(figure_path))
 
-            k_cut = k_cut1_of_step_change_refined[-1]
+            k_cut_stringent = k_cut1_of_step_change_refined[-1]
             factor_of_increase_from_estimation = k_cut / k_cut_estimate
+
+            k_cut = k_cut_stringent
             prefix_list.append(f'Number of step changes in Fourier-space energy with varying k_cut: {num_steps_refined}\n')
             prefix_list.append(f'Factor of increase in the value of converged k_cut from estimation: {factor_of_increase_from_estimation:.3e}\n')
+            prefix_list.append(f'k_cut (stringent): {k_cut_stringent * constants.ANG2BOHR:.3e} / angstrom\n')
+            prefix_list.append(f'k_cut (gentle): {k_cut_gentle * constants.ANG2BOHR:.3e} / angstrom\n')
         elif not np.isreal(self.alpha) & np.isreal(self.r_cut) & np.isreal(self.k_cut):
             if np.isreal(self.alpha) & np.isreal(self.r_cut):
                 # optimize fourier-space cutoff error for k_cut
