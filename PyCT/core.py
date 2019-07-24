@@ -833,6 +833,23 @@ class System(object):
         prefix_list.append(f'Fourier-space cutoff error: {fourier_space_cutoff_error:.3e}\n\n')
         return prefix_list
 
+    def check_for_convergence(self, charge_list_prod, alpha, r_cut_max):
+        lower_bound = 0.9
+        upper_bound = 0.9999
+
+        r_cut_lower = lower_bound * r_cut_max
+        r_cut_upper = upper_bound * r_cut_max
+        precomputed_array_real = self.get_precomputed_array_real(alpha, r_cut_lower)[0]
+        real_space_energy_lower = np.sum(np.multiply(charge_list_prod, precomputed_array_real))
+
+        precomputed_array_real = self.get_precomputed_array_real(alpha, r_cut_upper)[0]
+        real_space_energy_upper = np.sum(np.multiply(charge_list_prod, precomputed_array_real))
+        if abs(real_space_energy_lower - real_space_energy_upper) < self.err_tol:
+            convergence_status = 1
+        else:
+            convergence_status = 0
+        return convergence_status
+
     def get_cutoff_parameters(self, tau_ratio):
         real_space_parameters = {}
         fourier_space_parameters = {}
