@@ -969,6 +969,8 @@ class System(object):
         # real space contribution confined to the simulation cell
         if self.r_cut == 'simulation_cell':
             real_space_parameters = self.get_simulation_cell_real_space_parameters(charge_list_prod, charge_list_einsum, real_space_parameters, x_real_initial_guess, dst_path)
+            alpha = real_space_parameters['alpha']
+            r_cut = real_space_parameters['r_cut']
         elif not np.isreal(self.alpha) & np.isreal(self.r_cut) & np.isreal(self.k_cut):
             if np.isreal(self.alpha) & np.isreal(self.r_cut):
                 # optimize fourier-space cutoff error for k_cut
