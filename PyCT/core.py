@@ -1073,12 +1073,12 @@ class System(object):
             for step_index in range(num_steps):
                 k_cut_lower = k_cut0_of_step_change[step_index]
                 k_cut_upper = k_cut1_of_step_change[step_index]
-                (k_cut_data, fourier_space_energy_data) = self.get_energy_profile_with_k_cut(
+                (step_k_cut_data, step_fourier_space_energy_data) = self.get_energy_profile_with_k_cut(
                             charge_list_prod, alpha, k_cut_lower, k_cut_upper, num_data_points)
                 title_suffix = f'_step{step_index+1}'
-                self.plot_energy_profile_in_bounded_k_cut(k_cut_data, fourier_space_energy_data, title_suffix, dst_path)
+                self.plot_energy_profile_in_bounded_k_cut(step_k_cut_data, step_fourier_space_energy_data, title_suffix, dst_path)
 
-                (k_cut0_of_step_change_temp, k_cut1_of_step_change_temp, energy_changes) = self.get_step_change_analysis_with_k_cut(k_cut_data, fourier_space_energy_data)[:-1]
+                (k_cut0_of_step_change_temp, k_cut1_of_step_change_temp, energy_changes) = self.get_step_change_analysis_with_k_cut(step_k_cut_data, step_fourier_space_energy_data)[:-1]
                 k_cut0_of_step_change_refined.extend(k_cut0_of_step_change_temp.tolist())
                 k_cut1_of_step_change_refined.extend(k_cut1_of_step_change_temp.tolist())
                 energy_changes_refined.extend(energy_changes.tolist())
