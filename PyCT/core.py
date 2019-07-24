@@ -1062,7 +1062,7 @@ class System(object):
             (k_cut_data, fourier_space_energy_data) = self.get_energy_profile_with_k_cut(
                         charge_list_prod, alpha, k_cut_lower, k_cut_upper, num_data_points)
             title_suffix = f'_{int(lower_bound)}x-{int(upper_bound)}x k_estimate'
-            self.plot_energy_profile_in_bounded_k_cut(k_cut_data, fourier_space_energy_data, title_suffix, dst_path)
+            self.plot_energy_profile_in_bounded_k_cut(k_cut_data, fourier_space_energy_data, title_suffix, k_cut_input_directory_path)
             converged_fourier_energy = fourier_space_energy_data[-1]
 
             (k_cut0_of_step_change, k_cut1_of_step_change, _, num_steps) = self.get_step_change_analysis_with_k_cut(k_cut_data, fourier_space_energy_data)
@@ -1077,7 +1077,7 @@ class System(object):
                 (step_k_cut_data, step_fourier_space_energy_data) = self.get_energy_profile_with_k_cut(
                             charge_list_prod, alpha, k_cut_lower, k_cut_upper, num_data_points)
                 title_suffix = f'_step{step_index+1}'
-                self.plot_energy_profile_in_bounded_k_cut(step_k_cut_data, step_fourier_space_energy_data, title_suffix, dst_path)
+                self.plot_energy_profile_in_bounded_k_cut(step_k_cut_data, step_fourier_space_energy_data, title_suffix, k_cut_input_directory_path)
 
                 divergent_k_cut = step_k_cut_data[abs(step_fourier_space_energy_data - converged_fourier_energy) > self.err_tol]
                 if len(divergent_k_cut) != 0:
