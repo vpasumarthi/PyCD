@@ -1043,6 +1043,7 @@ class System(object):
 
             k_cut0_of_step_change_refined = []
             k_cut1_of_step_change_refined = []
+            energy_changes_refined = []
             for step_index in range(num_steps):
                 k_cut_lower = k_cut0_of_step_change[step_index]
                 k_cut_upper = k_cut1_of_step_change[step_index]
@@ -1060,6 +1061,17 @@ class System(object):
                 plt.tight_layout()
                 plt.savefig(str(figure_path))
 
+                fourier_space_energy_data_diff = np.diff(fourier_space_energy_data)
+                indices0_of_step_change = np.where(fourier_space_energy_data_diff != 0)[0]
+                indices1_of_step_change = indices0_of_step_change + 1
+
+                k_cut0_of_step_change_refined.extend(k_cut_data[indices0_of_step_change].tolist())
+                k_cut1_of_step_change_refined.extend(k_cut_data[indices1_of_step_change].tolist())
+                energy_changes_refined.extend(np.nonzero(fourier_space_energy_data_diff).tolist())
+            k_cut0_of_step_change_refined = np.asarray(k_cut0_of_step_change_refined)
+            k_cut1_of_step_change_refined = np.asarray(k_cut1_of_step_change_refined)
+            energy_changes_refined = np.asarray(energy_changes_refined)
+            num_steps_refined = len(energy_changes_refined)
         elif not np.isreal(self.alpha) & np.isreal(self.r_cut) & np.isreal(self.k_cut):
             if np.isreal(self.alpha) & np.isreal(self.r_cut):
                 # optimize fourier-space cutoff error for k_cut
