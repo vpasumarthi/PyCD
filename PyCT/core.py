@@ -833,7 +833,7 @@ class System(object):
         prefix_list.append(f'Fourier-space cutoff error: {fourier_space_cutoff_error:.3e}\n\n')
         return prefix_list
 
-    def check_for_convergence(self, charge_list_prod, alpha, r_cut_max, threshold_fractional_r_cut, upper_bound):
+    def check_for_r_cut_convergence(self, charge_list_prod, alpha, r_cut_max, threshold_fractional_r_cut, upper_bound):
         r_cut_lower = threshold_fractional_r_cut * r_cut_max
         r_cut_upper = upper_bound * r_cut_max
         precomputed_array_real = self.get_precomputed_array_real(alpha, r_cut_lower)[0]
@@ -897,8 +897,8 @@ class System(object):
         upper_bound = 0.9999
         threshold_fractional_r_cut = 0.9000
         alpha_percent_increase = 10
-        while not self.check_for_convergence(charge_list_prod, alpha, r_cut_max,
-                                             threshold_fractional_r_cut, upper_bound):
+        while not self.check_for_r_cut_convergence(charge_list_prod, alpha, r_cut_max,
+                                                   threshold_fractional_r_cut, upper_bound):
             alpha = (1 + alpha_percent_increase / 100) * alpha
 
         r_cut_convergence = 0
