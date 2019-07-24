@@ -833,11 +833,8 @@ class System(object):
         prefix_list.append(f'Fourier-space cutoff error: {fourier_space_cutoff_error:.3e}\n\n')
         return prefix_list
 
-    def check_for_convergence(self, charge_list_prod, alpha, r_cut_max):
-        lower_bound = 0.9
-        upper_bound = 0.9999
-
-        r_cut_lower = lower_bound * r_cut_max
+    def check_for_convergence(self, charge_list_prod, alpha, r_cut_max, threshold_fractional_r_cut, upper_bound):
+        r_cut_lower = threshold_fractional_r_cut * r_cut_max
         r_cut_upper = upper_bound * r_cut_max
         precomputed_array_real = self.get_precomputed_array_real(alpha, r_cut_lower)[0]
         real_space_energy_lower = np.sum(np.multiply(charge_list_prod, precomputed_array_real))
@@ -921,15 +918,16 @@ class System(object):
             real_space_parameters = self.minimize_real_space_cutoff_error(charge_list_einsum, real_space_parameters, x_real_initial_guess)
             alpha = real_space_parameters['alpha']
 
+            lower_bound = 0.7500
+            upper_bound = 0.9999
+            threshold_fractional_r_cut = 0.9000
             alpha_percent_increase = 10
-            while not self.check_for_convergence(charge_list_prod, alpha, r_cut_max):
+            while not self.check_for_convergence(charge_list_prod, alpha, r_cut_max,
+                                                 threshold_fractional_r_cut, upper_bound):
                 alpha = (1 + alpha_percent_increase / 100) * alpha
 
             r_cut_convergence = 0
             alpha_vs_fraction_r_cut_convergence = []
-            lower_bound = 0.7500
-            upper_bound = 0.9999
-            threshold_fractional_r_cut = 0.9000
             alpha_percent_decrease = 5
             while r_cut_convergence / r_cut_max < threshold_fractional_r_cut:
                 alpha_convergence = alpha
