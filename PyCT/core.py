@@ -971,6 +971,13 @@ class System(object):
             real_space_parameters = self.get_simulation_cell_real_space_parameters(charge_list_prod, charge_list_einsum, real_space_parameters, x_real_initial_guess, dst_path)
             alpha = real_space_parameters['alpha']
             r_cut = real_space_parameters['r_cut']
+
+            # re-initialize fourier_space_parameters
+            fourier_space_parameters = {}
+            fourier_space_parameters['alpha'] = alpha
+            # optimize fourier-space cutoff error for k_cut
+            fourier_space_parameters = self.minimize_fourier_space_cutoff_error(charge_list_einsum, volume_derived_length, fourier_space_parameters, x_fourier_initial_guess)
+            k_cut_estimate = fourier_space_parameters['k_cut']
         elif not np.isreal(self.alpha) & np.isreal(self.r_cut) & np.isreal(self.k_cut):
             if np.isreal(self.alpha) & np.isreal(self.r_cut):
                 # optimize fourier-space cutoff error for k_cut
