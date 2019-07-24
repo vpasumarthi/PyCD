@@ -925,6 +925,18 @@ class System(object):
                 r_cut_convergence = self.get_convergence_rcut(charge_list_prod, alpha_convergence, r_cut_max)
                 alpha = 0.95 * alpha
             r_cut = r_cut_convergence
+
+            lower_bound = 0.50
+            upper_bound = 0.9999
+            num_data_points = 5.00E+01
+    
+            r_cut_lower = lower_bound * r_cut_max
+            r_cut_upper = upper_bound * r_cut_max
+            r_cut_data = np.linspace(r_cut_lower, r_cut_upper, num_data_points)
+            real_space_energy_data = np.zeros(int(num_data_points))
+            for r_cut_index, r_cut in enumerate(r_cut_data):
+                precomputed_array_real = self.get_precomputed_array_real(alpha_convergence, r_cut)[0]
+                real_space_energy_data[r_cut_index] = np.sum(np.multiply(charge_list_prod, precomputed_array_real))
         elif not np.isreal(self.alpha) & np.isreal(self.r_cut) & np.isreal(self.k_cut):
             if np.isreal(self.alpha) & np.isreal(self.r_cut):
                 # optimize fourier-space cutoff error for k_cut
