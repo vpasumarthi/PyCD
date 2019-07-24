@@ -1013,6 +1013,24 @@ class System(object):
             # optimize fourier-space cutoff error for k_cut
             fourier_space_parameters = self.minimize_fourier_space_cutoff_error(charge_list_einsum, volume_derived_length, fourier_space_parameters, x_fourier_initial_guess)
             k_cut_estimate = fourier_space_parameters['k_cut']
+
+            lower_bound = 0.0000
+            upper_bound = 100.0000
+            num_data_points = 5.00E+01
+            (k_cut_data, fourier_space_energy_data) = self.get_energy_profile_with_k_cut(
+                        charge_list_prod, alpha, k_cut_estimate, lower_bound, upper_bound, num_data_points)
+
+            plt.switch_backend('Agg')
+            fig1 = plt.figure()        
+            ax = fig1.add_subplot(111)
+            ax.plot(k_cut_data * constants.ANG2BOHR, fourier_space_energy_data / constants.EV2HARTREE, 'o-', color='#2ca02c', mec='black')
+            ax.set_xlabel('$k_{{cut}}$ (1/$\AA$)')
+            ax.set_ylabel(f'Energy (eV)')
+            ax.set_title('Fourier-space energy convergence in $k_{{cut}}$')
+            figure_name = 'Fourier-space energy convergence with k_cut.png'
+            figure_path = dst_path.joinpath(figure_name)
+            plt.tight_layout()
+            plt.savefig(str(figure_path))
         elif not np.isreal(self.alpha) & np.isreal(self.r_cut) & np.isreal(self.k_cut):
             if np.isreal(self.alpha) & np.isreal(self.r_cut):
                 # optimize fourier-space cutoff error for k_cut
