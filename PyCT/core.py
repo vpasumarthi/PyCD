@@ -1048,10 +1048,16 @@ class System(object):
 
             lower_bound = 0.0000
             upper_bound = 100.0000
-            k_cut_lower = lower_bound * k_cut_estimate
-            k_cut_upper = upper_bound * k_cut_estimate
+            threshold_fractional_k_cut = 0.9000
+            percent_increase_in_k_cut_upper = 10
             num_data_points = 5.00E+01
 
+            k_cut_threshold = threshold_fractional_k_cut * k_cut_estimate
+            k_cut_upper = upper_bound * k_cut_estimate
+            while not self.check_for_k_cut_convergence(charge_list_prod, alpha, k_cut_threshold, k_cut_upper):
+                k_cut_upper = (1 + percent_increase_in_k_cut_upper / 100) * k_cut_upper
+
+            k_cut_lower = lower_bound * k_cut_estimate
             (k_cut_data, fourier_space_energy_data) = self.get_energy_profile_with_k_cut(
                         charge_list_prod, alpha, k_cut_lower, k_cut_upper, num_data_points)
             title_suffix = f'_{int(lower_bound)}x-{int(upper_bound)}x k_estimate'
