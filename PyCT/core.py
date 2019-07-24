@@ -1110,7 +1110,7 @@ class System(object):
             plt.savefig(str(figure_path))
 
             k_cut_stringent = k_cut1_of_step_change_refined[-1]
-            factor_of_increase_from_estimation = k_cut / k_cut_estimate
+            factor_of_increase_from_estimation = k_cut_stringent / k_cut_estimate
 
             k_cut = k_cut_stringent
             prefix_list.append(f'Number of step changes in Fourier-space energy with varying k_cut: {num_steps_refined}\n')
