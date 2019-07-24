@@ -1055,6 +1055,7 @@ class System(object):
 
             k_cut_threshold = threshold_fractional_k_cut * k_cut_estimate
             k_cut_upper = upper_bound * k_cut_estimate
+            # check for convergence in the absolute value of energy with k_cut
             while not self.check_for_k_cut_convergence(charge_list_prod, alpha, k_cut_threshold, k_cut_upper, convergence_tolerance):
                 k_cut_upper = (1 + percent_increase_in_k_cut_upper / 100) * k_cut_upper
 
