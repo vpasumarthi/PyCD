@@ -1086,6 +1086,20 @@ class System(object):
             k_cut1_of_step_change_refined = np.asarray(k_cut1_of_step_change_refined)
             energy_changes_refined = np.asarray(energy_changes_refined)
             num_steps_refined = len(energy_changes_refined)
+
+            fig = plt.figure()
+            import matplotlib.ticker as mtick
+            ax = fig.add_subplot(111)
+            ax.yaxis.set_major_formatter(mtick.FormatStrFormatter('%.2e'))
+            ax.plot(k_cut0_of_step_change_refined * constants.ANG2BOHR, energy_changes_refined / constants.EV2HARTREE, 'o-', color='#2ca02c', mec='black')
+            ax.set_xlabel('$k_{{cut}}$ (1/$\AA$)')
+            ax.set_ylabel(f'Energy (eV)')
+            plt.title('Magnitude of step change in Fourier-space energy with increase in $k_{{cut}}$', y=1.08)
+            figure_name = f'Step change convergence with k_cut.png'
+            figure_path = dst_path.joinpath(figure_name)
+            plt.tight_layout()
+            plt.savefig(str(figure_path))
+
             k_cut = k_cut1_of_step_change_refined[-1]
             factor_of_increase_from_estimation = k_cut / k_cut_estimate
             prefix_list.append(f'Number of step changes in Fourier-space energy with varying k_cut: {num_steps_refined}\n')
