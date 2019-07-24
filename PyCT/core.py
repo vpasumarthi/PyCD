@@ -958,7 +958,7 @@ class System(object):
 
         k_cut0_of_step_change = k_cut_data[indices0_of_step_change]
         k_cut1_of_step_change = k_cut_data[indices1_of_step_change]
-        energy_changes = np.nonzero(fourier_space_energy_data_diff)
+        energy_changes = fourier_space_energy_data_diff[np.nonzero(fourier_space_energy_data_diff)[0]]
         num_steps = len(energy_changes)
         return (k_cut0_of_step_change, k_cut1_of_step_change, energy_changes, num_steps)
 
