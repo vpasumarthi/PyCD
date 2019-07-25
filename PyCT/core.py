@@ -1026,11 +1026,12 @@ class System(object):
             k_cut_convergence_system_directory_path = (
                 dst_path.resolve().parents[1]
                 / ('SystemSize[' + ','.join(str(element) for element in k_cut_convergence_system_size) + ']'))
-            k_cut_input_directory_path = (k_cut_convergence_system_directory_path
-                                          / input_file_directory_name
-                                          / f'alpha={alpha * constants.ANG2BOHR:.3e}')
+            k_cut_convergence_input_directory_path = (k_cut_convergence_system_directory_path
+                                                      / input_file_directory_name)
+            k_cut_convergence_alpha_directory_path = (k_cut_convergence_input_directory_path
+                                                      / f'alpha={alpha * constants.ANG2BOHR:.3e}')
 
-            if not k_cut_input_directory_path.exists():
+            if not k_cut_convergence_alpha_directory_path.exists():
                 print(f'Please re-run after converging k_cut at alpha={alpha * constants.ANG2BOHR:.3e} for system size [{",".join(str(element) for element in k_cut_convergence_system_size)}]')
                 exit()
             # re-initialize fourier_space_parameters
@@ -1040,8 +1041,8 @@ class System(object):
             fourier_space_parameters = self.minimize_fourier_space_cutoff_error(charge_list_einsum, volume_derived_length, fourier_space_parameters, x_fourier_initial_guess)
             k_cut_estimate = fourier_space_parameters['k_cut']
         elif self.k_cut == 'converge' and np.array_equal(self.system_size, np.ones(self.neighbors.n_dim, int)):
-            k_cut_input_directory_path = dst_path.joinpath(f'alpha={alpha * constants.ANG2BOHR:.3e}')
-            Path.mkdir(k_cut_input_directory_path, parents=True, exist_ok=True)
+            k_cut_convergence_alpha_directory_path = dst_path.joinpath(f'alpha={alpha * constants.ANG2BOHR:.3e}')
+            Path.mkdir(k_cut_convergence_alpha_directory_path, parents=True, exist_ok=True)
 
             # optimize fourier-space cutoff error for k_cut
             fourier_space_parameters = self.minimize_fourier_space_cutoff_error(charge_list_einsum, volume_derived_length, fourier_space_parameters, x_fourier_initial_guess)
@@ -1063,7 +1064,7 @@ class System(object):
             (k_cut_data, fourier_space_energy_data) = self.get_energy_profile_with_k_cut(
                         charge_list_prod, alpha, k_cut_lower, k_cut_upper, num_data_points)
             title_suffix = f'_{int(lower_bound)}x-{int(upper_bound)}x k_estimate'
-            self.plot_energy_profile_in_bounded_k_cut(k_cut_data, fourier_space_energy_data, title_suffix, k_cut_input_directory_path)
+            self.plot_energy_profile_in_bounded_k_cut(k_cut_data, fourier_space_energy_data, title_suffix, k_cut_convergence_alpha_directory_path)
             converged_fourier_energy = fourier_space_energy_data[-1]
 
             (k_cut0_of_step_change, k_cut1_of_step_change, _, num_steps) = self.get_step_change_analysis_with_k_cut(k_cut_data, fourier_space_energy_data)
@@ -1078,7 +1079,7 @@ class System(object):
                 (step_k_cut_data, step_fourier_space_energy_data) = self.get_energy_profile_with_k_cut(
                             charge_list_prod, alpha, k_cut_lower, k_cut_upper, num_data_points)
                 title_suffix = f'_step{step_index+1}'
-                self.plot_energy_profile_in_bounded_k_cut(step_k_cut_data, step_fourier_space_energy_data, title_suffix, k_cut_input_directory_path)
+                self.plot_energy_profile_in_bounded_k_cut(step_k_cut_data, step_fourier_space_energy_data, title_suffix, k_cut_convergence_alpha_directory_path)
 
                 divergent_k_cut = step_k_cut_data[abs(step_fourier_space_energy_data - converged_fourier_energy) > self.err_tol]
                 if len(divergent_k_cut) != 0:
