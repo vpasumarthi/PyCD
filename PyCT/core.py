@@ -1031,16 +1031,18 @@ class System(object):
             r_cut = real_space_parameters['r_cut'] = self.r_cut
         elif self.r_cut == 'simulation_cell':
             r_cut_choice = 'simulation_cell'
+            k_cut_choice = 'imported'
         else:
             r_cut_choice = 'optimal'
 
-        if np.isreal(self.k_cut):
-            k_cut_choice = 'user-specified'
-            k_cut = fourier_space_parameters['k_cut'] = self.k_cut
-        elif self.k_cut == 'converge' and np.array_equal(self.system_size, np.ones(self.neighbors.n_dim, int)):
-            k_cut_choice = 'converge'
-        else:
-            k_cut_choice = 'optimal'
+        if not np.isreal(self.r_cut):
+            if np.isreal(self.k_cut):
+                k_cut_choice = 'user-specified'
+                k_cut = fourier_space_parameters['k_cut'] = self.k_cut
+            elif self.k_cut == 'converge' and np.array_equal(self.system_size, np.ones(self.neighbors.n_dim, int)):
+                k_cut_choice = 'converge'
+            else:
+                k_cut_choice = 'optimal'
 
         choice_parameters = {'alpha': alpha_choice,
                              'r_cut': r_cut_choice,
