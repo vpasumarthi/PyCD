@@ -1383,7 +1383,7 @@ class System(object):
             prefix_list.append(f'Energy contribution from self-interactions: {self_interaction_energy / constants.EV2HARTREE:.3e} eV\n')
 
             total_system_energy = real_space_energy + fourier_space_energy + self_interaction_energy
-            prefix_list.append(f'Total system energy (neutral): {total_system_energy / constants.EV2HARTREE:.3e} eV\n')
+            prefix_list.append(f'Total system energy (neutral): {total_system_energy / constants.EV2HARTREE:.3e} eV\n\n')
         file_name = 'precomputed_array'
         print_time_elapsed = 1
         prefix = ''.join(prefix_list)
