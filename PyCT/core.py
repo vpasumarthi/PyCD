@@ -883,6 +883,17 @@ class System(object):
             fourier_space_energy_data[k_cut_index] = np.sum(np.multiply(charge_list_prod, precomputed_array_fourier))
         return (k_cut_data, fourier_space_energy_data)
 
+    def check_for_k_cut_step_energy_convergence(self, step_energy_k_cut_data, energy_changes, k_cut_lower, k_cut_upper):
+        energy_change_between_bounds = energy_changes[(step_energy_k_cut_data >= k_cut_lower) & (step_energy_k_cut_data <= k_cut_upper)]
+        total_energy_change = energy_change_between_bounds.sum()
+        max_energy_change = abs(energy_change_between_bounds).max()
+        
+        if total_energy_change < self.err_tol and max_energy_change < self.err_tol:
+            convergence_status = 1
+        else:
+            convergence_status = 0
+        return convergence_status
+
     def get_convergence_rcut(self, charge_list_prod, alpha, r_cut_max, lower_bound, upper_bound):
 
         num_data_points = 1.00E+01
