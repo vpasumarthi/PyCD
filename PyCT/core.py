@@ -756,21 +756,21 @@ class System(object):
         fourier_sum_coeff = (2 * np.pi) / self.system_volume
         k_cut_2 = k_cut**2
 
-        for i in range(-k_max[0], k_max[0]+1):
-            for j in range(-k_max[1], k_max[1]+1):
-                for k in range(-k_max[2], k_max[2]+1):
-                    if not np.all(np.array([i, j, k]) == 0):
-                        k_vector = np.dot(np.array([i, j, k]),
-                                          self.reciprocal_lattice_matrix)
-                        k_vector_2 = np.dot(k_vector, k_vector)
-                        if k_vector_2 < k_cut_2:
-                            precomputed_array += (
-                                            fourier_sum_coeff
-                                            * np.exp(-k_vector_2 / alpha4)
-                                            * np.cos(np.tensordot(
-                                                self.pairwise_min_image_vector_data,
-                                                k_vector, axes=([2], [0])))
-                                            / k_vector_2)
+        k_vector_list = self.get_effective_k_vectors(k_max)
+        for k_vector_value in k_vector_list:
+            k_vector = np.dot(np.asarray(k_vector_value),
+                              self.reciprocal_lattice_matrix)
+            k_vector_2 = np.dot(k_vector, k_vector)
+            if k_vector_2 < k_cut_2:
+                precomputed_array += (
+                                fourier_sum_coeff
+                                * np.exp(-k_vector_2 / alpha4)
+                                * np.cos(np.tensordot(
+                                    self.pairwise_min_image_vector_data,
+                                    k_vector, axes=([2], [0])))
+                                / k_vector_2)
+        # effective k_vectors only include half of all possible k_vectors
+        precomputed_array *= 2
         return precomputed_array
 
     def benchmark_ewald(self, num_repeats, benchmark_parameters):
