@@ -1144,12 +1144,20 @@ class System(object):
             k_cut_stringent = k_cut1_of_step_change_refined[-1]
             factor_of_increase_from_estimation = k_cut_stringent / k_cut_estimate
 
+            # check for step energy change convergence
+            k_cut_lower = threshold_fractional_k_cut * k_cut_stringent
+            k_cut_upper = k_cut_stringent
+            step_energy_convergence_status = self.check_for_k_cut_step_energy_convergence(
+                k_cut0_of_step_change_refined, energy_changes_refined, k_cut_lower, k_cut_upper)
+            convergence_keyword = 'NOT ' if not step_energy_convergence_status else ''
+
             k_cut = k_cut_stringent
             sub_prefix_list = []
             sub_prefix_list.append(f'Number of step changes in Fourier-space energy with varying k_cut: {num_steps_refined}\n')
             sub_prefix_list.append(f'Factor of increase in the value of converged k_cut from estimation: {factor_of_increase_from_estimation:.3e}\n')
             sub_prefix_list.append(f'k_cut (stringent): {k_cut_stringent * constants.ANG2BOHR:.3e} / angstrom\n')
             sub_prefix_list.append(f'k_cut (gentle): {k_cut_gentle * constants.ANG2BOHR:.3e} / angstrom\n')
+            sub_prefix_list.append(f'Step energy changes have {convergence_keyword}converged\n')
 
             file_name = 'k_cut_convergence'
             print_time_elapsed = 0
