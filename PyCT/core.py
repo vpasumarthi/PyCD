@@ -734,6 +734,18 @@ class System(object):
                     precomputed_array[cutoff_neighbor_pairs] /= dr_translated[cutoff_neighbor_pairs]
         return (precomputed_array, num_neighbor_pairs)
 
+    def get_effective_k_vectors(self, k_max):
+        k_vector_list = []
+        exclude_list = []
+        for i in range(-k_max[0], k_max[0]+1):
+            for j in range(-k_max[1], k_max[1]+1):
+                for k in range(-k_max[2], k_max[2]+1):
+                    if [i, j, k] not in exclude_list:
+                        k_vector_list.append([i, j, k])
+                        exclude_list.append([-i, -j, -k])
+        k_vector_list.remove([0, 0, 0])
+        return k_vector_list
+
     def pot_k_ewald(self, k_max, alpha, k_cut):
         """Updates precomputed array with potential energy contributions from
            reciprocal-space"""
