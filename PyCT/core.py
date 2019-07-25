@@ -1093,7 +1093,7 @@ class System(object):
                 for line_index, line in enumerate(k_cut_convergence_log_file):
                     # stringent k_cut
                     if line_index == 2:
-                        k_cut = float(line[7:16]) / constants.ANG2BOHR
+                        k_cut = float(line[19:28]) / constants.ANG2BOHR
             # re-initialize fourier_space_parameters
             fourier_space_parameters = {}
             fourier_space_parameters['alpha'] = alpha
