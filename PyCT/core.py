@@ -1001,6 +1001,21 @@ class System(object):
                         new_k_vectors.append([i, j, k])
         return new_k_vectors
 
+    def get_k_vector_energy_contribution(self, charge_list_prod, alpha, k_vector):
+        alpha4 = 4 * alpha
+        fourier_sum_coeff = (2 * np.pi) / self.system_volume
+
+        k_vector_exact = np.dot(k_vector, self.reciprocal_lattice_matrix)
+        k_vector_exact_2 = np.dot(k_vector_exact, k_vector_exact)
+        precomputed_array = (fourier_sum_coeff * np.exp(-k_vector_exact_2 / alpha4)
+                             * np.cos(np.tensordot(
+                                 self.pairwise_min_image_vector_data,
+                                 k_vector_exact, axes=([2], [0])))
+                             / k_vector_exact_2)
+
+        energy_contribution = np.sum(np.multiply(charge_list_prod, precomputed_array))
+        return energy_contribution
+
     def get_cutoff_parameters(self, tau_ratio, dst_path, prefix_list):
         real_space_parameters = {}
         fourier_space_parameters = {}
