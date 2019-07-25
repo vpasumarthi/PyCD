@@ -986,6 +986,21 @@ class System(object):
         plt.savefig(str(figure_path))
         return None
 
+    def get_new_k_vectors(self, k_cut0, k_cut1):
+        k_cut0_2 = k_cut0**2
+        k_cut1_2 = k_cut1**2
+        k_max = np.ceil(k_cut1 / self.reciprocal_lattice_vector_length).astype(int)
+        new_k_vectors = []
+        for i in range(-k_max[0], k_max[0]+1):
+            for j in range(-k_max[1], k_max[1]+1):
+                for k in range(-k_max[2], k_max[2]+1):
+                    k_vector = np.dot(np.array([i, j, k]),
+                                      self.reciprocal_lattice_matrix)
+                    k_vector_2 = np.dot(k_vector, k_vector)
+                    if k_vector_2 >= k_cut0_2 and k_vector_2 < k_cut1_2:
+                        new_k_vectors.append([i, j, k])
+        return new_k_vectors
+
     def get_cutoff_parameters(self, tau_ratio, dst_path, prefix_list):
         real_space_parameters = {}
         fourier_space_parameters = {}
