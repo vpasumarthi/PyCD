@@ -12,7 +12,7 @@ import itertools
 import pdb
 
 import numpy as np
-from scipy.special import erfc
+from scipy.special import erfc, binom
 from scipy.stats import linregress
 from scipy.optimize import fsolve
 import matplotlib.pyplot as plt
@@ -745,6 +745,19 @@ class System(object):
                         exclude_list.append([-i, -j, -k])
         k_vector_list.remove([0, 0, 0])
         return k_vector_list
+
+    def get_cosine_data(self, k_max):
+        max_k_max = max(k_max)
+        unit_k_vector = np.dot(np.ones(self.neighbors.n_dim),
+                               self.reciprocal_lattice_matrix)
+        unit_cosine_data = np.cos(np.tensordot(self.pairwise_min_image_vector_data, unit_k_vector, axes=([2], [0])))
+        unit_sine_data = np.sin(np.tensordot(self.pairwise_min_image_vector_data, unit_k_vector, axes=([2], [0])))
+        cosine_data_shape = (max_k_max, unit_cosine_data.shape[0], unit_cosine_data.shape[1])
+        cosine_data = np.zeros(cosine_data_shape)
+        for n_index in range(1, max_k_max+1):
+            for k_index in range(0, n_index, 2):
+                cosine_data[n_index] += (-1)**(k_index / 2) * binom(n_index, k_index) * unit_cosine_data**(n_index - k_index) * unit_sine_data**k_index
+        return cosine_data
 
     def pot_k_ewald(self, k_max, alpha, k_cut):
         """Updates precomputed array with potential energy contributions from
