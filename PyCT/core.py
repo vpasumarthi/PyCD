@@ -1034,6 +1034,12 @@ class System(object):
             if not k_cut_convergence_alpha_directory_path.exists():
                 print(f'Please re-run after converging k_cut at alpha={alpha * constants.ANG2BOHR:.3e} for system size [{",".join(str(element) for element in k_cut_convergence_system_size)}]')
                 exit()
+            else:
+                precomputed_array_log_file_path = k_cut_convergence_input_directory_path.joinpath('precomputed_array.log')
+                precomputed_array_log_file = open(precomputed_array_log_file_path, 'r')
+                for line_index, line in enumerate(precomputed_array_log_file):
+                    if line_index == 9:
+                        k_cut = float(line[7:16]) / constants.ANG2BOHR
             # re-initialize fourier_space_parameters
             fourier_space_parameters = {}
             fourier_space_parameters['alpha'] = alpha
