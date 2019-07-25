@@ -1166,6 +1166,29 @@ class System(object):
                 new_k_vectors_list.append(self.get_new_k_vectors(k_cut0, k_cut1))
                 num_new_k_vectors[step_index] = len(new_k_vectors_list[-1])
 
+            new_k_vectors_consolidated = np.asarray([k_vector for new_k_vectors in new_k_vectors_list for k_vector in new_k_vectors])
+            num_new_k_vectors_consolidated = len(new_k_vectors_consolidated)
+            energy_contribution_data = np.zeros(num_new_k_vectors_consolidated)
+            for k_vector_index in range(num_new_k_vectors_consolidated):
+                k_vector = new_k_vectors_consolidated[k_vector_index]
+                energy_contribution_data[k_vector_index] = self.get_k_vector_energy_contribution(charge_list_prod, alpha, k_vector)
+
+            # sorting in descending order
+            sort_indices = np.argsort(energy_contribution_data)[::-1]
+            sorted_new_k_vectors_consolidated = new_k_vectors_consolidated[sort_indices]
+            sorted_energy_contribution_data = energy_contribution_data[sort_indices]
+            sub_prefix_list_01 = []
+            sub_prefix_list_01.append(f'k-vectors sorted in the decreasing order of their energy contributions\n')
+            for k_vector_index in range(num_new_k_vectors_consolidated):
+                k_vector = sorted_new_k_vectors_consolidated[k_vector_index]
+                energy_contribution = sorted_energy_contribution_data[k_vector_index]
+                sub_prefix_list_01.append(f'{k_vector[0]:4d} {k_vector[1]:4d} {k_vector[2]:4d}: {energy_contribution / constants.EV2HARTREE:.3e} eV\n')
+
+            file_name = 'k_vector_energy_contribution'
+            print_time_elapsed = 0
+            sub_prefix = ''.join(sub_prefix_list_01)
+            generate_report(self.start_time, k_cut_convergence_alpha_directory_path, file_name, print_time_elapsed, sub_prefix)
+
             fig = plt.figure()
             import matplotlib.ticker as mtick
             ax = fig.add_subplot(111)
