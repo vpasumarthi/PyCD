@@ -1275,6 +1275,8 @@ class System(object):
             self_interaction_energy = np.sum(np.multiply(charge_list_prod, precomputed_array_self))
             prefix_list.append(f'Energy contribution from self-interactions: {self_interaction_energy / constants.EV2HARTREE} eV\n')
 
+            total_system_energy = real_space_energy + fourier_space_energy + self_interaction_energy
+            prefix_list.append(f'Total system energy (neutral): {total_system_energy / constants.EV2HARTREE} eV\n')
         file_name = 'precomputed_array'
         print_time_elapsed = 1
         prefix = ''.join(prefix_list)
