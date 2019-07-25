@@ -1113,7 +1113,7 @@ class System(object):
             ax.set_ylabel(f'Energy (eV)')
             plt.title('Magnitude of step change in Fourier-space energy with increase in $k_{{cut}}$', y=1.08)
             figure_name = f'Step change convergence with k_cut.png'
-            figure_path = dst_path.joinpath(figure_name)
+            figure_path = k_cut_convergence_alpha_directory_path.joinpath(figure_name)
             plt.tight_layout()
             plt.savefig(str(figure_path))
 
