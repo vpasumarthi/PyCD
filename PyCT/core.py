@@ -1143,6 +1143,14 @@ class System(object):
             energy_changes_refined = np.asarray(energy_changes_refined)
             num_steps_refined = len(energy_changes_refined)
 
+            new_k_vectors_list = []
+            num_new_k_vectors = np.zeros(num_steps_refined, int)
+            for step_index in range(num_steps_refined):
+                k_cut0 = k_cut0_of_step_change_refined[step_index]
+                k_cut1 = k_cut1_of_step_change_refined[step_index]
+                new_k_vectors_list.append(self.get_new_k_vectors(k_cut0, k_cut1))
+                num_new_k_vectors[step_index] = len(new_k_vectors_list[-1])
+
             fig = plt.figure()
             import matplotlib.ticker as mtick
             ax = fig.add_subplot(111)
