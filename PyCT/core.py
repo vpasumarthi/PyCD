@@ -1121,10 +1121,16 @@ class System(object):
             factor_of_increase_from_estimation = k_cut_stringent / k_cut_estimate
 
             k_cut = k_cut_stringent
-            prefix_list.append(f'Number of step changes in Fourier-space energy with varying k_cut: {num_steps_refined}\n')
-            prefix_list.append(f'Factor of increase in the value of converged k_cut from estimation: {factor_of_increase_from_estimation:.3e}\n')
-            prefix_list.append(f'k_cut (stringent): {k_cut_stringent * constants.ANG2BOHR:.3e} / angstrom\n')
-            prefix_list.append(f'k_cut (gentle): {k_cut_gentle * constants.ANG2BOHR:.3e} / angstrom\n')
+            sub_prefix_list = []
+            sub_prefix_list.append(f'Number of step changes in Fourier-space energy with varying k_cut: {num_steps_refined}\n')
+            sub_prefix_list.append(f'Factor of increase in the value of converged k_cut from estimation: {factor_of_increase_from_estimation:.3e}\n')
+            sub_prefix_list.append(f'k_cut (stringent): {k_cut_stringent * constants.ANG2BOHR:.3e} / angstrom\n')
+            sub_prefix_list.append(f'k_cut (gentle): {k_cut_gentle * constants.ANG2BOHR:.3e} / angstrom\n')
+
+            file_name = 'k_cut_convergence'
+            print_time_elapsed = 0
+            sub_prefix = ''.join(sub_prefix_list)
+            generate_report(self.start_time, k_cut_convergence_alpha_directory_path, file_name, print_time_elapsed, sub_prefix)
         elif not np.isreal(self.alpha) & np.isreal(self.r_cut) & np.isreal(self.k_cut):
             if np.isreal(self.alpha) & np.isreal(self.r_cut):
                 # optimize fourier-space cutoff error for k_cut
