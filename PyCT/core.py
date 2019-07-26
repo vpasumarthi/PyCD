@@ -1060,7 +1060,7 @@ class System(object):
         else:
             r_cut_choice = 'optimal'
 
-        if not np.isreal(self.r_cut):
+        if self.r_cut != 'simulation_cell':
             if np.isreal(self.k_cut):
                 k_cut_choice = 'user-specified'
                 k_cut = fourier_space_parameters['k_cut'] = self.k_cut
