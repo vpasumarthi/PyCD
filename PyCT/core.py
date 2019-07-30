@@ -1138,6 +1138,7 @@ class System(object):
             k_cut_estimate = fourier_space_parameters['k_cut']
 
             lower_bound = 0.0000
+            # upper bound value of 100 is too high for large systems
             upper_bound = 100.0000
             threshold_fractional_k_cut = 0.9000
             percent_increase_in_k_cut_upper = 10
