@@ -1430,7 +1430,7 @@ class System(object):
         print_time_elapsed = 1
         prefix = ''.join(prefix_list)
         generate_report(self.start_time, dst_path, file_name, print_time_elapsed, prefix)
-        return precomputed_array
+        return (precomputed_array, dst_path)
 
 
 class Run(object):
