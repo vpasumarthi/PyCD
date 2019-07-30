@@ -1276,6 +1276,7 @@ class System(object):
                     k_cut_upper = (1 + percent_increase_in_k_cut_upper / 100) * k_cut_upper
                 sub_prefix_list.append(f'Preliminary convergence in Fourier-space energy achieved at k_cut: {k_cut_upper * constants.ANG2BOHR} / angstrom\n')
 
+            dst_path = output_dir_path
             # get step energy data
             # NOTE: k_cut outputted below is the k_cut_stringent
             (k_cut0_of_step_change, k_cut1_of_step_change, k_cut,
@@ -1337,7 +1338,7 @@ class System(object):
                 # optimize fourier-space cutoff error for k_cut
                 fourier_space_parameters = self.minimize_fourier_space_cutoff_error(charge_list_einsum, volume_derived_length, fourier_space_parameters, x_fourier_initial_guess)
                 k_cut = fourier_space_parameters['k_cut']
-        return (alpha, r_cut, k_cut, choice_parameters, charge_list_einsum, volume_derived_length, prefix_list)
+        return (alpha, r_cut, k_cut, choice_parameters, charge_list_einsum, volume_derived_length, prefix_list, dst_path)
 
     def get_ewald_parameters(self, prefix_list, dst_path):
 
@@ -1361,7 +1362,7 @@ class System(object):
         prefix_list.append(f'tau_ratio, (tau_r/tau_f): {tau_ratio:.3e}\n')
         prefix_list.append(f'time_ratio, (time_r/time_f): {time_ratio:.3e}\n\n')
 
-        (alpha, r_cut, k_cut, choice_parameters, charge_list_einsum, volume_derived_length, prefix_list) = self.get_cutoff_parameters(tau_ratio, dst_path, prefix_list)
+        (alpha, r_cut, k_cut, choice_parameters, charge_list_einsum, volume_derived_length, prefix_list, dst_path) = self.get_cutoff_parameters(tau_ratio, dst_path, prefix_list)
 
         prefix_list.append(f'alpha: {alpha * constants.ANG2BOHR:.3e} / angstrom ({choice_parameters["alpha"]})\n')
         prefix_list.append(f'r_cut: {r_cut / constants.ANG2BOHR:.3e} angstrom ({choice_parameters["r_cut"]})\n')
@@ -1372,7 +1373,7 @@ class System(object):
         ewald_parameters = {'alpha': alpha,
                             'r_cut': r_cut,
                             'k_cut': k_cut}
-        return (ewald_parameters, prefix_list)
+        return (ewald_parameters, prefix_list, dst_path)
 
     def get_precomputed_array_real(self, alpha, r_cut):
         n_max = np.round(r_cut / self.translational_vector_length).astype(int)
@@ -1392,7 +1393,7 @@ class System(object):
         :return:
         """
         prefix_list = []
-        (ewald_parameters, prefix_list) = self.get_ewald_parameters(prefix_list, dst_path)
+        (ewald_parameters, prefix_list, dst_path) = self.get_ewald_parameters(prefix_list, dst_path)
         alpha = ewald_parameters['alpha']
         r_cut = ewald_parameters['r_cut']
         k_cut = ewald_parameters['k_cut']
