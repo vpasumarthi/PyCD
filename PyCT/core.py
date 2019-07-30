@@ -1248,6 +1248,14 @@ class System(object):
             if isinstance(self.k_cut, list):
                 output_dir_path = dst_path / ('k_max=[' + ','.join(str(element) for element in self.k_cut) + ']')
                 Path.mkdir(output_dir_path, parents=True, exist_ok=True)
+
+                # check for convergence in the absolute value of energy with k_cut
+                upper_bound = 1.0000
+                k_cut_estimate = k_cut
+                k_cut_threshold = threshold_fractional_k_cut * k_cut
+                convergence_status = self.check_for_k_cut_convergence(charge_list_prod, alpha, k_cut_threshold, k_cut)
+                convergence_keyword = 'NOT ' if not convergence_status else ''
+                sub_prefix_list.append(f'Preliminary convergence in Fourier-space energy {convergence_keyword}achieved at k_cut: {k_cut * constants.ANG2BOHR} / angstrom\n')
             else:
                 output_dir_path = dst_path.joinpath(f'alpha={alpha * constants.ANG2BOHR:.3e}')
                 Path.mkdir(output_dir_path, parents=True, exist_ok=True)
