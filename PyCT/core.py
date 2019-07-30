@@ -1154,6 +1154,8 @@ class System(object):
             # check for convergence in the absolute value of energy with k_cut
             while not self.check_for_k_cut_convergence(charge_list_prod, alpha, k_cut_threshold, k_cut_upper):
                 k_cut_upper = (1 + percent_increase_in_k_cut_upper / 100) * k_cut_upper
+            sub_prefix_list_02 = []
+            sub_prefix_list_02.append(f'Preliminary convergence in Fourier-space energy achieved at k_cut: {k_cut_upper * constants.ANG2BOHR} / angstrom\n')
 
             k_cut_lower = lower_bound * k_cut_estimate
             (k_cut_data, fourier_space_energy_data) = self.get_energy_profile_with_k_cut(
@@ -1248,7 +1250,6 @@ class System(object):
             convergence_keyword = 'NOT ' if not step_energy_convergence_status else ''
 
             k_cut = k_cut_stringent
-            sub_prefix_list_02 = []
             sub_prefix_list_02.append(f'Number of step changes in Fourier-space energy with varying k_cut: {num_steps_refined}\n')
             sub_prefix_list_02.append(f'Factor of increase in the value of converged k_cut from estimation: {factor_of_increase_from_estimation:.3e}\n')
             sub_prefix_list_02.append(f'k_cut (stringent): {k_cut_stringent * constants.ANG2BOHR:.3e} / angstrom\n')
