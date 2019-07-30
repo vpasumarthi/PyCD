@@ -1045,6 +1045,40 @@ class System(object):
         energy_contribution = np.sum(np.multiply(charge_list_prod, precomputed_array))
         return energy_contribution
 
+    def get_k_vector_based_energy_contribution(self, charge_list_prod, alpha, k_cut0, k_cut1, dst_path):
+        num_steps_refined = len(k_cut0)
+        new_k_vectors_list = []
+        num_new_k_vectors = np.zeros(num_steps_refined, int)
+        for step_index in range(num_steps_refined):
+            k_cut0 = k_cut0[step_index]
+            k_cut1 = k_cut1[step_index]
+            new_k_vectors_list.append(self.get_new_k_vectors(k_cut0, k_cut1))
+            num_new_k_vectors[step_index] = len(new_k_vectors_list[-1])
+
+        new_k_vectors_consolidated = np.asarray([k_vector for new_k_vectors in new_k_vectors_list for k_vector in new_k_vectors])
+        num_new_k_vectors_consolidated = len(new_k_vectors_consolidated)
+        energy_contribution_data = np.zeros(num_new_k_vectors_consolidated)
+        for k_vector_index in range(num_new_k_vectors_consolidated):
+            k_vector = new_k_vectors_consolidated[k_vector_index]
+            energy_contribution_data[k_vector_index] = self.get_k_vector_energy_contribution(charge_list_prod, alpha, k_vector)
+
+        # sorting in descending order
+        sort_indices = np.argsort(energy_contribution_data)[::-1]
+        sorted_new_k_vectors_consolidated = new_k_vectors_consolidated[sort_indices]
+        sorted_energy_contribution_data = energy_contribution_data[sort_indices]
+        prefix_list = []
+        prefix_list.append(f'k-vectors sorted in the decreasing order of their energy contributions\n')
+        for k_vector_index in range(num_new_k_vectors_consolidated):
+            k_vector = sorted_new_k_vectors_consolidated[k_vector_index]
+            energy_contribution = sorted_energy_contribution_data[k_vector_index]
+            prefix_list.append(f'{k_vector[0]:4d} {k_vector[1]:4d} {k_vector[2]:4d}: {energy_contribution / constants.EV2HARTREE:.3e} eV\n')
+
+        file_name = 'k_vector_energy_contribution'
+        print_time_elapsed = 0
+        prefix = ''.join(prefix_list)
+        generate_report(self.start_time, dst_path, file_name, print_time_elapsed, prefix)
+        return None
+
     def get_cutoff_parameters(self, tau_ratio, dst_path, prefix_list):
         real_space_parameters = {}
         fourier_space_parameters = {}
@@ -1194,37 +1228,6 @@ class System(object):
             k_cut1_of_step_change_refined = np.asarray(k_cut1_of_step_change_refined)
             energy_changes_refined = np.asarray(energy_changes_refined)
             num_steps_refined = len(energy_changes_refined)
-
-            new_k_vectors_list = []
-            num_new_k_vectors = np.zeros(num_steps_refined, int)
-            for step_index in range(num_steps_refined):
-                k_cut0 = k_cut0_of_step_change_refined[step_index]
-                k_cut1 = k_cut1_of_step_change_refined[step_index]
-                new_k_vectors_list.append(self.get_new_k_vectors(k_cut0, k_cut1))
-                num_new_k_vectors[step_index] = len(new_k_vectors_list[-1])
-
-            new_k_vectors_consolidated = np.asarray([k_vector for new_k_vectors in new_k_vectors_list for k_vector in new_k_vectors])
-            num_new_k_vectors_consolidated = len(new_k_vectors_consolidated)
-            energy_contribution_data = np.zeros(num_new_k_vectors_consolidated)
-            for k_vector_index in range(num_new_k_vectors_consolidated):
-                k_vector = new_k_vectors_consolidated[k_vector_index]
-                energy_contribution_data[k_vector_index] = self.get_k_vector_energy_contribution(charge_list_prod, alpha, k_vector)
-
-            # sorting in descending order
-            sort_indices = np.argsort(energy_contribution_data)[::-1]
-            sorted_new_k_vectors_consolidated = new_k_vectors_consolidated[sort_indices]
-            sorted_energy_contribution_data = energy_contribution_data[sort_indices]
-            sub_prefix_list_02 = []
-            sub_prefix_list_02.append(f'k-vectors sorted in the decreasing order of their energy contributions\n')
-            for k_vector_index in range(num_new_k_vectors_consolidated):
-                k_vector = sorted_new_k_vectors_consolidated[k_vector_index]
-                energy_contribution = sorted_energy_contribution_data[k_vector_index]
-                sub_prefix_list_02.append(f'{k_vector[0]:4d} {k_vector[1]:4d} {k_vector[2]:4d}: {energy_contribution / constants.EV2HARTREE:.3e} eV\n')
-
-            file_name = 'k_vector_energy_contribution'
-            print_time_elapsed = 0
-            sub_prefix_02 = ''.join(sub_prefix_list_02)
-            generate_report(self.start_time, k_cut_convergence_alpha_directory_path, file_name, print_time_elapsed, sub_prefix_02)
 
             fig = plt.figure()
             import matplotlib.ticker as mtick
