@@ -1099,6 +1099,10 @@ class System(object):
             k_cut0_of_step_change.extend(k_cut0_of_step_change_temp.tolist())
             k_cut1_of_step_change.extend(k_cut1_of_step_change_temp.tolist())
             energy_changes.extend(energy_changes_temp.tolist())
+
+        k_cut0_of_step_change = np.asarray(k_cut0_of_step_change)
+        k_cut1_of_step_change = np.asarray(k_cut1_of_step_change)
+        energy_changes = np.asarray(energy_changes)
         return (k_cut0_of_step_change, k_cut1_of_step_change, energy_changes, max_divergent_k_cut)
 
     def get_cutoff_parameters(self, tau_ratio, dst_path, prefix_list):
