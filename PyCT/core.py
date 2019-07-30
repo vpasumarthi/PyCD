@@ -1280,7 +1280,7 @@ class System(object):
             # NOTE: k_cut outputted below is the k_cut_stringent
             (k_cut0_of_step_change, k_cut1_of_step_change, k_cut) = self.get_precise_step_change_data(
                  charge_list_prod, alpha, lower_bound, upper_bound, k_cut_estimate,
-                 threshold_fractional_k_cut, num_data_points, output_dir_path)
+                 threshold_fractional_k_cut, num_data_points, output_dir_path, sub_prefix_list)
 
             # analyze the k-vectors and their energy contributions towards Fourier-space energy
             self.get_k_vector_based_energy_contribution(
