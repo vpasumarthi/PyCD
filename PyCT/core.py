@@ -1233,7 +1233,7 @@ class System(object):
                 k_cut_convergence_log_file = open(k_cut_convergence_log_file_path, 'r')
                 for line_index, line in enumerate(k_cut_convergence_log_file):
                     # stringent k_cut
-                    if line_index == 2:
+                    if line_index == 3:
                         k_cut = float(line[19:28]) / constants.ANG2BOHR
             # re-initialize fourier_space_parameters
             fourier_space_parameters = {}
