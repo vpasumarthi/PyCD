@@ -1265,11 +1265,11 @@ class System(object):
             sub_prefix_list.append(f'Preliminary convergence in Fourier-space energy achieved at k_cut: {k_cut_upper * constants.ANG2BOHR} / angstrom\n')
 
             # get step energy data
-            (k_cut0_of_step_change, k_cut1_of_step_change, k_cut_stringent) = self.get_precise_step_change_data(
+            # NOTE: k_cut outputted below is the k_cut_stringent
+            (k_cut0_of_step_change, k_cut1_of_step_change, k_cut) = self.get_precise_step_change_data(
                  charge_list_prod, alpha, lower_bound, upper_bound, k_cut_estimate,
                  threshold_fractional_k_cut, num_data_points, k_cut_convergence_alpha_directory_path)
 
-            k_cut = k_cut_stringent
             # analyze the k-vectors and their energy contributions towards Fourier-space energy
             self.get_k_vector_based_energy_contribution(
                 charge_list_prod, alpha, k_cut0_of_step_change,
