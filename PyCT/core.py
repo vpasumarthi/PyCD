@@ -702,7 +702,9 @@ class System(object):
             self.r_cut = r_cut
 
         # k_cut: cutoff radius in k-space
-        if np.isreal(k_cut):
+        if isinstance(k_cut, list):
+            self.k_cut = k_cut
+        elif np.isreal(k_cut):
             self.k_cut = k_cut / constants.ANG2BOHR
         else:
             self.k_cut = k_cut
@@ -1063,7 +1065,10 @@ class System(object):
             r_cut_choice = 'optimal'
 
         if self.r_cut != 'simulation_cell':
-            if np.isreal(self.k_cut):
+            if isinstance(self.k_cut, list):
+                k_cut = max(np.asarray(self.k_cut) * self.reciprocal_lattice_vector_length)
+                k_cut_choice = 'user-specified (k_max)'
+            elif np.isreal(self.k_cut):
                 k_cut_choice = 'user-specified'
                 k_cut = fourier_space_parameters['k_cut'] = self.k_cut
             elif self.k_cut == 'converge' and np.array_equal(self.system_size, np.ones(self.neighbors.n_dim, int)):
