@@ -1115,6 +1115,11 @@ class System(object):
         k_cut1_of_step_change = np.asarray(k_cut1_of_step_change)
         energy_changes = np.asarray(energy_changes)
 
+        if max_divergent_k_cut > 0:
+            k_cut_gentle = k_cut_data[k_cut_data > max_divergent_k_cut][0]
+        else:
+            k_cut_gentle = 0
+
         fig = plt.figure()
         import matplotlib.ticker as mtick
         ax = fig.add_subplot(111)
@@ -1127,7 +1132,7 @@ class System(object):
         figure_path = dst_path.joinpath(figure_name)
         plt.tight_layout()
         plt.savefig(str(figure_path))
-        return (k_cut0_of_step_change, k_cut1_of_step_change, energy_changes, max_divergent_k_cut)
+        return (k_cut0_of_step_change, k_cut1_of_step_change, energy_changes, k_cut_gentle)
 
     def get_cutoff_parameters(self, tau_ratio, dst_path, prefix_list):
         real_space_parameters = {}
@@ -1243,15 +1248,11 @@ class System(object):
 
             # get step energy data
             (k_cut0_of_step_change, k_cut1_of_step_change, energy_changes,
-             max_divergent_k_cut) = self.get_precise_step_change_data(
-                 charge_list_prod, alpha, k_cut_data, fourier_space_energy_data,
-                 num_data_points, converged_fourier_energy, k_cut_convergence_alpha_directory_path)
+             k_cut_gentle) = self.get_precise_step_change_data(
+                 charge_list_prod, alpha, lower_bound, upper_bound, k_cut_estimate,
+                 num_data_points, k_cut_convergence_alpha_directory_path)
             sub_prefix_list.append(f'Number of step changes in Fourier-space energy with varying k_cut: {len(energy_changes)}\n')
 
-            if max_divergent_k_cut > 0:
-                k_cut_gentle = k_cut_data[k_cut_data > max_divergent_k_cut][0]
-            else:
-                k_cut_gentle = 0
             sub_prefix_list.append(f'k_cut (gentle): {k_cut_gentle * constants.ANG2BOHR:.3e} / angstrom\n')
 
             # analyze the k-vectors and their energy contributions towards Fourier-space energy
