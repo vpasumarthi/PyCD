@@ -1044,13 +1044,13 @@ class System(object):
         energy_contribution = np.sum(np.multiply(charge_list_prod, precomputed_array))
         return energy_contribution
 
-    def get_k_vector_based_energy_contribution(self, charge_list_prod, alpha, k_cut0, k_cut1, dst_path):
-        num_steps_refined = len(k_cut0)
+    def get_k_vector_based_energy_contribution(self, charge_list_prod, alpha, k_cut0_of_step_change, k_cut1_of_step_change, dst_path):
+        num_steps = len(k_cut0_of_step_change)
         new_k_vectors_list = []
-        num_new_k_vectors = np.zeros(num_steps_refined, int)
-        for step_index in range(num_steps_refined):
-            k_cut0 = k_cut0[step_index]
-            k_cut1 = k_cut1[step_index]
+        num_new_k_vectors = np.zeros(num_steps, int)
+        for step_index in range(num_steps):
+            k_cut0 = k_cut0_of_step_change[step_index]
+            k_cut1 = k_cut1_of_step_change[step_index]
             new_k_vectors_list.append(self.get_new_k_vectors(k_cut0, k_cut1))
             num_new_k_vectors[step_index] = len(new_k_vectors_list[-1])
 
