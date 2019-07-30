@@ -1150,7 +1150,7 @@ class System(object):
             k_cut0_of_step_change, energy_changes, k_cut_lower, k_cut_upper)
         convergence_keyword = 'NOT ' if not step_energy_convergence_status else ''
         sub_prefix_list.append(f'Step energy changes have {convergence_keyword}converged\n')
-        return (k_cut0_of_step_change, k_cut1_of_step_change, energy_changes, k_cut_stringent, sub_prefix_list)
+        return (k_cut0_of_step_change, k_cut1_of_step_change, k_cut_stringent, sub_prefix_list)
 
     def get_cutoff_parameters(self, tau_ratio, dst_path, prefix_list):
         real_space_parameters = {}
@@ -1265,8 +1265,7 @@ class System(object):
             sub_prefix_list.append(f'Preliminary convergence in Fourier-space energy achieved at k_cut: {k_cut_upper * constants.ANG2BOHR} / angstrom\n')
 
             # get step energy data
-            (k_cut0_of_step_change, k_cut1_of_step_change, energy_changes,
-             k_cut_stringent) = self.get_precise_step_change_data(
+            (k_cut0_of_step_change, k_cut1_of_step_change, k_cut_stringent) = self.get_precise_step_change_data(
                  charge_list_prod, alpha, lower_bound, upper_bound, k_cut_estimate,
                  threshold_fractional_k_cut, num_data_points, k_cut_convergence_alpha_directory_path)
 
