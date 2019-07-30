@@ -1079,6 +1079,29 @@ class System(object):
         generate_report(self.start_time, dst_path, file_name, print_time_elapsed, prefix)
         return None
 
+    def get_precise_step_change_data(self, charge_list_prod, alpha, k_cut0, k_cut1, num_data_points, converged_fourier_energy, dst_path):
+        k_cut0_of_step_change = []
+        k_cut1_of_step_change = []
+        energy_changes = []
+        num_steps = len(k_cut0)
+        max_divergent_k_cut = 0
+        for step_index in range(num_steps):
+            k_cut_lower = k_cut0[step_index]
+            k_cut_upper = k_cut1[step_index]
+            (step_k_cut_data, step_fourier_space_energy_data) = self.get_energy_profile_with_k_cut(
+                        charge_list_prod, alpha, k_cut_lower, k_cut_upper, num_data_points)
+            title_suffix = f'_step{step_index+1}'
+            self.plot_energy_profile_in_bounded_k_cut(step_k_cut_data, step_fourier_space_energy_data, title_suffix, dst_path)
+
+            divergent_k_cut = step_k_cut_data[abs(step_fourier_space_energy_data - converged_fourier_energy) > self.err_tol]
+            if len(divergent_k_cut) != 0:
+                max_divergent_k_cut = max(divergent_k_cut)
+            (k_cut0_of_step_change_temp, k_cut1_of_step_change_temp, energy_changes_temp) = self.get_step_change_analysis_with_k_cut(step_k_cut_data, step_fourier_space_energy_data)
+            k_cut0_of_step_change.extend(k_cut0_of_step_change_temp.tolist())
+            k_cut1_of_step_change.extend(k_cut1_of_step_change_temp.tolist())
+            energy_changes.extend(energy_changes_temp.tolist())
+        return (k_cut0_of_step_change, k_cut1_of_step_change, energy_changes, max_divergent_k_cut)
+
     def get_cutoff_parameters(self, tau_ratio, dst_path, prefix_list):
         real_space_parameters = {}
         fourier_space_parameters = {}
