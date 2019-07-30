@@ -999,8 +999,7 @@ class System(object):
         k_cut0_of_step_change = k_cut_data[indices0_of_step_change]
         k_cut1_of_step_change = k_cut_data[indices1_of_step_change]
         energy_changes = fourier_space_energy_data_diff[np.nonzero(fourier_space_energy_data_diff)[0]]
-        num_steps = len(energy_changes)
-        return (k_cut0_of_step_change, k_cut1_of_step_change, energy_changes, num_steps)
+        return (k_cut0_of_step_change, k_cut1_of_step_change, energy_changes)
 
     def plot_energy_profile_in_bounded_k_cut(self, k_cut_data, fourier_space_energy_data, title_suffix, dst_path):
         fig1 = plt.figure()        
