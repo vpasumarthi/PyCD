@@ -1229,6 +1229,11 @@ class System(object):
             energy_changes_refined = np.asarray(energy_changes_refined)
             num_steps_refined = len(energy_changes_refined)
 
+            # analyze the k-vectors and their energy contributions towards Fourier-space energy
+            self.get_k_vector_based_energy_contribution(
+                charge_list_prod, alpha, k_cut0_of_step_change_refined,
+                k_cut1_of_step_change_refined, k_cut_convergence_alpha_directory_path)
+
             fig = plt.figure()
             import matplotlib.ticker as mtick
             ax = fig.add_subplot(111)
