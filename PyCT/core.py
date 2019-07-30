@@ -1154,8 +1154,8 @@ class System(object):
             # check for convergence in the absolute value of energy with k_cut
             while not self.check_for_k_cut_convergence(charge_list_prod, alpha, k_cut_threshold, k_cut_upper):
                 k_cut_upper = (1 + percent_increase_in_k_cut_upper / 100) * k_cut_upper
-            sub_prefix_list_02 = []
-            sub_prefix_list_02.append(f'Preliminary convergence in Fourier-space energy achieved at k_cut: {k_cut_upper * constants.ANG2BOHR} / angstrom\n')
+            sub_prefix_list_01 = []
+            sub_prefix_list_01.append(f'Preliminary convergence in Fourier-space energy achieved at k_cut: {k_cut_upper * constants.ANG2BOHR} / angstrom\n')
 
             k_cut_lower = lower_bound * k_cut_estimate
             (k_cut_data, fourier_space_energy_data) = self.get_energy_profile_with_k_cut(
@@ -1214,17 +1214,17 @@ class System(object):
             sort_indices = np.argsort(energy_contribution_data)[::-1]
             sorted_new_k_vectors_consolidated = new_k_vectors_consolidated[sort_indices]
             sorted_energy_contribution_data = energy_contribution_data[sort_indices]
-            sub_prefix_list_01 = []
-            sub_prefix_list_01.append(f'k-vectors sorted in the decreasing order of their energy contributions\n')
+            sub_prefix_list_02 = []
+            sub_prefix_list_02.append(f'k-vectors sorted in the decreasing order of their energy contributions\n')
             for k_vector_index in range(num_new_k_vectors_consolidated):
                 k_vector = sorted_new_k_vectors_consolidated[k_vector_index]
                 energy_contribution = sorted_energy_contribution_data[k_vector_index]
-                sub_prefix_list_01.append(f'{k_vector[0]:4d} {k_vector[1]:4d} {k_vector[2]:4d}: {energy_contribution / constants.EV2HARTREE:.3e} eV\n')
+                sub_prefix_list_02.append(f'{k_vector[0]:4d} {k_vector[1]:4d} {k_vector[2]:4d}: {energy_contribution / constants.EV2HARTREE:.3e} eV\n')
 
             file_name = 'k_vector_energy_contribution'
             print_time_elapsed = 0
-            sub_prefix_01 = ''.join(sub_prefix_list_01)
-            generate_report(self.start_time, k_cut_convergence_alpha_directory_path, file_name, print_time_elapsed, sub_prefix_01)
+            sub_prefix_02 = ''.join(sub_prefix_list_02)
+            generate_report(self.start_time, k_cut_convergence_alpha_directory_path, file_name, print_time_elapsed, sub_prefix_02)
 
             fig = plt.figure()
             import matplotlib.ticker as mtick
@@ -1250,16 +1250,16 @@ class System(object):
             convergence_keyword = 'NOT ' if not step_energy_convergence_status else ''
 
             k_cut = k_cut_stringent
-            sub_prefix_list_02.append(f'Number of step changes in Fourier-space energy with varying k_cut: {num_steps_refined}\n')
-            sub_prefix_list_02.append(f'Factor of increase in the value of converged k_cut from estimation: {factor_of_increase_from_estimation:.3e}\n')
-            sub_prefix_list_02.append(f'k_cut (stringent): {k_cut_stringent * constants.ANG2BOHR:.3e} / angstrom\n')
-            sub_prefix_list_02.append(f'k_cut (gentle): {k_cut_gentle * constants.ANG2BOHR:.3e} / angstrom\n')
-            sub_prefix_list_02.append(f'Step energy changes have {convergence_keyword}converged\n')
+            sub_prefix_list_01.append(f'Number of step changes in Fourier-space energy with varying k_cut: {num_steps_refined}\n')
+            sub_prefix_list_01.append(f'Factor of increase in the value of converged k_cut from estimation: {factor_of_increase_from_estimation:.3e}\n')
+            sub_prefix_list_01.append(f'k_cut (stringent): {k_cut_stringent * constants.ANG2BOHR:.3e} / angstrom\n')
+            sub_prefix_list_01.append(f'k_cut (gentle): {k_cut_gentle * constants.ANG2BOHR:.3e} / angstrom\n')
+            sub_prefix_list_01.append(f'Step energy changes have {convergence_keyword}converged\n')
 
             file_name = 'k_cut_convergence'
             print_time_elapsed = 0
-            sub_prefix_02 = ''.join(sub_prefix_list_02)
-            generate_report(self.start_time, k_cut_convergence_alpha_directory_path, file_name, print_time_elapsed, sub_prefix_02)
+            sub_prefix_01 = ''.join(sub_prefix_list_01)
+            generate_report(self.start_time, k_cut_convergence_alpha_directory_path, file_name, print_time_elapsed, sub_prefix_01)
         elif not np.isreal(self.alpha) & np.isreal(self.r_cut) & np.isreal(self.k_cut):
             if np.isreal(self.alpha) & np.isreal(self.r_cut):
                 # optimize fourier-space cutoff error for k_cut
