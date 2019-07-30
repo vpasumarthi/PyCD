@@ -1173,7 +1173,7 @@ class System(object):
 
         if self.r_cut != 'simulation_cell':
             if isinstance(self.k_cut, list):
-                k_cut = max(np.asarray(self.k_cut) * self.reciprocal_lattice_vector_length)
+                k_cut = 1.10 * max(np.asarray(self.k_cut) * self.reciprocal_lattice_vector_length)
                 k_cut_choice = 'user-specified (k_max)'
             elif np.isreal(self.k_cut):
                 k_cut_choice = 'user-specified'
