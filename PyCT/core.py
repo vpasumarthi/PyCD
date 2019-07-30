@@ -1078,7 +1078,16 @@ class System(object):
         generate_report(self.start_time, dst_path, file_name, print_time_elapsed, prefix)
         return None
 
-    def get_precise_step_change_data(self, charge_list_prod, alpha, k_cut_data, fourier_space_energy_data, num_data_points, converged_fourier_energy, dst_path):
+    def get_precise_step_change_data(self, charge_list_prod, alpha, lower_bound, upper_bound, k_cut_estimate, num_data_points, dst_path):
+        k_cut_lower = lower_bound * k_cut_estimate
+        k_cut_upper = upper_bound * k_cut_estimate
+        (k_cut_data, fourier_space_energy_data) = self.get_energy_profile_with_k_cut(
+                    charge_list_prod, alpha, k_cut_lower, k_cut_upper, num_data_points)
+
+        title_suffix = f'_{int(lower_bound)}x-{int(upper_bound)}x k_estimate'
+        self.plot_energy_profile_in_bounded_k_cut(k_cut_data, fourier_space_energy_data, title_suffix, dst_path)
+        converged_fourier_energy = fourier_space_energy_data[-1]
+
         (k_cut0_estimated, k_cut1_estimated) = self.get_step_change_analysis_with_k_cut(k_cut_data, fourier_space_energy_data)[:-1]
 
         k_cut0_of_step_change = []
@@ -1224,7 +1233,6 @@ class System(object):
             percent_increase_in_k_cut_upper = 10
             num_data_points = 5.00E+01
 
-            k_cut_lower = lower_bound * k_cut_estimate
             k_cut_upper = upper_bound * k_cut_estimate
             k_cut_threshold = threshold_fractional_k_cut * k_cut_upper
             # check for convergence in the absolute value of energy with k_cut
@@ -1233,13 +1241,7 @@ class System(object):
             sub_prefix_list = []
             sub_prefix_list.append(f'Preliminary convergence in Fourier-space energy achieved at k_cut: {k_cut_upper * constants.ANG2BOHR} / angstrom\n')
 
-            (k_cut_data, fourier_space_energy_data) = self.get_energy_profile_with_k_cut(
-                        charge_list_prod, alpha, k_cut_lower, k_cut_upper, num_data_points)
-            title_suffix = f'_{int(lower_bound)}x-{int(upper_bound)}x k_estimate'
-            self.plot_energy_profile_in_bounded_k_cut(k_cut_data, fourier_space_energy_data, title_suffix, k_cut_convergence_alpha_directory_path)
-            converged_fourier_energy = fourier_space_energy_data[-1]
-
-            # get precise step energy data
+            # get step energy data
             (k_cut0_of_step_change, k_cut1_of_step_change, energy_changes,
              max_divergent_k_cut) = self.get_precise_step_change_data(
                  charge_list_prod, alpha, k_cut_data, fourier_space_energy_data,
