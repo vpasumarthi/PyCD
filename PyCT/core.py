@@ -1245,6 +1245,7 @@ class System(object):
             sub_prefix_list = []
             lower_bound = 0.0000
             threshold_fractional_k_cut = 0.9000
+            num_data_points = 5.00E+01
             if isinstance(self.k_cut, list):
                 output_dir_path = dst_path / ('k_max=[' + ','.join(str(element) for element in self.k_cut) + ']')
                 Path.mkdir(output_dir_path, parents=True, exist_ok=True)
@@ -1267,7 +1268,6 @@ class System(object):
                 # upper bound value of 100 is too high for large systems
                 upper_bound = 100.0000
                 percent_increase_in_k_cut_upper = 10
-                num_data_points = 5.00E+01
     
                 k_cut_upper = upper_bound * k_cut_estimate
                 k_cut_threshold = threshold_fractional_k_cut * k_cut_upper
