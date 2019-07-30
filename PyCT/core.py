@@ -1242,8 +1242,8 @@ class System(object):
             fourier_space_parameters = self.minimize_fourier_space_cutoff_error(charge_list_einsum, volume_derived_length, fourier_space_parameters, x_fourier_initial_guess)
             k_cut_estimate = fourier_space_parameters['k_cut']
         elif self.k_cut == 'converge' and np.array_equal(self.system_size, np.ones(self.neighbors.n_dim, int)):
-            k_cut_convergence_alpha_directory_path = dst_path.joinpath(f'alpha={alpha * constants.ANG2BOHR:.3e}')
-            Path.mkdir(k_cut_convergence_alpha_directory_path, parents=True, exist_ok=True)
+            output_dir_path = dst_path.joinpath(f'alpha={alpha * constants.ANG2BOHR:.3e}')
+            Path.mkdir(output_dir_path, parents=True, exist_ok=True)
 
             # optimize fourier-space cutoff error for k_cut
             fourier_space_parameters = self.minimize_fourier_space_cutoff_error(charge_list_einsum, volume_derived_length, fourier_space_parameters, x_fourier_initial_guess)
@@ -1268,17 +1268,17 @@ class System(object):
             # NOTE: k_cut outputted below is the k_cut_stringent
             (k_cut0_of_step_change, k_cut1_of_step_change, k_cut) = self.get_precise_step_change_data(
                  charge_list_prod, alpha, lower_bound, upper_bound, k_cut_estimate,
-                 threshold_fractional_k_cut, num_data_points, k_cut_convergence_alpha_directory_path)
+                 threshold_fractional_k_cut, num_data_points, output_dir_path)
 
             # analyze the k-vectors and their energy contributions towards Fourier-space energy
             self.get_k_vector_based_energy_contribution(
                 charge_list_prod, alpha, k_cut0_of_step_change,
-                k_cut1_of_step_change, k_cut_convergence_alpha_directory_path)
+                k_cut1_of_step_change, output_dir_path)
 
             file_name = 'k_cut_convergence'
             print_time_elapsed = 0
             sub_prefix = ''.join(sub_prefix_list)
-            generate_report(self.start_time, k_cut_convergence_alpha_directory_path, file_name, print_time_elapsed, sub_prefix)
+            generate_report(self.start_time, output_dir_path, file_name, print_time_elapsed, sub_prefix)
         elif not np.isreal(self.alpha) & np.isreal(self.r_cut) & np.isreal(self.k_cut):
             if np.isreal(self.alpha) & np.isreal(self.r_cut):
                 # optimize fourier-space cutoff error for k_cut
