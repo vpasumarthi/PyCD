@@ -892,7 +892,9 @@ class System(object):
 
         precomputed_array_fourier = self.get_precomputed_array_fourier(alpha, k_cut_upper)[0]
         fourier_space_energy_upper = np.sum(np.multiply(charge_list_prod, precomputed_array_fourier))
-        if abs(fourier_space_energy_lower - fourier_space_energy_upper) < self.err_tol:
+
+        energy_difference = abs(fourier_space_energy_lower - fourier_space_energy_upper)
+        if energy_difference < self.err_tol:
             convergence_status = 1
         else:
             convergence_status = 0
