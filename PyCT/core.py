@@ -1220,7 +1220,7 @@ class System(object):
             self.plot_energy_profile_in_bounded_k_cut(k_cut_data, fourier_space_energy_data, title_suffix, k_cut_convergence_alpha_directory_path)
             converged_fourier_energy = fourier_space_energy_data[-1]
 
-            (k_cut0_of_step_change, k_cut1_of_step_change, _, num_steps) = self.get_step_change_analysis_with_k_cut(k_cut_data, fourier_space_energy_data)
+            (k_cut0_of_step_change, k_cut1_of_step_change) = self.get_step_change_analysis_with_k_cut(k_cut_data, fourier_space_energy_data)[:-1]
 
             # get precise step energy data
             (k_cut0_of_step_change_refined, k_cut1_of_step_change_refined,
