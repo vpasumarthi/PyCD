@@ -1078,7 +1078,9 @@ class System(object):
         generate_report(self.start_time, dst_path, file_name, print_time_elapsed, prefix)
         return None
 
-    def get_precise_step_change_data(self, charge_list_prod, alpha, lower_bound, upper_bound, k_cut_estimate, num_data_points, dst_path):
+    def get_precise_step_change_data(self, charge_list_prod, alpha, lower_bound,
+                                     upper_bound, k_cut_estimate, threshold_fractional_k_cut,
+                                     num_data_points, dst_path, sub_prefix_list):
         k_cut_lower = lower_bound * k_cut_estimate
         k_cut_upper = upper_bound * k_cut_estimate
         (k_cut_data, fourier_space_energy_data) = self.get_energy_profile_with_k_cut(
@@ -1132,7 +1134,16 @@ class System(object):
         figure_path = dst_path.joinpath(figure_name)
         plt.tight_layout()
         plt.savefig(str(figure_path))
-        return (k_cut0_of_step_change, k_cut1_of_step_change, energy_changes, k_cut_gentle)
+
+        # check for step energy change convergence
+        k_cut_stringent = k_cut1_of_step_change[-1]
+        k_cut_lower = threshold_fractional_k_cut * k_cut_stringent
+        k_cut_upper = k_cut_stringent
+        step_energy_convergence_status = self.check_for_k_cut_step_energy_convergence(
+            k_cut0_of_step_change, energy_changes, k_cut_lower, k_cut_upper)
+        convergence_keyword = 'NOT ' if not step_energy_convergence_status else ''
+        sub_prefix_list.append(f'Step energy changes have {convergence_keyword}converged\n')
+        return (k_cut0_of_step_change, k_cut1_of_step_change, energy_changes, k_cut_stringent, k_cut_gentle, sub_prefix_list)
 
     def get_cutoff_parameters(self, tau_ratio, dst_path, prefix_list):
         real_space_parameters = {}
@@ -1248,24 +1259,14 @@ class System(object):
 
             # get step energy data
             (k_cut0_of_step_change, k_cut1_of_step_change, energy_changes,
-             k_cut_gentle) = self.get_precise_step_change_data(
+             k_cut_stringent, k_cut_gentle) = self.get_precise_step_change_data(
                  charge_list_prod, alpha, lower_bound, upper_bound, k_cut_estimate,
-                 num_data_points, k_cut_convergence_alpha_directory_path)
+                 threshold_fractional_k_cut, num_data_points, k_cut_convergence_alpha_directory_path)
             sub_prefix_list.append(f'k_cut (gentle): {k_cut_gentle * constants.ANG2BOHR:.3e} / angstrom\n')
 
-            k_cut_stringent = k_cut1_of_step_change[-1]
             k_cut = k_cut_stringent
             sub_prefix_list.append(f'k_cut (stringent): {k_cut_stringent * constants.ANG2BOHR:.3e} / angstrom\n')
             sub_prefix_list.append(f'Number of step changes in Fourier-space energy with varying k_cut: {len(energy_changes)}\n')
-
-
-            # check for step energy change convergence
-            k_cut_lower = threshold_fractional_k_cut * k_cut_stringent
-            k_cut_upper = k_cut_stringent
-            step_energy_convergence_status = self.check_for_k_cut_step_energy_convergence(
-                k_cut0_of_step_change, energy_changes, k_cut_lower, k_cut_upper)
-            convergence_keyword = 'NOT ' if not step_energy_convergence_status else ''
-            sub_prefix_list.append(f'Step energy changes have {convergence_keyword}converged\n')
 
             # analyze the k-vectors and their energy contributions towards Fourier-space energy
             self.get_k_vector_based_energy_contribution(
