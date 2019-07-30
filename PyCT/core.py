@@ -1223,25 +1223,11 @@ class System(object):
 
             (k_cut0_of_step_change, k_cut1_of_step_change, _, num_steps) = self.get_step_change_analysis_with_k_cut(k_cut_data, fourier_space_energy_data)
 
-            k_cut0_of_step_change_refined = []
-            k_cut1_of_step_change_refined = []
-            energy_changes_refined = []
-            max_divergent_k_cut = 0
-            for step_index in range(num_steps):
-                k_cut_lower = k_cut0_of_step_change[step_index]
-                k_cut_upper = k_cut1_of_step_change[step_index]
-                (step_k_cut_data, step_fourier_space_energy_data) = self.get_energy_profile_with_k_cut(
-                            charge_list_prod, alpha, k_cut_lower, k_cut_upper, num_data_points)
-                title_suffix = f'_step{step_index+1}'
-                self.plot_energy_profile_in_bounded_k_cut(step_k_cut_data, step_fourier_space_energy_data, title_suffix, k_cut_convergence_alpha_directory_path)
-
-                divergent_k_cut = step_k_cut_data[abs(step_fourier_space_energy_data - converged_fourier_energy) > self.err_tol]
-                if len(divergent_k_cut) != 0:
-                    max_divergent_k_cut = max(divergent_k_cut)
-                (k_cut0_of_step_change_temp, k_cut1_of_step_change_temp, energy_changes) = self.get_step_change_analysis_with_k_cut(step_k_cut_data, step_fourier_space_energy_data)[:-1]
-                k_cut0_of_step_change_refined.extend(k_cut0_of_step_change_temp.tolist())
-                k_cut1_of_step_change_refined.extend(k_cut1_of_step_change_temp.tolist())
-                energy_changes_refined.extend(energy_changes.tolist())
+            # get precise step energy data
+            (k_cut0_of_step_change_refined, k_cut1_of_step_change_refined,
+             energy_changes_refined, max_divergent_k_cut) = self.get_precise_step_change_data(
+                 charge_list_prod, alpha, k_cut0_of_step_change, k_cut1_of_step_change,
+                 num_data_points, converged_fourier_energy, dst_path)
 
             if max_divergent_k_cut > 0:
                 k_cut_gentle = k_cut_data[k_cut_data > max_divergent_k_cut][0]
