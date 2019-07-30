@@ -1258,13 +1258,6 @@ class System(object):
             sub_prefix_list.append(f'k_cut (stringent): {k_cut_stringent * constants.ANG2BOHR:.3e} / angstrom\n')
             sub_prefix_list.append(f'Number of step changes in Fourier-space energy with varying k_cut: {len(energy_changes)}\n')
 
-            # analyze the k-vectors and their energy contributions towards Fourier-space energy
-            self.get_k_vector_based_energy_contribution(
-                charge_list_prod, alpha, k_cut0_of_step_change,
-                k_cut1_of_step_change, k_cut_convergence_alpha_directory_path)
-
-            factor_of_increase_from_estimation = k_cut_stringent / k_cut_estimate
-            sub_prefix_list.append(f'Factor of increase in the value of converged k_cut from estimation: {factor_of_increase_from_estimation:.3e}\n')
 
             # check for step energy change convergence
             k_cut_lower = threshold_fractional_k_cut * k_cut_stringent
@@ -1273,6 +1266,14 @@ class System(object):
                 k_cut0_of_step_change, energy_changes, k_cut_lower, k_cut_upper)
             convergence_keyword = 'NOT ' if not step_energy_convergence_status else ''
             sub_prefix_list.append(f'Step energy changes have {convergence_keyword}converged\n')
+
+            # analyze the k-vectors and their energy contributions towards Fourier-space energy
+            self.get_k_vector_based_energy_contribution(
+                charge_list_prod, alpha, k_cut0_of_step_change,
+                k_cut1_of_step_change, k_cut_convergence_alpha_directory_path)
+
+            factor_of_increase_from_estimation = k_cut_stringent / k_cut_estimate
+            sub_prefix_list.append(f'Factor of increase in the value of converged k_cut from estimation: {factor_of_increase_from_estimation:.3e}\n')
 
             file_name = 'k_cut_convergence'
             print_time_elapsed = 0
