@@ -1246,7 +1246,8 @@ class System(object):
             lower_bound = 0.0000
             threshold_fractional_k_cut = 0.9000
             if isinstance(self.k_cut, list):
-                return None
+                output_dir_path = dst_path / ('k_max=[' + ','.join(str(element) for element in self.k_cut) + ']')
+                Path.mkdir(output_dir_path, parents=True, exist_ok=True)
             else:
                 output_dir_path = dst_path.joinpath(f'alpha={alpha * constants.ANG2BOHR:.3e}')
                 Path.mkdir(output_dir_path, parents=True, exist_ok=True)
