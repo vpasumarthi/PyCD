@@ -1249,9 +1249,6 @@ class System(object):
                 k_cut_gentle = k_cut_data[k_cut_data > max_divergent_k_cut][0]
             else:
                 k_cut_gentle = 0
-            k_cut0_of_step_change_refined = np.asarray(k_cut0_of_step_change_refined)
-            k_cut1_of_step_change_refined = np.asarray(k_cut1_of_step_change_refined)
-            energy_changes_refined = np.asarray(energy_changes_refined)
             num_steps_refined = len(energy_changes_refined)
 
             # analyze the k-vectors and their energy contributions towards Fourier-space energy
