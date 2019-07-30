@@ -1221,8 +1221,8 @@ class System(object):
 
             file_name = 'k_vector_energy_contribution'
             print_time_elapsed = 0
-            sub_prefix = ''.join(sub_prefix_list_01)
-            generate_report(self.start_time, k_cut_convergence_alpha_directory_path, file_name, print_time_elapsed, sub_prefix)
+            sub_prefix_01 = ''.join(sub_prefix_list_01)
+            generate_report(self.start_time, k_cut_convergence_alpha_directory_path, file_name, print_time_elapsed, sub_prefix_01)
 
             fig = plt.figure()
             import matplotlib.ticker as mtick
@@ -1257,8 +1257,8 @@ class System(object):
 
             file_name = 'k_cut_convergence'
             print_time_elapsed = 0
-            sub_prefix = ''.join(sub_prefix_list_02)
-            generate_report(self.start_time, k_cut_convergence_alpha_directory_path, file_name, print_time_elapsed, sub_prefix)
+            sub_prefix_02 = ''.join(sub_prefix_list_02)
+            generate_report(self.start_time, k_cut_convergence_alpha_directory_path, file_name, print_time_elapsed, sub_prefix_02)
         elif not np.isreal(self.alpha) & np.isreal(self.r_cut) & np.isreal(self.k_cut):
             if np.isreal(self.alpha) & np.isreal(self.r_cut):
                 # optimize fourier-space cutoff error for k_cut
