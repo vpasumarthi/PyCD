@@ -1078,15 +1078,17 @@ class System(object):
         generate_report(self.start_time, dst_path, file_name, print_time_elapsed, prefix)
         return None
 
-    def get_precise_step_change_data(self, charge_list_prod, alpha, k_cut0, k_cut1, num_data_points, converged_fourier_energy, dst_path):
+    def get_precise_step_change_data(self, charge_list_prod, alpha, k_cut_data, fourier_space_energy_data, num_data_points, converged_fourier_energy, dst_path):
+        (k_cut0_estimated, k_cut1_estimated) = self.get_step_change_analysis_with_k_cut(k_cut_data, fourier_space_energy_data)[:-1]
+
         k_cut0_of_step_change = []
         k_cut1_of_step_change = []
         energy_changes = []
-        num_steps = len(k_cut0)
+        num_steps = len(k_cut0_estimated)
         max_divergent_k_cut = 0
         for step_index in range(num_steps):
-            k_cut_lower = k_cut0[step_index]
-            k_cut_upper = k_cut1[step_index]
+            k_cut_lower = k_cut0_estimated[step_index]
+            k_cut_upper = k_cut1_estimated[step_index]
             (step_k_cut_data, step_fourier_space_energy_data) = self.get_energy_profile_with_k_cut(
                         charge_list_prod, alpha, k_cut_lower, k_cut_upper, num_data_points)
             title_suffix = f'_step{step_index+1}'
@@ -1237,12 +1239,10 @@ class System(object):
             self.plot_energy_profile_in_bounded_k_cut(k_cut_data, fourier_space_energy_data, title_suffix, k_cut_convergence_alpha_directory_path)
             converged_fourier_energy = fourier_space_energy_data[-1]
 
-            (k_cut0_of_step_change_estimated, k_cut1_of_step_change_estimated) = self.get_step_change_analysis_with_k_cut(k_cut_data, fourier_space_energy_data)[:-1]
-
             # get precise step energy data
             (k_cut0_of_step_change, k_cut1_of_step_change, energy_changes,
              max_divergent_k_cut) = self.get_precise_step_change_data(
-                 charge_list_prod, alpha, k_cut0_of_step_change_estimated, k_cut1_of_step_change_estimated,
+                 charge_list_prod, alpha, k_cut_data, fourier_space_energy_data,
                  num_data_points, converged_fourier_energy, k_cut_convergence_alpha_directory_path)
             sub_prefix_list.append(f'Number of step changes in Fourier-space energy with varying k_cut: {len(energy_changes)}\n')
 
