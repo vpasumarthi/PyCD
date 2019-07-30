@@ -1241,28 +1241,31 @@ class System(object):
             # optimize fourier-space cutoff error for k_cut
             fourier_space_parameters = self.minimize_fourier_space_cutoff_error(charge_list_einsum, volume_derived_length, fourier_space_parameters, x_fourier_initial_guess)
             k_cut_estimate = fourier_space_parameters['k_cut']
-        elif self.k_cut == 'converge' and np.array_equal(self.system_size, np.ones(self.neighbors.n_dim, int)):
-            output_dir_path = dst_path.joinpath(f'alpha={alpha * constants.ANG2BOHR:.3e}')
-            Path.mkdir(output_dir_path, parents=True, exist_ok=True)
-
-            # optimize fourier-space cutoff error for k_cut
-            fourier_space_parameters = self.minimize_fourier_space_cutoff_error(charge_list_einsum, volume_derived_length, fourier_space_parameters, x_fourier_initial_guess)
-            k_cut_estimate = fourier_space_parameters['k_cut']
-
-            lower_bound = 0.0000
-            # upper bound value of 100 is too high for large systems
-            upper_bound = 100.0000
-            threshold_fractional_k_cut = 0.9000
-            percent_increase_in_k_cut_upper = 10
-            num_data_points = 5.00E+01
-
-            k_cut_upper = upper_bound * k_cut_estimate
-            k_cut_threshold = threshold_fractional_k_cut * k_cut_upper
-            # check for convergence in the absolute value of energy with k_cut
-            while not self.check_for_k_cut_convergence(charge_list_prod, alpha, k_cut_threshold, k_cut_upper):
-                k_cut_upper = (1 + percent_increase_in_k_cut_upper / 100) * k_cut_upper
-            sub_prefix_list = []
-            sub_prefix_list.append(f'Preliminary convergence in Fourier-space energy achieved at k_cut: {k_cut_upper * constants.ANG2BOHR} / angstrom\n')
+        elif (self.k_cut == 'converge' and np.array_equal(self.system_size, np.ones(self.neighbors.n_dim, int))) or isinstance(self.k_cut, list):
+            if isinstance(self.k_cut, list):
+                return None
+            else:
+                output_dir_path = dst_path.joinpath(f'alpha={alpha * constants.ANG2BOHR:.3e}')
+                Path.mkdir(output_dir_path, parents=True, exist_ok=True)
+    
+                # optimize fourier-space cutoff error for k_cut
+                fourier_space_parameters = self.minimize_fourier_space_cutoff_error(charge_list_einsum, volume_derived_length, fourier_space_parameters, x_fourier_initial_guess)
+                k_cut_estimate = fourier_space_parameters['k_cut']
+    
+                lower_bound = 0.0000
+                # upper bound value of 100 is too high for large systems
+                upper_bound = 100.0000
+                threshold_fractional_k_cut = 0.9000
+                percent_increase_in_k_cut_upper = 10
+                num_data_points = 5.00E+01
+    
+                k_cut_upper = upper_bound * k_cut_estimate
+                k_cut_threshold = threshold_fractional_k_cut * k_cut_upper
+                # check for convergence in the absolute value of energy with k_cut
+                while not self.check_for_k_cut_convergence(charge_list_prod, alpha, k_cut_threshold, k_cut_upper):
+                    k_cut_upper = (1 + percent_increase_in_k_cut_upper / 100) * k_cut_upper
+                sub_prefix_list = []
+                sub_prefix_list.append(f'Preliminary convergence in Fourier-space energy achieved at k_cut: {k_cut_upper * constants.ANG2BOHR} / angstrom\n')
 
             # get step energy data
             # NOTE: k_cut outputted below is the k_cut_stringent
