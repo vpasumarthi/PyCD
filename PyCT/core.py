@@ -1116,11 +1116,13 @@ class System(object):
         k_cut0_of_step_change = np.asarray(k_cut0_of_step_change)
         k_cut1_of_step_change = np.asarray(k_cut1_of_step_change)
         energy_changes = np.asarray(energy_changes)
+        sub_prefix_list.append(f'Number of step changes in Fourier-space energy with varying k_cut: {len(energy_changes)}\n')
 
         if max_divergent_k_cut > 0:
             k_cut_gentle = k_cut_data[k_cut_data > max_divergent_k_cut][0]
         else:
             k_cut_gentle = 0
+        sub_prefix_list.append(f'k_cut (gentle): {k_cut_gentle * constants.ANG2BOHR:.3e} / angstrom\n')
 
         fig = plt.figure()
         import matplotlib.ticker as mtick
@@ -1137,13 +1139,14 @@ class System(object):
 
         # check for step energy change convergence
         k_cut_stringent = k_cut1_of_step_change[-1]
+        sub_prefix_list.append(f'k_cut (stringent): {k_cut_stringent * constants.ANG2BOHR:.3e} / angstrom\n')
         k_cut_lower = threshold_fractional_k_cut * k_cut_stringent
         k_cut_upper = k_cut_stringent
         step_energy_convergence_status = self.check_for_k_cut_step_energy_convergence(
             k_cut0_of_step_change, energy_changes, k_cut_lower, k_cut_upper)
         convergence_keyword = 'NOT ' if not step_energy_convergence_status else ''
         sub_prefix_list.append(f'Step energy changes have {convergence_keyword}converged\n')
-        return (k_cut0_of_step_change, k_cut1_of_step_change, energy_changes, k_cut_stringent, k_cut_gentle, sub_prefix_list)
+        return (k_cut0_of_step_change, k_cut1_of_step_change, energy_changes, k_cut_stringent, sub_prefix_list)
 
     def get_cutoff_parameters(self, tau_ratio, dst_path, prefix_list):
         real_space_parameters = {}
@@ -1259,15 +1262,11 @@ class System(object):
 
             # get step energy data
             (k_cut0_of_step_change, k_cut1_of_step_change, energy_changes,
-             k_cut_stringent, k_cut_gentle) = self.get_precise_step_change_data(
+             k_cut_stringent) = self.get_precise_step_change_data(
                  charge_list_prod, alpha, lower_bound, upper_bound, k_cut_estimate,
                  threshold_fractional_k_cut, num_data_points, k_cut_convergence_alpha_directory_path)
-            sub_prefix_list.append(f'k_cut (gentle): {k_cut_gentle * constants.ANG2BOHR:.3e} / angstrom\n')
 
             k_cut = k_cut_stringent
-            sub_prefix_list.append(f'k_cut (stringent): {k_cut_stringent * constants.ANG2BOHR:.3e} / angstrom\n')
-            sub_prefix_list.append(f'Number of step changes in Fourier-space energy with varying k_cut: {len(energy_changes)}\n')
-
             # analyze the k-vectors and their energy contributions towards Fourier-space energy
             self.get_k_vector_based_energy_contribution(
                 charge_list_prod, alpha, k_cut0_of_step_change,
