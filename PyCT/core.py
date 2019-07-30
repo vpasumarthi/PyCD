@@ -1140,6 +1140,10 @@ class System(object):
         # check for step energy change convergence
         k_cut_stringent = k_cut1_of_step_change[-1]
         sub_prefix_list.append(f'k_cut (stringent): {k_cut_stringent * constants.ANG2BOHR:.3e} / angstrom\n')
+
+        factor_of_increase_from_estimation = k_cut_stringent / k_cut_estimate
+        sub_prefix_list.append(f'Factor of increase in the value of converged k_cut from estimation: {factor_of_increase_from_estimation:.3e}\n')
+
         k_cut_lower = threshold_fractional_k_cut * k_cut_stringent
         k_cut_upper = k_cut_stringent
         step_energy_convergence_status = self.check_for_k_cut_step_energy_convergence(
@@ -1271,9 +1275,6 @@ class System(object):
             self.get_k_vector_based_energy_contribution(
                 charge_list_prod, alpha, k_cut0_of_step_change,
                 k_cut1_of_step_change, k_cut_convergence_alpha_directory_path)
-
-            factor_of_increase_from_estimation = k_cut_stringent / k_cut_estimate
-            sub_prefix_list.append(f'Factor of increase in the value of converged k_cut from estimation: {factor_of_increase_from_estimation:.3e}\n')
 
             file_name = 'k_cut_convergence'
             print_time_elapsed = 0
