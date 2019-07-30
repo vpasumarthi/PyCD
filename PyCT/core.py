@@ -1220,7 +1220,7 @@ class System(object):
                 prefix_list.append(f'r_cut: {r_cut / constants.ANG2BOHR:.3e} angstrom ({choice_parameters["r_cut"]})\n')
                 n_max = np.round(r_cut / self.translational_vector_length).astype(int)
                 prefix_list.append(f'n_max: [{n_max[0]}, {n_max[1]}, {n_max[2]}]\n')
-                prefix_list.append(f'Please re-run after converging k_cut at alpha={alpha * constants.ANG2BOHR:.3e} for system size [{",".join(str(element) for element in k_cut_convergence_system_size)}]')
+                prefix_list.append(f'Please re-run after converging k_cut at alpha={alpha * constants.ANG2BOHR:.3e} for system size [{",".join(str(element) for element in k_cut_convergence_system_size)}]\n\n')
 
                 file_name = 'precomputed_array'
                 print_time_elapsed = 1
