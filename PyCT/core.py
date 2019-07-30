@@ -1103,6 +1103,19 @@ class System(object):
         k_cut0_of_step_change = np.asarray(k_cut0_of_step_change)
         k_cut1_of_step_change = np.asarray(k_cut1_of_step_change)
         energy_changes = np.asarray(energy_changes)
+
+        fig = plt.figure()
+        import matplotlib.ticker as mtick
+        ax = fig.add_subplot(111)
+        ax.yaxis.set_major_formatter(mtick.FormatStrFormatter('%.2e'))
+        ax.plot(k_cut0_of_step_change * constants.ANG2BOHR, energy_changes / constants.EV2HARTREE, 'o-', color='#2ca02c', mec='black')
+        ax.set_xlabel('$k_{{cut}}$ (1/$\AA$)')
+        ax.set_ylabel(f'Energy (eV)')
+        plt.title('Magnitude of step change in Fourier-space energy with increase in $k_{{cut}}$', y=1.08)
+        figure_name = f'Step change convergence with k_cut.png'
+        figure_path = dst_path.joinpath(figure_name)
+        plt.tight_layout()
+        plt.savefig(str(figure_path))
         return (k_cut0_of_step_change, k_cut1_of_step_change, energy_changes, max_divergent_k_cut)
 
     def get_cutoff_parameters(self, tau_ratio, dst_path, prefix_list):
@@ -1245,19 +1258,6 @@ class System(object):
             self.get_k_vector_based_energy_contribution(
                 charge_list_prod, alpha, k_cut0_of_step_change_refined,
                 k_cut1_of_step_change_refined, k_cut_convergence_alpha_directory_path)
-
-            fig = plt.figure()
-            import matplotlib.ticker as mtick
-            ax = fig.add_subplot(111)
-            ax.yaxis.set_major_formatter(mtick.FormatStrFormatter('%.2e'))
-            ax.plot(k_cut0_of_step_change_refined * constants.ANG2BOHR, energy_changes_refined / constants.EV2HARTREE, 'o-', color='#2ca02c', mec='black')
-            ax.set_xlabel('$k_{{cut}}$ (1/$\AA$)')
-            ax.set_ylabel(f'Energy (eV)')
-            plt.title('Magnitude of step change in Fourier-space energy with increase in $k_{{cut}}$', y=1.08)
-            figure_name = f'Step change convergence with k_cut.png'
-            figure_path = k_cut_convergence_alpha_directory_path.joinpath(figure_name)
-            plt.tight_layout()
-            plt.savefig(str(figure_path))
 
             k_cut_stringent = k_cut1_of_step_change_refined[-1]
             factor_of_increase_from_estimation = k_cut_stringent / k_cut_estimate
