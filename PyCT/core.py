@@ -949,24 +949,32 @@ class System(object):
         upper_bound = 0.9999
         threshold_fractional_r_cut = 0.9000
         alpha_percent_increase = 10
+        print(f'Attempting to find best alpha towards converging real-space energy within the simulation cell:\n')
+        print(f'Starting with an estimate for alpha={alpha * constants.ANG2BOHR:.3e}')
         while not self.check_for_r_cut_convergence(charge_list_prod, alpha, r_cut_max,
                                                    threshold_fractional_r_cut, upper_bound):
             alpha = (1 + alpha_percent_increase / 100) * alpha
+            print(f'Couldn\'t find real-space energy convergence within simulation cell. Re-attempting with {alpha_percent_increase} % increased alpha={alpha * constants.ANG2BOHR:.3e}')
 
+        print(f'Preliminary convergence in real-space energy achieved at alpha={alpha * constants.ANG2BOHR:.3e}\n')
         r_cut_convergence = 0
         alpha_vs_fraction_r_cut_convergence = []
         alpha_percent_decrease = 5
+        print(f'Attempting to achieve convergence above {threshold_fractional_r_cut * 100:.1f} % of max L/2:')
         while r_cut_convergence / r_cut_max < threshold_fractional_r_cut:
             alpha_convergence = alpha
             r_cut_convergence = self.get_convergence_rcut(charge_list_prod, alpha_convergence, r_cut_max, lower_bound, upper_bound)
+            print(f'alpha={alpha * constants.ANG2BOHR:.3e}; r_cut={r_cut_convergence / r_cut_max:.3f} max L/2')
             alpha_vs_fraction_r_cut_convergence.append([alpha_convergence, r_cut_convergence / r_cut_max])
             alpha = (1 - alpha_percent_decrease / 100) * alpha
 
         real_space_parameters['r_cut'] = r_cut_convergence
         real_space_parameters['alpha'] = alpha_convergence
         alpha_vs_fraction_r_cut_convergence = np.asarray(alpha_vs_fraction_r_cut_convergence)
+        print(f'Convergence in real-space energy achieved at alpha={alpha_convergence * constants.ANG2BOHR:.3e} with r_cut={r_cut_convergence / r_cut_max:.3f} max L/2\n')
 
         num_data_points = 5.00E+01
+        print(f'Generating energy profile between {lower_bound:.3f} and {upper_bound:.3f} fractions of max L/2')
         (r_cut_data, real_space_energy_data) = self.get_energy_profile_with_r_cut(
             charge_list_prod, alpha_convergence, r_cut_max, lower_bound, upper_bound, num_data_points)
 
@@ -979,6 +987,7 @@ class System(object):
         figure_name = 'Real-space energy convergence with r_cut.png'
         figure_path = dst_path.joinpath(figure_name)
         plt.savefig(str(figure_path))
+        print(f'Generated energy profile\n')
 
         fig2 = plt.figure()        
         ax = fig2.add_subplot(111)
