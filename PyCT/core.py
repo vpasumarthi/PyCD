@@ -1155,12 +1155,16 @@ class System(object):
         else:
             k_cut_gentle = 0
         sub_prefix_list.append(f'k_cut (gentle): {k_cut_gentle * constants.ANG2BOHR:.3e} / angstrom\n')
-        print(f'k_cut (gentle): {k_cut_gentle * constants.ANG2BOHR:.3e} / angstrom')
+        k_max_gentle = np.ceil(k_cut_gentle / self.reciprocal_lattice_vector_length).astype(int)
+        num_k_vectors_gentle = np.ceil(np.prod(2 * k_max_gentle + 1) * np.pi / 6 - 1).astype(int)
+        print(f'k_cut (gentle): {k_cut_gentle * constants.ANG2BOHR:.3e} / angstrom; k_max: [{",".join(str(element) for element in k_max_gentle)}]; num_k-vectors: {num_k_vectors_gentle}')
 
         # check for step energy change convergence
         k_cut_stringent = k_cut1_of_step_change[-1]
         sub_prefix_list.append(f'k_cut (stringent): {k_cut_stringent * constants.ANG2BOHR:.3e} / angstrom\n')
-        print(f'k_cut (stringent): {k_cut_stringent * constants.ANG2BOHR:.3e} / angstrom\n')
+        k_max_stringent = np.ceil(k_cut_stringent / self.reciprocal_lattice_vector_length).astype(int)
+        num_k_vectors_stringent = np.ceil(np.prod(2 * k_max_stringent + 1) * np.pi / 6 - 1).astype(int)
+        print(f'k_cut (stringent): {k_cut_stringent * constants.ANG2BOHR:.3e} / angstrom; k_max: [{",".join(str(element) for element in k_max_stringent)}]; num_k-vectors: {num_k_vectors_stringent}\n')
 
         factor_of_increase_from_estimation = k_cut_stringent / k_cut_estimate
         sub_prefix_list.append(f'Factor of increase in the value of converged k_cut from estimation: {factor_of_increase_from_estimation:.3e}\n')
