@@ -1140,7 +1140,7 @@ class System(object):
         else:
             k_cut_gentle = 0
         sub_prefix_list.append(f'k_cut (gentle): {k_cut_gentle * constants.ANG2BOHR:.3e} / angstrom\n')
-        print(f'k_cut_gentle: {k_cut_gentle * constants.ANG2BOHR:.3e} / angstrom')
+        print(f'k_cut (gentle): {k_cut_gentle * constants.ANG2BOHR:.3e} / angstrom')
 
         # check for step energy change convergence
         k_cut_stringent = k_cut1_of_step_change[-1]
