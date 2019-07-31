@@ -712,12 +712,12 @@ class System(object):
         self.lower_bound_real = precision_parameters['lower_bound_real']
         self.lower_bound_rcut = precision_parameters['lower_bound_rcut']
         self.lower_bound_kcut = precision_parameters['lower_bound_kcut']
+        self.upper_bound_kcut = precision_parameters['upper_bound_kcut']
         self.threshold_fraction = precision_parameters['threshold_fraction']
         self.num_data_points_low = precision_parameters['num_data_points_low'].astype(int)
         self.num_data_points_high = precision_parameters['num_data_points_high'].astype(int)
         self.precise_r_cut = precision_parameters['precise_r_cut']
         self.err_tol = precision_parameters['err_tol'] * constants.EV2HARTREE
-        self.k_cut_upper_bound = precision_parameters['k_cut_upper_bound']
         self.step_increase_tol = precision_parameters['step_increase_tol'] * constants.EV2HARTREE
         self.step_change_data_points = precision_parameters['step_change_data_points']
 
@@ -1340,9 +1340,9 @@ class System(object):
                 k_cut_estimate = fourier_space_parameters['k_cut']
                 print(f'Starting with an estimate for k_cut={k_cut_estimate * constants.ANG2BOHR:.3e} / angstrom')
                 percent_increase_in_k_cut_upper = 10
-                print(f'Exploring convergence in Fourier-space energy between {int(self.lower_bound_kcut)}x and {int(self.k_cut_upper_bound)}x of estimated k_cut')
+                print(f'Exploring convergence in Fourier-space energy between {int(self.lower_bound_kcut)}x and {int(self.upper_bound_kcut)}x of estimated k_cut')
     
-                k_cut_upper = self.k_cut_upper_bound * k_cut_estimate
+                k_cut_upper = self.upper_bound_kcut * k_cut_estimate
                 k_cut_threshold = self.threshold_fraction * k_cut_upper
                 # check for convergence in the absolute value of energy with k_cut
                 while not self.convergence_check_with_k_cut(charge_list_prod, alpha, k_cut_threshold, k_cut_upper):
@@ -1357,7 +1357,7 @@ class System(object):
             # NOTE: k_cut outputted below is the k_cut_stringent
             (k_cut0_of_step_change, k_cut1_of_step_change, k_cut,
              sub_prefix_list) = self.get_precise_step_change_data(
-                 charge_list_prod, alpha, self.k_cut_upper_bound, k_cut_estimate,
+                 charge_list_prod, alpha, self.upper_bound_kcut, k_cut_estimate,
                  output_dir_path, sub_prefix_list)
 
             print(f'Analyzing energy contributions of individual k-vectors:')
