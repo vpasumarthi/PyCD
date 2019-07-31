@@ -781,7 +781,6 @@ class System(object):
         return precomputed_array
 
     def benchmark_ewald(self, num_repeats, benchmark_parameters):
-        n_max = benchmark_parameters['n_max']
         k_max = benchmark_parameters['k_max']
         alpha = benchmark_parameters['alpha']
         r_cut = benchmark_parameters['r_cut']
@@ -857,10 +856,10 @@ class System(object):
     def check_for_r_cut_convergence(self, charge_list_prod, alpha, r_cut_max, lower_bound, upper_bound):
         r_cut_lower = lower_bound * r_cut_max
         r_cut_upper = upper_bound * r_cut_max
-        precomputed_array_real = self.get_precomputed_array_real(alpha, r_cut_lower)[0]
+        precomputed_array_real = self.get_precomputed_array_real(alpha, r_cut_lower)
         real_space_energy_lower = np.sum(np.multiply(charge_list_prod, precomputed_array_real))
 
-        precomputed_array_real = self.get_precomputed_array_real(alpha, r_cut_upper)[0]
+        precomputed_array_real = self.get_precomputed_array_real(alpha, r_cut_upper)
         real_space_energy_upper = np.sum(np.multiply(charge_list_prod, precomputed_array_real))
         if abs(real_space_energy_lower - real_space_energy_upper) < self.err_tol:
             convergence_status = 1
@@ -876,7 +875,7 @@ class System(object):
         r_cut_data = np.linspace(r_cut_lower, r_cut_upper, num_data_points)
         real_space_energy_data = np.zeros(int(num_data_points))
         for r_cut_index, r_cut in enumerate(r_cut_data):
-            precomputed_array_real = self.get_precomputed_array_real(alpha, r_cut)[0]
+            precomputed_array_real = self.get_precomputed_array_real(alpha, r_cut)
             real_space_energy_data[r_cut_index] = np.sum(np.multiply(charge_list_prod, precomputed_array_real))
         return (r_cut_data, real_space_energy_data)
 
@@ -1546,9 +1545,8 @@ class System(object):
         return (ewald_parameters, prefix_list, dst_path)
 
     def get_precomputed_array_real(self, alpha, r_cut):
-        n_max = np.round(r_cut / self.translational_vector_length).astype(int)
         precomputed_array_real = self.pot_r_ewald(alpha, r_cut)[0] / self.material.dielectric_constant
-        return (precomputed_array_real, n_max)
+        return precomputed_array_real
 
     def get_precomputed_array_fourier(self, alpha, k_cut):
         k_max = np.ceil(k_cut / self.reciprocal_lattice_vector_length).astype(int)  # max number of multiples of reciprocal lattice length vectors
@@ -1568,8 +1566,7 @@ class System(object):
         r_cut = ewald_parameters['r_cut']
         k_cut = ewald_parameters['k_cut']
 
-        (precomputed_array_real, n_max) = self.get_precomputed_array_real(alpha, r_cut)
-        prefix_list.append(f'n_max: [{n_max[0]}, {n_max[1]}, {n_max[2]}]\n')
+        precomputed_array_real = self.get_precomputed_array_real(alpha, r_cut)
 
         (precomputed_array_fourier, k_max, num_k_vectors) = self.get_precomputed_array_fourier(alpha, k_cut)
         prefix_list.append(f'k_max: [{k_max[0]}, {k_max[1]}, {k_max[2]}]\n')
