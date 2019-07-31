@@ -710,6 +710,7 @@ class System(object):
             self.k_cut = k_cut
 
         self.lower_bound_real = precision_parameters['lower_bound_real']
+        self.num_data_points_low = precision_parameters['num_data_points_low'].astype(int)
         self.precise_r_cut = precision_parameters['precise_r_cut']
         self.err_tol = precision_parameters['err_tol'] * constants.EV2HARTREE
         self.k_cut_upper_bound = precision_parameters['k_cut_upper_bound']
@@ -921,9 +922,8 @@ class System(object):
 
     def get_convergence_rcut(self, charge_list_prod, alpha, r_cut_max, lower_bound, upper_bound):
 
-        num_data_points = 1.00E+01
         (r_cut_data, real_space_energy_data) = self.get_energy_profile_with_r_cut(
-            charge_list_prod, alpha, r_cut_max, lower_bound, upper_bound, num_data_points)
+            charge_list_prod, alpha, r_cut_max, lower_bound, upper_bound, self.num_data_points_low)
 
         real_space_energy_deviation = np.abs(real_space_energy_data - real_space_energy_data[-1])
         indices_of_non_convergence = np.where(real_space_energy_deviation > self.err_tol)[0]
