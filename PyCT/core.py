@@ -711,6 +711,7 @@ class System(object):
 
         self.lower_bound_real = precision_parameters['lower_bound_real']
         self.num_data_points_low = precision_parameters['num_data_points_low'].astype(int)
+        self.num_data_points_high = precision_parameters['num_data_points_high'].astype(int)
         self.precise_r_cut = precision_parameters['precise_r_cut']
         self.err_tol = precision_parameters['err_tol'] * constants.EV2HARTREE
         self.k_cut_upper_bound = precision_parameters['k_cut_upper_bound']
@@ -968,11 +969,10 @@ class System(object):
         alpha_vs_fraction_r_cut_convergence = np.asarray(alpha_vs_fraction_r_cut_convergence)
         print(f'Convergence in real-space energy achieved at alpha={alpha_convergence * constants.ANG2BOHR:.3e} / angstrom with r_cut={r_cut_convergence / r_cut_max:.3f} max L/2\n')
 
-        num_data_points = 5.00E+01
         lower_bound = 0.7500
         print(f'Generating energy profile between {lower_bound:.3f} and {upper_bound:.3f} fractions of max L/2')
         (r_cut_data, real_space_energy_data) = self.get_energy_profile_with_r_cut(
-            charge_list_prod, alpha_convergence, r_cut_max, lower_bound, upper_bound, num_data_points)
+            charge_list_prod, alpha_convergence, r_cut_max, lower_bound, upper_bound, self.num_data_points_high)
 
         fig1 = plt.figure()        
         ax = fig1.add_subplot(111)
@@ -1087,7 +1087,7 @@ class System(object):
 
     def get_precise_step_change_data(self, charge_list_prod, alpha, lower_bound,
                                      upper_bound, k_cut_estimate, threshold_fractional_k_cut,
-                                     num_data_points, dst_path, sub_prefix_list):
+                                     dst_path, sub_prefix_list):
         k_cut_lower = lower_bound * k_cut_estimate
         k_cut_upper = upper_bound * k_cut_estimate
         print(f'Generating energy profile between {int(lower_bound)}x and {int(upper_bound)}x of estimated k_cut')
@@ -1100,7 +1100,7 @@ class System(object):
         print(f'Maximum number of k-vectors vary from {num_k_vectors_lower} to {num_k_vectors_upper}')
 
         (k_cut_data, fourier_space_energy_data) = self.get_energy_profile_with_k_cut(
-                    charge_list_prod, alpha, k_cut_lower, k_cut_upper, num_data_points)
+                    charge_list_prod, alpha, k_cut_lower, k_cut_upper, self.num_data_points_high)
 
         title_suffix = f'_{int(lower_bound)}x-{int(upper_bound)}x k_estimate'
         self.plot_energy_profile_in_bounded_k_cut(k_cut_data, fourier_space_energy_data, title_suffix, dst_path)
@@ -1189,12 +1189,12 @@ class System(object):
         return (k_cut0_of_step_change, k_cut1_of_step_change, k_cut_stringent, sub_prefix_list)
 
     def get_optimized_r_cut(self, charge_list_prod, alpha, lower_bound, upper_bound,
-                            threshold_fractional_r_cut, num_data_points,
-                            choice_parameters, dst_path, prefix_list):
+                            threshold_fractional_r_cut, choice_parameters,
+                            dst_path, prefix_list):
         r_cut_max = min(self.translational_vector_length) / 2
         
         (r_cut_data, real_space_energy_data) = self.get_energy_profile_with_r_cut(
-            charge_list_prod, alpha, r_cut_max, lower_bound, upper_bound, num_data_points)
+            charge_list_prod, alpha, r_cut_max, lower_bound, upper_bound, self.num_data_points_high)
 
         # check for energy-convergence with r_cut at user-specified alpha between 0 to L/2
         if self.convergence_check_with_r_cut(charge_list_prod, alpha, r_cut_max, threshold_fractional_r_cut, upper_bound):
@@ -1205,7 +1205,7 @@ class System(object):
                 upper_bound = r_cut_data[abs(real_space_energy_data - converged_real_space_energy) < self.err_tol][0] / r_cut_max
     
                 (r_cut_data_local, real_space_energy_data_local) = self.get_energy_profile_with_r_cut(
-                    charge_list_prod, alpha, r_cut_max, lower_bound, upper_bound, num_data_points)
+                    charge_list_prod, alpha, r_cut_max, lower_bound, upper_bound, self.num_data_points_high)
                 r_cut = r_cut_data_local[abs(real_space_energy_data_local - converged_real_space_energy) < self.err_tol][0]
             else:
                 r_cut = r_cut_data[abs(real_space_energy_data - converged_real_space_energy) < self.err_tol][0]
@@ -1319,7 +1319,6 @@ class System(object):
             sub_prefix_list = []
             lower_bound = 0.0000
             threshold_fractional_k_cut = 0.9000
-            num_data_points = 5.00E+01
             if isinstance(self.k_cut, list):
                 output_dir_path = dst_path / ('k_max=[' + ','.join(str(element) for element in self.k_cut) + ']')
                 Path.mkdir(output_dir_path, parents=True, exist_ok=True)
@@ -1361,7 +1360,7 @@ class System(object):
             (k_cut0_of_step_change, k_cut1_of_step_change, k_cut,
              sub_prefix_list) = self.get_precise_step_change_data(
                  charge_list_prod, alpha, lower_bound, self.k_cut_upper_bound, k_cut_estimate,
-                 threshold_fractional_k_cut, num_data_points, output_dir_path, sub_prefix_list)
+                 threshold_fractional_k_cut, output_dir_path, sub_prefix_list)
 
             print(f'Analyzing energy contributions of individual k-vectors:')
             # analyze the k-vectors and their energy contributions towards Fourier-space energy
@@ -1380,27 +1379,25 @@ class System(object):
                 fourier_space_parameters = self.minimize_fourier_space_cutoff_error(charge_list_einsum, volume_derived_length, fourier_space_parameters, x_fourier_initial_guess)
                 k_cut = fourier_space_parameters['k_cut']
             elif np.isreal(self.alpha) & np.isreal(self.k_cut):
-                num_data_points = 5.00E+01
                 lower_bound = 0.0000
                 threshold_fractional_r_cut = 0.9000
                 upper_bound = 0.9999
                 r_cut = self.get_optimized_r_cut(
                             charge_list_prod, alpha, lower_bound, upper_bound,
-                            threshold_fractional_r_cut, num_data_points,
-                            choice_parameters, dst_path, prefix_list)
+                            threshold_fractional_r_cut, choice_parameters,
+                            dst_path, prefix_list)
             elif np.isreal(self.r_cut) & np.isreal(self.k_cut):
                 # optimize real-space cutoff error for alpha
                 real_space_parameters = self.minimize_real_space_cutoff_error(charge_list_einsum, real_space_parameters, x_real_initial_guess)
                 alpha = real_space_parameters['alpha']
             elif np.isreal(self.alpha):
-                num_data_points = 5.00E+01
                 lower_bound = 0.0000
                 threshold_fractional_r_cut = 0.9000
                 upper_bound = 0.9999
                 r_cut = self.get_optimized_r_cut(
                             charge_list_prod, alpha, lower_bound, upper_bound,
-                            threshold_fractional_r_cut, num_data_points,
-                            choice_parameters, dst_path, prefix_list)
+                            threshold_fractional_r_cut, choice_parameters,
+                            dst_path, prefix_list)
 
                 # optimize fourier-space cutoff error for k_cut
                 fourier_space_parameters = self.minimize_fourier_space_cutoff_error(charge_list_einsum, volume_derived_length, fourier_space_parameters, x_fourier_initial_guess)
@@ -1418,14 +1415,13 @@ class System(object):
                 alpha = real_space_parameters['alpha'] = fourier_space_parameters['alpha']
 
                 # explore real-space convergence for r_cut
-                num_data_points = 5.00E+01
                 lower_bound = 0.0000
                 threshold_fractional_r_cut = 0.9000
                 upper_bound = 0.9999
                 r_cut = self.get_optimized_r_cut(
                             charge_list_prod, alpha, lower_bound, upper_bound,
-                            threshold_fractional_r_cut, num_data_points,
-                            choice_parameters, dst_path, prefix_list)
+                            threshold_fractional_r_cut, choice_parameters,
+                            dst_path, prefix_list)
             else:
                 # current implementation of pot_k_ewald has O(N^2) complexity resulting in N-independt expression for alpha 
                 alpha = (tau_ratio * np.pi**3 / (self.system_volume)**2)**(1/6)
@@ -1433,14 +1429,13 @@ class System(object):
                 fourier_space_parameters['alpha'] = alpha
 
                 # explore real-space convergence for r_cut
-                num_data_points = 5.00E+01
                 lower_bound = 0.0000
                 threshold_fractional_r_cut = 0.9000
                 upper_bound = 0.9999
                 r_cut = self.get_optimized_r_cut(
                             charge_list_prod, alpha, lower_bound, upper_bound,
-                            threshold_fractional_r_cut, num_data_points,
-                            choice_parameters, dst_path, prefix_list)
+                            threshold_fractional_r_cut, choice_parameters,
+                            dst_path, prefix_list)
 
                 # optimize fourier-space cutoff error for k_cut
                 fourier_space_parameters = self.minimize_fourier_space_cutoff_error(charge_list_einsum, volume_derived_length, fourier_space_parameters, x_fourier_initial_guess)
