@@ -715,8 +715,8 @@ class System(object):
         self.lower_bound_kcut = precision_parameters['lower_bound_kcut']
         self.upper_bound_kcut = precision_parameters['upper_bound_kcut']
         self.threshold_fraction = precision_parameters['threshold_fraction']
-        self.num_data_points_low = precision_parameters['num_data_points_low'].astype(int)
-        self.num_data_points_high = precision_parameters['num_data_points_high'].astype(int)
+        self.num_data_points_low = int(precision_parameters['num_data_points_low'])
+        self.num_data_points_high = int(precision_parameters['num_data_points_high'])
         self.precise_r_cut = precision_parameters['precise_r_cut']
         self.err_tol = precision_parameters['err_tol'] * constants.EV2HARTREE
         self.step_increase_tol = precision_parameters['step_increase_tol'] * constants.EV2HARTREE
