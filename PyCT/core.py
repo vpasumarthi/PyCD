@@ -1276,9 +1276,11 @@ class System(object):
                 upper_bound = 1.0000
                 k_cut_estimate = k_cut
                 k_cut_threshold = threshold_fractional_k_cut * k_cut
+                print(f'Analyzing the convergence in Fourier-space energy at k_cut derived from user-specified k_max:')
                 convergence_status = self.check_for_k_cut_convergence(charge_list_prod, alpha, k_cut_threshold, k_cut)
                 convergence_keyword = 'NOT ' if not convergence_status else ''
                 sub_prefix_list.append(f'Preliminary convergence in Fourier-space energy {convergence_keyword}achieved at k_cut: {k_cut * constants.ANG2BOHR:.3e} / angstrom\n')
+                print(f'Preliminary convergence in Fourier-space energy {convergence_keyword}achieved at k_cut: {k_cut * constants.ANG2BOHR:.3e} / angstrom\n')
             else:
                 print(f'Attempting to converge k_cut for user-specified alpha={alpha * constants.ANG2BOHR:.3e}:\n')
                 output_dir_path = dst_path.joinpath(f'alpha={alpha * constants.ANG2BOHR:.3e}')
