@@ -712,6 +712,7 @@ class System(object):
         self.lower_bound_real = precision_parameters['lower_bound_real']
         self.precise_r_cut = precision_parameters['precise_r_cut']
         self.err_tol = precision_parameters['err_tol'] * constants.EV2HARTREE
+        self.k_cut_upper_bound = precision_parameters['k_cut_upper_bound']
 
     def pot_r_ewald(self, alpha, r_cut):
         """Generates precomputed array with potential energy contributions from
@@ -1339,12 +1340,10 @@ class System(object):
                 fourier_space_parameters = self.minimize_fourier_space_cutoff_error(charge_list_einsum, volume_derived_length, fourier_space_parameters, x_fourier_initial_guess)
                 k_cut_estimate = fourier_space_parameters['k_cut']
                 print(f'Starting with an estimate for k_cut={k_cut_estimate * constants.ANG2BOHR:.3e} / angstrom')
-                # upper bound value of 100 is too high for large systems
-                upper_bound = 100.0000
                 percent_increase_in_k_cut_upper = 10
-                print(f'Exploring convergence in Fourier-space energy between {int(lower_bound)}x and {int(upper_bound)}x of estimated k_cut')
+                print(f'Exploring convergence in Fourier-space energy between {int(lower_bound)}x and {int(self.k_cut_upper_bound)}x of estimated k_cut')
     
-                k_cut_upper = upper_bound * k_cut_estimate
+                k_cut_upper = self.k_cut_upper_bound * k_cut_estimate
                 k_cut_threshold = threshold_fractional_k_cut * k_cut_upper
                 # check for convergence in the absolute value of energy with k_cut
                 while not self.convergence_check_with_k_cut(charge_list_prod, alpha, k_cut_threshold, k_cut_upper):
@@ -1359,7 +1358,7 @@ class System(object):
             # NOTE: k_cut outputted below is the k_cut_stringent
             (k_cut0_of_step_change, k_cut1_of_step_change, k_cut,
              sub_prefix_list) = self.get_precise_step_change_data(
-                 charge_list_prod, alpha, lower_bound, upper_bound, k_cut_estimate,
+                 charge_list_prod, alpha, lower_bound, self.k_cut_upper_bound, k_cut_estimate,
                  threshold_fractional_k_cut, num_data_points, output_dir_path, sub_prefix_list)
 
             print(f'Analyzing energy contributions of individual k-vectors:')
