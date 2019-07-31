@@ -603,7 +603,7 @@ class System(object):
     """
     def __init__(self, material_info, material_neighbors,
                  hop_neighbor_list, pairwise_min_image_vector_data, alpha, r_cut,
-                 k_cut, err_tol, step_system_size_array, step_hop_neighbor_master_list):
+                 k_cut, precision_parameters, step_system_size_array, step_hop_neighbor_master_list):
         """Return a system object whose size is *size*
         :param material_info:
         :param material_neighbors:
@@ -709,7 +709,7 @@ class System(object):
         else:
             self.k_cut = k_cut
 
-        self.err_tol = err_tol
+        self.err_tol = precision_parameters['err_tol']
 
     def pot_r_ewald(self, alpha, r_cut):
         """Generates precomputed array with potential energy contributions from
