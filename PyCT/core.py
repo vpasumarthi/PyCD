@@ -1095,6 +1095,14 @@ class System(object):
         k_cut_lower = lower_bound * k_cut_estimate
         k_cut_upper = upper_bound * k_cut_estimate
         print(f'Generating energy profile between {int(lower_bound)}x and {int(upper_bound)}x of estimated k_cut')
+
+        k_max_lower = np.ceil(k_cut_lower / self.reciprocal_lattice_vector_length).astype(int)
+        num_k_vectors_lower = np.ceil(np.prod(2 * k_max_lower + 1) * np.pi / 6 - 1).astype(int)
+        k_max_upper = np.ceil(k_cut_upper / self.reciprocal_lattice_vector_length).astype(int)
+        num_k_vectors_upper = np.ceil(np.prod(2 * k_max_upper + 1) * np.pi / 6 - 1).astype(int)
+        print(f'k_max vary from [{",".join(str(element) for element in k_max_lower)}] to [{",".join(str(element) for element in k_max_upper)}]')
+        print(f'Maximum number of k-vectors vary from {num_k_vectors_lower} to {num_k_vectors_upper}')
+
         (k_cut_data, fourier_space_energy_data) = self.get_energy_profile_with_k_cut(
                     charge_list_prod, alpha, k_cut_lower, k_cut_upper, num_data_points)
 
@@ -1117,6 +1125,12 @@ class System(object):
             print(f'Analyzing step-change {step_index+1}')
             k_cut_lower = k_cut0_estimated[step_index]
             k_cut_upper = k_cut1_estimated[step_index]
+            k_max_lower = np.ceil(k_cut_lower / self.reciprocal_lattice_vector_length).astype(int)
+            num_k_vectors_lower = np.ceil(np.prod(2 * k_max_lower + 1) * np.pi / 6 - 1).astype(int)
+            k_max_upper = np.ceil(k_cut_upper / self.reciprocal_lattice_vector_length).astype(int)
+            num_k_vectors_upper = np.ceil(np.prod(2 * k_max_upper + 1) * np.pi / 6 - 1).astype(int)
+            print(f'k_max vary from [{",".join(str(element) for element in k_max_lower)}] to [{",".join(str(element) for element in k_max_upper)}]')
+            print(f'Maximum number of k-vectors vary from {num_k_vectors_lower} to {num_k_vectors_upper}')
             (step_k_cut_data, step_fourier_space_energy_data) = self.get_energy_profile_with_k_cut(
                         charge_list_prod, alpha, k_cut_lower, k_cut_upper, num_data_points)
             title_suffix = f'_step{step_index+1}'
