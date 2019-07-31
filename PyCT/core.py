@@ -853,7 +853,7 @@ class System(object):
         prefix_list.append(f'Fourier-space cutoff error: {fourier_space_cutoff_error:.3e}\n\n')
         return prefix_list
 
-    def check_for_r_cut_convergence(self, charge_list_prod, alpha, r_cut_max, lower_bound, upper_bound):
+    def convergence_check_with_r_cut(self, charge_list_prod, alpha, r_cut_max, lower_bound, upper_bound):
         r_cut_lower = lower_bound * r_cut_max
         r_cut_upper = upper_bound * r_cut_max
         precomputed_array_real = self.get_precomputed_array_real(alpha, r_cut_lower)
@@ -879,7 +879,7 @@ class System(object):
             real_space_energy_data[r_cut_index] = np.sum(np.multiply(charge_list_prod, precomputed_array_real))
         return (r_cut_data, real_space_energy_data)
 
-    def check_for_k_cut_convergence(self, charge_list_prod, alpha, k_cut_lower, k_cut_upper):
+    def convergence_check_with_k_cut(self, charge_list_prod, alpha, k_cut_lower, k_cut_upper):
         precomputed_array_fourier = self.get_precomputed_array_fourier(alpha, k_cut_lower)[0]
         fourier_space_energy_lower = np.sum(np.multiply(charge_list_prod, precomputed_array_fourier))
 
@@ -942,7 +942,7 @@ class System(object):
         alpha_percent_increase = 10
         print(f'Attempting to find best alpha towards converging real-space energy within the simulation cell:\n')
         print(f'Starting with an estimate for alpha={alpha * constants.ANG2BOHR:.3e} / angstrom')
-        while not self.check_for_r_cut_convergence(charge_list_prod, alpha, r_cut_max,
+        while not self.convergence_check_with_r_cut(charge_list_prod, alpha, r_cut_max,
                                                    threshold_fractional_r_cut, upper_bound):
             alpha = (1 + alpha_percent_increase / 100) * alpha
             print(f'Couldn\'t find real-space energy convergence within simulation cell. Re-attempting with {alpha_percent_increase} % increased alpha={alpha * constants.ANG2BOHR:.3e} / angstrom')
@@ -1286,7 +1286,7 @@ class System(object):
                 k_cut_estimate = k_cut
                 k_cut_threshold = threshold_fractional_k_cut * k_cut
                 print(f'Analyzing the convergence in Fourier-space energy at k_cut derived from user-specified k_max:')
-                convergence_status = self.check_for_k_cut_convergence(charge_list_prod, alpha, k_cut_threshold, k_cut)
+                convergence_status = self.convergence_check_with_k_cut(charge_list_prod, alpha, k_cut_threshold, k_cut)
                 convergence_keyword = 'NOT ' if not convergence_status else ''
                 sub_prefix_list.append(f'Preliminary convergence in Fourier-space energy {convergence_keyword}achieved at k_cut: {k_cut * constants.ANG2BOHR:.3e} / angstrom\n')
                 print(f'Preliminary convergence in Fourier-space energy {convergence_keyword}achieved at k_cut: {k_cut * constants.ANG2BOHR:.3e} / angstrom\n')
@@ -1307,7 +1307,7 @@ class System(object):
                 k_cut_upper = upper_bound * k_cut_estimate
                 k_cut_threshold = threshold_fractional_k_cut * k_cut_upper
                 # check for convergence in the absolute value of energy with k_cut
-                while not self.check_for_k_cut_convergence(charge_list_prod, alpha, k_cut_threshold, k_cut_upper):
+                while not self.convergence_check_with_k_cut(charge_list_prod, alpha, k_cut_threshold, k_cut_upper):
                     k_cut_upper = (1 + percent_increase_in_k_cut_upper / 100) * k_cut_upper
                     print(f'Could not find convergence in given k_cut range. Re-attempting with upper bound increased by {percent_increase_in_k_cut_upper:.3f} %')
                 sub_prefix_list.append(f'Preliminary convergence in Fourier-space energy achieved at k_cut: {k_cut_upper * constants.ANG2BOHR:.3e} / angstrom\n')
@@ -1349,7 +1349,7 @@ class System(object):
                     charge_list_prod, alpha, r_cut_max, lower_bound, upper_bound, num_data_points)
 
                 # check for energy-convergence with r_cut at user-specified alpha between 0 to L/2
-                if self.check_for_r_cut_convergence(charge_list_prod, alpha, r_cut_max, threshold_fractional_r_cut, upper_bound):
+                if self.convergence_check_with_r_cut(charge_list_prod, alpha, r_cut_max, threshold_fractional_r_cut, upper_bound):
                     # get more precise r_cut by looking at the convergence point.
                     converged_real_space_energy = real_space_energy_data[-1]
                     lower_bound = r_cut_data[abs(real_space_energy_data - converged_real_space_energy) > self.err_tol][-1] / r_cut_max
@@ -1389,7 +1389,7 @@ class System(object):
                     charge_list_prod, alpha, r_cut_max, lower_bound, upper_bound, num_data_points)
 
                 # check for energy-convergence with r_cut at user-specified alpha between 0 to L/2
-                if self.check_for_r_cut_convergence(charge_list_prod, alpha, r_cut_max, threshold_fractional_r_cut, upper_bound):
+                if self.convergence_check_with_r_cut(charge_list_prod, alpha, r_cut_max, threshold_fractional_r_cut, upper_bound):
                     # get more precise r_cut by looking at the convergence point.
                     converged_real_space_energy = real_space_energy_data[-1]
                     lower_bound = r_cut_data[abs(real_space_energy_data - converged_real_space_energy) > self.err_tol][-1] / r_cut_max
@@ -1440,7 +1440,7 @@ class System(object):
                     charge_list_prod, alpha, r_cut_max, lower_bound, upper_bound, num_data_points)
 
                 # check for energy-convergence with r_cut at user-specified alpha between 0 to L/2
-                if self.check_for_r_cut_convergence(charge_list_prod, alpha, r_cut_max, threshold_fractional_r_cut, upper_bound):
+                if self.convergence_check_with_r_cut(charge_list_prod, alpha, r_cut_max, threshold_fractional_r_cut, upper_bound):
                     # get more precise r_cut by looking at the convergence point.
                     converged_real_space_energy = real_space_energy_data[-1]
                     lower_bound = r_cut_data[abs(real_space_energy_data - converged_real_space_energy) > self.err_tol][-1] / r_cut_max
@@ -1480,7 +1480,7 @@ class System(object):
                     charge_list_prod, alpha, r_cut_max, lower_bound, upper_bound, num_data_points)
 
                 # check for energy-convergence with r_cut at user-specified alpha between 0 to L/2
-                if self.check_for_r_cut_convergence(charge_list_prod, alpha, r_cut_max, threshold_fractional_r_cut, upper_bound):
+                if self.convergence_check_with_r_cut(charge_list_prod, alpha, r_cut_max, threshold_fractional_r_cut, upper_bound):
                     # get more precise r_cut by looking at the convergence point.
                     converged_real_space_energy = real_space_energy_data[-1]
                     lower_bound = r_cut_data[abs(real_space_energy_data - converged_real_space_energy) > self.err_tol][-1] / r_cut_max
