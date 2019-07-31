@@ -714,6 +714,7 @@ class System(object):
         self.err_tol = precision_parameters['err_tol'] * constants.EV2HARTREE
         self.k_cut_upper_bound = precision_parameters['k_cut_upper_bound']
         self.step_increase_tol = precision_parameters['step_increase_tol'] * constants.EV2HARTREE
+        self.step_change_data_points = precision_parameters['step_change_data_points']
 
     def pot_r_ewald(self, alpha, r_cut):
         """Generates precomputed array with potential energy contributions from
@@ -1127,7 +1128,7 @@ class System(object):
             print(f'k_max vary from [{",".join(str(element) for element in k_max_lower)}] to [{",".join(str(element) for element in k_max_upper)}]')
             print(f'Maximum number of k-vectors vary from {num_k_vectors_lower} to {num_k_vectors_upper}')
             (step_k_cut_data, step_fourier_space_energy_data) = self.get_energy_profile_with_k_cut(
-                        charge_list_prod, alpha, k_cut_lower, k_cut_upper, num_data_points)
+                        charge_list_prod, alpha, k_cut_lower, k_cut_upper, self.step_change_data_points)
             title_suffix = f'_step{step_index+1}'
             self.plot_energy_profile_in_bounded_k_cut(step_k_cut_data, step_fourier_space_energy_data, title_suffix, dst_path)
 
