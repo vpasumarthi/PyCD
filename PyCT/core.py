@@ -710,6 +710,7 @@ class System(object):
             self.k_cut = k_cut
 
         self.lower_bound_real = precision_parameters['lower_bound_real']
+        self.lower_bound_rcut = precision_parameters['lower_bound_rcut']
         self.threshold_fraction = precision_parameters['threshold_fraction']
         self.num_data_points_low = precision_parameters['num_data_points_low'].astype(int)
         self.num_data_points_high = precision_parameters['num_data_points_high'].astype(int)
@@ -1188,12 +1189,12 @@ class System(object):
         print(f'Step energy changes have {convergence_keyword}converged\n')
         return (k_cut0_of_step_change, k_cut1_of_step_change, k_cut_stringent, sub_prefix_list)
 
-    def get_optimized_r_cut(self, charge_list_prod, alpha, lower_bound, upper_bound,
+    def get_optimized_r_cut(self, charge_list_prod, alpha, upper_bound,
                             choice_parameters, dst_path, prefix_list):
         r_cut_max = min(self.translational_vector_length) / 2
         
         (r_cut_data, real_space_energy_data) = self.get_energy_profile_with_r_cut(
-            charge_list_prod, alpha, r_cut_max, lower_bound, upper_bound, self.num_data_points_high)
+            charge_list_prod, alpha, r_cut_max, self.lower_bound_rcut, upper_bound, self.num_data_points_high)
 
         # check for energy-convergence with r_cut at user-specified alpha between 0 to L/2
         if self.convergence_check_with_r_cut(charge_list_prod, alpha, r_cut_max, self.threshold_fraction, upper_bound):
@@ -1377,20 +1378,18 @@ class System(object):
                 fourier_space_parameters = self.minimize_fourier_space_cutoff_error(charge_list_einsum, volume_derived_length, fourier_space_parameters, x_fourier_initial_guess)
                 k_cut = fourier_space_parameters['k_cut']
             elif np.isreal(self.alpha) & np.isreal(self.k_cut):
-                lower_bound = 0.0000
                 upper_bound = 0.9999
                 r_cut = self.get_optimized_r_cut(
-                            charge_list_prod, alpha, lower_bound, upper_bound,
+                            charge_list_prod, alpha, upper_bound,
                             choice_parameters, dst_path, prefix_list)
             elif np.isreal(self.r_cut) & np.isreal(self.k_cut):
                 # optimize real-space cutoff error for alpha
                 real_space_parameters = self.minimize_real_space_cutoff_error(charge_list_einsum, real_space_parameters, x_real_initial_guess)
                 alpha = real_space_parameters['alpha']
             elif np.isreal(self.alpha):
-                lower_bound = 0.0000
                 upper_bound = 0.9999
                 r_cut = self.get_optimized_r_cut(
-                            charge_list_prod, alpha, lower_bound, upper_bound,
+                            charge_list_prod, alpha, upper_bound,
                             choice_parameters, dst_path, prefix_list)
 
                 # optimize fourier-space cutoff error for k_cut
@@ -1409,10 +1408,9 @@ class System(object):
                 alpha = real_space_parameters['alpha'] = fourier_space_parameters['alpha']
 
                 # explore real-space convergence for r_cut
-                lower_bound = 0.0000
                 upper_bound = 0.9999
                 r_cut = self.get_optimized_r_cut(
-                            charge_list_prod, alpha, lower_bound, upper_bound,
+                            charge_list_prod, alpha, upper_bound,
                             choice_parameters, dst_path, prefix_list)
             else:
                 # current implementation of pot_k_ewald has O(N^2) complexity resulting in N-independt expression for alpha 
@@ -1421,10 +1419,9 @@ class System(object):
                 fourier_space_parameters['alpha'] = alpha
 
                 # explore real-space convergence for r_cut
-                lower_bound = 0.0000
                 upper_bound = 0.9999
                 r_cut = self.get_optimized_r_cut(
-                            charge_list_prod, alpha, lower_bound, upper_bound,
+                            charge_list_prod, alpha, upper_bound,
                             choice_parameters, dst_path, prefix_list)
 
                 # optimize fourier-space cutoff error for k_cut
