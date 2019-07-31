@@ -1021,6 +1021,7 @@ class System(object):
         figure_path = dst_path.joinpath(figure_name)
         plt.tight_layout()
         plt.savefig(str(figure_path))
+        plt.close()
         return None
 
     def get_new_k_vectors(self, k_cut0, k_cut1):
