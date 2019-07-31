@@ -810,7 +810,7 @@ class System(object):
         end_time_f = datetime.now()
         time_elapsed_f = end_time_f - start_time_f
         time_elapsed_f_seconds = time_elapsed_f.total_seconds()
-        num_k_vectors = np.ceil(np.prod(2 * k_max + 1) * np.pi / 6 - 1)
+        num_k_vectors = np.ceil(np.prod(2 * k_max + 1) * np.pi / 6 - 1).astype(int)
         tau_f = time_elapsed_f_seconds / num_repeats / self.neighbors.num_system_elements**2 / num_k_vectors
 
         tau_ratio = tau_r / tau_f
@@ -1446,7 +1446,7 @@ class System(object):
 
     def get_precomputed_array_fourier(self, alpha, k_cut):
         k_max = np.ceil(k_cut / self.reciprocal_lattice_vector_length).astype(int)  # max number of multiples of reciprocal lattice length vectors
-        num_k_vectors = np.ceil(np.prod(2 * k_max + 1) * np.pi / 6 - 1)
+        num_k_vectors = np.ceil(np.prod(2 * k_max + 1) * np.pi / 6 - 1).astype(int)
         precomputed_array_fourier = self.pot_k_ewald(k_max, alpha, k_cut) / self.material.dielectric_constant
         return (precomputed_array_fourier, k_max, num_k_vectors)
 
