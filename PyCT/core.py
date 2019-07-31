@@ -710,6 +710,7 @@ class System(object):
             self.k_cut = k_cut
 
         self.lower_bound_real = precision_parameters['lower_bound_real']
+        self.precise_r_cut = precision_parameters['precise_r_cut']
         self.err_tol = precision_parameters['err_tol']
 
     def pot_r_ewald(self, alpha, r_cut):
@@ -1195,13 +1196,16 @@ class System(object):
         # check for energy-convergence with r_cut at user-specified alpha between 0 to L/2
         if self.convergence_check_with_r_cut(charge_list_prod, alpha, r_cut_max, threshold_fractional_r_cut, upper_bound):
             # get more precise r_cut by looking at the convergence point.
-            converged_real_space_energy = real_space_energy_data[-1]
-            lower_bound = r_cut_data[abs(real_space_energy_data - converged_real_space_energy) > self.err_tol][-1] / r_cut_max
-            upper_bound = r_cut_data[abs(real_space_energy_data - converged_real_space_energy) < self.err_tol][0] / r_cut_max
-
-            (r_cut_data_local, real_space_energy_data_local) = self.get_energy_profile_with_r_cut(
-                charge_list_prod, alpha, r_cut_max, lower_bound, upper_bound, num_data_points)
-            r_cut = r_cut_data_local[abs(real_space_energy_data_local - converged_real_space_energy) < self.err_tol][0]
+            if self.precise_r_cut:
+                converged_real_space_energy = real_space_energy_data[-1]
+                lower_bound = r_cut_data[abs(real_space_energy_data - converged_real_space_energy) > self.err_tol][-1] / r_cut_max
+                upper_bound = r_cut_data[abs(real_space_energy_data - converged_real_space_energy) < self.err_tol][0] / r_cut_max
+    
+                (r_cut_data_local, real_space_energy_data_local) = self.get_energy_profile_with_r_cut(
+                    charge_list_prod, alpha, r_cut_max, lower_bound, upper_bound, num_data_points)
+                r_cut = r_cut_data_local[abs(real_space_energy_data_local - converged_real_space_energy) < self.err_tol][0]
+            else:
+                r_cut = r_cut_data[abs(real_space_energy_data - converged_real_space_energy) < self.err_tol][0]
         else:
             # mention that r_cut is over L/2 and the simulation code doesn't support the user-specified alpha.
             prefix_list.append(f'')
