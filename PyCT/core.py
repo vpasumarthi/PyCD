@@ -1322,7 +1322,6 @@ class System(object):
                 Path.mkdir(output_dir_path, parents=True, exist_ok=True)
 
                 # check for convergence in the absolute value of energy with k_cut
-                upper_bound = 1.0000
                 k_cut_estimate = k_cut
                 k_cut_threshold = self.threshold_fraction * k_cut
                 print(f'Analyzing the convergence in Fourier-space energy at k_cut derived from user-specified k_max:')
