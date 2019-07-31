@@ -711,29 +711,21 @@ class System(object):
 
         self.err_tol = err_tol
 
-    def pot_r_ewald(self, n_max, alpha, r_cut):
-        """Updates precomputed array with potential energy contributions from
-           real-space"""
+    def pot_r_ewald(self, alpha, r_cut):
+        """Generates precomputed array with potential energy contributions from
+           real-space confined to simulation cell i.e. n_max=[0, 0, 0]"""
         precomputed_array = np.zeros((self.neighbors.num_system_elements,
                                       self.neighbors.num_system_elements))
 
         sqrt_alpha = np.sqrt(alpha)
-        for i in range(-n_max[0], n_max[0]+1):
-            for j in range(-n_max[1], n_max[1]+1):
-                for k in range(-n_max[2], n_max[2]+1):
-                    dr_translated = np.linalg.norm(
-                                        (self.pairwise_min_image_vector_data
-                                         + np.dot(np.array([i, j, k]),
-                                                  self.translational_matrix)),
-                                        axis=2)
-                    cutoff_neighbor_pairs = dr_translated < r_cut
-                    precomputed_array[cutoff_neighbor_pairs] += erfc(sqrt_alpha * dr_translated[cutoff_neighbor_pairs]) / 2
+        dr_translated = np.linalg.norm((self.pairwise_min_image_vector_data), axis=2)
+        cutoff_neighbor_pairs = dr_translated < r_cut
+        precomputed_array[cutoff_neighbor_pairs] += erfc(sqrt_alpha * dr_translated[cutoff_neighbor_pairs]) / 2
 
-                    # avoid division for diagonal elements for original simulation cell
-                    if np.all(np.array([i, j, k]) == 0):
-                        num_neighbor_pairs = cutoff_neighbor_pairs.sum()
-                        np.fill_diagonal(dr_translated, 1)
-                    precomputed_array[cutoff_neighbor_pairs] /= dr_translated[cutoff_neighbor_pairs]
+        # avoid division for diagonal elements for original simulation cell
+        num_neighbor_pairs = cutoff_neighbor_pairs.sum()
+        np.fill_diagonal(dr_translated, 1)
+        precomputed_array[cutoff_neighbor_pairs] /= dr_translated[cutoff_neighbor_pairs]
         return (precomputed_array, num_neighbor_pairs)
 
     def get_effective_k_vectors(self, k_max):
@@ -797,11 +789,11 @@ class System(object):
 
         start_time_r = datetime.now()
         for _ in range(num_repeats):
-            self.pot_r_ewald(n_max, alpha, r_cut)
+            self.pot_r_ewald(alpha, r_cut)
         end_time_r = datetime.now()
         time_elapsed_r = end_time_r - start_time_r
         time_elapsed_r_seconds = time_elapsed_r.total_seconds()
-        num_neighbor_pairs = self.pot_r_ewald(n_max, alpha, r_cut)[1]
+        num_neighbor_pairs = self.pot_r_ewald(alpha, r_cut)[1]
         tau_r = time_elapsed_r_seconds / num_repeats / num_neighbor_pairs
 
         start_time_f = datetime.now()
@@ -1555,7 +1547,7 @@ class System(object):
 
     def get_precomputed_array_real(self, alpha, r_cut):
         n_max = np.round(r_cut / self.translational_vector_length).astype(int)
-        precomputed_array_real = self.pot_r_ewald(n_max, alpha, r_cut)[0] / self.material.dielectric_constant
+        precomputed_array_real = self.pot_r_ewald(alpha, r_cut)[0] / self.material.dielectric_constant
         return (precomputed_array_real, n_max)
 
     def get_precomputed_array_fourier(self, alpha, k_cut):
