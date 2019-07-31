@@ -711,6 +711,7 @@ class System(object):
 
         self.lower_bound_real = precision_parameters['lower_bound_real']
         self.lower_bound_rcut = precision_parameters['lower_bound_rcut']
+        self.lower_bound_kcut = precision_parameters['lower_bound_kcut']
         self.threshold_fraction = precision_parameters['threshold_fraction']
         self.num_data_points_low = precision_parameters['num_data_points_low'].astype(int)
         self.num_data_points_high = precision_parameters['num_data_points_high'].astype(int)
@@ -1086,12 +1087,11 @@ class System(object):
         generate_report(self.start_time, dst_path, file_name, print_time_elapsed, prefix)
         return None
 
-    def get_precise_step_change_data(self, charge_list_prod, alpha, lower_bound,
-                                     upper_bound, k_cut_estimate, dst_path,
-                                     sub_prefix_list):
-        k_cut_lower = lower_bound * k_cut_estimate
+    def get_precise_step_change_data(self, charge_list_prod, alpha, upper_bound,
+                                     k_cut_estimate, dst_path, sub_prefix_list):
+        k_cut_lower = self.lower_bound_kcut * k_cut_estimate
         k_cut_upper = upper_bound * k_cut_estimate
-        print(f'Generating energy profile between {int(lower_bound)}x and {int(upper_bound)}x of estimated k_cut')
+        print(f'Generating energy profile between {int(self.lower_bound_kcut)}x and {int(upper_bound)}x of estimated k_cut')
 
         k_max_lower = np.ceil(k_cut_lower / self.reciprocal_lattice_vector_length).astype(int)
         num_k_vectors_lower = np.ceil(np.prod(2 * k_max_lower + 1) * np.pi / 6 - 1).astype(int)
@@ -1103,7 +1103,7 @@ class System(object):
         (k_cut_data, fourier_space_energy_data) = self.get_energy_profile_with_k_cut(
                     charge_list_prod, alpha, k_cut_lower, k_cut_upper, self.num_data_points_high)
 
-        title_suffix = f'_{int(lower_bound)}x-{int(upper_bound)}x k_estimate'
+        title_suffix = f'_{int(self.lower_bound_kcut)}x-{int(upper_bound)}x k_estimate'
         self.plot_energy_profile_in_bounded_k_cut(k_cut_data, fourier_space_energy_data, title_suffix, dst_path)
         print(f'Generated energy profile\n')
         converged_fourier_energy = fourier_space_energy_data[-1]
@@ -1317,7 +1317,6 @@ class System(object):
             k_cut_estimate = fourier_space_parameters['k_cut']
         elif (self.k_cut == 'converge' and np.array_equal(self.system_size, np.ones(self.neighbors.n_dim, int))) or isinstance(self.k_cut, list):
             sub_prefix_list = []
-            lower_bound = 0.0000
             if isinstance(self.k_cut, list):
                 output_dir_path = dst_path / ('k_max=[' + ','.join(str(element) for element in self.k_cut) + ']')
                 Path.mkdir(output_dir_path, parents=True, exist_ok=True)
@@ -1341,7 +1340,7 @@ class System(object):
                 k_cut_estimate = fourier_space_parameters['k_cut']
                 print(f'Starting with an estimate for k_cut={k_cut_estimate * constants.ANG2BOHR:.3e} / angstrom')
                 percent_increase_in_k_cut_upper = 10
-                print(f'Exploring convergence in Fourier-space energy between {int(lower_bound)}x and {int(self.k_cut_upper_bound)}x of estimated k_cut')
+                print(f'Exploring convergence in Fourier-space energy between {int(self.lower_bound_kcut)}x and {int(self.k_cut_upper_bound)}x of estimated k_cut')
     
                 k_cut_upper = self.k_cut_upper_bound * k_cut_estimate
                 k_cut_threshold = self.threshold_fraction * k_cut_upper
@@ -1358,7 +1357,7 @@ class System(object):
             # NOTE: k_cut outputted below is the k_cut_stringent
             (k_cut0_of_step_change, k_cut1_of_step_change, k_cut,
              sub_prefix_list) = self.get_precise_step_change_data(
-                 charge_list_prod, alpha, lower_bound, self.k_cut_upper_bound, k_cut_estimate,
+                 charge_list_prod, alpha, self.k_cut_upper_bound, k_cut_estimate,
                  output_dir_path, sub_prefix_list)
 
             print(f'Analyzing energy contributions of individual k-vectors:')
