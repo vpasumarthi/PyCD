@@ -1378,37 +1378,10 @@ class System(object):
                 lower_bound = 0.0000
                 threshold_fractional_r_cut = 0.9000
                 upper_bound = 0.9999
-                r_cut_max = min(self.translational_vector_length) / 2
-                
-                (r_cut_data, real_space_energy_data) = self.get_energy_profile_with_r_cut(
-                    charge_list_prod, alpha, r_cut_max, lower_bound, upper_bound, num_data_points)
-
-                # check for energy-convergence with r_cut at user-specified alpha between 0 to L/2
-                if self.convergence_check_with_r_cut(charge_list_prod, alpha, r_cut_max, threshold_fractional_r_cut, upper_bound):
-                    # get more precise r_cut by looking at the convergence point.
-                    converged_real_space_energy = real_space_energy_data[-1]
-                    lower_bound = r_cut_data[abs(real_space_energy_data - converged_real_space_energy) > self.err_tol][-1] / r_cut_max
-                    upper_bound = r_cut_data[abs(real_space_energy_data - converged_real_space_energy) < self.err_tol][0] / r_cut_max
-
-                    (r_cut_data_local, real_space_energy_data_local) = self.get_energy_profile_with_r_cut(
-                        charge_list_prod, alpha, r_cut_max, lower_bound, upper_bound, num_data_points)
-                    r_cut = r_cut_data_local[abs(real_space_energy_data_local - converged_real_space_energy) < self.err_tol][0]
-                else:
-                    # mention that r_cut is over L/2 and the simulation code doesn't support the user-specified alpha.
-                    prefix_list.append(f'')
-
-                    print(f'This code doesn\'t support user-specified alpha={alpha * constants.ANG2BOHR:.3e} as r_cut is over L/2. Please re-run at a suitable alpha value.')
-    
-                    prefix_list.append(f'alpha: {alpha * constants.ANG2BOHR:.3e} / angstrom ({choice_parameters["r_cut"]})\n')
-                    prefix_list.append(f'This code doesn\'t support user-specified alpha={alpha * constants.ANG2BOHR:.3e} as r_cut is over L/2. Please re-run at a suitable alpha value.\n\n')
-    
-                    file_name = 'precomputed_array'
-                    print_time_elapsed = 1
-                    prefix = ''.join(prefix_list)
-                    generate_report(self.start_time, dst_path, file_name, print_time_elapsed, prefix)
-
-                    exit()
-
+                r_cut = self.get_optimized_r_cut(
+                            charge_list_prod, alpha, lower_bound, upper_bound,
+                            threshold_fractional_r_cut, num_data_points,
+                            choice_parameters, dst_path, prefix_list)
             elif np.isreal(self.r_cut) & np.isreal(self.k_cut):
                 # optimize real-space cutoff error for alpha
                 real_space_parameters = self.minimize_real_space_cutoff_error(charge_list_einsum, real_space_parameters, x_real_initial_guess)
@@ -1418,36 +1391,10 @@ class System(object):
                 lower_bound = 0.0000
                 threshold_fractional_r_cut = 0.9000
                 upper_bound = 0.9999
-                r_cut_max = min(self.translational_vector_length) / 2
-                
-                (r_cut_data, real_space_energy_data) = self.get_energy_profile_with_r_cut(
-                    charge_list_prod, alpha, r_cut_max, lower_bound, upper_bound, num_data_points)
-
-                # check for energy-convergence with r_cut at user-specified alpha between 0 to L/2
-                if self.convergence_check_with_r_cut(charge_list_prod, alpha, r_cut_max, threshold_fractional_r_cut, upper_bound):
-                    # get more precise r_cut by looking at the convergence point.
-                    converged_real_space_energy = real_space_energy_data[-1]
-                    lower_bound = r_cut_data[abs(real_space_energy_data - converged_real_space_energy) > self.err_tol][-1] / r_cut_max
-                    upper_bound = r_cut_data[abs(real_space_energy_data - converged_real_space_energy) < self.err_tol][0] / r_cut_max
-
-                    (r_cut_data_local, real_space_energy_data_local) = self.get_energy_profile_with_r_cut(
-                        charge_list_prod, alpha, r_cut_max, lower_bound, upper_bound, num_data_points)
-                    r_cut = r_cut_data_local[abs(real_space_energy_data_local - converged_real_space_energy) < self.err_tol][0]
-                else:
-                    # mention that r_cut is over L/2 and the simulation code doesn't support the user-specified alpha.
-                    prefix_list.append(f'')
-
-                    print(f'This code doesn\'t support user-specified alpha={alpha * constants.ANG2BOHR:.3e} as r_cut is over L/2. Please re-run at a suitable alpha value.')
-    
-                    prefix_list.append(f'alpha: {alpha * constants.ANG2BOHR:.3e} / angstrom ({choice_parameters["r_cut"]})\n')
-                    prefix_list.append(f'This code doesn\'t support user-specified alpha={alpha * constants.ANG2BOHR:.3e} as r_cut is over L/2. Please re-run at a suitable alpha value.\n\n')
-    
-                    file_name = 'precomputed_array'
-                    print_time_elapsed = 1
-                    prefix = ''.join(prefix_list)
-                    generate_report(self.start_time, dst_path, file_name, print_time_elapsed, prefix)
-
-                    exit()
+                r_cut = self.get_optimized_r_cut(
+                            charge_list_prod, alpha, lower_bound, upper_bound,
+                            threshold_fractional_r_cut, num_data_points,
+                            choice_parameters, dst_path, prefix_list)
 
                 # optimize fourier-space cutoff error for k_cut
                 fourier_space_parameters = self.minimize_fourier_space_cutoff_error(charge_list_einsum, volume_derived_length, fourier_space_parameters, x_fourier_initial_guess)
@@ -1469,35 +1416,10 @@ class System(object):
                 lower_bound = 0.0000
                 threshold_fractional_r_cut = 0.9000
                 upper_bound = 0.9999
-                r_cut_max = min(self.translational_vector_length) / 2
-                
-                (r_cut_data, real_space_energy_data) = self.get_energy_profile_with_r_cut(
-                    charge_list_prod, alpha, r_cut_max, lower_bound, upper_bound, num_data_points)
-
-                # check for energy-convergence with r_cut at user-specified alpha between 0 to L/2
-                if self.convergence_check_with_r_cut(charge_list_prod, alpha, r_cut_max, threshold_fractional_r_cut, upper_bound):
-                    # get more precise r_cut by looking at the convergence point.
-                    converged_real_space_energy = real_space_energy_data[-1]
-                    lower_bound = r_cut_data[abs(real_space_energy_data - converged_real_space_energy) > self.err_tol][-1] / r_cut_max
-                    upper_bound = r_cut_data[abs(real_space_energy_data - converged_real_space_energy) < self.err_tol][0] / r_cut_max
-
-                    (r_cut_data_local, real_space_energy_data_local) = self.get_energy_profile_with_r_cut(
-                        charge_list_prod, alpha, r_cut_max, lower_bound, upper_bound, num_data_points)
-                    r_cut = r_cut_data_local[abs(real_space_energy_data_local - converged_real_space_energy) < self.err_tol][0]
-                else:
-                    prefix_list.append(f'')
-
-                    print(f'This code doesn\'t support estimated alpha={alpha * constants.ANG2BOHR:.3e} as r_cut is over L/2. Please re-run at a suitable alpha value.')
-    
-                    prefix_list.append(f'alpha: {alpha * constants.ANG2BOHR:.3e} / angstrom ({choice_parameters["r_cut"]})\n')
-                    prefix_list.append(f'This code doesn\'t support user-specified alpha={alpha * constants.ANG2BOHR:.3e} as r_cut is over L/2. Please re-run at a suitable alpha value.\n\n')
-    
-                    file_name = 'precomputed_array'
-                    print_time_elapsed = 1
-                    prefix = ''.join(prefix_list)
-                    generate_report(self.start_time, dst_path, file_name, print_time_elapsed, prefix)
-
-                    exit()
+                r_cut = self.get_optimized_r_cut(
+                            charge_list_prod, alpha, lower_bound, upper_bound,
+                            threshold_fractional_r_cut, num_data_points,
+                            choice_parameters, dst_path, prefix_list)
             else:
                 # current implementation of pot_k_ewald has O(N^2) complexity resulting in N-independt expression for alpha 
                 alpha = (tau_ratio * np.pi**3 / (self.system_volume)**2)**(1/6)
@@ -1509,35 +1431,10 @@ class System(object):
                 lower_bound = 0.0000
                 threshold_fractional_r_cut = 0.9000
                 upper_bound = 0.9999
-                r_cut_max = min(self.translational_vector_length) / 2
-                
-                (r_cut_data, real_space_energy_data) = self.get_energy_profile_with_r_cut(
-                    charge_list_prod, alpha, r_cut_max, lower_bound, upper_bound, num_data_points)
-
-                # check for energy-convergence with r_cut at user-specified alpha between 0 to L/2
-                if self.convergence_check_with_r_cut(charge_list_prod, alpha, r_cut_max, threshold_fractional_r_cut, upper_bound):
-                    # get more precise r_cut by looking at the convergence point.
-                    converged_real_space_energy = real_space_energy_data[-1]
-                    lower_bound = r_cut_data[abs(real_space_energy_data - converged_real_space_energy) > self.err_tol][-1] / r_cut_max
-                    upper_bound = r_cut_data[abs(real_space_energy_data - converged_real_space_energy) < self.err_tol][0] / r_cut_max
-
-                    (r_cut_data_local, real_space_energy_data_local) = self.get_energy_profile_with_r_cut(
-                        charge_list_prod, alpha, r_cut_max, lower_bound, upper_bound, num_data_points)
-                    r_cut = r_cut_data_local[abs(real_space_energy_data_local - converged_real_space_energy) < self.err_tol][0]
-                else:
-                    prefix_list.append(f'')
-
-                    print(f'This code doesn\'t support estimated alpha={alpha * constants.ANG2BOHR:.3e} as r_cut is over L/2. Please re-run at a suitable alpha value.')
-    
-                    prefix_list.append(f'alpha: {alpha * constants.ANG2BOHR:.3e} / angstrom ({choice_parameters["r_cut"]})\n')
-                    prefix_list.append(f'This code doesn\'t support user-specified alpha={alpha * constants.ANG2BOHR:.3e} as r_cut is over L/2. Please re-run at a suitable alpha value.\n\n')
-    
-                    file_name = 'precomputed_array'
-                    print_time_elapsed = 1
-                    prefix = ''.join(prefix_list)
-                    generate_report(self.start_time, dst_path, file_name, print_time_elapsed, prefix)
-
-                    exit()
+                r_cut = self.get_optimized_r_cut(
+                            charge_list_prod, alpha, lower_bound, upper_bound,
+                            threshold_fractional_r_cut, num_data_points,
+                            choice_parameters, dst_path, prefix_list)
 
                 # optimize fourier-space cutoff error for k_cut
                 fourier_space_parameters = self.minimize_fourier_space_cutoff_error(charge_list_einsum, volume_derived_length, fourier_space_parameters, x_fourier_initial_guess)
