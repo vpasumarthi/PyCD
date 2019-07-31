@@ -1065,6 +1065,7 @@ class System(object):
 
         new_k_vectors_consolidated = np.asarray([k_vector for new_k_vectors in new_k_vectors_list for k_vector in new_k_vectors])
         num_new_k_vectors_consolidated = len(new_k_vectors_consolidated)
+        print(f'Identified a total of {num_new_k_vectors_consolidated} k-vectors contributing towards energy changes')
         energy_contribution_data = np.zeros(num_new_k_vectors_consolidated)
         for k_vector_index in range(num_new_k_vectors_consolidated):
             k_vector = new_k_vectors_consolidated[k_vector_index]
@@ -1092,21 +1093,27 @@ class System(object):
                                      num_data_points, dst_path, sub_prefix_list):
         k_cut_lower = lower_bound * k_cut_estimate
         k_cut_upper = upper_bound * k_cut_estimate
+        print(f'Generating energy profile between {int(lower_bound)}x and {int(upper_bound)}x of estimated k_cut')
         (k_cut_data, fourier_space_energy_data) = self.get_energy_profile_with_k_cut(
                     charge_list_prod, alpha, k_cut_lower, k_cut_upper, num_data_points)
 
         title_suffix = f'_{int(lower_bound)}x-{int(upper_bound)}x k_estimate'
         self.plot_energy_profile_in_bounded_k_cut(k_cut_data, fourier_space_energy_data, title_suffix, dst_path)
+        print(f'Generated energy profile\n')
         converged_fourier_energy = fourier_space_energy_data[-1]
 
+        print(f'Estimating the step energy changes in Fourier-space energy within this k_cut range:')
         (k_cut0_estimated, k_cut1_estimated) = self.get_step_change_analysis_with_k_cut(k_cut_data, fourier_space_energy_data)[:-1]
 
         k_cut0_of_step_change = []
         k_cut1_of_step_change = []
         energy_changes = []
         num_steps = len(k_cut0_estimated)
+        print(f'Identified {num_steps} preliminary step changes\n')
         max_divergent_k_cut = 0
+        print(f'Analyzing each step energy change in detail:')
         for step_index in range(num_steps):
+            print(f'Analyzing step-change {step_index+1}')
             k_cut_lower = k_cut0_estimated[step_index]
             k_cut_upper = k_cut1_estimated[step_index]
             (step_k_cut_data, step_fourier_space_energy_data) = self.get_energy_profile_with_k_cut(
@@ -1126,12 +1133,14 @@ class System(object):
         k_cut1_of_step_change = np.asarray(k_cut1_of_step_change)
         energy_changes = np.asarray(energy_changes)
         sub_prefix_list.append(f'Number of step changes in Fourier-space energy with varying k_cut: {len(energy_changes)}\n')
+        print(f'Identified a total of {len(energy_changes)} step changes\n')
 
         if max_divergent_k_cut > 0:
             k_cut_gentle = k_cut_data[k_cut_data > max_divergent_k_cut][0]
         else:
             k_cut_gentle = 0
         sub_prefix_list.append(f'k_cut (gentle): {k_cut_gentle * constants.ANG2BOHR:.3e} / angstrom\n')
+        print(f'k_cut_gentle: {k_cut_gentle * constants.ANG2BOHR:.3e} / angstrom')
 
         fig = plt.figure()
         import matplotlib.ticker as mtick
@@ -1149,16 +1158,19 @@ class System(object):
         # check for step energy change convergence
         k_cut_stringent = k_cut1_of_step_change[-1]
         sub_prefix_list.append(f'k_cut (stringent): {k_cut_stringent * constants.ANG2BOHR:.3e} / angstrom\n')
+        print(f'k_cut (stringent): {k_cut_stringent * constants.ANG2BOHR:.3e} / angstrom\n')
 
         factor_of_increase_from_estimation = k_cut_stringent / k_cut_estimate
         sub_prefix_list.append(f'Factor of increase in the value of converged k_cut from estimation: {factor_of_increase_from_estimation:.3e}\n')
 
+        print(f'Analyzing convergence in step energy change:')
         k_cut_lower = threshold_fractional_k_cut * k_cut_stringent
         k_cut_upper = k_cut_stringent
         step_energy_convergence_status = self.check_for_k_cut_step_energy_convergence(
             k_cut0_of_step_change, energy_changes, k_cut_lower, k_cut_upper)
         convergence_keyword = 'NOT ' if not step_energy_convergence_status else ''
         sub_prefix_list.append(f'Step energy changes have {convergence_keyword}converged\n')
+        print(f'Step energy changes have {convergence_keyword}converged\n')
         return (k_cut0_of_step_change, k_cut1_of_step_change, k_cut_stringent, sub_prefix_list)
 
     def get_cutoff_parameters(self, tau_ratio, dst_path, prefix_list):
@@ -1267,24 +1279,29 @@ class System(object):
                 convergence_keyword = 'NOT ' if not convergence_status else ''
                 sub_prefix_list.append(f'Preliminary convergence in Fourier-space energy {convergence_keyword}achieved at k_cut: {k_cut * constants.ANG2BOHR:.3e} / angstrom\n')
             else:
+                print(f'Attempting to converge k_cut for user-specified alpha={alpha * constants.ANG2BOHR:.3e}:\n')
                 output_dir_path = dst_path.joinpath(f'alpha={alpha * constants.ANG2BOHR:.3e}')
                 Path.mkdir(output_dir_path, parents=True, exist_ok=True)
     
                 # optimize fourier-space cutoff error for k_cut
                 fourier_space_parameters = self.minimize_fourier_space_cutoff_error(charge_list_einsum, volume_derived_length, fourier_space_parameters, x_fourier_initial_guess)
                 k_cut_estimate = fourier_space_parameters['k_cut']
-    
+                print(f'Starting with an estimate for k_cut={k_cut_estimate * constants.ANG2BOHR:.3e}')
                 # upper bound value of 100 is too high for large systems
                 upper_bound = 100.0000
                 percent_increase_in_k_cut_upper = 10
+                print(f'Exploring convergence in Fourier-space energy between {int(lower_bound)}x and {int(upper_bound)}x of estimated k_cut')
     
                 k_cut_upper = upper_bound * k_cut_estimate
                 k_cut_threshold = threshold_fractional_k_cut * k_cut_upper
                 # check for convergence in the absolute value of energy with k_cut
                 while not self.check_for_k_cut_convergence(charge_list_prod, alpha, k_cut_threshold, k_cut_upper):
                     k_cut_upper = (1 + percent_increase_in_k_cut_upper / 100) * k_cut_upper
+                    print(f'Could not find convergence in given k_cut range. Re-attempting with upper bound increased by {percent_increase_in_k_cut_upper:.3f} %')
                 sub_prefix_list.append(f'Preliminary convergence in Fourier-space energy achieved at k_cut: {k_cut_upper * constants.ANG2BOHR:.3e} / angstrom\n')
 
+            print(f'Preliminary convergence in absolute value of Fourier-space energy achieved within k_cut={k_cut_upper * constants.ANG2BOHR:.3e}\n')
+            print(f'Attempting to identify precise k_cut:')
             dst_path = output_dir_path
             # get step energy data
             # NOTE: k_cut outputted below is the k_cut_stringent
@@ -1293,10 +1310,12 @@ class System(object):
                  charge_list_prod, alpha, lower_bound, upper_bound, k_cut_estimate,
                  threshold_fractional_k_cut, num_data_points, output_dir_path, sub_prefix_list)
 
+            print(f'Analyzing energy contributions of individual k-vectors:')
             # analyze the k-vectors and their energy contributions towards Fourier-space energy
             self.get_k_vector_based_energy_contribution(
                 charge_list_prod, alpha, k_cut0_of_step_change,
                 k_cut1_of_step_change, output_dir_path)
+            print('Finished k-vector analysis')
 
             file_name = 'k_cut_convergence'
             print_time_elapsed = 0
