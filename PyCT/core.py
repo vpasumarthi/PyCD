@@ -1282,14 +1282,14 @@ class System(object):
                 sub_prefix_list.append(f'Preliminary convergence in Fourier-space energy {convergence_keyword}achieved at k_cut: {k_cut * constants.ANG2BOHR:.3e} / angstrom\n')
                 print(f'Preliminary convergence in Fourier-space energy {convergence_keyword}achieved at k_cut: {k_cut * constants.ANG2BOHR:.3e} / angstrom\n')
             else:
-                print(f'Attempting to converge k_cut for user-specified alpha={alpha * constants.ANG2BOHR:.3e}:\n')
+                print(f'Attempting to converge k_cut for user-specified alpha={alpha * constants.ANG2BOHR:.3e} / angstrom:\n')
                 output_dir_path = dst_path.joinpath(f'alpha={alpha * constants.ANG2BOHR:.3e}')
                 Path.mkdir(output_dir_path, parents=True, exist_ok=True)
     
                 # optimize fourier-space cutoff error for k_cut
                 fourier_space_parameters = self.minimize_fourier_space_cutoff_error(charge_list_einsum, volume_derived_length, fourier_space_parameters, x_fourier_initial_guess)
                 k_cut_estimate = fourier_space_parameters['k_cut']
-                print(f'Starting with an estimate for k_cut={k_cut_estimate * constants.ANG2BOHR:.3e}')
+                print(f'Starting with an estimate for k_cut={k_cut_estimate * constants.ANG2BOHR:.3e} / angstrom')
                 # upper bound value of 100 is too high for large systems
                 upper_bound = 100.0000
                 percent_increase_in_k_cut_upper = 10
@@ -1303,7 +1303,7 @@ class System(object):
                     print(f'Could not find convergence in given k_cut range. Re-attempting with upper bound increased by {percent_increase_in_k_cut_upper:.3f} %')
                 sub_prefix_list.append(f'Preliminary convergence in Fourier-space energy achieved at k_cut: {k_cut_upper * constants.ANG2BOHR:.3e} / angstrom\n')
 
-            print(f'Preliminary convergence in absolute value of Fourier-space energy achieved within k_cut={k_cut_upper * constants.ANG2BOHR:.3e}\n')
+            print(f'Preliminary convergence in absolute value of Fourier-space energy achieved within k_cut={k_cut_upper * constants.ANG2BOHR:.3e} / angstrom\n')
             print(f'Attempting to identify precise k_cut:')
             dst_path = output_dir_path
             # get step energy data
