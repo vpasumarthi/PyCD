@@ -713,6 +713,7 @@ class System(object):
         self.precise_r_cut = precision_parameters['precise_r_cut']
         self.err_tol = precision_parameters['err_tol'] * constants.EV2HARTREE
         self.k_cut_upper_bound = precision_parameters['k_cut_upper_bound']
+        self.step_increase_tol = precision_parameters['step_increase_tol'] * constants.EV2HARTREE
 
     def pot_r_ewald(self, alpha, r_cut):
         """Generates precomputed array with potential energy contributions from
@@ -996,7 +997,7 @@ class System(object):
 
     def get_step_change_analysis_with_k_cut(self, k_cut_data, fourier_space_energy_data):
         fourier_space_energy_data_diff = np.diff(fourier_space_energy_data)
-        indices0_of_step_change = np.where(fourier_space_energy_data_diff != 0)[0]
+        indices0_of_step_change = np.where(fourier_space_energy_data_diff > self.step_increase_tol)[0]
         indices1_of_step_change = indices0_of_step_change + 1
 
         k_cut0_of_step_change = k_cut_data[indices0_of_step_change]
