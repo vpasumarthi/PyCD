@@ -711,7 +711,7 @@ class System(object):
 
         self.lower_bound_real = precision_parameters['lower_bound_real']
         self.precise_r_cut = precision_parameters['precise_r_cut']
-        self.err_tol = precision_parameters['err_tol']
+        self.err_tol = precision_parameters['err_tol'] * constants.EV2HARTREE
 
     def pot_r_ewald(self, alpha, r_cut):
         """Generates precomputed array with potential energy contributions from
