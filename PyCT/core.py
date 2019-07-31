@@ -1142,6 +1142,14 @@ class System(object):
         sub_prefix_list.append(f'k_cut (gentle): {k_cut_gentle * constants.ANG2BOHR:.3e} / angstrom\n')
         print(f'k_cut_gentle: {k_cut_gentle * constants.ANG2BOHR:.3e} / angstrom')
 
+        # check for step energy change convergence
+        k_cut_stringent = k_cut1_of_step_change[-1]
+        sub_prefix_list.append(f'k_cut (stringent): {k_cut_stringent * constants.ANG2BOHR:.3e} / angstrom\n')
+        print(f'k_cut (stringent): {k_cut_stringent * constants.ANG2BOHR:.3e} / angstrom\n')
+
+        factor_of_increase_from_estimation = k_cut_stringent / k_cut_estimate
+        sub_prefix_list.append(f'Factor of increase in the value of converged k_cut from estimation: {factor_of_increase_from_estimation:.3e}\n')
+
         fig = plt.figure()
         import matplotlib.ticker as mtick
         ax = fig.add_subplot(111)
@@ -1154,14 +1162,6 @@ class System(object):
         figure_path = dst_path.joinpath(figure_name)
         plt.tight_layout()
         plt.savefig(str(figure_path))
-
-        # check for step energy change convergence
-        k_cut_stringent = k_cut1_of_step_change[-1]
-        sub_prefix_list.append(f'k_cut (stringent): {k_cut_stringent * constants.ANG2BOHR:.3e} / angstrom\n')
-        print(f'k_cut (stringent): {k_cut_stringent * constants.ANG2BOHR:.3e} / angstrom\n')
-
-        factor_of_increase_from_estimation = k_cut_stringent / k_cut_estimate
-        sub_prefix_list.append(f'Factor of increase in the value of converged k_cut from estimation: {factor_of_increase_from_estimation:.3e}\n')
 
         print(f'Analyzing convergence in step energy change:')
         k_cut_lower = threshold_fractional_k_cut * k_cut_stringent
