@@ -1198,9 +1198,9 @@ class System(object):
 
         # check for energy-convergence with r_cut at user-specified alpha between 0 to L/2
         if self.convergence_check_with_r_cut(charge_list_prod, alpha, r_cut_max, self.threshold_fraction, self.upper_bound_rcut):
+            converged_real_space_energy = real_space_energy_data[-1]
             # get more precise r_cut by looking at the convergence point.
             if self.precise_r_cut:
-                converged_real_space_energy = real_space_energy_data[-1]
                 lower_bound = r_cut_data[abs(real_space_energy_data - converged_real_space_energy) > self.err_tol][-1] / r_cut_max
                 upper_bound = r_cut_data[abs(real_space_energy_data - converged_real_space_energy) < self.err_tol][0] / r_cut_max
     
