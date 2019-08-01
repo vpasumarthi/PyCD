@@ -1249,7 +1249,7 @@ class System(object):
             if isinstance(self.k_cut, list):
                 k_cut = 1.10 * max(np.asarray(self.k_cut) * self.reciprocal_lattice_vector_length)
                 print(f'At the user-specified k_max=[{",".join(str(element) for element in self.k_cut)}], k_cut={k_cut * constants.ANG2BOHR:.3e} / angstrom')
-                num_k_vectors = np.ceil(np.prod(2 * self.k_cut + 1) * np.pi / 6 - 1).astype(int)
+                num_k_vectors = np.ceil(np.prod(2 * np.asarray(self.k_cut) + 1) * np.pi / 6 - 1).astype(int)
                 print(f'Maximum number of k-vectors: {num_k_vectors}')
                 k_cut_choice = 'user-specified (k_max)'
             elif np.isreal(self.k_cut):
