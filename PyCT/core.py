@@ -1488,16 +1488,16 @@ class System(object):
             charge_list_prod = np.multiply(charge_list.transpose(), charge_list)
 
             real_space_energy = np.sum(np.multiply(charge_list_prod, precomputed_array_real))
-            prefix_list.append(f'Energy contribution from Real space: {real_space_energy/ constants.EV2HARTREE:.3e} eV\n')
+            prefix_list.append(f'Energy contribution from Real space: {real_space_energy/ constants.EV2HARTREE} eV\n')
 
             fourier_space_energy = np.sum(np.multiply(charge_list_prod, precomputed_array_fourier))
-            prefix_list.append(f'Energy contribution from Fourier-space: {fourier_space_energy / constants.EV2HARTREE:.3e} eV\n')
+            prefix_list.append(f'Energy contribution from Fourier-space: {fourier_space_energy / constants.EV2HARTREE} eV\n')
 
             self_interaction_energy = np.sum(np.multiply(charge_list_prod, precomputed_array_self))
-            prefix_list.append(f'Energy contribution from self-interactions: {self_interaction_energy / constants.EV2HARTREE:.3e} eV\n')
+            prefix_list.append(f'Energy contribution from self-interactions: {self_interaction_energy / constants.EV2HARTREE} eV\n')
 
             total_system_energy = real_space_energy + fourier_space_energy + self_interaction_energy
-            prefix_list.append(f'Total system energy (neutral): {total_system_energy / constants.EV2HARTREE:.3e} eV\n\n')
+            prefix_list.append(f'Total system energy (neutral): {total_system_energy / constants.EV2HARTREE} eV\n\n')
         file_name = 'precomputed_array'
         print_time_elapsed = 1
         prefix = ''.join(prefix_list)
