@@ -1387,6 +1387,7 @@ class System(object):
                 r_cut = self.get_optimized_r_cut(
                             charge_list_prod, alpha, choice_parameters,
                             dst_path, prefix_list)
+                print(f'Convergence in real-space energy achieved at alpha={alpha * constants.ANG2BOHR:.3e} / angstrom with r_cut:{r_cut / constants.ANG2BOHR:.3e}\n')
 
                 # optimize fourier-space cutoff error for k_cut
                 fourier_space_parameters = self.minimize_fourier_space_cutoff_error(charge_list_einsum, volume_derived_length, fourier_space_parameters, x_fourier_initial_guess)
