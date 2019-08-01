@@ -1248,6 +1248,9 @@ class System(object):
         if self.r_cut != 'simulation_cell':
             if isinstance(self.k_cut, list):
                 k_cut = 1.10 * max(np.asarray(self.k_cut) * self.reciprocal_lattice_vector_length)
+                print(f'At the user-specified k_max=[{",".join(str(element) for element in self.k_cut)}], k_cut={k_cut * constants.ANG2BOHR:.3e} / angstrom')
+                num_k_vectors = np.ceil(np.prod(2 * self.k_cut + 1) * np.pi / 6 - 1).astype(int)
+                print(f'Maximum number of k-vectors: {num_k_vectors}')
                 k_cut_choice = 'user-specified (k_max)'
             elif np.isreal(self.k_cut):
                 k_cut_choice = 'user-specified'
@@ -1315,40 +1318,27 @@ class System(object):
             # optimize fourier-space cutoff error for k_cut
             fourier_space_parameters = self.minimize_fourier_space_cutoff_error(charge_list_einsum, volume_derived_length, fourier_space_parameters, x_fourier_initial_guess)
             k_cut_estimate = fourier_space_parameters['k_cut']
-        elif (self.k_cut == 'converge' and np.array_equal(self.system_size, np.ones(self.neighbors.n_dim, int))) or isinstance(self.k_cut, list):
+        elif self.k_cut == 'converge' and np.array_equal(self.system_size, np.ones(self.neighbors.n_dim, int)):
             sub_prefix_list = []
-            if isinstance(self.k_cut, list):
-                output_dir_path = dst_path / ('k_max=[' + ','.join(str(element) for element in self.k_cut) + ']')
-                Path.mkdir(output_dir_path, parents=True, exist_ok=True)
+            print(f'Attempting to converge k_cut for user-specified alpha={alpha * constants.ANG2BOHR:.3e} / angstrom:\n')
+            output_dir_path = dst_path.joinpath(f'alpha={alpha * constants.ANG2BOHR:.3e}')
+            Path.mkdir(output_dir_path, parents=True, exist_ok=True)
 
-                # check for convergence in the absolute value of energy with k_cut
-                k_cut_estimate = k_cut
-                k_cut_threshold = self.threshold_fraction * k_cut
-                print(f'Analyzing the convergence in Fourier-space energy at k_cut derived from user-specified k_max:')
-                convergence_status = self.convergence_check_with_k_cut(charge_list_prod, alpha, k_cut_threshold, k_cut)
-                convergence_keyword = 'NOT ' if not convergence_status else ''
-                sub_prefix_list.append(f'Preliminary convergence in Fourier-space energy {convergence_keyword}achieved at k_cut: {k_cut * constants.ANG2BOHR:.3e} / angstrom\n')
-                print(f'Preliminary convergence in Fourier-space energy {convergence_keyword}achieved at k_cut: {k_cut * constants.ANG2BOHR:.3e} / angstrom\n')
-            else:
-                print(f'Attempting to converge k_cut for user-specified alpha={alpha * constants.ANG2BOHR:.3e} / angstrom:\n')
-                output_dir_path = dst_path.joinpath(f'alpha={alpha * constants.ANG2BOHR:.3e}')
-                Path.mkdir(output_dir_path, parents=True, exist_ok=True)
-    
-                # optimize fourier-space cutoff error for k_cut
-                fourier_space_parameters = self.minimize_fourier_space_cutoff_error(charge_list_einsum, volume_derived_length, fourier_space_parameters, x_fourier_initial_guess)
-                k_cut_estimate = fourier_space_parameters['k_cut']
-                print(f'Starting with an estimate for k_cut={k_cut_estimate * constants.ANG2BOHR:.3e} / angstrom')
-                percent_increase_in_k_cut_upper = 10
-                print(f'Exploring convergence in Fourier-space energy between {int(self.lower_bound_kcut)}x and {int(self.upper_bound_kcut)}x of estimated k_cut')
-    
-                k_cut_upper = self.upper_bound_kcut * k_cut_estimate
-                k_cut_threshold = self.threshold_fraction * k_cut_upper
-                # check for convergence in the absolute value of energy with k_cut
-                while not self.convergence_check_with_k_cut(charge_list_prod, alpha, k_cut_threshold, k_cut_upper):
-                    k_cut_upper = (1 + percent_increase_in_k_cut_upper / 100) * k_cut_upper
-                    print(f'Could not find convergence in given k_cut range. Re-attempting with upper bound increased by {percent_increase_in_k_cut_upper:.3f} %')
-                sub_prefix_list.append(f'Preliminary convergence in Fourier-space energy achieved at k_cut: {k_cut_upper * constants.ANG2BOHR:.3e} / angstrom\n')
-                print(f'Preliminary convergence in absolute value of Fourier-space energy achieved within k_cut={k_cut_upper * constants.ANG2BOHR:.3e} / angstrom\n')
+            # optimize fourier-space cutoff error for k_cut
+            fourier_space_parameters = self.minimize_fourier_space_cutoff_error(charge_list_einsum, volume_derived_length, fourier_space_parameters, x_fourier_initial_guess)
+            k_cut_estimate = fourier_space_parameters['k_cut']
+            print(f'Starting with an estimate for k_cut={k_cut_estimate * constants.ANG2BOHR:.3e} / angstrom')
+            percent_increase_in_k_cut_upper = 10
+            print(f'Exploring convergence in Fourier-space energy between {int(self.lower_bound_kcut)}x and {int(self.upper_bound_kcut)}x of estimated k_cut')
+
+            k_cut_upper = self.upper_bound_kcut * k_cut_estimate
+            k_cut_threshold = self.threshold_fraction * k_cut_upper
+            # check for convergence in the absolute value of energy with k_cut
+            while not self.convergence_check_with_k_cut(charge_list_prod, alpha, k_cut_threshold, k_cut_upper):
+                k_cut_upper = (1 + percent_increase_in_k_cut_upper / 100) * k_cut_upper
+                print(f'Could not find convergence in given k_cut range. Re-attempting with upper bound increased by {percent_increase_in_k_cut_upper:.3f} %')
+            sub_prefix_list.append(f'Preliminary convergence in Fourier-space energy achieved at k_cut: {k_cut_upper * constants.ANG2BOHR:.3e} / angstrom\n')
+            print(f'Preliminary convergence in absolute value of Fourier-space energy achieved within k_cut={k_cut_upper * constants.ANG2BOHR:.3e} / angstrom\n')
 
             print(f'Attempting to identify precise k_cut:')
             dst_path = output_dir_path
@@ -1370,16 +1360,16 @@ class System(object):
             print_time_elapsed = 0
             sub_prefix = ''.join(sub_prefix_list)
             generate_report(self.start_time, output_dir_path, file_name, print_time_elapsed, sub_prefix)
-        elif not np.isreal(self.alpha) & np.isreal(self.r_cut) & np.isreal(self.k_cut):
+        elif not np.isreal(self.alpha) & np.isreal(self.r_cut) & (np.isreal(self.k_cut) or isinstance(self.k_cut, list)):
             if np.isreal(self.alpha) & np.isreal(self.r_cut):
                 # optimize fourier-space cutoff error for k_cut
                 fourier_space_parameters = self.minimize_fourier_space_cutoff_error(charge_list_einsum, volume_derived_length, fourier_space_parameters, x_fourier_initial_guess)
                 k_cut = fourier_space_parameters['k_cut']
-            elif np.isreal(self.alpha) & np.isreal(self.k_cut):
+            elif np.isreal(self.alpha) & (np.isreal(self.k_cut) or isinstance(self.k_cut, list)):
                 r_cut = self.get_optimized_r_cut(
                             charge_list_prod, alpha, choice_parameters,
                             dst_path, prefix_list)
-            elif np.isreal(self.r_cut) & np.isreal(self.k_cut):
+            elif np.isreal(self.r_cut) & (np.isreal(self.k_cut) or isinstance(self.k_cut, list)):
                 # optimize real-space cutoff error for alpha
                 real_space_parameters = self.minimize_real_space_cutoff_error(charge_list_einsum, real_space_parameters, x_real_initial_guess)
                 alpha = real_space_parameters['alpha']
@@ -1399,7 +1389,7 @@ class System(object):
                 # optimize fourier-space cutoff error for k_cut
                 fourier_space_parameters = self.minimize_fourier_space_cutoff_error(charge_list_einsum, volume_derived_length, fourier_space_parameters, x_fourier_initial_guess)
                 k_cut = fourier_space_parameters['k_cut']
-            elif np.isreal(self.k_cut):
+            elif np.isreal(self.k_cut) or isinstance(self.k_cut, list):
                 # optimize fourier-space cutoff error for alpha
                 fourier_space_parameters = self.minimize_fourier_space_cutoff_error(charge_list_einsum, volume_derived_length, fourier_space_parameters, x_fourier_initial_guess)
                 alpha = real_space_parameters['alpha'] = fourier_space_parameters['alpha']
