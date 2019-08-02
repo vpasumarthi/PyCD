@@ -8,7 +8,8 @@ from PyCT.core import Material, Neighbors, System
 
 def material_setup(input_directory_path, system_size, pbc,
                    generate_hop_neighbor_list, generate_pairwise_min_image_vector_data,
-                   generate_precomputed_array, compute_energy_contributions):
+                   generate_precomputed_array, compute_energy_contributions,
+                   analyze_k_vectors):
     """Prepare material class object file, neighbor list and \
         saves to the provided destination path"""
 
@@ -72,7 +73,8 @@ def material_setup(input_directory_path, system_size, pbc,
             step_system_size_array, step_hop_neighbor_master_list)
         (precomputed_array, output_dir) = material_system.get_precomputed_array(
                                                 input_directory_path,
-                                                compute_energy_contributions)
+                                                compute_energy_contributions,
+                                                analyze_k_vectors)
         precomputed_array_file_path = output_dir.joinpath(
                                             'precomputed_array.npy')
         np.save(precomputed_array_file_path, precomputed_array)

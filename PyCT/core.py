@@ -1470,7 +1470,8 @@ class System(object):
         precomputed_array_fourier = self.pot_k_ewald(k_max, alpha, k_cut) / self.material.dielectric_constant
         return (precomputed_array_fourier, k_max, num_k_vectors)
 
-    def get_precomputed_array(self, dst_path, compute_energy_contributions):
+    def get_precomputed_array(self, dst_path, compute_energy_contributions,
+                              analyze_k_vectors):
         """
 
         :param dst_path:
@@ -1488,16 +1489,42 @@ class System(object):
         prefix_list.append(f'k_max: [{k_max[0]}, {k_max[1]}, {k_max[2]}]\n')
         prefix_list.append(f'number of k-vectors: {num_k_vectors}\n\n')
 
-        precomputed_array_self = - np.eye(self.neighbors.num_system_elements) * np.sqrt(alpha / np.pi) / self.material.dielectric_constant
-
-        precomputed_array = precomputed_array_real + precomputed_array_fourier + precomputed_array_self
-
-        if compute_energy_contributions:
+        if analyze_k_vectors or compute_energy_contributions:
             # Assumption for the accuracy analysis
             ion_charge_type = 'full'
             charge_list = self.base_charge_config_for_accuracy_analysis(ion_charge_type)
             charge_list_prod = np.multiply(charge_list.transpose(), charge_list)
 
+        if analyze_k_vectors:
+            sub_prefix_list = []
+            print(f'Attempting to identify precise k_cut:')
+            k_cut_lower = 0.0000
+            k_cut_upper = k_cut
+            print(f'Generating energy profile in the k_cut range between {k_cut_lower * constants.ANG2BOHR:.3e}  / angstrom and {k_cut_upper * constants.ANG2BOHR:.3e} / angstrom')
+            # get step energy data
+            (_, k_cut0_of_step_change, k_cut1_of_step_change, _, _,
+             sub_prefix_list) = self.get_precise_step_change_data(
+                             charge_list_prod, alpha, k_cut_lower, k_cut_upper,
+                             dst_path, sub_prefix_list)
+
+            print(f'Analyzing energy contributions of individual k-vectors:')
+            # analyze the k-vectors and their energy contributions towards Fourier-space energy
+            self.get_k_vector_based_energy_contribution(
+                charge_list_prod, alpha, k_cut0_of_step_change,
+                k_cut1_of_step_change, dst_path)
+            print('Finished k-vector analysis')
+
+            file_name = 'k_cut_convergence'
+            print_time_elapsed = 0
+            sub_prefix = ''.join(sub_prefix_list)
+            generate_report(self.start_time, dst_path, file_name,
+                            print_time_elapsed, sub_prefix)
+
+        precomputed_array_self = - np.eye(self.neighbors.num_system_elements) * np.sqrt(alpha / np.pi) / self.material.dielectric_constant
+
+        precomputed_array = precomputed_array_real + precomputed_array_fourier + precomputed_array_self
+
+        if compute_energy_contributions:
             real_space_energy = np.sum(np.multiply(charge_list_prod, precomputed_array_real))
             prefix_list.append(f'Energy contribution from Real space: {real_space_energy/ constants.EV2HARTREE} eV\n')
 
