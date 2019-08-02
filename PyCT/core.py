@@ -1144,6 +1144,25 @@ class System(object):
         sub_prefix_list.append(f'Number of step changes in Fourier-space energy with varying k_cut: {len(energy_changes)}\n')
         print(f'Identified a total of {len(energy_changes)} step changes\n')
 
+        fig = plt.figure()
+        import matplotlib.ticker as mtick
+        ax = fig.add_subplot(111)
+        ax.yaxis.set_major_formatter(mtick.FormatStrFormatter('%.2e'))
+        ax.plot(k_cut0_of_step_change * constants.ANG2BOHR, energy_changes / constants.EV2HARTREE, 'o-', color='#2ca02c', mec='black')
+        ax.set_xlabel('$k_{{cut}}$ (1/$\AA$)')
+        ax.set_ylabel(f'Energy (eV)')
+        plt.title('Magnitude of step change in Fourier-space energy with increase in $k_{{cut}}$', y=1.08)
+        figure_name = f'Step change convergence with k_cut.png'
+        figure_path = dst_path.joinpath(figure_name)
+        plt.tight_layout()
+        plt.savefig(str(figure_path))
+
+        return (k_cut_data, k_cut0_of_step_change, k_cut1_of_step_change,
+                energy_changes, max_divergent_k_cut, sub_prefix_list)
+
+    def get_k_cut_choices(
+            self, k_cut_data, k_cut0_of_step_change, k_cut1_of_step_change,
+            energy_changes, max_divergent_k_cut, k_cut_estimate, sub_prefix_list):
         if max_divergent_k_cut > 0:
             k_cut_gentle = k_cut_data[k_cut_data > max_divergent_k_cut][0]
         else:
@@ -1163,19 +1182,6 @@ class System(object):
         factor_of_increase_from_estimation = k_cut_stringent / k_cut_estimate
         sub_prefix_list.append(f'Factor of increase in the value of converged k_cut from estimation: {factor_of_increase_from_estimation:.3e}\n')
 
-        fig = plt.figure()
-        import matplotlib.ticker as mtick
-        ax = fig.add_subplot(111)
-        ax.yaxis.set_major_formatter(mtick.FormatStrFormatter('%.2e'))
-        ax.plot(k_cut0_of_step_change * constants.ANG2BOHR, energy_changes / constants.EV2HARTREE, 'o-', color='#2ca02c', mec='black')
-        ax.set_xlabel('$k_{{cut}}$ (1/$\AA$)')
-        ax.set_ylabel(f'Energy (eV)')
-        plt.title('Magnitude of step change in Fourier-space energy with increase in $k_{{cut}}$', y=1.08)
-        figure_name = f'Step change convergence with k_cut.png'
-        figure_path = dst_path.joinpath(figure_name)
-        plt.tight_layout()
-        plt.savefig(str(figure_path))
-
         print(f'Analyzing convergence in step energy change:')
         k_cut_lower = self.threshold_fraction * k_cut_stringent
         k_cut_upper = k_cut_stringent
@@ -1184,7 +1190,7 @@ class System(object):
         convergence_keyword = 'NOT ' if not step_energy_convergence_status else ''
         sub_prefix_list.append(f'Step energy changes have {convergence_keyword}converged\n')
         print(f'Step energy changes have {convergence_keyword}converged\n')
-        return (k_cut0_of_step_change, k_cut1_of_step_change, k_cut_stringent, sub_prefix_list)
+        return (k_cut_stringent, sub_prefix_list)
 
     def get_optimized_r_cut(self, charge_list_prod, alpha, choice_parameters,
                             dst_path, prefix_list):
@@ -1340,14 +1346,19 @@ class System(object):
             print(f'Attempting to identify precise k_cut:')
             dst_path = output_dir_path
             # get step energy data
-            # NOTE: k_cut outputted below is the k_cut_stringent
             k_cut_lower = self.lower_bound_kcut * k_cut_estimate
             k_cut_upper = self.upper_bound_kcut * k_cut_estimate
             print(f'Generating energy profile between {int(self.lower_bound_kcut)}x and {int(self.upper_bound_kcut)}x of estimated k_cut')
-            (k_cut0_of_step_change, k_cut1_of_step_change, k_cut,
-             sub_prefix_list) = self.get_precise_step_change_data(
+            (k_cut_data, k_cut0_of_step_change, k_cut1_of_step_change,
+             energy_changes, max_divergent_k_cut, sub_prefix_list
+             ) = self.get_precise_step_change_data(
                  charge_list_prod, alpha, k_cut_lower, k_cut_upper,
                  output_dir_path, sub_prefix_list)
+
+            # NOTE: k_cut outputted below is the k_cut_stringent
+            (k_cut, sub_prefix_list) = self.get_k_cut_choices(
+                k_cut_data, k_cut0_of_step_change, k_cut1_of_step_change,
+                energy_changes, max_divergent_k_cut, k_cut_estimate, sub_prefix_list)
 
             print(f'Analyzing energy contributions of individual k-vectors:')
             # analyze the k-vectors and their energy contributions towards Fourier-space energy
