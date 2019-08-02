@@ -1052,7 +1052,7 @@ class System(object):
         energy_contribution = np.sum(np.multiply(charge_list_prod, precomputed_array))
         return energy_contribution
 
-    def get_k_vector_based_energy_contribution(self, charge_list_prod, alpha, k_cut0_of_step_change, k_cut1_of_step_change, dst_path):
+    def get_k_vector_based_energy_contribution(self, charge_list_prod, alpha, k_cut0_of_step_change, k_cut1_of_step_change, prefix_list):
         num_steps = len(k_cut0_of_step_change)
         new_k_vectors_list = []
         num_new_k_vectors = np.zeros(num_steps, int)
@@ -1080,12 +1080,7 @@ class System(object):
             k_vector = sorted_new_k_vectors_consolidated[k_vector_index]
             energy_contribution = sorted_energy_contribution_data[k_vector_index]
             prefix_list.append(f'{k_vector[0]:4d} {k_vector[1]:4d} {k_vector[2]:4d}: {energy_contribution / constants.EV2HARTREE:.3e} eV\n')
-
-        file_name = 'k_vector_energy_contribution'
-        print_time_elapsed = 0
-        prefix = ''.join(prefix_list)
-        generate_report(self.start_time, dst_path, file_name, print_time_elapsed, prefix)
-        return None
+        return prefix_list
 
     def get_precise_step_change_data(self, charge_list_prod, alpha,
                                      k_cut_lower, k_cut_upper, dst_path,
@@ -1322,7 +1317,7 @@ class System(object):
             fourier_space_parameters = self.minimize_fourier_space_cutoff_error(charge_list_einsum, volume_derived_length, fourier_space_parameters, x_fourier_initial_guess)
             k_cut_estimate = fourier_space_parameters['k_cut']
         elif self.k_cut == 'converge' and np.array_equal(self.system_size, np.ones(self.neighbors.n_dim, int)):
-            sub_prefix_list = []
+            sub_prefix_list_01 = []
             print(f'Attempting to converge k_cut for user-specified alpha={alpha * constants.ANG2BOHR:.3e} / angstrom:\n')
             output_dir_path = dst_path.joinpath(f'alpha={alpha * constants.ANG2BOHR:.3e}')
             Path.mkdir(output_dir_path, parents=True, exist_ok=True)
@@ -1340,7 +1335,7 @@ class System(object):
             while not self.convergence_check_with_k_cut(charge_list_prod, alpha, k_cut_threshold, k_cut_upper):
                 k_cut_upper = (1 + percent_increase_in_k_cut_upper / 100) * k_cut_upper
                 print(f'Could not find convergence in given k_cut range. Re-attempting with upper bound increased by {percent_increase_in_k_cut_upper:.3f} %')
-            sub_prefix_list.append(f'Preliminary convergence in Fourier-space energy achieved at k_cut: {k_cut_upper * constants.ANG2BOHR:.3e} / angstrom\n')
+            sub_prefix_list_01.append(f'Preliminary convergence in Fourier-space energy achieved at k_cut: {k_cut_upper * constants.ANG2BOHR:.3e} / angstrom\n')
             print(f'Preliminary convergence in absolute value of Fourier-space energy achieved within k_cut={k_cut_upper * constants.ANG2BOHR:.3e} / angstrom\n')
 
             print(f'Attempting to identify precise k_cut:')
@@ -1350,27 +1345,33 @@ class System(object):
             k_cut_upper = self.upper_bound_kcut * k_cut_estimate
             print(f'Generating energy profile between {int(self.lower_bound_kcut)}x and {int(self.upper_bound_kcut)}x of estimated k_cut')
             (k_cut_data, k_cut0_of_step_change, k_cut1_of_step_change,
-             energy_changes, max_divergent_k_cut, sub_prefix_list
+             energy_changes, max_divergent_k_cut, sub_prefix_list_01
              ) = self.get_precise_step_change_data(
                  charge_list_prod, alpha, k_cut_lower, k_cut_upper,
-                 output_dir_path, sub_prefix_list)
+                 output_dir_path, sub_prefix_list_01)
 
             # NOTE: k_cut outputted below is the k_cut_stringent
-            (k_cut, sub_prefix_list) = self.get_k_cut_choices(
+            (k_cut, sub_prefix_list_01) = self.get_k_cut_choices(
                 k_cut_data, k_cut0_of_step_change, k_cut1_of_step_change,
-                energy_changes, max_divergent_k_cut, k_cut_estimate, sub_prefix_list)
+                energy_changes, max_divergent_k_cut, k_cut_estimate, sub_prefix_list_01)
 
             print(f'Analyzing energy contributions of individual k-vectors:')
             # analyze the k-vectors and their energy contributions towards Fourier-space energy
-            self.get_k_vector_based_energy_contribution(
-                charge_list_prod, alpha, k_cut0_of_step_change,
-                k_cut1_of_step_change, output_dir_path)
+            sub_prefix_list_02 = []
+            sub_prefix_list_02 = self.get_k_vector_based_energy_contribution(
+                                charge_list_prod, alpha, k_cut0_of_step_change,
+                                k_cut1_of_step_change, sub_prefix_list_02)
+
+            file_name = 'k_vector_energy_contribution'
+            print_time_elapsed = 0
+            sub_prefix_02 = ''.join(sub_prefix_list_02)
+            generate_report(self.start_time, dst_path, file_name, print_time_elapsed, sub_prefix_02)
             print('Finished k-vector analysis')
 
             file_name = 'k_cut_convergence'
             print_time_elapsed = 0
-            sub_prefix = ''.join(sub_prefix_list)
-            generate_report(self.start_time, output_dir_path, file_name, print_time_elapsed, sub_prefix)
+            sub_prefix_01 = ''.join(sub_prefix_list_01)
+            generate_report(self.start_time, output_dir_path, file_name, print_time_elapsed, sub_prefix_01)
         elif not np.isreal(self.alpha) and np.isreal(self.r_cut) and (np.isreal(self.k_cut) or isinstance(self.k_cut, list)):
             if np.isreal(self.alpha) & np.isreal(self.r_cut):
                 # optimize fourier-space cutoff error for k_cut
@@ -1496,29 +1497,35 @@ class System(object):
             charge_list_prod = np.multiply(charge_list.transpose(), charge_list)
 
         if analyze_k_vectors:
-            sub_prefix_list = []
+            sub_prefix_list_01 = []
             print(f'Attempting to identify precise k_cut:')
             k_cut_lower = 0.0000
             k_cut_upper = k_cut
             print(f'Generating energy profile in the k_cut range between {k_cut_lower * constants.ANG2BOHR:.3e}  / angstrom and {k_cut_upper * constants.ANG2BOHR:.3e} / angstrom')
             # get step energy data
             (_, k_cut0_of_step_change, k_cut1_of_step_change, _, _,
-             sub_prefix_list) = self.get_precise_step_change_data(
+             sub_prefix_list_01) = self.get_precise_step_change_data(
                              charge_list_prod, alpha, k_cut_lower, k_cut_upper,
-                             dst_path, sub_prefix_list)
+                             dst_path, sub_prefix_list_01)
 
             print(f'Analyzing energy contributions of individual k-vectors:')
             # analyze the k-vectors and their energy contributions towards Fourier-space energy
-            self.get_k_vector_based_energy_contribution(
-                charge_list_prod, alpha, k_cut0_of_step_change,
-                k_cut1_of_step_change, dst_path)
+            sub_prefix_list_02 = []
+            sub_prefix_list_02 = self.get_k_vector_based_energy_contribution(
+                                charge_list_prod, alpha, k_cut0_of_step_change,
+                                k_cut1_of_step_change, sub_prefix_list_02)
+
+            file_name = 'k_vector_energy_contribution_within_user_specified_k_cut'
+            print_time_elapsed = 0
+            sub_prefix_02 = ''.join(sub_prefix_list_02)
+            generate_report(self.start_time, dst_path, file_name, print_time_elapsed, sub_prefix_02)
             print('Finished k-vector analysis')
 
             file_name = 'Step-Energy change analysis'
             print_time_elapsed = 0
-            sub_prefix = ''.join(sub_prefix_list)
+            sub_prefix_01 = ''.join(sub_prefix_list_01)
             generate_report(self.start_time, dst_path, file_name,
-                            print_time_elapsed, sub_prefix)
+                            print_time_elapsed, sub_prefix_01)
 
         precomputed_array_self = - np.eye(self.neighbors.num_system_elements) * np.sqrt(alpha / np.pi) / self.material.dielectric_constant
 
