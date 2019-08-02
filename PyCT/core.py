@@ -955,16 +955,24 @@ class System(object):
             print(f'Couldn\'t find real-space energy convergence within simulation cell. Re-attempting with {alpha_percent_increase} % increased alpha={alpha * constants.ANG2BOHR:.3e} / angstrom')
 
         print(f'Preliminary convergence in real-space energy achieved at alpha={alpha * constants.ANG2BOHR:.3e} / angstrom\n')
-        r_cut_convergence = 0
+        alpha_convergence = alpha
+        r_cut_convergence = self.get_convergence_rcut(charge_list_prod, alpha_convergence, r_cut_max, self.lower_bound_real, self.upper_bound_rcut)
+        print(f'alpha={alpha_convergence * constants.ANG2BOHR:.3e} / angstrom; r_cut={r_cut_convergence / r_cut_max:.3f} max L/2')
         alpha_vs_fraction_r_cut_convergence = []
+        alpha_vs_fraction_r_cut_convergence.append([alpha_convergence, r_cut_convergence / r_cut_max])
+
         alpha_percent_decrease = 5
         print(f'Attempting to achieve convergence above {self.threshold_fraction * 100:.1f} % of max L/2:')
         while r_cut_convergence / r_cut_max < self.threshold_fraction:
-            alpha_convergence = alpha
-            r_cut_convergence = self.get_convergence_rcut(charge_list_prod, alpha_convergence, r_cut_max, self.lower_bound_real, self.upper_bound_rcut)
-            print(f'alpha={alpha * constants.ANG2BOHR:.3e} / angstrom; r_cut={r_cut_convergence / r_cut_max:.3f} max L/2')
-            alpha_vs_fraction_r_cut_convergence.append([alpha_convergence, r_cut_convergence / r_cut_max])
-            alpha = (1 - alpha_percent_decrease / 100) * alpha
+            alpha_new = (1 - alpha_percent_decrease / 100) * alpha_convergence
+            r_cut_new = self.get_convergence_rcut(charge_list_prod, alpha_new, r_cut_max, self.lower_bound_real, self.upper_bound_rcut)
+            if r_cut_new / r_cut_max < self.upper_bound_rcut:
+                r_cut_convergence = r_cut_new
+                alpha_convergence = alpha_new
+                print(f'alpha={alpha_convergence * constants.ANG2BOHR:.3e} / angstrom; r_cut={r_cut_convergence / r_cut_max:.3f} max L/2')
+                alpha_vs_fraction_r_cut_convergence.append([alpha_convergence, r_cut_convergence / r_cut_max])
+            else:
+                break
 
         real_space_parameters['r_cut'] = r_cut_convergence
         real_space_parameters['alpha'] = alpha_convergence
