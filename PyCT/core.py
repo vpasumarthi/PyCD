@@ -1498,7 +1498,6 @@ class System(object):
 
         if analyze_k_vectors:
             sub_prefix_list_01 = []
-            print(f'Attempting to identify precise k_cut:')
             k_cut_lower = 0.0000
             k_cut_upper = k_cut
             print(f'Generating energy profile in the k_cut range between {k_cut_lower * constants.ANG2BOHR:.3e}  / angstrom and {k_cut_upper * constants.ANG2BOHR:.3e} / angstrom')
