@@ -1088,11 +1088,8 @@ class System(object):
         return None
 
     def get_precise_step_change_data(self, charge_list_prod, alpha,
-                                     k_cut_estimate, dst_path, sub_prefix_list):
-        k_cut_lower = self.lower_bound_kcut * k_cut_estimate
-        k_cut_upper = self.upper_bound_kcut * k_cut_estimate
-        print(f'Generating energy profile between {int(self.lower_bound_kcut)}x and {int(self.upper_bound_kcut)}x of estimated k_cut')
-
+                                     k_cut_lower, k_cut_upper, dst_path,
+                                     sub_prefix_list):
         k_max_lower = np.ceil(k_cut_lower / self.reciprocal_lattice_vector_length).astype(int)
         num_k_vectors_lower = np.ceil(np.prod(2 * k_max_lower + 1) * np.pi / 6 - 1).astype(int)
         k_max_upper = np.ceil(k_cut_upper / self.reciprocal_lattice_vector_length).astype(int)
@@ -1344,10 +1341,13 @@ class System(object):
             dst_path = output_dir_path
             # get step energy data
             # NOTE: k_cut outputted below is the k_cut_stringent
+            k_cut_lower = self.lower_bound_kcut * k_cut_estimate
+            k_cut_upper = self.upper_bound_kcut * k_cut_estimate
+            print(f'Generating energy profile between {int(self.lower_bound_kcut)}x and {int(self.upper_bound_kcut)}x of estimated k_cut')
             (k_cut0_of_step_change, k_cut1_of_step_change, k_cut,
              sub_prefix_list) = self.get_precise_step_change_data(
-                 charge_list_prod, alpha, k_cut_estimate, output_dir_path,
-                 sub_prefix_list)
+                 charge_list_prod, alpha, k_cut_lower, k_cut_upper,
+                 output_dir_path, sub_prefix_list)
 
             print(f'Analyzing energy contributions of individual k-vectors:')
             # analyze the k-vectors and their energy contributions towards Fourier-space energy
