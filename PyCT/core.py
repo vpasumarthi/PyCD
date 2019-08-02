@@ -1514,7 +1514,7 @@ class System(object):
                 k_cut1_of_step_change, dst_path)
             print('Finished k-vector analysis')
 
-            file_name = 'k_cut_convergence'
+            file_name = 'Step-Energy change analysis'
             print_time_elapsed = 0
             sub_prefix = ''.join(sub_prefix_list)
             generate_report(self.start_time, dst_path, file_name,
