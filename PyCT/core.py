@@ -1495,7 +1495,10 @@ class System(object):
 
         precomputed_array_real = self.get_precomputed_array_real(alpha, r_cut)
 
-        (precomputed_array_fourier, k_max, num_k_vectors) = self.get_precomputed_array_fourier(alpha, k_cut)
+        if return_k_vector_data:
+            (precomputed_array_fourier, k_max, num_k_vectors) = self.get_precomputed_array_fourier_with_k_vector_data(alpha, k_cut)
+        else:
+            (precomputed_array_fourier, k_max, num_k_vectors) = self.get_precomputed_array_fourier(alpha, k_cut)
         prefix_list.append(f'k_max: [{k_max[0]}, {k_max[1]}, {k_max[2]}]\n')
         prefix_list.append(f'number of k-vectors: {num_k_vectors}\n\n')
 
