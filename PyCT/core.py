@@ -1480,6 +1480,13 @@ class System(object):
         precomputed_array_fourier = self.pot_k_ewald(k_max, alpha, k_cut) / self.material.dielectric_constant
         return (precomputed_array_fourier, k_max, num_k_vectors)
 
+    def get_precomputed_array_fourier_with_k_vector_data(self, charge_list_prod, alpha, k_cut):
+        k_max = np.ceil(k_cut / self.reciprocal_lattice_vector_length).astype(int)  # max number of multiples of reciprocal lattice length vectors
+        num_k_vectors = np.ceil(np.prod(2 * k_max + 1) * np.pi / 6 - 1).astype(int)
+        (precomputed_array_fourier, k_vector_data, energy_contribution_data) = self.pot_k_ewald_with_k_vector_data(charge_list_prod, k_max, alpha, k_cut)
+        precomputed_array_fourier /= self.material.dielectric_constant
+        return (precomputed_array_fourier, k_max, num_k_vectors, k_vector_data, energy_contribution_data)
+
     def get_precomputed_array(self, dst_path, compute_energy_contributions,
                               return_k_vector_data):
         """
@@ -1502,7 +1509,8 @@ class System(object):
             charge_list_prod = np.multiply(charge_list.transpose(), charge_list)
 
         if return_k_vector_data:
-            (precomputed_array_fourier, k_max, num_k_vectors) = self.get_precomputed_array_fourier_with_k_vector_data(alpha, k_cut)
+            (precomputed_array_fourier, k_max, num_k_vectors, k_vector_data,
+             energy_contribution_data) = self.get_precomputed_array_fourier_with_k_vector_data(charge_list_prod, alpha, k_cut)
         else:
             (precomputed_array_fourier, k_max, num_k_vectors) = self.get_precomputed_array_fourier(alpha, k_cut)
         prefix_list.append(f'k_max: [{k_max[0]}, {k_max[1]}, {k_max[2]}]\n')
