@@ -749,7 +749,8 @@ class System(object):
                         k_vector_list.append([i, j, k])
                         exclude_list.append([-i, -j, -k])
         k_vector_list.remove([0, 0, 0])
-        return k_vector_list
+        k_vector_data = np.asarray(k_vector_list)
+        return k_vector_data
 
     def get_cosine_data(self, k_max):
         max_k_max = max(k_max)
@@ -774,8 +775,8 @@ class System(object):
         fourier_sum_coeff = (2 * np.pi) / self.system_volume
         k_cut_2 = k_cut**2
 
-        k_vector_list = self.get_effective_k_vectors(k_max)
-        for k_vector_value in k_vector_list:
+        k_vector_data = self.get_effective_k_vectors(k_max)
+        for k_vector_value in k_vector_data:
             k_vector = np.dot(np.asarray(k_vector_value),
                               self.reciprocal_lattice_matrix)
             k_vector_2 = np.dot(k_vector, k_vector)
