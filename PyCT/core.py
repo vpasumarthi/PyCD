@@ -1480,7 +1480,7 @@ class System(object):
         return (precomputed_array_fourier, k_max, num_k_vectors)
 
     def get_precomputed_array(self, dst_path, compute_energy_contributions,
-                              analyze_k_vectors):
+                              return_k_vector_data):
         """
 
         :param dst_path:
@@ -1498,13 +1498,13 @@ class System(object):
         prefix_list.append(f'k_max: [{k_max[0]}, {k_max[1]}, {k_max[2]}]\n')
         prefix_list.append(f'number of k-vectors: {num_k_vectors}\n\n')
 
-        if analyze_k_vectors or compute_energy_contributions:
+        if return_k_vector_data or compute_energy_contributions:
             # Assumption for the accuracy analysis
             ion_charge_type = 'full'
             charge_list = self.base_charge_config_for_accuracy_analysis(ion_charge_type)
             charge_list_prod = np.multiply(charge_list.transpose(), charge_list)
 
-        if analyze_k_vectors:
+        if return_k_vector_data:
             sub_prefix_list_01 = []
             k_cut_lower = 0.0000
             k_cut_upper = k_cut
