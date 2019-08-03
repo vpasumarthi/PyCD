@@ -792,6 +792,39 @@ class System(object):
         precomputed_array *= 2
         return precomputed_array
 
+    def pot_k_ewald_with_k_vector_data(self, charge_list_prod, k_max, alpha, k_cut):
+        """Updates precomputed array with potential energy contributions from
+           reciprocal-space"""
+        precomputed_array = np.zeros((self.neighbors.num_system_elements,
+                                      self.neighbors.num_system_elements))
+
+        alpha4 = 4 * alpha
+        fourier_sum_coeff = (2 * np.pi) / self.system_volume
+        k_cut_2 = k_cut**2
+
+        k_vector_data = self.get_effective_k_vectors(k_max)
+        num_vectors = len(k_vector_data)
+        energy_contribution_data = np.zeros(num_vectors)
+        for k_vector_index, k_vector_value in enumerate(k_vector_data):
+            k_vector = np.dot(np.asarray(k_vector_value),
+                              self.reciprocal_lattice_matrix)
+            k_vector_2 = np.dot(k_vector, k_vector)
+            if k_vector_2 < k_cut_2:
+                k_vector_precomputed_array = (
+                                fourier_sum_coeff
+                                * np.exp(-k_vector_2 / alpha4)
+                                * np.cos(np.tensordot(
+                                    self.pairwise_min_image_vector_data,
+                                    k_vector, axes=([2], [0])))
+                                / k_vector_2)
+                energy_contribution_data[k_vector_index] = np.sum(np.multiply(charge_list_prod, k_vector_precomputed_array))
+                precomputed_array += k_vector_precomputed_array
+            else:
+                energy_contribution_data[k_vector_index] = 0
+        # effective k_vectors only include half of all possible k_vectors
+        precomputed_array *= 2
+        return (precomputed_array, k_vector_data, energy_contribution_data)
+
     def benchmark_ewald(self, num_repeats, benchmark_parameters):
         k_max = benchmark_parameters['k_max']
         alpha = benchmark_parameters['alpha']
