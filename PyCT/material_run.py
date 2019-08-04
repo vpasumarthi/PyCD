@@ -77,7 +77,7 @@ def material_run(dst_path):
 
         r_cut = config_params.r_cut
         k_cut = config_params.k_cut
-        err_tol = config_params.err_tol
+        precision_parameters = config_params.precision_parameters
         
         # Load step hop neighbor list if needed
         step_system_size_array = []
@@ -128,7 +128,7 @@ def material_run(dst_path):
 
         material_system = System(
             material_info, material_neighbors, hop_neighbor_list,
-            pairwise_min_image_vector_data, alpha, r_cut, k_cut, err_tol,
+            pairwise_min_image_vector_data, alpha, r_cut, k_cut, precision_parameters,
             step_system_size_array, step_hop_neighbor_master_list)
 
         # Load precomputed array to instantiate run class
