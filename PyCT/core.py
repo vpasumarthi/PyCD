@@ -1414,7 +1414,7 @@ class System(object):
             print_time_elapsed = 0
             sub_prefix_01 = ''.join(sub_prefix_list_01)
             generate_report(self.start_time, output_dir_path, file_name, print_time_elapsed, sub_prefix_01)
-        elif not np.isreal(self.alpha) and np.isreal(self.r_cut) and (np.isreal(self.k_cut) or isinstance(self.k_cut, list)):
+        elif not (np.isreal(self.alpha) and np.isreal(self.r_cut) and ((np.isreal(self.k_cut) or isinstance(self.k_cut, list)))):
             if np.isreal(self.alpha) & np.isreal(self.r_cut):
                 # optimize fourier-space cutoff error for k_cut
                 fourier_space_parameters = self.minimize_fourier_space_cutoff_error(charge_list_einsum, volume_derived_length, fourier_space_parameters, x_fourier_initial_guess)
