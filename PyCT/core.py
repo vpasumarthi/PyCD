@@ -1544,12 +1544,9 @@ class System(object):
         if return_k_vector_data:
             (precomputed_array_fourier, k_max, num_k_vectors, k_vector_data,
              energy_contribution_data) = self.get_precomputed_array_fourier_with_k_vector_data(charge_list_prod, alpha, k_cut)
-        else:
-            (precomputed_array_fourier, k_max, num_k_vectors) = self.get_precomputed_array_fourier(alpha, k_cut)
-        prefix_list.append(f'k_max: [{k_max[0]}, {k_max[1]}, {k_max[2]}]\n')
-        prefix_list.append(f'number of k-vectors: {num_k_vectors}\n\n')
+            prefix_list.append(f'k_max: [{k_max[0]}, {k_max[1]}, {k_max[2]}]\n')
+            prefix_list.append(f'number of k-vectors: {num_k_vectors}\n\n')
 
-        if return_k_vector_data:
             # sorting in descending order
             sort_indices = np.argsort(energy_contribution_data)[::-1]
             sorted_k_vector_data = k_vector_data[sort_indices]
@@ -1566,6 +1563,10 @@ class System(object):
             sub_prefix_01 = ''.join(sub_prefix_list_01)
             generate_report(self.start_time, dst_path, file_name, print_time_elapsed, sub_prefix_01)
             print('Finished k-vector analysis')
+        else:
+            (precomputed_array_fourier, k_max, num_k_vectors) = self.get_precomputed_array_fourier(alpha, k_cut)
+            prefix_list.append(f'k_max: [{k_max[0]}, {k_max[1]}, {k_max[2]}]\n')
+            prefix_list.append(f'number of k-vectors: {num_k_vectors}\n\n')
 
         precomputed_array_self = - np.eye(self.neighbors.num_system_elements) * np.sqrt(alpha / np.pi) / self.material.dielectric_constant
 
