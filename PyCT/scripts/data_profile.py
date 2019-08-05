@@ -11,7 +11,7 @@ class DataProfile(object):
     def __init__(self, dst_path, system_directory_path,
                  variable_quantity_type_index, variable_quantity_index,
                  variable_quantity_list, species_count,
-                 temp, t_final, time_interval, n_traj, external_field, doping):
+                 t_final, time_interval, n_traj, external_field, doping):
         self.dst_path = dst_path
         self.system_directory_path = system_directory_path
         self.variable_quantity_type_index = variable_quantity_type_index
@@ -21,7 +21,6 @@ class DataProfile(object):
         if self.variable_quantity_type_index == 1:
             self.var_species_type = 'electron' if self.species_count[0] else 'hole'
         self.num_runs = len(variable_quantity_list)
-        self.temp = temp
         self.t_final = t_final
         self.time_interval = time_interval
         self.n_traj = n_traj
@@ -52,12 +51,11 @@ class DataProfile(object):
                        + ('electron' if n_electrons == 1 else 'electrons')
                        + ',' + str(n_holes)
                        + ('hole' if n_holes == 1 else 'holes'))
-        parent_dir3 = str(self.temp) + 'K'
-        parent_dir4 = (('%1.2E' % self.t_final) + 'SEC,'
+        parent_dir3 = (('%1.2E' % self.t_final) + 'SEC,'
                        + ('%1.2E' % self.time_interval) + 'TimeInterval,'
                        + ('%1.2E' % self.n_traj) + 'Traj')
         work_dir_path = (self.system_directory_path / parent_dir1 / parent_dir2
-                         / parent_dir3 / parent_dir4 / self.field_tag)
+                         / parent_dir3 / self.field_tag)
         return work_dir_path
 
     def generate_profile_plot(self, profile_data, y_label, figure_title,
