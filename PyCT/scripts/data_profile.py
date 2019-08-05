@@ -11,8 +11,7 @@ class DataProfile(object):
     def __init__(self, dst_path, system_directory_path,
                  variable_quantity_type_index, variable_quantity_index,
                  variable_quantity_list, species_count,
-                 ion_charge_type, species_charge_type, temp, t_final,
-                 time_interval, n_traj, external_field, doping):
+                 temp, t_final, time_interval, n_traj, external_field, doping):
         self.dst_path = dst_path
         self.system_directory_path = system_directory_path
         self.variable_quantity_type_index = variable_quantity_type_index
@@ -22,8 +21,6 @@ class DataProfile(object):
         if self.variable_quantity_type_index == 1:
             self.var_species_type = 'electron' if self.species_count[0] else 'hole'
         self.num_runs = len(variable_quantity_list)
-        self.ion_charge_type = ion_charge_type
-        self.species_charge_type = species_charge_type
         self.temp = temp
         self.t_final = t_final
         self.time_interval = time_interval
@@ -51,19 +48,16 @@ class DataProfile(object):
     def generate_work_dir_path(self, species_count):
         (n_electrons, n_holes) = species_count
         parent_dir1 = 'SimulationFiles'
-        parent_dir2 = ('IonChargeType=' + self.ion_charge_type
-                       + ';SpeciesChargeType=' + self.species_charge_type)
-        parent_dir3 = (str(n_electrons)
+        parent_dir2 = (str(n_electrons)
                        + ('electron' if n_electrons == 1 else 'electrons')
                        + ',' + str(n_holes)
                        + ('hole' if n_holes == 1 else 'holes'))
-        parent_dir4 = str(self.temp) + 'K'
-        parent_dir5 = (('%1.2E' % self.t_final) + 'SEC,'
+        parent_dir3 = str(self.temp) + 'K'
+        parent_dir4 = (('%1.2E' % self.t_final) + 'SEC,'
                        + ('%1.2E' % self.time_interval) + 'TimeInterval,'
                        + ('%1.2E' % self.n_traj) + 'Traj')
         work_dir_path = (self.system_directory_path / parent_dir1 / parent_dir2
-                         / parent_dir3 / parent_dir4 / parent_dir5
-                         / self.field_tag)
+                         / parent_dir3 / parent_dir4 / self.field_tag)
         return work_dir_path
 
     def generate_profile_plot(self, profile_data, y_label, figure_title,
