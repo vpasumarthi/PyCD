@@ -104,8 +104,8 @@ class DataProfile(object):
             with open(msd_analysis_log_file_path, 'r') as msd_analysis_log_file:
                 first_line = msd_analysis_log_file.readline()
                 second_line = msd_analysis_log_file.readline()
-            diffusivity_profile_data[i_run, 1] = float(first_line[-13:-6])
-            diffusivity_profile_data[i_run, 2] = float(second_line[-13:-6])
+            diffusivity_profile_data[i_run, 1] = float(first_line[-15:-8])
+            diffusivity_profile_data[i_run, 2] = float(second_line[-15:-8])
 
         y_label = 'Diffusivity (${{\mu}}m^2/s$)'
         species_count[self.variable_quantity_index] = self.variable_quantity_list[i_run]
@@ -120,7 +120,7 @@ class DataProfile(object):
         np.savetxt(data_file_path, diffusivity_profile_data)
         return None
 
-    def drift_mobility_profile(self, plot_error_bars):
+    def drvift_mobility_profile(self, plot_error_bars):
         drift_mobility_profile_data = np.zeros((self.num_runs, 3))
         drift_mobility_profile_data[:, 0] = np.copy(self.variable_quantity_list)
         run_log_file_name = 'Run.log'
