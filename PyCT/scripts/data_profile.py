@@ -77,7 +77,6 @@ class DataProfile(object):
         ax.set_title('\n'.join(wrap(figure_title, 60)))
         filename = (
             self.var_species_type + '_' + profiling_quantity + '_profile_'
-            + self.ion_charge_type[0] + self.species_charge_type[0]
             + '_' + str(self.variable_quantity_list[0])
             + '-' + str(self.variable_quantity_list[-1])
             + '_' + self.field_tag)
