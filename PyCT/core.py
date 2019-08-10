@@ -777,7 +777,7 @@ class System(object):
 
         k_vector_data = self.get_effective_k_vectors(k_max)
         for k_vector_value in k_vector_data:
-            k_vector = np.dot(np.asarray(k_vector_value),
+            k_vector = np.dot(k_vector_value,
                               self.reciprocal_lattice_matrix)
             k_vector_2 = np.dot(k_vector, k_vector)
             if k_vector_2 < k_cut_2:
