@@ -2065,6 +2065,26 @@ class Run(object):
                             available_site_indices, map_index, num_dopants))
                     dopant_site_indices[dopant_element_type] = dopant_type_dopant_site_indices
                 elif insertion_type == 'pairwise':
+                    system_size = self.system.system_size
+                    num_cells = system_size.prod()
+                    substitution_element_type = self.substitution_element_types[map_index]
+                    substitution_element_type_index = self.material.element_types.index(
+                                                                substitution_element_type)
+                    system_element_index_offset_array = np.repeat(
+                                np.arange(
+                                    0, (self.material.total_elements_per_unit_cell
+                                        * num_cells),
+                                    self.material.total_elements_per_unit_cell),
+                                self.material.n_elements_per_unit_cell[
+                                                substitution_element_type_index])
+                    site_indices = (
+                        np.tile(self.material.n_elements_per_unit_cell[
+                                    :substitution_element_type_index].sum()
+                                + np.arange(0,
+                                            self.material.n_elements_per_unit_cell[
+                                                substitution_element_type_index]),
+                                num_cells)
+                        + system_element_index_offset_array).tolist()
                 dopant_types_inserted += 1
             elif insertion_type == 'gradient':
                 # NOTE: 'available_site_indices' is populated based on an isolated step system size.
