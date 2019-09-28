@@ -2085,6 +2085,11 @@ class Run(object):
                                                 substitution_element_type_index]),
                                 num_cells)
                         + system_element_index_offset_array).tolist()
+                    num_site_indices = len(site_indices)
+                    pair_wise_distance_vector_array = np.zeros((num_site_indices, num_site_indices, self.neighbors.n_dim))
+                    for index, site_index in enumerate(site_indices):
+                        pair_wise_distance_vector_array[index, :] = self.system.pairwise_min_image_vector_data[site_index][site_indices]
+                    pair_wise_distance_array = np.linalg.norm(pair_wise_distance_vector_array, axis=2)
                 dopant_types_inserted += 1
             elif insertion_type == 'gradient':
                 # NOTE: 'available_site_indices' is populated based on an isolated step system size.
