@@ -2064,6 +2064,7 @@ class Run(object):
                             self.system.hop_neighbor_list,
                             available_site_indices, map_index, num_dopants))
                     dopant_site_indices[dopant_element_type] = dopant_type_dopant_site_indices
+                elif insertion_type == 'pairwise':
                 dopant_types_inserted += 1
             elif insertion_type == 'gradient':
                 # NOTE: 'available_site_indices' is populated based on an isolated step system size.
