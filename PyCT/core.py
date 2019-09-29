@@ -2117,6 +2117,11 @@ class Run(object):
                     num_planes = 2 * (system_size[0] + system_size[1])  # plane intersects a and b axis at half-unit cell length
                     bin_edge_shift = plane_contributions_max / num_planes / 2
                     bins = np.linspace(0, plane_contributions_max, num_planes+1) + bin_edge_shift  # 0 through one corner, 1 through diagonal, 2 through diagonally opposite corner
+                    atoms_sorted_by_plane = np.empty(num_planes, object)
+                    num_atoms_by_plane = np.zeros(num_planes)
+                    for plane_index in np.arange(num_planes):
+                        atoms_sorted_by_plane[plane_index] = cumulative_pair_indices[np.where((plane_contributions >= bins[plane_index]) & (plane_contributions < bins[plane_index+1]))[0]]
+                        num_atoms_by_plane[plane_index] = len(atoms_sorted_by_plane[plane_index])
                 dopant_types_inserted += 1
             elif insertion_type == 'gradient':
                 # NOTE: 'available_site_indices' is populated based on an isolated step system size.
