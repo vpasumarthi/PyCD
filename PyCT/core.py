@@ -2122,6 +2122,7 @@ class Run(object):
                     for plane_index in np.arange(num_planes):
                         atoms_sorted_by_plane[plane_index] = cumulative_pair_indices[np.where((plane_contributions >= bins[plane_index]) & (plane_contributions < bins[plane_index+1]))[0]]
                         num_atoms_by_plane[plane_index] = len(atoms_sorted_by_plane[plane_index])
+                    inter_plane_spacing = self.doping['pairwise'][map_index]['inter_plane_spacing']
                 dopant_types_inserted += 1
             elif insertion_type == 'gradient':
                 # NOTE: 'available_site_indices' is populated based on an isolated step system size.
