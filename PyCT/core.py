@@ -2108,7 +2108,7 @@ class Run(object):
                     for index, site_index in enumerate(cumulative_pair_indices):
                         site_positions[index] = self.neighbors.get_coordinates(system_size, site_index)
                     cell_lengths = np.linalg.norm(self.material.lattice_matrix, axis=1)
-                    plane_contributions = np.zeros((2 * num_pairs, self.neighbors.n_dim))
+                    plane_contributions = np.zeros(2 * num_pairs)
                     for dim_index in range(self.neighbors.n_dim):
                         if plane_of_arrangement[dim_index] != 0:
                             plane_contributions += site_positions[:, dim_index] / (plane_of_arrangement[dim_index] * cell_lengths[dim_index])
