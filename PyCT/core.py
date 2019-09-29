@@ -2122,7 +2122,18 @@ class Run(object):
                     for plane_index in np.arange(num_planes):
                         atoms_sorted_by_plane[plane_index] = cumulative_pair_indices[np.where((plane_contributions >= bins[plane_index]) & (plane_contributions < bins[plane_index+1]))[0]]
                         num_atoms_by_plane[plane_index] = len(atoms_sorted_by_plane[plane_index])
+
                     inter_plane_spacing = self.doping['pairwise'][map_index]['inter_plane_spacing']
+                    starting_plane_index = 0
+                    selected_plane_indices = range(starting_plane_index, num_planes, inter_plane_spacing)
+                    pair_atoms_in_selected_planes = np.hstack(atoms_sorted_by_plane[selected_plane_indices])
+                    if num_dopants == len(pair_atoms_in_selected_planes):
+                        dopant_site_indices[dopant_element_type] = pair_atoms_in_selected_planes
+                    else:
+                        print(f'Total number of pair atoms available with user-specified inter-plane spacing: {len(pair_atoms_in_selected_planes)}\n')
+                        print(f'Number of pair-wise substitutions ({num_dopants}) did not match with total number of pair atoms available.\n')
+                        print(f'Please re-run by changing number of pair-wise substitutions to {len(pair_atoms_in_selected_planes)}\n')
+                        exit()
                 dopant_types_inserted += 1
             elif insertion_type == 'gradient':
                 # NOTE: 'available_site_indices' is populated based on an isolated step system size.
