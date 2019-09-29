@@ -2084,12 +2084,21 @@ class Run(object):
                                             self.material.n_elements_per_unit_cell[
                                                 substitution_element_type_index]),
                                 num_cells)
-                        + system_element_index_offset_array).tolist()
+                        + system_element_index_offset_array)
                     num_site_indices = len(site_indices)
                     pair_wise_distance_vector_array = np.zeros((num_site_indices, num_site_indices, self.neighbors.n_dim))
                     for index, site_index in enumerate(site_indices):
                         pair_wise_distance_vector_array[index, :] = self.system.pairwise_min_image_vector_data[site_index][site_indices]
                     pair_wise_distance_array = np.linalg.norm(pair_wise_distance_vector_array, axis=2)
+                    intra_pair_distance_ang = self.doping['pairwise'][map_index]['intra_pair_distance']
+                    intra_pair_distance = intra_pair_distance_ang * constants.ANG2BOHR
+                    rounding_digits = len(str(intra_pair_distance_ang).split(".")[1])
+                    desired_pair_internal_indices_temp = np.where(pair_wise_distance_array.round(rounding_digits) == np.round(intra_pair_distance, rounding_digits))
+                    desired_pair_internal_indices = np.hstack((desired_pair_internal_indices_temp[0][:, None], desired_pair_internal_indices_temp[1][:, None]))
+
+                    # avoiding duplicate pairs
+                    desired_pair_internal_indices = desired_pair_internal_indices[desired_pair_internal_indices[:, 1] > desired_pair_internal_indices[:, 0]]
+                    desired_pair_indices = site_indices[desired_pair_internal_indices]
                 dopant_types_inserted += 1
             elif insertion_type == 'gradient':
                 # NOTE: 'available_site_indices' is populated based on an isolated step system size.
