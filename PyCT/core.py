@@ -2099,6 +2099,19 @@ class Run(object):
                     # avoiding duplicate pairs
                     desired_pair_internal_indices = desired_pair_internal_indices[desired_pair_internal_indices[:, 1] > desired_pair_internal_indices[:, 0]]
                     desired_pair_indices = site_indices[desired_pair_internal_indices]
+                    num_pairs = len(desired_pair_indices)
+
+                    # arrange pairs in plane_of_arrangement
+                    plane_of_arrangement = self.doping['pairwise'][map_index]['plane_of_arrangement']
+                    cumulative_pair_indices = desired_pair_indices.flatten()
+                    site_positions = np.zeros((2 * num_pairs, self.neighbors.n_dim))
+                    for index, site_index in enumerate(cumulative_pair_indices):
+                        site_positions[index] = self.neighbors.get_coordinates(system_size, site_index)
+                    cell_lengths = np.linalg.norm(self.material.lattice_matrix, axis=1)
+                    plane_contributions = np.zeros((2 * num_pairs, self.neighbors.n_dim))
+                    for dim_index in range(self.neighbors.n_dim):
+                        if plane_of_arrangement[dim_index] != 0:
+                            plane_contributions += site_positions[:, dim_index] / (plane_of_arrangement[dim_index] * cell_lengths[dim_index])
                 dopant_types_inserted += 1
             elif insertion_type == 'gradient':
                 # NOTE: 'available_site_indices' is populated based on an isolated step system size.
