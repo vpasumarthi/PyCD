@@ -2109,9 +2109,14 @@ class Run(object):
                         site_positions[index] = self.neighbors.get_coordinates(system_size, site_index)
                     cell_lengths = system_size * np.linalg.norm(self.material.lattice_matrix, axis=1)
                     plane_contributions = np.zeros(2 * num_pairs)
+                    plane_contributions_max = 0
                     for dim_index in range(self.neighbors.n_dim):
                         if plane_of_arrangement[dim_index] != 0:
                             plane_contributions += site_positions[:, dim_index] / (plane_of_arrangement[dim_index] * cell_lengths[dim_index])
+                            plane_contributions_max += 1
+                    num_planes = 2 * (system_size[0] + system_size[1])  # plane intersects a and b axis at half-unit cell length
+                    bin_edge_shift = plane_contributions_max / num_planes / 2
+                    bins = np.linspace(0, plane_contributions_max, num_planes+1) + bin_edge_shift  # 0 through one corner, 1 through diagonal, 2 through diagonally opposite corner
                 dopant_types_inserted += 1
             elif insertion_type == 'gradient':
                 # NOTE: 'available_site_indices' is populated based on an isolated step system size.
