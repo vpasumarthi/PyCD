@@ -2389,7 +2389,7 @@ class Run(object):
                         and dopant_species_type == species_type
                         and num_dopant_sites and num_species):
                         dopant_element_type = self.dopant_element_types[map_index]
-                        occupancy.extend(dopant_site_indices[dopant_element_type][:num_species])
+                        occupancy.extend(rnd.sample(dopant_site_indices[dopant_element_type], num_species)[:])
                         num_species -= len(dopant_site_indices[dopant_element_type][:num_species])
             if species_type in self.initial_occupancy:
                 occupancy.extend([index for index in self.initial_occupancy[species_type]])
