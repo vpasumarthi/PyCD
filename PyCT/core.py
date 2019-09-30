@@ -2488,7 +2488,8 @@ class Run(object):
                 if traj_index == 0:
                     dopant_site_indices_repo = {}
                 dopant_site_indices_repo[traj_index] = {}
-                prefix_list.append(f'Trajectory {traj_index+1}:\n')
+                if not pairwise_insertion:
+                    prefix_list.append(f'Trajectory {traj_index+1}:\n')
                 attempt_number = 1
                 old_min_shell_separation = [-1] * len(self.doping['num_dopants'])
                 while (np.any(old_min_shell_separation < self.doping['min_shell_separation']) and attempt_number <= self.doping['max_attempts']):
@@ -2521,14 +2522,22 @@ class Run(object):
                     self.get_site_wise_shell_indices(dopant_site_element_types,
                                                      system_shell_based_neighbors,
                                                      prefix_list))
-                output_file_path = traj_dir_path / 'site_indices'
+                if pairwise_insertion:
+                    output_file_path = dst_path / 'site_indices'
+                else:
+                    output_file_path = traj_dir_path / 'site_indices'
                 np.save(output_file_path, site_wise_shell_indices_array)
 
                 file_name = 'PreProduction'
                 prefix = ''.join(prefix_list)
                 print_time_elapsed = 0
-                generate_report(self.start_time, traj_dir_path, file_name,
-                                print_time_elapsed, prefix)
+                if pairwise_insertion:
+                    generate_report(self.start_time, dst_path, file_name,
+                                    print_time_elapsed, prefix)
+                    break
+                else:
+                    generate_report(self.start_time, traj_dir_path, file_name,
+                                    print_time_elapsed, prefix)
 
         for traj_index in range(self.n_traj):
             traj_dir_path = dst_path.joinpath(f'traj{traj_index+1}')
