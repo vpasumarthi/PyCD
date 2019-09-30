@@ -2659,7 +2659,6 @@ class Run(object):
             current_state_charge_config_prod = np.multiply(
                                     current_state_charge_config.transpose(),
                                     current_state_charge_config)
-            # TODO: How helpful is recording precomputed_array?
             current_state_energy = (ewald_neut
                                     + np.sum(np.multiply(current_state_charge_config_prod,
                                                          self.precomputed_array)))
