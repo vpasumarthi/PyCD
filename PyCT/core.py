@@ -2609,8 +2609,15 @@ class Run(object):
             if self.doping_active:
                 self.system_relative_energies = np.copy(self.undoped_system_relative_energies)
 
+                if 'pairwise' in self.doping['insertion_type']:
+                    map_index = self.doping['insertion_type'].index('pairwise')
+                    pairwise_insertion = self.doping['num_dopants'][map_index] != 0
+
                 # Load doping distribution
-                site_indices_file_path = traj_dir_path / 'site_indices.npy'
+                if pairwise_insertion:
+                    site_indices_file_path = traj_dir_path.parent / 'site_indices.npy'
+                else:
+                    site_indices_file_path = traj_dir_path / 'site_indices.npy'
                 site_indices_data = np.load(site_indices_file_path)
                 site_indices_list = site_indices_data[:, 0]
                 dopant_element_type_index_list = site_indices_data[:, 1]
