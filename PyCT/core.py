@@ -2306,8 +2306,14 @@ class Run(object):
         for dopant_element_type, dopant_element_type_site_indices in dopant_site_indices.items():
             dopant_element_type_index = self.dopant_element_types.index(dopant_element_type)
             substitution_element_type = self.substitution_element_types[dopant_element_type_index]
+            dopant_element_type_map = ':'.join([substitution_element_type, dopant_element_type])
+            map_index = self.doping['doping_element_map'].index(dopant_element_type_map)
+            insertion_type = self.doping['insertion_type'][map_index]
             if dopant_element_type == 'X':
                 max_neighbor_shells = 0
+            elif insertion_type == 'pairwise':
+                # set for the specific case of S-S pairwise dopant insertion with inter_plane_spacing == 4
+                max_neighbor_shells = len(self.relative_energies['doping'][substitution_element_type][map_index]) + 3
             else:
                 max_neighbor_shells = self.max_neighbor_shells[substitution_element_type]
             for dopant_site_index in dopant_element_type_site_indices:
