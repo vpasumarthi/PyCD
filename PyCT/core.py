@@ -2476,13 +2476,19 @@ class Run(object):
                           simulation output files needs to be saved'
         rnd.seed(random_seed)
         random_seed_list = [rnd.random() for traj_index in range(self.n_traj)]
+        for traj_index in range(self.n_traj):
+            traj_dir_path = dst_path.joinpath(f'traj{traj_index+1}')
+            Path.mkdir(traj_dir_path, parents=True, exist_ok=True)
+            random_state_file_path = traj_dir_path.joinpath(f'initial_rnd_state.dump')
+            rnd.seed(random_seed_list[traj_index])
+            pickle.dump(rnd.getstate(), open(random_state_file_path, 'wb'))
+
         if 'pairwise' in self.doping['insertion_type']:
             map_index = self.doping['insertion_type'].index('pairwise')
             pairwise_insertion = self.doping['num_dopants'][map_index] != 0
         for traj_index in range(self.n_traj):
             prefix_list = []
             traj_dir_path = dst_path.joinpath(f'traj{traj_index+1}')
-            Path.mkdir(traj_dir_path, parents=True, exist_ok=True)
 
             if self.doping_active:
                 if traj_index == 0:
@@ -2538,12 +2544,6 @@ class Run(object):
                 else:
                     generate_report(self.start_time, traj_dir_path, file_name,
                                     print_time_elapsed, prefix)
-
-        for traj_index in range(self.n_traj):
-            traj_dir_path = dst_path.joinpath(f'traj{traj_index+1}')
-            random_state_file_path = traj_dir_path.joinpath(f'initial_rnd_state.dump')
-            rnd.seed(random_seed_list[traj_index])
-            pickle.dump(rnd.getstate(), open(random_state_file_path, 'wb'))
         return None
 
     def do_kmc_steps(self, dst_path, output_data, random_seed, compute_mode):
