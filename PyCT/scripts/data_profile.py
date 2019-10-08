@@ -38,8 +38,9 @@ class DataProfile(object):
             for map_index, i_doping_element_map in enumerate(doping['doping_element_map']):
                 [_, dopant_element_type] = i_doping_element_map.split(':')
                 num_dopants = doping['num_dopants'][map_index]
+                num_shells = doping['num_shells'][map_index]
                 if num_dopants:
-                    self.field_tag = '_'.join([self.field_tag, f'{dopant_element_type}{num_dopants}'])
+                    self.field_tag = '_'.join([self.field_tag, f'{dopant_element_type}{num_dopants}_{num_shells}shells'])
         else:
             self.field_tag = '_'.join([self.field_tag, 'undoped'])
         return None
