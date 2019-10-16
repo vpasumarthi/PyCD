@@ -1116,7 +1116,6 @@ class System(object):
         sort_indices = np.argsort(energy_contribution_data)[::-1]
         sorted_new_k_vectors_consolidated = new_k_vectors_consolidated[sort_indices]
         sorted_energy_contribution_data = energy_contribution_data[sort_indices]
-        prefix_list = []
         prefix_list.append(f'k-vectors sorted in the decreasing order of their energy contributions\n')
         for k_vector_index in range(num_new_k_vectors_consolidated):
             k_vector = sorted_new_k_vectors_consolidated[k_vector_index]
