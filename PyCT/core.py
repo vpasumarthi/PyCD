@@ -2121,6 +2121,10 @@ class Run(object):
                             position_adjusted_desired_pair_indices[pair_index] = pair[0], pair[1]
                         else:
                             position_adjusted_desired_pair_indices[pair_index] = pair[1], pair[0]
+                    pair_wise_plane_contributions = np.zeros((num_pairs, 2))
+                    for pair_index, pair in enumerate(desired_pair_indices):
+                        pair_wise_plane_contributions[pair_index, 0] = plane_contributions[cumulative_pair_indices == pair[0]]
+                        pair_wise_plane_contributions[pair_index, 1] = plane_contributions[cumulative_pair_indices == pair[1]]
                     num_planes = 2 * (system_size[0] + system_size[1])  # plane intersects a and b axis at half-unit cell length
                     bin_edge_shift = plane_contributions_max / num_planes / 2
                     bins = np.linspace(0, plane_contributions_max, num_planes+1) + bin_edge_shift  # 0 through one corner, 1 through diagonal, 2 through diagonally opposite corner
