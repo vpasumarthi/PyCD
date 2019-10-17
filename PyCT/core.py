@@ -2106,12 +2106,13 @@ class Run(object):
                     site_positions = np.zeros((2 * num_pairs, self.neighbors.n_dim))
                     for index, site_index in enumerate(cumulative_pair_indices):
                         site_positions[index] = self.neighbors.get_coordinates(system_size, site_index)
-                    cell_lengths = system_size * np.linalg.norm(self.material.lattice_matrix, axis=1)
+                    site_positions = np.dot(site_positions,
+                                            np.linalg.inv(self.material.lattice_matrix * system_size))
                     plane_contributions = np.zeros(2 * num_pairs)
                     plane_contributions_max = 0
                     for dim_index in range(self.neighbors.n_dim):
                         if plane_of_arrangement[dim_index] != 0:
-                            plane_contributions += site_positions[:, dim_index] / (plane_of_arrangement[dim_index] * cell_lengths[dim_index])
+                            plane_contributions += site_positions[:, dim_index] / plane_of_arrangement[dim_index]
                             plane_contributions_max += 1
                     num_planes = 2 * (system_size[0] + system_size[1])  # plane intersects a and b axis at half-unit cell length
                     bin_edge_shift = plane_contributions_max / num_planes / 2
