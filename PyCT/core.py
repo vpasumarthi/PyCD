@@ -2126,11 +2126,8 @@ class Run(object):
                         pair_wise_plane_contributions[pair_index, 0] = plane_contributions[cumulative_pair_indices == pair[0]]
                         pair_wise_plane_contributions[pair_index, 1] = plane_contributions[cumulative_pair_indices == pair[1]]
                     sort_indices_plane_contributions = np.argsort(pair_wise_plane_contributions[:, 0])
-                    plane_contributions_sorted = pair_wise_plane_contributions[sort_indices_plane_contributions]
                     pair_indices_sorted_by_plane_contributions = position_adjusted_desired_pair_indices[sort_indices_plane_contributions]
                     num_planes = 2 * (system_size[0] + system_size[1])  # plane intersects a and b axis at half-unit cell length
-                    bin_edge_shift = plane_contributions_max / num_planes / 2
-                    bins = np.linspace(0, plane_contributions_max, num_planes+1) + bin_edge_shift  # 0 through one corner, 1 through diagonal, 2 through diagonally opposite corner
                     num_atoms_by_plane = np.append(np.arange(2, num_planes+1, 2), np.arange(num_planes-2, -1, -2)) * system_size[-1]
                     num_pairs_by_plane = (num_atoms_by_plane / 2).astype(int)
                     atoms_sorted_by_plane = np.empty(num_planes, object)
