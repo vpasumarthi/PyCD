@@ -2114,6 +2114,13 @@ class Run(object):
                         if plane_of_arrangement[dim_index] != 0:
                             plane_contributions += site_positions[:, dim_index] / plane_of_arrangement[dim_index]
                             plane_contributions_max += 1
+                    position_adjusted_desired_pair_indices = np.zeros((num_pairs, 2), int)
+                    for pair_index, pair in enumerate(desired_pair_indices):
+                        x_pos_diff = site_positions[cumulative_pair_indices == pair[1]][0][0] - site_positions[cumulative_pair_indices == pair[0]][0][0]
+                        if (x_pos_diff > 0 and x_pos_diff < 0.1244) or (x_pos_diff < 0 and x_pos_diff > -0.8758):
+                            position_adjusted_desired_pair_indices[pair_index] = pair[0], pair[1]
+                        else:
+                            position_adjusted_desired_pair_indices[pair_index] = pair[1], pair[0]
                     num_planes = 2 * (system_size[0] + system_size[1])  # plane intersects a and b axis at half-unit cell length
                     bin_edge_shift = plane_contributions_max / num_planes / 2
                     bins = np.linspace(0, plane_contributions_max, num_planes+1) + bin_edge_shift  # 0 through one corner, 1 through diagonal, 2 through diagonally opposite corner
