@@ -2117,6 +2117,13 @@ class Run(object):
                     sort_indices_plane_contributions = np.argsort(plane_contributions)
                     sorted_plane_contributions = plane_contributions[sort_indices_plane_contributions]
                     sorted_pair_indices = cumulative_pair_indices[sort_indices_plane_contributions]
+                    rounding_digits_for_plane_contributions = 6
+                    rounded_plane_contributions = sorted_plane_contributions.round(rounding_digits_for_plane_contributions)
+                    unique_plane_contributions = np.unique(rounded_plane_contributions)
+                    num_unique_plane_contributions = len(unique_plane_contributions)
+                    bin_pair_indices_by_unique_plane_contributions = np.empty(num_unique_plane_contributions, dtype=object)
+                    for plane_index, plane_contribution in enumerate(unique_plane_contributions):
+                        bin_pair_indices_by_unique_plane_contributions[plane_index] = sorted_pair_indices[rounded_plane_contributions == plane_contribution]
                     position_adjusted_desired_pair_indices = np.zeros((num_pairs, 2), int)
                     for pair_index, pair in enumerate(desired_pair_indices):
                         x_pos_diff = site_positions[cumulative_pair_indices == pair[1]][0][0] - site_positions[cumulative_pair_indices == pair[0]][0][0]
