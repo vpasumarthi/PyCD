@@ -2121,9 +2121,12 @@ class Run(object):
                     rounded_plane_contributions = sorted_plane_contributions.round(rounding_digits_for_plane_contributions)
                     unique_plane_contributions = np.unique(rounded_plane_contributions)
                     num_unique_plane_contributions = len(unique_plane_contributions)
-                    bin_pair_indices_by_unique_plane_contributions = np.empty(num_unique_plane_contributions, dtype=object)
-                    for plane_index, plane_contribution in enumerate(unique_plane_contributions):
-                        bin_pair_indices_by_unique_plane_contributions[plane_index] = sorted_pair_indices[rounded_plane_contributions == plane_contribution]
+                    coupled_plane_contributions = np.reshape(unique_plane_contributions, (int(num_unique_plane_contributions / 2), 2))
+                    bin_pair_indices_by_coupled_plane_contributions = np.empty(int(num_unique_plane_contributions / 2), dtype=object)
+                    for plane_index, plane_contribution in enumerate(coupled_plane_contributions):
+                        bin_pair_indices_by_coupled_plane_contributions[plane_index] = (
+                            np.append(sorted_pair_indices[rounded_plane_contributions == plane_contribution[0]],
+                                      sorted_pair_indices[rounded_plane_contributions == plane_contribution[1]]))
                     position_adjusted_desired_pair_indices = np.zeros((num_pairs, 2), int)
                     for pair_index, pair in enumerate(desired_pair_indices):
                         x_pos_diff = site_positions[cumulative_pair_indices == pair[1]][0][0] - site_positions[cumulative_pair_indices == pair[0]][0][0]
