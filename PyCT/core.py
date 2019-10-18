@@ -2123,10 +2123,13 @@ class Run(object):
                     num_unique_plane_contributions = len(unique_plane_contributions)
                     coupled_plane_contributions = np.reshape(unique_plane_contributions, (int(num_unique_plane_contributions / 2), 2))
                     bin_pair_indices_by_coupled_plane_contributions = np.empty(int(num_unique_plane_contributions / 2), dtype=object)
+                    num_planes = 2 * (system_size[0] + system_size[1])  # plane intersects a and b axis at half-unit cell length
+                    num_atoms_by_plane = np.zeros(num_planes)
                     for plane_index, plane_contribution in enumerate(coupled_plane_contributions):
                         bin_pair_indices_by_coupled_plane_contributions[plane_index] = (
                             np.append(sorted_pair_indices[rounded_plane_contributions == plane_contribution[0]],
                                       sorted_pair_indices[rounded_plane_contributions == plane_contribution[1]]))
+                        num_atoms_by_plane[plane_index] = len(bin_pair_indices_by_coupled_plane_contributions[plane_index])
                     position_adjusted_desired_pair_indices = np.zeros((num_pairs, 2), int)
                     for pair_index, pair in enumerate(desired_pair_indices):
                         x_pos_diff = site_positions[cumulative_pair_indices == pair[1]][0][0] - site_positions[cumulative_pair_indices == pair[0]][0][0]
