@@ -2130,29 +2130,6 @@ class Run(object):
                             np.append(sorted_pair_indices[rounded_plane_contributions == plane_contribution[0]],
                                       sorted_pair_indices[rounded_plane_contributions == plane_contribution[1]]))
                         num_atoms_by_plane[plane_index] = len(bin_pair_indices_by_coupled_plane_contributions[plane_index])
-                    position_adjusted_desired_pair_indices = np.zeros((num_pairs, 2), int)
-                    for pair_index, pair in enumerate(desired_pair_indices):
-                        x_pos_diff = site_positions[cumulative_pair_indices == pair[1]][0][0] - site_positions[cumulative_pair_indices == pair[0]][0][0]
-                        if (x_pos_diff > 0 and x_pos_diff < 0.1244) or (x_pos_diff < 0 and x_pos_diff > -0.8758):
-                            position_adjusted_desired_pair_indices[pair_index] = pair[0], pair[1]
-                        else:
-                            position_adjusted_desired_pair_indices[pair_index] = pair[1], pair[0]
-                    pair_wise_plane_contributions = np.zeros((num_pairs, 2))
-                    for pair_index, pair in enumerate(desired_pair_indices):
-                        pair_wise_plane_contributions[pair_index, 0] = plane_contributions[cumulative_pair_indices == pair[0]]
-                        pair_wise_plane_contributions[pair_index, 1] = plane_contributions[cumulative_pair_indices == pair[1]]
-                    sort_indices_pairwise_plane_contributions = np.argsort(pair_wise_plane_contributions[:, 0])
-                    pair_indices_sorted_by_plane_contributions = position_adjusted_desired_pair_indices[sort_indices_pairwise_plane_contributions]
-                    num_planes = 2 * (system_size[0] + system_size[1])  # plane intersects a and b axis at half-unit cell length
-                    num_atoms_by_plane = np.append(np.arange(2, num_planes+1, 2), np.arange(num_planes-2, -1, -2)) * system_size[-1]
-                    num_pairs_by_plane = (num_atoms_by_plane / 2).astype(int)
-                    atoms_sorted_by_plane = np.empty(num_planes, object)
-                    start_pair_index = 0
-                    for plane_index in range(num_planes):
-                        end_pair_index = start_pair_index + num_pairs_by_plane[plane_index]
-                        atoms_sorted_by_plane[plane_index] = pair_indices_sorted_by_plane_contributions[start_pair_index:end_pair_index].flatten()
-                        start_pair_index = end_pair_index
-
                     inter_plane_spacing = self.doping['pairwise'][map_index]['inter_plane_spacing']
                     starting_plane_index = 0
                     selected_plane_indices = range(starting_plane_index, num_planes, inter_plane_spacing)
