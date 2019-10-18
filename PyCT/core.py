@@ -2114,6 +2114,9 @@ class Run(object):
                         if plane_of_arrangement[dim_index] != 0:
                             plane_contributions += site_positions[:, dim_index] / plane_of_arrangement[dim_index]
                             plane_contributions_max += 1
+                    sort_indices_plane_contributions = np.argsort(plane_contributions)
+                    sorted_plane_contributions = plane_contributions[sort_indices_plane_contributions]
+                    sorted_pair_indices = cumulative_pair_indices[sort_indices_plane_contributions]
                     position_adjusted_desired_pair_indices = np.zeros((num_pairs, 2), int)
                     for pair_index, pair in enumerate(desired_pair_indices):
                         x_pos_diff = site_positions[cumulative_pair_indices == pair[1]][0][0] - site_positions[cumulative_pair_indices == pair[0]][0][0]
@@ -2125,8 +2128,8 @@ class Run(object):
                     for pair_index, pair in enumerate(desired_pair_indices):
                         pair_wise_plane_contributions[pair_index, 0] = plane_contributions[cumulative_pair_indices == pair[0]]
                         pair_wise_plane_contributions[pair_index, 1] = plane_contributions[cumulative_pair_indices == pair[1]]
-                    sort_indices_plane_contributions = np.argsort(pair_wise_plane_contributions[:, 0])
-                    pair_indices_sorted_by_plane_contributions = position_adjusted_desired_pair_indices[sort_indices_plane_contributions]
+                    sort_indices_pairwise_plane_contributions = np.argsort(pair_wise_plane_contributions[:, 0])
+                    pair_indices_sorted_by_plane_contributions = position_adjusted_desired_pair_indices[sort_indices_pairwise_plane_contributions]
                     num_planes = 2 * (system_size[0] + system_size[1])  # plane intersects a and b axis at half-unit cell length
                     num_atoms_by_plane = np.append(np.arange(2, num_planes+1, 2), np.arange(num_planes-2, -1, -2)) * system_size[-1]
                     num_pairs_by_plane = (num_atoms_by_plane / 2).astype(int)
