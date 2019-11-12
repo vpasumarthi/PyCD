@@ -2493,6 +2493,8 @@ class Run(object):
         if 'pairwise' in self.doping['insertion_type']:
             map_index = self.doping['insertion_type'].index('pairwise')
             pairwise_insertion = self.doping['num_dopants'][map_index] != 0
+        else:
+            pairwise_insertion = 0
         for traj_index in range(self.n_traj):
             prefix_list = []
             traj_dir_path = dst_path.joinpath(f'traj{traj_index+1}')
