@@ -2621,6 +2621,8 @@ class Run(object):
                 if 'pairwise' in self.doping['insertion_type']:
                     map_index = self.doping['insertion_type'].index('pairwise')
                     pairwise_insertion = self.doping['num_dopants'][map_index] != 0
+                else:
+                    pairwise_insertion = 0
 
                 # Load doping distribution
                 if pairwise_insertion:
