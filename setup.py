@@ -1,21 +1,21 @@
 #!/usr/bin/env python
 """
-This is a setup script to install PyCT
+This is a setup script to install PyCD
 """
 
 import setuptools
 
-from PyCT import __version__
+from PyCD import __version__
 
 
 if __name__ == "__main__":
     setuptools.setup(
-        name='PyCT',
+        name='PyCD',
         version=__version__,
         description='Python-based mesoscale model for Charge Transport',
         author='Viswanath Pasumarthi',
         author_email='pasumart@buffalo.edu',
-        url="https://github.com/vpasumarthi/PyCT",
+        url="https://github.com/vpasumarthi/PyCD",
         packages=setuptools.find_packages(),
         install_requires=[
             'scipy',
