@@ -1,8 +1,8 @@
-[![Build Status](https://travis-ci.org/vpasumarthi/PyCT.svg?branch=master)](https://travis-ci.org/vpasumarthi/PyCT)
-[![codecov](https://codecov.io/gh/vpasumarthi/PyCT/branch/master/graph/badge.svg)](https://codecov.io/gh/vpasumarthi/PyCT)
+[![Build Status](https://travis-ci.org/vpasumarthi/PyCD.svg?branch=master)](https://travis-ci.org/vpasumarthi/PyCD)
+[![codecov](https://codecov.io/gh/vpasumarthi/PyCD/branch/master/graph/badge.svg)](https://codecov.io/gh/vpasumarthi/PyCD)
 
-# PyCT
-Python-based mesoscale model for Charge Transport
+# PyCD
+Python-based mesoscale model for Charge Dynamics
 
 ## Package Installation
 
@@ -10,10 +10,10 @@ Python-based mesoscale model for Charge Transport
 
 ```bash
 # Clone this repository
-$ git clone https://github.com/vpasumarthi/PyCT.git
+$ git clone https://github.com/vpasumarthi/PyCD.git
 
 # Navigate to root directory
-$ cd PyCT
+$ cd PyCD
 
 # Perform a local installation of package with Pip 
 $ pip install -e .
@@ -23,16 +23,16 @@ $ pip install -e .
 
 ```bash
 # Create a new conda environment
-$ conda create -n pyct-env python=3.6
+$ conda create -n pycd-env python=3.6
 
 # Activate the new conda environment
-$ source activate pyct-env
+$ source activate pycd-env
 
 # Clone this repository
-$ git clone https://github.com/vpasumarthi/PyCT.git
+$ git clone https://github.com/vpasumarthi/PyCD.git
 
 # Navigate to root directory
-$ cd PyCT
+$ cd PyCD
 
 # Install requirements
 $ pip install -r requirements.txt
