@@ -5,7 +5,7 @@
 import numpy as np
 import yaml
 
-from PyCT.core import Material, Neighbors, System
+from PyCD.core import Material, Neighbors, System
 
 
 def material_setup(input_directory_path, system_size, pbc,

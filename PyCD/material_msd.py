@@ -5,7 +5,7 @@
 import numpy as np
 import yaml
 
-from PyCT.core import Material, Analysis
+from PyCD.core import Material, Analysis
 
 
 def material_msd(dst_path):

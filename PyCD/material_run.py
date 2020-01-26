@@ -5,7 +5,7 @@
 import numpy as np
 import yaml
 
-from PyCT.core import Material, Neighbors, System, Run
+from PyCD.core import Material, Neighbors, System, Run
 
 
 def material_run(dst_path):
@@ -80,7 +80,7 @@ def material_run(dst_path):
         r_cut = config_params.r_cut
         k_cut = config_params.k_cut
         precision_parameters = config_params.precision_parameters
-        
+
         # Load step hop neighbor list if needed
         step_system_size_array = []
         step_hop_neighbor_master_list = []
@@ -118,7 +118,7 @@ def material_run(dst_path):
                         if import_flag:
                             step_work_dir_depth = (
                                 sim_params['doping']['step_work_dir_depth'] + 1
-                                if sim_params['compute_mode'] == 'parallel' else sim_params['doping']['step_work_dir_depth']) 
+                                if sim_params['compute_mode'] == 'parallel' else sim_params['doping']['step_work_dir_depth'])
                             step_input_directory_path = (
                                 dst_path.resolve().parents[step_work_dir_depth - 1]
                                 / ('SystemSize[' + ','.join(str(element) for element in step_system_size) + ']')

@@ -5,7 +5,7 @@
 import numpy as np
 import yaml
 
-from PyCT.core import Material, Neighbors, System, Run
+from PyCD.core import Material, Neighbors, System, Run
 
 
 def material_preprod(dst_path):
@@ -72,7 +72,7 @@ def material_preprod(dst_path):
         r_cut = config_params.r_cut
         k_cut = config_params.k_cut
         precision_parameters = config_params.precision_parameters
-        
+
         # Load step hop neighbor list if needed
         step_system_size_array = []
         step_hop_neighbor_master_list = []
