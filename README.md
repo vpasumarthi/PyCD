@@ -1,8 +1,12 @@
-[![Build Status](https://travis-ci.org/vpasumarthi/PyCD.svg?branch=master)](https://travis-ci.org/vpasumarthi/PyCD)
-[![codecov](https://codecov.io/gh/vpasumarthi/PyCD/branch/master/graph/badge.svg)](https://codecov.io/gh/vpasumarthi/PyCD)
+PyCD
+==============================
+[//]: # (Badges)
+[![Travis Build Status](https://travis-ci.com/vpasumarthi/PyCD.svg?branch=master)](https://travis-ci.com/vpasumarthi/PyCD)
+[![codecov](https://codecov.io/gh/vpasumarthi/PyCD/branch/master/graph/badge.svg)](https://codecov.io/gh/vpasumarthi/PyCD/branch/master)
 
-# PyCD
-Python-based mesoscale model for Charge Dynamics
+Python-based Charge Dynamics
+
+Open-source, cross-platform application supporting lattice-based kinetic Monte Carlo simulations in crystalline systems
 
 ## Package Installation
 
@@ -40,3 +44,15 @@ $ pip install -r requirements.txt
 # Perform a local installation of package with Pip 
 $ pip install -e .
 ```
+
+### Copyright
+
+Copyright (c) 2020, Viswanath Pasumarthi
+
+
+#### Acknowledgements
+ 
+Project based on the 
+[Computational Molecular Science Python Cookiecutter](https://github.com/molssi/cookiecutter-cms) version 1.1.
+
+
