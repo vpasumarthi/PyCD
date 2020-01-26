@@ -1,35 +1,51 @@
-# After changing this file, check it on:
-#   http://lint.travis-ci.org/
 language: python
 
 # Run jobs on container-based infrastructure, can be overridden per job
-sudo: false
 
 matrix:
   include:
-    - python: 3.5
-    - python: 3.6
+    # Extra includes for OSX since python language is not available by default on OSX
+    - os: osx
+      language: generic
+      env: PYTHON_VER=3.6
+    - os: osx
+      language: generic
+      env: PYTHON_VER=3.7
+
+
+    - os: linux
+      language: generic  # No need to set Python version since its conda
+      env: PYTHON_VER=3.6
+    - os: linux
+      language: generic
+      env: PYTHON_VER=3.7
+
 
 before_install:
+    # Additional info about the build
   - uname -a
-  - free -m
   - df -h
   - ulimit -a
+
+    # Install the Python environment
+  - source devtools/travis-ci/before_install.sh
   - python -V
-  - pip install --upgrade pip setuptools
-  - pip install pytest pytest-cov
-  - pip install numpy
-  - pip install codecov
-  - pip install -e .
+
+install:
+
+    # Create test environment for package
+  - python devtools/scripts/create_conda_env.py -n=test -p=$PYTHON_VER devtools/conda-envs/test_env.yaml
+    # Activate the test environment
+  - conda activate test
+    # Build and install package
+  - python setup.py develop --no-deps
+
 
 script:
-  - py.test -v --cov=./
-
-# after_success:
-#   - ./tools/travis-upload-wheel.sh
+  - pytest -v --cov=PyCD PyCD/tests/
 
 notifications:
     email: false
 
 after_success:
-- codecov
+  - codecov
