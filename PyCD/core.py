@@ -23,8 +23,8 @@ from matplotlib.offsetbox import AnchoredText
 from textwrap import wrap
 import pickle
 
-from PyCT.io import read_poscar, generate_report
-from PyCT import constants
+from PyCD.io import read_poscar, generate_report
+from PyCD import constants
 
 plt.switch_backend('Agg')
 
