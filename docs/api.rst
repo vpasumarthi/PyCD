@@ -6,4 +6,5 @@ API Documentation
 
    PyCD.material_setup
    PyCD.Material
+   PyCD.Neighbors
 
