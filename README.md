@@ -12,6 +12,8 @@ Python-based Charge Dynamics
 
 Open-source, cross-platform application supporting lattice-based kinetic Monte Carlo simulations in crystalline systems
 
+Documentation available at [`pycd.readthedocs.io`](https://pycd.readthedocs.io/en/latest/).
+
 ## Package Installation
 
 ### For production:
