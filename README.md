@@ -3,6 +3,7 @@ PyCD
 [//]: # (Badges)
 [![Travis Build Status](https://travis-ci.com/vpasumarthi/PyCD.svg?branch=master)](https://travis-ci.com/vpasumarthi/PyCD)
 [![codecov](https://codecov.io/gh/vpasumarthi/PyCD/branch/master/graph/badge.svg)](https://codecov.io/gh/vpasumarthi/PyCD/branch/master)
+[![License: MPL 2.0](https://img.shields.io/badge/License-MPL%202.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
 
 Python-based Charge Dynamics
 
