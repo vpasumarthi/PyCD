@@ -4,6 +4,5 @@ API Documentation
 .. autosummary::
    :toctree: autosummary
 
-   Material
-   Neighbors
+   material_setup
 
