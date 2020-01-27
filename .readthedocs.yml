@@ -15,5 +15,5 @@ python:
 formats:
     - pdf
     - epub
-    - html
+    - htmlzip
 
