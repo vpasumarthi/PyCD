@@ -1,5 +1,5 @@
-PyCD
-==============================
+Python-based Charge Dynamics (PyCD)
+===================================
 [//]: # (Badges)
 [![Travis Build Status](https://travis-ci.com/vpasumarthi/PyCD.svg?branch=master)](https://travis-ci.com/vpasumarthi/PyCD)
 [![codecov](https://codecov.io/gh/vpasumarthi/PyCD/branch/master/graph/badge.svg)](https://codecov.io/gh/vpasumarthi/PyCD/branch/master)
@@ -7,8 +7,6 @@ PyCD
 [![Version](https://img.shields.io/badge/version-v4.0-blue)](https://github.com/vpasumarthi/PyCD/tree/v4.0)
 [![python](https://img.shields.io/badge/python-3.6%20%7C%203.7%20%7C%203.8-blue)](https://github.com/vpasumarthi/PyCD)
 [![Documentation Status](https://readthedocs.org/projects/pycd/badge/?version=latest)](https://pycd.readthedocs.io/en/latest/?badge=latest)
-
-Python-based Charge Dynamics
 
 Open-source, cross-platform application supporting lattice-based kinetic Monte Carlo simulations in crystalline systems
 
