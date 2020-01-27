@@ -5,6 +5,7 @@ Open-source, cross-platform application supporting lattice-based kinetic Monte C
 
 # Add imports here
 from .core import *
+from .material_setup import material_setup
 
 # Handle versioneer
 from ._version import get_versions
