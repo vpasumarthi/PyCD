@@ -4,5 +4,5 @@ API Documentation
 .. autosummary::
    :toctree: autosummary
 
-   material_setup
+   PyCD.material_setup
 
