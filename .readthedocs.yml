@@ -12,5 +12,3 @@ python:
       path: .
     - requirements: requirements.txt
 
-conda:
-  environment: docs/doc_env.yaml
