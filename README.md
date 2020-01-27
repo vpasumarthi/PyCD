@@ -5,6 +5,7 @@ PyCD
 [![codecov](https://codecov.io/gh/vpasumarthi/PyCD/branch/master/graph/badge.svg)](https://codecov.io/gh/vpasumarthi/PyCD/branch/master)
 [![License](https://img.shields.io/badge/License-MPL%202.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
 [![Version](https://img.shields.io/badge/version-v4.0-blue)](https://github.com/vpasumarthi/PyCD/tree/v4.0)
+[![python](https://img.shields.io/badge/python-3.6%20%7C%203.7%20%7C%203.8-blue)](https://github.com/vpasumarthi/PyCD)
 
 Python-based Charge Dynamics
 
