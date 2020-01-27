@@ -1,11 +1,6 @@
 API Documentation
 =================
 
-.. autosummary::
-   :toctree: autosummary
-
-   PyCD.material_setup
-
 .. autoclass:: PyCD.Material
    :members: generate_sites
 
@@ -21,4 +16,18 @@ API Documentation
 .. autoclass:: PyCD.Analysis
    :members: compute_msd, generate_msd_plot
 
+.. automodule:: PyCD.material_setup
+   :members: material_setup
+
+.. automodule:: PyCD.material_preprod
+   :members: material_preprod
+
+.. automodule:: PyCD.material_run
+   :members: material_run
+
+.. automodule:: PyCD.material_msd
+   :members: material_msd
+
+.. automodule:: PyCD.io
+   :members: read_poscar, write_poscar, generate_report
 
