@@ -9,6 +9,6 @@ API Documentation
    PyCD.Neighbors
    PyCD.System.pot_r_ewald
 
-.. autoclass:: Neighbors
+.. autoclass:: PyCD.Neighbors
    :members: compute_distance, generate_neighbor_list, get_coordinates
 
