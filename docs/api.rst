@@ -32,7 +32,7 @@ API Documentation
    :members: materialCOCMSD
 
 .. automodule:: PyCD.io
-   :members: read_poscar, write_poscar, generate_report
+   :members:
 
 .. autoclass:: PyCD.scripts.data_profile.DataProfile
    :members: generate_work_dir_path, generate_profile_plot, diffusion_profile, drvift_mobility_profile, runtime_profile
