@@ -18,13 +18,7 @@ def read_poscar(input_file_path):
 
     Returns
     -------
-    poscar_info : dict of {str : np.ndarray,
-                           str : list,
-                           str : list,
-                           str : int,
-                           str : str,
-                           str : np.ndarray,
-                           str : str}
+    poscar_info : dict of {str : np.ndarray, str : list, str : list, str : int, str : str, str : np.ndarray, str : str}
         Dict of POSCAR-derived quantities
     """
     input_file = open(input_file_path, 'r')
