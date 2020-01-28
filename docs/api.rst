@@ -17,19 +17,19 @@ API Documentation
    :members: compute_msd, generate_msd_plot
 
 .. automodule:: PyCD.material_setup
-   :members: material_setup
+   :members:
 
 .. automodule:: PyCD.material_preprod
-   :members: material_preprod
+   :members:
 
 .. automodule:: PyCD.material_run
-   :members: material_run
+   :members:
 
 .. automodule:: PyCD.material_msd
-   :members: material_msd
+   :members:
 
 .. automodule:: PyCD.material_coc_msd
-   :members: materialCOCMSD
+   :members:
 
 .. automodule:: PyCD.io
    :members:
@@ -38,17 +38,17 @@ API Documentation
    :members: generate_work_dir_path, generate_profile_plot, diffusion_profile, drvift_mobility_profile, runtime_profile
 
 .. automodule:: PyCD.scripts.mean_distance
-   :members: compute_mean_distance, generate_mean_displacement_analysis_log_report
+   :members:
 
 .. automodule:: PyCD.scripts.coc_msd
-   :members: compute_coc_msd, plot_coc_dispvector, generate_coc_msd_plot, generate_coc_msd_analysis_log_report
+   :members:
 
 .. automodule:: PyCD.scripts.generate_msd_analytical_data
-   :members: generate_msd_analytical_data, generate_msd_analytical_data_report
+   :members:
 
 .. automodule:: PyCD.scripts.generate_species_site_sd_list
-   :members: generate_species_site_sd_list, generate_species_site_sd_list_report
+   :members:
 
 .. automodule:: PyCD.scripts.generate_transition_prob_matrix
-   :members: generate_transition_prob_matrix, generate_transition_prob_matrix_list_report
+   :members:
 
