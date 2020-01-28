@@ -8,6 +8,25 @@ import numpy as np
 
 
 def read_poscar(input_file_path):
+    """
+    This function reads in a VASP-style POSCAR file and returns dict containing a variety of POSCAR-derived quantities.
+
+    Parameters
+    ----------
+    file_location : str
+        The location of the POSCAR file to read in
+
+    Returns
+    -------
+    poscar_info : dict of {str : np.ndarray,
+                           str : list,
+                           str : list,
+                           str : int,
+                           str : str,
+                           str : np.ndarray,
+                           str : str}
+        Dict of POSCAR-derived quantities
+    """
     input_file = open(input_file_path, 'r')
     element_types_line_number = 6
     for line_index, line in enumerate(input_file):
@@ -70,6 +89,30 @@ def read_poscar(input_file_path):
 def write_poscar(src_file_path, dst_file_path, file_format,
                  element_types_cluster, num_elements_cluster, coordinate_type,
                  coordinates_cluster):
+    """
+    This function writes out a VASP-style POSCAR file and returns dict containing a variety of POSCAR-derived quantities.
+
+    Parameters
+    ----------
+    src_file_path : str
+        The location of the source file to read in
+    dst_file_path : str
+        The location of the destination file to write out
+    file_format : str
+        The file format of the source coordinate file: VASP, VESTA, unknown
+    element_types_cluster : list
+        List of element types in the cluster
+    num_elements_cluster : list
+        List containing number of elements for each element type listed in element_types_cluster
+    coordinate_type : str
+        Nature of coordinates : Cartesian or Fractional
+    coordinates_cluster : np.ndarray
+        NumPy array containing the coordinates within the selected cluster
+
+    Returns
+    -------
+    None : NoneType
+    """
     unmodified_line_number_limit = 5
     src_file = open(src_file_path, 'r')
     open(dst_file_path, 'w').close()
@@ -123,7 +166,26 @@ def write_poscar(src_file_path, dst_file_path, file_format,
 
 def generate_report(start_time, dst_path, file_name, print_time_elapsed,
                     prefix=None):
-    """Generates a report file to the output directory"""
+    """
+    Generates a report file to the output directory
+    This function writes out a VASP-style POSCAR file and returns dict containing a variety of POSCAR-derived quantities.
+
+    Parameters
+    ----------
+    start_time : datetime.datetime
+        Time value when this function is called
+    dst_path : str
+        The location of the destination file to write out
+    file_name : str
+        The file name of the output report
+    print_time_elapsed : bool
+        Flag value to whether to print elapsed time or not
+    prefix : str or NoneType
+        String value to prefix the newly generated report content
+    Returns
+    -------
+    None : NoneType
+    """
     report_file_name = file_name + '.log'
     report_file_path = dst_path / report_file_name
     report = open(report_file_path, 'w')
