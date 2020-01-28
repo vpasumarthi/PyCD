@@ -30,43 +30,17 @@ plt.switch_backend('Agg')
 
 
 class Material(object):
-    """Defines the properties and structure of working material
-    :param str name: A string representing the material name
-    :param list element_types: list of chemical elements
-    :param dict species_to_element_type_map: list of charge carrier species
-    :param unit_cell_coords: positions of all elements in the unit cell
-    :type unit_cell_coords: np.array (nx3)
-    :param element_type_index_list: list of element types for all unit cell
-            coordinates
-    :type element_type_index_list: np.array (n)
-    :param dict charge_types: types of atomic charges considered for the
-            working material
-    :param list lattice_parameters: list of three lattice constants in
-            angstrom and three angles between them in degrees
-    :param float vn: typical frequency for nuclear motion
-    :param dict lambda_values: Reorganization energies
-    :param dict v_ab: Electronic coupling matrix element
-    :param dict neighbor_cutoff_dist: List of neighbors and their respective
-            cutoff distances in angstrom
-    :param float neighbor_cutoff_dist_tol: Tolerance value in angstrom for
-            neighbor cutoff distance
-    :param str element_type_delimiter: Delimiter between element types
-    :param float epsilon: Dielectric constant of the material
-
-    The additional attributes are:
-        * **n_elements_per_unit_cell** (np.array (n)): element-type wise total
-            number of elements in a unit cell
-        * **element_type_to_species_map** (dict): dictionary of element to
-                species mapping
-        * **hop_element_types** (dict): dictionary of species to
-            hopping element types separated by element_type_delimiter
-        * **lattice_matrix** (np.array (3x3): lattice cell matrix
+    """
+    Defines the properties and structure of working material
     """
 
     def __init__(self, material_parameters):
         """
+        Defines the properties and structure of working material parameters
+        ----------
 
-        :param material_parameters:
+        material_parameters : ReturnValues object
+            Object with values of material parameters
         """
         # Read Input POSCAR
         poscar_info = (
@@ -173,19 +147,20 @@ class Material(object):
             for species_type in self.species_types}
 
     def generate_sites(self, element_type_indices, cell_size):
-        """Returns system_element_indices and coordinates of specified elements
-            in a cell of size *cell_size*
+        """
+        Generates NumPy array of sites for the specified element types and cell size
 
-        :param str element_type_indices: element type indices
-        :param cell_size: size of the cell
-        :type cell_size: np.array (3x1)
-        :return: an object with following attributes:
+        Parameters
+        ----------
+        element_type_indices : 
+            
+        cell_size : np.ndarray
+            size of the cell
 
-            * **cell_coordinates** (np.array (nx3)):
-            * **quantum_index_list** (np.array (nx5)):
-            * **system_element_index_list** (np.array (n)):
-
-        :raises ValueError: if the input cell_size is less than or equal to 0.
+        Returns
+        -------
+        return_sites : object
+            Object of cell_coordinates, quantum_index_list, system_element_index_list
         """
         assert all(size > 0 for size in cell_size), 'Input size should always \
                                                     be greater than 0'
