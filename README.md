@@ -6,6 +6,7 @@ Python-based Charge Dynamics (PyCD)
 [![Version](https://img.shields.io/badge/version-v4.0-blue)](https://github.com/vpasumarthi/PyCD/tree/v4.0)
 [![python](https://img.shields.io/badge/python-3.6%20%7C%203.7%20%7C%203.8-blue)](https://github.com/vpasumarthi/PyCD)
 [![Documentation Status](https://readthedocs.org/projects/pycd/badge/?version=latest)](https://pycd.readthedocs.io/en/latest/?badge=latest)
+[![DOI](https://zenodo.org/badge/90578885.svg)](https://zenodo.org/badge/latestdoi/90578885)
 
 Open-source, cross-platform application supporting lattice-based kinetic Monte Carlo simulations in crystalline systems
 
