@@ -2,6 +2,8 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+"""Collection of physical constants used throughout the package."""
+
 # CONSTANTS
 EPSILON0 = 8.854187817E-12  # Electric constant in F.m-1
 ANG = 1E-10  # Angstrom in m

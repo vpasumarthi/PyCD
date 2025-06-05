@@ -2,6 +2,8 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+"""I/O helper routines used for preparing and analyzing simulations."""
+
 from datetime import datetime
 
 import numpy as np

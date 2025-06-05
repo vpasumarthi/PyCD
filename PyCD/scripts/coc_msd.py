@@ -2,6 +2,8 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+"""Command-line helper to compute center-of-charge MSD from trajectories."""
+
 from datetime import datetime
 
 import numpy as np
