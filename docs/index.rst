@@ -11,6 +11,7 @@ Welcome to PyCD's documentation!
    :caption: Contents:
 
    getting_started
+   running_examples
    api
 
 
