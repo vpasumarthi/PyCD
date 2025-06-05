@@ -2,6 +2,8 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+"""Generate diffusivity and runtime profiles from simulation outputs."""
+
 from textwrap import wrap
 from datetime import timedelta
 
@@ -10,6 +12,33 @@ import matplotlib.pyplot as plt
 
 
 class DataProfile(object):
+    """Generate diffusivity and runtime statistics over many runs.
+
+    Parameters
+    ----------
+    dst_path : pathlib.Path
+        Destination directory for generated profiles.
+    system_directory_path : pathlib.Path
+        Root directory containing simulation results.
+    variable_quantity_type_index : int
+        Index describing which quantity is varied across runs.
+    variable_quantity_index : int
+        Species index varied when ``variable_quantity_type_index`` equals 1.
+    variable_quantity_list : list
+        Sequence of values for the variable quantity.
+    species_count : list
+        Base count of [electrons, holes].
+    t_final : float
+        Simulation end time.
+    time_interval : float
+        Time step used in the simulation.
+    n_traj : int
+        Number of trajectories per run.
+    external_field : dict
+        Dictionary describing external field parameters.
+    doping : dict
+        Dictionary with doping information.
+    """
     def __init__(self, dst_path, system_directory_path,
                  variable_quantity_type_index, variable_quantity_index,
                  variable_quantity_list, species_count,
@@ -48,6 +77,18 @@ class DataProfile(object):
         return None
 
     def generate_work_dir_path(self, species_count):
+        """Create the directory path for a given species configuration.
+
+        Parameters
+        ----------
+        species_count : sequence of int
+            Two-element iterable containing the numbers of electrons and holes.
+
+        Returns
+        -------
+        pathlib.Path
+            Path to the corresponding simulation directory.
+        """
         (n_electrons, n_holes) = species_count
         parent_dir1 = 'SimulationFiles'
         parent_dir2 = (str(n_electrons)
