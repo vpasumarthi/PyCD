@@ -300,9 +300,8 @@ class Neighbors(object):
         """
         Apply minimum image convention efficiently for non-orthorhombic cells.
         
-        For non-orthorhombic cells, the simple fractional coordinate wrapping
-        to [-0.5, 0.5) is not always optimal. This method checks a small set
-        of candidate offsets to find the true minimum.
+        Uses fractional coordinates with a small neighborhood search to handle
+        non-orthorhombic cases correctly while remaining much faster than brute-force.
         
         :param displacement_vector: 3D displacement vector in Cartesian coordinates
         :return: minimum image displacement vector in Cartesian coordinates
@@ -310,40 +309,51 @@ class Neighbors(object):
         # Convert to fractional coordinates
         frac_displacement = np.dot(displacement_vector, self.simulation_cell_matrix_inv)
         
-        # For non-PBC dimensions, no offset is allowed
-        # For PBC dimensions, check offsets of -1, 0, +1 around the wrapped position
-        candidate_offsets = []
-        
-        for dx in ([-1, 0, 1] if self.pbc_mask[0] else [0]):
-            for dy in ([-1, 0, 1] if self.pbc_mask[1] else [0]):
-                for dz in ([-1, 0, 1] if self.pbc_mask[2] else [0]):
-                    candidate_offsets.append([dx, dy, dz])
-        
         # Start with the simple wrapped solution as baseline
         base_offset = np.zeros(3)
-        base_offset[self.pbc_mask] = -np.floor(frac_displacement[self.pbc_mask] + 0.5)
+        base_offset[self.pbc_mask] = -np.round(frac_displacement[self.pbc_mask])
+        # Non-PBC dimensions keep offset of 0 (no wrapping)
         
-        best_distance = float('inf')
-        best_displacement = None
+        # Calculate baseline result
+        frac_wrapped = frac_displacement + base_offset
+        baseline_result = np.dot(frac_wrapped, self.simulation_cell_matrix)
         
-        # Check each candidate offset
-        for offset_delta in candidate_offsets:
-            offset = base_offset + np.array(offset_delta)
-            
-            # Calculate the wrapped fractional displacement
-            frac_wrapped = frac_displacement + offset
-            
-            # Convert back to Cartesian
-            cart_displacement = np.dot(frac_wrapped, self.simulation_cell_matrix)
-            
-            # Calculate distance
-            distance = np.linalg.norm(cart_displacement)
-            
-            if distance < best_distance:
-                best_distance = distance
-                best_displacement = cart_displacement
+        best_distance = np.linalg.norm(baseline_result)
+        best_result = baseline_result
         
-        return best_displacement
+        # Check a small neighborhood around the base offset
+        # This covers the cases where simple rounding is not optimal
+        search_range = 1  # Check ±1 around the base offset
+        
+        offsets_to_check = []
+        for dx in range(-search_range, search_range + 1):
+            for dy in range(-search_range, search_range + 1):
+                for dz in range(-search_range, search_range + 1):
+                    if dx == 0 and dy == 0 and dz == 0:
+                        continue  # Skip baseline case already computed
+                    
+                    # Only apply offsets in PBC dimensions
+                    offset_delta = np.array([
+                        dx if self.pbc_mask[0] else 0,
+                        dy if self.pbc_mask[1] else 0, 
+                        dz if self.pbc_mask[2] else 0
+                    ])
+                    
+                    if np.any(offset_delta != 0):  # Skip if no effective offset
+                        offsets_to_check.append(offset_delta)
+        
+        # Test each offset
+        for offset_delta in offsets_to_check:
+            test_offset = base_offset + offset_delta
+            test_frac_wrapped = frac_displacement + test_offset
+            test_result = np.dot(test_frac_wrapped, self.simulation_cell_matrix)
+            test_distance = np.linalg.norm(test_result)
+            
+            if test_distance < best_distance:
+                best_distance = test_distance
+                best_result = test_result
+        
+        return best_result
 
     def apply_minimum_image_convention_vectorized(self, displacement_vectors):
         """
@@ -352,8 +362,8 @@ class Neighbors(object):
         :param displacement_vectors: Array of shape (N, 3) containing displacement vectors
         :return: Array of shape (N, 3) containing minimum image displacement vectors
         """
-        # For simplicity in vectorization, fall back to per-vector processing
-        # This could be optimized further if needed
+        # For the optimized version, use the single-vector method for each vector
+        # This could be further optimized with true vectorization if needed
         results = np.array([
             self.apply_minimum_image_convention(dv) 
             for dv in displacement_vectors
