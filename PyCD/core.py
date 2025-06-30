@@ -192,25 +192,42 @@ class Material(object):
                                       dtype=int)
         system_element_index_list = np.zeros(num_cells * n_sites_per_unit_cell,
                                              dtype=int)
-        i_unit_cell = 0
-        for x_index in range(cell_size[0]):
-            for y_index in range(cell_size[1]):
-                for z_index in range(cell_size[2]):
-                    start_index = i_unit_cell * n_sites_per_unit_cell
-                    end_index = start_index + n_sites_per_unit_cell
-                    translation_vector = np.dot([x_index, y_index, z_index],
-                                                self.lattice_matrix)
-                    cell_coordinates[start_index:end_index] = (
-                                unit_cell_element_coords + translation_vector)
-                    system_element_index_list[start_index:end_index] = (
-                                            i_unit_cell * n_sites_per_unit_cell
-                                            + unit_cell_element_index_list)
-                    quantum_index_list[start_index:end_index] = np.hstack(
-                                (np.tile(np.array([x_index, y_index, z_index]),
-                                         (n_sites_per_unit_cell, 1)),
-                                 unit_cell_element_type_index,
-                                 unit_cell_element_type_element_index_list))
-                    i_unit_cell += 1
+        # Optimized: Use meshgrid to generate all coordinate combinations at once
+        x_indices, y_indices, z_indices = np.meshgrid(
+            np.arange(cell_size[0]),
+            np.arange(cell_size[1]), 
+            np.arange(cell_size[2]),
+            indexing='ij')
+        
+        # Flatten and stack to get all unit cell indices
+        unit_cell_indices = np.column_stack((
+            x_indices.flatten(),
+            y_indices.flatten(),
+            z_indices.flatten()))
+        
+        # Calculate all translation vectors at once
+        translation_vectors = np.dot(unit_cell_indices, self.lattice_matrix)
+        
+        # Use broadcasting to add translation vectors to all unit cell coordinates
+        # Shape: (num_cells, n_sites_per_unit_cell, 3)
+        all_coordinates = (unit_cell_element_coords[np.newaxis, :, :] + 
+                          translation_vectors[:, np.newaxis, :])
+        
+        # Reshape to final format
+        cell_coordinates = all_coordinates.reshape((num_cells * n_sites_per_unit_cell, 3))
+        
+        # Vectorized computation of other arrays
+        for i_unit_cell in range(num_cells):
+            start_index = i_unit_cell * n_sites_per_unit_cell
+            end_index = start_index + n_sites_per_unit_cell
+            
+            system_element_index_list[start_index:end_index] = (
+                i_unit_cell * n_sites_per_unit_cell + unit_cell_element_index_list)
+            
+            quantum_index_list[start_index:end_index] = np.hstack(
+                (np.tile(unit_cell_indices[i_unit_cell], (n_sites_per_unit_cell, 1)),
+                 unit_cell_element_type_index,
+                 unit_cell_element_type_element_index_list))
 
         return_sites = ReturnValues(
                         cell_coordinates=cell_coordinates,
@@ -718,17 +735,28 @@ class System(object):
         return (precomputed_array, num_neighbor_pairs)
 
     def get_effective_k_vectors(self, k_max):
-        k_vector_list = []
-        exclude_list = []
-        for i in range(-k_max[0], k_max[0]+1):
-            for j in range(-k_max[1], k_max[1]+1):
-                for k in range(-k_max[2], k_max[2]+1):
-                    if [i, j, k] not in exclude_list:
-                        k_vector_list.append([i, j, k])
-                        exclude_list.append([-i, -j, -k])
-        k_vector_list.remove([0, 0, 0])
-        k_vector_data = np.asarray(k_vector_list)
-        return k_vector_data
+        # Optimized: Use mgrid for efficient generation of all k-vector combinations
+        grid = np.mgrid[-k_max[0]:k_max[0]+1, -k_max[1]:k_max[1]+1, -k_max[2]:k_max[2]+1]
+        all_vectors = grid.reshape(3, -1).T
+        
+        # Remove [0, 0, 0]
+        nonzero_mask = ~np.all(all_vectors == 0, axis=1)
+        all_vectors = all_vectors[nonzero_mask]
+        
+        # Efficiently remove duplicate k/-k pairs
+        # Use lexicographic ordering to keep only one from each pair
+        unique_vectors = []
+        seen_negatives = set()
+        
+        for vector in all_vectors:
+            vector_tuple = tuple(vector)
+            neg_vector_tuple = tuple(-vector)
+            
+            if vector_tuple not in seen_negatives:
+                unique_vectors.append(vector)
+                seen_negatives.add(neg_vector_tuple)
+        
+        return np.array(unique_vectors)
 
     def get_cosine_data(self, k_max):
         max_k_max = max(k_max)
@@ -1046,15 +1074,19 @@ class System(object):
         k_cut0_2 = k_cut0**2
         k_cut1_2 = k_cut1**2
         k_max = np.ceil(k_cut1 / self.reciprocal_lattice_vector_length).astype(int)
-        new_k_vectors = []
-        for i in range(-k_max[0], k_max[0]+1):
-            for j in range(-k_max[1], k_max[1]+1):
-                for k in range(-k_max[2], k_max[2]+1):
-                    k_vector = np.dot(np.array([i, j, k]),
-                                      self.reciprocal_lattice_matrix)
-                    k_vector_2 = np.dot(k_vector, k_vector)
-                    if k_vector_2 >= k_cut0_2 and k_vector_2 < k_cut1_2:
-                        new_k_vectors.append([i, j, k])
+        
+        # Optimized: Generate all combinations using mgrid
+        grid = np.mgrid[-k_max[0]:k_max[0]+1, -k_max[1]:k_max[1]+1, -k_max[2]:k_max[2]+1]
+        all_indices = grid.reshape(3, -1).T
+        
+        # Vectorized computation of k-vectors and their magnitudes
+        k_vectors = np.dot(all_indices, self.reciprocal_lattice_matrix)
+        k_vectors_2 = np.sum(k_vectors * k_vectors, axis=1)
+        
+        # Vectorized filtering
+        valid_mask = (k_vectors_2 >= k_cut0_2) & (k_vectors_2 < k_cut1_2)
+        new_k_vectors = all_indices[valid_mask].tolist()
+        
         return new_k_vectors
 
     def get_k_vector_energy_contribution(self, charge_list_prod, alpha, k_vector):
