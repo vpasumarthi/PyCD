@@ -3014,6 +3014,328 @@ class Analysis(object):
         plt.savefig(str(figure_path))
         return None
 
+    def unwrap_trajectory(self, wrapped_traj_file_path, system_size, lattice_matrix, 
+                         pbc=None, output_file_path=None):
+        """
+        Unwrap a wrapped trajectory file to obtain continuous coordinates.
+        
+        This function takes a wrapped trajectory (where coordinates are wrapped 
+        back into the simulation box due to periodic boundary conditions) and 
+        unwraps it to get the continuous trajectory. This is useful when only 
+        wrapped trajectories were saved during simulation but unwrapped coordinates
+        are needed for analysis (e.g., mean square displacement calculations).
+        
+        Parameters
+        ----------
+        wrapped_traj_file_path : str or Path
+            Path to the wrapped trajectory file (.npy format)
+        system_size : array_like
+            System size in number of unit cells [nx, ny, nz]
+        lattice_matrix : array_like
+            3x3 lattice matrix in Bohr units
+        pbc : array_like, optional
+            Periodic boundary conditions flags [x, y, z]. Defaults to [1, 1, 1]
+        output_file_path : str or Path, optional
+            Path to save the unwrapped trajectory. If None, no file is saved.
+            
+        Returns
+        -------
+        unwrapped_trajectory : ndarray
+            Unwrapped trajectory array with same shape as input
+            
+        Notes
+        -----
+        The function detects boundary crossings by identifying large jumps in 
+        position between consecutive time steps. When a jump larger than half 
+        the box size is detected, it corrects for the periodic boundary crossing.
+        
+        The algorithm assumes that particles don't move more than half a box 
+        length in a single time step, which is typically valid for KMC simulations.
+        
+        Examples
+        --------
+        >>> # Unwrap a wrapped trajectory file
+        >>> analysis = Analysis(material_info, ...)
+        >>> unwrapped = analysis.unwrap_trajectory('wrapped_traj.npy', 
+        ...                                       [2, 2, 1], lattice_matrix)
+        >>> # Save unwrapped trajectory
+        >>> analysis.unwrap_trajectory('wrapped_traj.npy', [2, 2, 1], 
+        ...                           lattice_matrix, output_file_path='unwrapped_traj.npy')
+        """
+        from pathlib import Path
+        
+        # Validate inputs
+        wrapped_traj_file_path = Path(wrapped_traj_file_path)
+        if not wrapped_traj_file_path.exists():
+            raise FileNotFoundError(f"Wrapped trajectory file not found: {wrapped_traj_file_path}")
+        
+        # Load wrapped trajectory
+        try:
+            wrapped_traj = np.load(wrapped_traj_file_path)
+        except Exception as e:
+            raise ValueError(f"Failed to load trajectory file {wrapped_traj_file_path}: {e}")
+            
+        if wrapped_traj.size == 0:
+            raise ValueError("Trajectory file is empty")
+            
+        # Handle different trajectory formats
+        original_shape = wrapped_traj.shape
+        if wrapped_traj.ndim == 1:
+            # Handle case where trajectory is 1D (single species, 3 coordinates)
+            if len(wrapped_traj) % 3 != 0:
+                raise ValueError(f"1D trajectory length ({len(wrapped_traj)}) is not divisible by 3")
+            wrapped_traj = wrapped_traj.reshape(-1, 3)
+        elif wrapped_traj.ndim != 2:
+            raise ValueError(f"Trajectory must be 1D or 2D array, got {wrapped_traj.ndim}D")
+        
+        # Set default PBC if not provided
+        if pbc is None:
+            pbc = np.array([1, 1, 1])
+        else:
+            pbc = np.array(pbc)
+            
+        if len(pbc) != 3:
+            raise ValueError("PBC must be a 3-element array")
+            
+        # Validate system parameters
+        system_size = np.array(system_size)
+        if len(system_size) != 3:
+            raise ValueError("System size must be a 3-element array")
+        if np.any(system_size <= 0):
+            raise ValueError("System size elements must be positive")
+            
+        lattice_matrix = np.array(lattice_matrix)
+        if lattice_matrix.shape != (3, 3):
+            raise ValueError("Lattice matrix must be 3x3")
+            
+        # Calculate box dimensions
+        box_vectors = system_size[:, np.newaxis] * lattice_matrix
+        box_lengths = np.linalg.norm(box_vectors, axis=1)
+        
+        if np.any(box_lengths <= 0):
+            raise ValueError("Box lengths must be positive")
+        
+        # Initialize unwrapped trajectory
+        unwrapped_traj = np.copy(wrapped_traj)
+        n_steps = wrapped_traj.shape[0]
+        
+        if wrapped_traj.shape[1] == 3:
+            # Single species case - trajectory shape is (n_steps, 3)
+            for step in range(1, n_steps):
+                # Calculate displacement from previous step
+                displacement = wrapped_traj[step] - wrapped_traj[step-1]
+                
+                # Check for boundary crossings in each dimension
+                for dim in range(3):
+                    if pbc[dim]:  # Only unwrap if PBC is active in this dimension
+                        # If displacement is larger than half box length, it's likely a boundary crossing
+                        if displacement[dim] > box_lengths[dim] / 2:
+                            # Particle crossed forward boundary, subtract box length
+                            unwrapped_traj[step:, dim] -= box_lengths[dim]
+                        elif displacement[dim] < -box_lengths[dim] / 2:
+                            # Particle crossed backward boundary, add box length
+                            unwrapped_traj[step:, dim] += box_lengths[dim]
+        else:
+            # Multiple species case - trajectory shape is (n_steps, n_species*3)
+            n_coords = wrapped_traj.shape[1]
+            if n_coords % 3 != 0:
+                raise ValueError(f"Number of coordinates ({n_coords}) is not divisible by 3")
+                
+            n_species = n_coords // 3
+            
+            for species in range(n_species):
+                start_idx = species * 3
+                end_idx = start_idx + 3
+                
+                for step in range(1, n_steps):
+                    # Calculate displacement from previous step for this species
+                    displacement = (wrapped_traj[step, start_idx:end_idx] - 
+                                   wrapped_traj[step-1, start_idx:end_idx])
+                    
+                    # Check for boundary crossings in each dimension
+                    for dim in range(3):
+                        coord_idx = start_idx + dim
+                        if pbc[dim]:  # Only unwrap if PBC is active in this dimension
+                            # If displacement is larger than half box length, it's likely a boundary crossing
+                            if displacement[dim] > box_lengths[dim] / 2:
+                                # Particle crossed forward boundary, subtract box length
+                                unwrapped_traj[step:, coord_idx] -= box_lengths[dim]
+                            elif displacement[dim] < -box_lengths[dim] / 2:
+                                # Particle crossed backward boundary, add box length
+                                unwrapped_traj[step:, coord_idx] += box_lengths[dim]
+        
+        # Reshape to original format if necessary
+        if len(original_shape) == 1:
+            unwrapped_traj = unwrapped_traj.flatten()
+        
+        # Save unwrapped trajectory if output path is provided
+        if output_file_path is not None:
+            try:
+                np.save(output_file_path, unwrapped_traj)
+                print(f"Unwrapped trajectory saved to: {output_file_path}")
+            except Exception as e:
+                print(f"Warning: Failed to save unwrapped trajectory to {output_file_path}: {e}")
+        
+        return unwrapped_traj
+
+
+def unwrap_trajectory_file(wrapped_traj_file_path, system_size, lattice_matrix, 
+                          pbc=None, output_file_path=None):
+    """
+    Standalone function to unwrap a wrapped trajectory file.
+    
+    This is a convenience function that doesn't require instantiating an Analysis object.
+    
+    Parameters
+    ----------
+    wrapped_traj_file_path : str or Path
+        Path to the wrapped trajectory file (.npy format)
+    system_size : array_like
+        System size in number of unit cells [nx, ny, nz]
+    lattice_matrix : array_like
+        3x3 lattice matrix in Bohr units
+    pbc : array_like, optional
+        Periodic boundary conditions flags [x, y, z]. Defaults to [1, 1, 1]
+    output_file_path : str or Path, optional
+        Path to save the unwrapped trajectory. If None, no file is saved.
+        
+    Returns
+    -------
+    unwrapped_trajectory : ndarray
+        Unwrapped trajectory array
+        
+    Examples
+    --------
+    >>> # Simple usage
+    >>> from PyCD.core import unwrap_trajectory_file
+    >>> lattice = np.eye(3) * 10.0 * constants.ANG2BOHR  # 10 Angstrom cubic box
+    >>> unwrapped = unwrap_trajectory_file('wrapped_traj.npy', [2, 2, 1], lattice)
+    """
+    # Create a temporary Analysis object to use the method
+    # We only need the unwrap_trajectory method, so we can create a minimal object
+    class TempAnalysis:
+        def unwrap_trajectory(self, wrapped_traj_file_path, system_size, lattice_matrix, 
+                             pbc=None, output_file_path=None):
+            from pathlib import Path
+            
+            # Validate inputs
+            wrapped_traj_file_path = Path(wrapped_traj_file_path)
+            if not wrapped_traj_file_path.exists():
+                raise FileNotFoundError(f"Wrapped trajectory file not found: {wrapped_traj_file_path}")
+            
+            # Load wrapped trajectory
+            try:
+                wrapped_traj = np.load(wrapped_traj_file_path)
+            except Exception as e:
+                raise ValueError(f"Failed to load trajectory file {wrapped_traj_file_path}: {e}")
+                
+            if wrapped_traj.size == 0:
+                raise ValueError("Trajectory file is empty")
+                
+            # Handle different trajectory formats
+            original_shape = wrapped_traj.shape
+            if wrapped_traj.ndim == 1:
+                # Handle case where trajectory is 1D (single species, 3 coordinates)
+                if len(wrapped_traj) % 3 != 0:
+                    raise ValueError(f"1D trajectory length ({len(wrapped_traj)}) is not divisible by 3")
+                wrapped_traj = wrapped_traj.reshape(-1, 3)
+            elif wrapped_traj.ndim != 2:
+                raise ValueError(f"Trajectory must be 1D or 2D array, got {wrapped_traj.ndim}D")
+            
+            # Set default PBC if not provided
+            if pbc is None:
+                pbc = np.array([1, 1, 1])
+            else:
+                pbc = np.array(pbc)
+                
+            if len(pbc) != 3:
+                raise ValueError("PBC must be a 3-element array")
+                
+            # Validate system parameters
+            system_size = np.array(system_size)
+            if len(system_size) != 3:
+                raise ValueError("System size must be a 3-element array")
+            if np.any(system_size <= 0):
+                raise ValueError("System size elements must be positive")
+                
+            lattice_matrix = np.array(lattice_matrix)
+            if lattice_matrix.shape != (3, 3):
+                raise ValueError("Lattice matrix must be 3x3")
+                
+            # Calculate box dimensions
+            box_vectors = system_size[:, np.newaxis] * lattice_matrix
+            box_lengths = np.linalg.norm(box_vectors, axis=1)
+            
+            if np.any(box_lengths <= 0):
+                raise ValueError("Box lengths must be positive")
+            
+            # Initialize unwrapped trajectory
+            unwrapped_traj = np.copy(wrapped_traj)
+            n_steps = wrapped_traj.shape[0]
+            
+            if wrapped_traj.shape[1] == 3:
+                # Single species case - trajectory shape is (n_steps, 3)
+                for step in range(1, n_steps):
+                    # Calculate displacement from previous step
+                    displacement = wrapped_traj[step] - wrapped_traj[step-1]
+                    
+                    # Check for boundary crossings in each dimension
+                    for dim in range(3):
+                        if pbc[dim]:  # Only unwrap if PBC is active in this dimension
+                            # If displacement is larger than half box length, it's likely a boundary crossing
+                            if displacement[dim] > box_lengths[dim] / 2:
+                                # Particle crossed forward boundary, subtract box length
+                                unwrapped_traj[step:, dim] -= box_lengths[dim]
+                            elif displacement[dim] < -box_lengths[dim] / 2:
+                                # Particle crossed backward boundary, add box length
+                                unwrapped_traj[step:, dim] += box_lengths[dim]
+            else:
+                # Multiple species case - trajectory shape is (n_steps, n_species*3)
+                n_coords = wrapped_traj.shape[1]
+                if n_coords % 3 != 0:
+                    raise ValueError(f"Number of coordinates ({n_coords}) is not divisible by 3")
+                    
+                n_species = n_coords // 3
+                
+                for species in range(n_species):
+                    start_idx = species * 3
+                    end_idx = start_idx + 3
+                    
+                    for step in range(1, n_steps):
+                        # Calculate displacement from previous step for this species
+                        displacement = (wrapped_traj[step, start_idx:end_idx] - 
+                                       wrapped_traj[step-1, start_idx:end_idx])
+                        
+                        # Check for boundary crossings in each dimension
+                        for dim in range(3):
+                            coord_idx = start_idx + dim
+                            if pbc[dim]:  # Only unwrap if PBC is active in this dimension
+                                # If displacement is larger than half box length, it's likely a boundary crossing
+                                if displacement[dim] > box_lengths[dim] / 2:
+                                    # Particle crossed forward boundary, subtract box length
+                                    unwrapped_traj[step:, coord_idx] -= box_lengths[dim]
+                                elif displacement[dim] < -box_lengths[dim] / 2:
+                                    # Particle crossed backward boundary, add box length
+                                    unwrapped_traj[step:, coord_idx] += box_lengths[dim]
+            
+            # Reshape to original format if necessary
+            if len(original_shape) == 1:
+                unwrapped_traj = unwrapped_traj.flatten()
+            
+            # Save unwrapped trajectory if output path is provided
+            if output_file_path is not None:
+                try:
+                    np.save(output_file_path, unwrapped_traj)
+                    print(f"Unwrapped trajectory saved to: {output_file_path}")
+                except Exception as e:
+                    print(f"Warning: Failed to save unwrapped trajectory to {output_file_path}: {e}")
+            
+            return unwrapped_traj
+    
+    temp_analysis = TempAnalysis()
+    return temp_analysis.unwrap_trajectory(wrapped_traj_file_path, system_size, 
+                                          lattice_matrix, pbc, output_file_path)
+
 
 class ReturnValues(object):
     """dummy class to return objects from methods defined inside
