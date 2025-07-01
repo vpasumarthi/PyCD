@@ -280,6 +280,96 @@ class Neighbors(object):
                                 np.array([x_offset, y_offset, z_offset]),
                                 system_size), self.material.lattice_matrix))
                     index += 1
+        
+        # Precompute matrices for efficient minimum image convention
+        self._setup_efficient_pbc()
+
+    def _setup_efficient_pbc(self):
+        """Setup matrices for efficient minimum image convention in non-orthorhombic cells"""
+        # Get the simulation cell matrix 
+        # Each row represents a simulation cell vector: system_size[i] * lattice_matrix[i, :]
+        self.simulation_cell_matrix = self.material.lattice_matrix * self.system_size[:, np.newaxis]
+        
+        # Compute inverse for transformation to fractional coordinates
+        self.simulation_cell_matrix_inv = np.linalg.inv(self.simulation_cell_matrix)
+        
+        # PBC mask for which dimensions to apply periodic boundary conditions
+        self.pbc_mask = np.array(self.pbc, dtype=bool)
+
+    def apply_minimum_image_convention(self, displacement_vector):
+        """
+        Apply minimum image convention efficiently for non-orthorhombic cells.
+        
+        Uses fractional coordinates with a small neighborhood search to handle
+        non-orthorhombic cases correctly while remaining much faster than brute-force.
+        
+        :param displacement_vector: 3D displacement vector in Cartesian coordinates
+        :return: minimum image displacement vector in Cartesian coordinates
+        """
+        # Convert to fractional coordinates
+        frac_displacement = np.dot(displacement_vector, self.simulation_cell_matrix_inv)
+        
+        # Start with the simple wrapped solution as baseline
+        base_offset = np.zeros(3)
+        base_offset[self.pbc_mask] = -np.round(frac_displacement[self.pbc_mask])
+        # Non-PBC dimensions keep offset of 0 (no wrapping)
+        
+        # Calculate baseline result
+        frac_wrapped = frac_displacement + base_offset
+        baseline_result = np.dot(frac_wrapped, self.simulation_cell_matrix)
+        
+        best_distance = np.linalg.norm(baseline_result)
+        best_result = baseline_result
+        
+        # Check a small neighborhood around the base offset
+        # This covers the cases where simple rounding is not optimal
+        search_range = 1  # Check ±1 around the base offset
+        
+        offsets_to_check = []
+        for dx in range(-search_range, search_range + 1):
+            for dy in range(-search_range, search_range + 1):
+                for dz in range(-search_range, search_range + 1):
+                    if dx == 0 and dy == 0 and dz == 0:
+                        continue  # Skip baseline case already computed
+                    
+                    # Only apply offsets in PBC dimensions
+                    offset_delta = np.array([
+                        dx if self.pbc_mask[0] else 0,
+                        dy if self.pbc_mask[1] else 0, 
+                        dz if self.pbc_mask[2] else 0
+                    ])
+                    
+                    if np.any(offset_delta != 0):  # Skip if no effective offset
+                        offsets_to_check.append(offset_delta)
+        
+        # Test each offset
+        for offset_delta in offsets_to_check:
+            test_offset = base_offset + offset_delta
+            test_frac_wrapped = frac_displacement + test_offset
+            test_result = np.dot(test_frac_wrapped, self.simulation_cell_matrix)
+            test_distance = np.linalg.norm(test_result)
+            
+            if test_distance < best_distance:
+                best_distance = test_distance
+                best_result = test_result
+        
+        return best_result
+
+    def apply_minimum_image_convention_vectorized(self, displacement_vectors):
+        """
+        Vectorized version of minimum image convention for multiple displacement vectors.
+        
+        :param displacement_vectors: Array of shape (N, 3) containing displacement vectors
+        :return: Array of shape (N, 3) containing minimum image displacement vectors
+        """
+        # For the optimized version, use the single-vector method for each vector
+        # This could be further optimized with true vectorization if needed
+        results = np.array([
+            self.apply_minimum_image_convention(dv) 
+            for dv in displacement_vectors
+        ])
+        
+        return results
 
     def get_system_element_index(self, system_size, quantum_indices):
         """Returns the system_element_index of the element
@@ -373,7 +463,7 @@ class Neighbors(object):
     def compute_distance(self, system_size, system_element_index_1,
                          system_element_index_2):
         """Returns the distance in atomic units between the two system element
-            indices for a given system size
+            indices for a given system size using efficient minimum image convention
             :param system_size:
             :param system_element_index_1:
             :param system_element_index_2:
@@ -382,13 +472,9 @@ class Neighbors(object):
                                             system_element_index_1)
         neighbor_coord = self.get_coordinates(system_size,
                                               system_element_index_2)
-        neighbor_image_coords = (self.system_translational_vector_list
-                                 + neighbor_coord)
-        neighbor_image_displacement_vectors = (neighbor_image_coords
-                                               - center_coord)
-        neighbor_image_displacements = np.linalg.norm(
-                                neighbor_image_displacement_vectors, axis=1)
-        displacement = np.min(neighbor_image_displacements)
+        displacement_vector = neighbor_coord - center_coord
+        min_image_displacement_vector = self.apply_minimum_image_convention(displacement_vector)
+        displacement = np.linalg.norm(min_image_displacement_vector)
         return displacement
 
     def hop_neighbor_sites(self, bulk_sites, center_site_indices,
@@ -428,23 +514,17 @@ class Neighbors(object):
                 displacement_list = np.zeros(len(neighbor_site_coords))
             for neighbor_site_index, neighbor_coord in enumerate(
                                                         neighbor_site_coords):
-                neighbor_image_coords = (self.system_translational_vector_list
-                                         + neighbor_coord)
-                neighbor_image_displacement_vectors = (neighbor_image_coords
-                                                       - center_coord)
-                neighbor_image_displacements = np.linalg.norm(
-                                        neighbor_image_displacement_vectors,
-                                        axis=1)
-                [displacement, image_index] = [
-                                    np.min(neighbor_image_displacements),
-                                    np.argmin(neighbor_image_displacements)]
+                # Calculate displacement vector and apply efficient minimum image convention
+                displacement_vector = neighbor_coord - center_coord
+                min_image_displacement_vector = self.apply_minimum_image_convention(displacement_vector)
+                displacement = np.linalg.norm(min_image_displacement_vector)
+                
                 if quick_test:
                     displacement_list[neighbor_site_index] = displacement
                 if (cutoff_dist_limits[0] < displacement
                         <= cutoff_dist_limits[1]):
                     i_neighbor_site_index_list.append(neighbor_site_index)
-                    i_displacement_vectors.append(
-                            neighbor_image_displacement_vectors[image_index])
+                    i_displacement_vectors.append(min_image_displacement_vector)
                     i_num_neighbors += 1
             neighbor_system_element_indices[center_site_index] = (
                                     neighbor_site_system_element_index_list[
@@ -485,29 +565,23 @@ class Neighbors(object):
 
     def get_pairwise_min_image_vector_data(self, dst_path):
         """Returns cumulative displacement list for the given system size
-            printed out to disk
+            printed out to disk using efficient minimum image convention
             :param dst_path:
             :return: """
         pairwise_min_image_vector_data = np.zeros((self.num_system_elements,
                                                  self.num_system_elements, 3))
+        
         for center_site_index, center_coord in enumerate(
                                             self.bulk_sites.cell_coordinates):
-            cumulative_system_translational_vector_list = np.tile(
-                                        self.system_translational_vector_list,
-                                        (self.num_system_elements, 1, 1))
-            cumulative_neighbor_image_coords = (
-                cumulative_system_translational_vector_list
-                + np.tile(self.bulk_sites.cell_coordinates[:, np.newaxis, :],
-                          (1, len(self.system_translational_vector_list), 1)))
-            cumulative_neighbor_image_displacement_vectors = (
-                            cumulative_neighbor_image_coords - center_coord)
-            cumulative_neighbor_image_displacements = np.linalg.norm(
-                                cumulative_neighbor_image_displacement_vectors,
-                                axis=2)
-            pairwise_min_image_vector_data[center_site_index] = \
-                cumulative_neighbor_image_displacement_vectors[
-                    np.arange(self.num_system_elements),
-                    np.argmin(cumulative_neighbor_image_displacements, axis=1)]
+            # Calculate all displacement vectors from center to all other sites
+            displacement_vectors = self.bulk_sites.cell_coordinates - center_coord
+            
+            # Apply efficient minimum image convention
+            min_image_displacements = self.apply_minimum_image_convention_vectorized(displacement_vectors)
+            
+            # Store the results
+            pairwise_min_image_vector_data[center_site_index] = min_image_displacements
+            
         pairwise_min_image_vector_data_file_path = dst_path.joinpath(
                                             'pairwise_min_image_vector_data.npy')
         np.save(pairwise_min_image_vector_data_file_path,
