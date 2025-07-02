@@ -52,6 +52,7 @@ output_data:
   time: {file_name: time_data.npy, write: 1}
   unwrapped_traj: {file_name: unwrapped_traj.npy, write: 1, write_every_step: 0}
   wrapped_traj: {file_name: wrapped_traj.npy, write: 0}
+  hdf5_output: {enabled: true, file_name: trajectory.h5}
 over_write: 1
 pre_prod_file_name: pre_prod.py
 random_seed: 2

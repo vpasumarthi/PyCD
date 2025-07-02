@@ -36,7 +36,8 @@ setup(
         'scipy',
         'numpy',
         'matplotlib',
-        'pyyaml'
+        'pyyaml',
+        'h5py'
     ],
 
     # Which Python importable modules should be included when your package is installed
