@@ -207,6 +207,8 @@ def save_trajectory_hdf5(filename, coordinates, time_data=None, n_atoms=None):
             n_atoms = len(coords) // 3
         elif coords.ndim == 2:
             n_atoms = coords.shape[1] // 3 if coords.shape[1] % 3 == 0 else coords.shape[1]
+        elif coords.ndim == 3:
+            n_atoms = coords.shape[1]  # (n_frames, n_atoms, 3)
         else:
             raise ValueError("Cannot infer n_atoms from coordinate shape")
     
