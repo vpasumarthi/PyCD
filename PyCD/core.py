@@ -25,6 +25,11 @@ import pickle
 
 from PyCD.io import read_poscar, generate_report
 from PyCD import constants
+try:
+    from PyCD.hdf5_io import HDF5TrajectoryWriter
+    HDF5_AVAILABLE = True
+except ImportError:
+    HDF5_AVAILABLE = False
 
 plt.switch_backend('Agg')
 
@@ -2669,6 +2674,22 @@ class Run(object):
             else:
                 traj_dir_path = dst_path
 
+            # Initialize HDF5 writer if enabled
+            hdf5_writer = None
+            if ('hdf5_output' in output_data and 
+                output_data['hdf5_output'].get('enabled', False) and 
+                HDF5_AVAILABLE):
+                try:
+                    hdf5_filename = traj_dir_path / output_data['hdf5_output']['file_name']
+                    hdf5_writer = HDF5TrajectoryWriter(
+                        hdf5_filename, 
+                        self.total_species, 
+                        len(self.species_count)
+                    )
+                except Exception as e:
+                    print(f"Warning: Could not initialize HDF5 writer: {e}")
+                    hdf5_writer = None
+
             # Load random state
             random_state_file_path = traj_dir_path.joinpath(f'initial_rnd_state.dump')
             rnd.setstate(pickle.load(open(random_state_file_path, 'rb')))
@@ -2857,6 +2878,28 @@ class Run(object):
                             np.save(output_file, delg_0_array)
                         elif output_data_type == 'potential':
                             np.save(output_file, potential_array)
+            
+            # Write trajectory data to HDF5 if enabled
+            if hdf5_writer and output_data.get('unwrapped_traj', {}).get('write', False):
+                try:
+                    # Get time data if available, otherwise create dummy data
+                    if 'time_data' in locals() and time_data:
+                        time_data_array = np.asarray(time_data)
+                    else:
+                        # Create dummy time data based on trajectory length
+                        n_frames = unwrapped_position_array.shape[0]
+                        time_data_array = np.arange(n_frames, dtype=float)
+                    
+                    hdf5_writer.write_frames(unwrapped_position_array, time_data_array)
+                except Exception as e:
+                    print(f"Warning: Failed to write HDF5 trajectory data: {e}")
+            
+            # Close HDF5 writer
+            if hdf5_writer:
+                try:
+                    hdf5_writer.close()
+                except Exception as e:
+                    print(f"Warning: Failed to close HDF5 writer: {e}")
             if self.doping_active:
                 output_file_path = traj_dir_path / 'occupancy.npy'
                 occupancy_array = np.asarray(occupancy_list, dtype=int)
