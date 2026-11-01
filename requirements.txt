@@ -19,7 +19,7 @@ pprofile==1.11.0
 prompt-toolkit==1.0.15
 ptyprocess==0.5.2
 Pygments==2.20.0
-pylint==1.7.4
+pylint==4.0.9
 pyparsing==2.2.0
 python-dateutil==2.7.2
 pytz==2018.3
