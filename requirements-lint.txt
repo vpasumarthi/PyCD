@@ -1,0 +1,5 @@
+# Lint tooling runs on Python 3.10 or newer.
+pylint==4.0.9
+astroid==4.0.4
+isort==9.0.2
+mccabe==0.6.1
