@@ -9,7 +9,7 @@ from datetime import datetime
 import numpy as np
 import yaml
 
-from PyCT.core import Material, Analysis
+from PyCD.core import Material, Analysis
 
 
 def compute_coc_msd(dst_path, report=1):
@@ -21,7 +21,7 @@ def compute_coc_msd(dst_path, report=1):
     sim_param_file_path = dst_path / sim_param_file_name
     with open(sim_param_file_path, 'r') as stream:
         try:
-            sim_params = yaml.load(stream)
+            sim_params = yaml.safe_load(stream)
         except yaml.YAMLError as exc:
             print(exc)
 
@@ -39,7 +39,7 @@ def compute_coc_msd(dst_path, report=1):
     config_file_path = input_directory_path / config_file_name
     with open(config_file_path, 'r') as stream:
         try:
-            params = yaml.load(stream)
+            params = yaml.safe_load(stream)
         except yaml.YAMLError as exc:
             print(exc)
 
@@ -48,7 +48,7 @@ def compute_coc_msd(dst_path, report=1):
                                             input_coordinate_file_name)
     params.update({'input_coord_file_location':
                    input_coord_file_location})
-    config_params = ReturnValues(params)
+    config_params = ReturnValues(**params)
 
     # Build material object files
     material_info = Material(config_params)

@@ -2108,7 +2108,8 @@ class Run(object):
 
     def get_doping_distribution(self):
         dopant_site_indices = {}
-        dopant_types_inserted = 0
+        substitution_element_type_index_list = []
+        available_site_indices = []
         for map_index, num_dopants in enumerate(self.doping['num_dopants']):
             insertion_type = self.doping['insertion_type'][map_index]
             dopant_element_type = self.dopant_element_types[map_index]
@@ -2117,9 +2118,6 @@ class Run(object):
                     dopant_site_indices[dopant_element_type] = (
                         self.doping['dopant_site_indices'][map_index][:num_dopants])
                 elif insertion_type == 'random':
-                    if dopant_types_inserted == 0:
-                        substitution_element_type_index_list = []
-                        available_site_indices = []
                     system_size = self.system.system_size
                     num_cells = system_size.prod()
 
@@ -2230,7 +2228,6 @@ class Run(object):
                         print(f'Number of pair-wise substitutions ({num_dopants}) did not match with total number of pair atoms available.\n')
                         print(f'Please re-run by changing number of pair-wise substitutions to {len(pair_atoms_in_selected_planes)}\n')
                         exit()
-                dopant_types_inserted += 1
             elif insertion_type == 'gradient':
                 # NOTE: 'available_site_indices' is populated based on an isolated step system size.
                 # NOTE: This implementation is inefficient as overlap between doping regions across interface

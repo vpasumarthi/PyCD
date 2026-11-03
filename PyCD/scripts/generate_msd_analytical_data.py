@@ -9,7 +9,7 @@ from datetime import datetime
 import numpy as np
 import yaml
 
-from PyCT.core import Material, Neighbors
+from PyCD.core import Material, Neighbors
 
 
 def generate_msd_analytical_data(
@@ -23,7 +23,7 @@ def generate_msd_analytical_data(
     sim_param_file_path = dst_path / sim_param_file_name
     with open(sim_param_file_path, 'r') as stream:
         try:
-            sim_params = yaml.load(stream)
+            sim_params = yaml.safe_load(stream)
         except yaml.YAMLError as exc:
             print(exc)
 
@@ -42,7 +42,7 @@ def generate_msd_analytical_data(
     config_file_path = input_directory_path / config_file_name
     with open(config_file_path, 'r') as stream:
         try:
-            params = yaml.load(stream)
+            params = yaml.safe_load(stream)
         except yaml.YAMLError as exc:
             print(exc)
 
