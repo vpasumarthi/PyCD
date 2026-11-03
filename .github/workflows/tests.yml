@@ -1,0 +1,35 @@
+name: Tests and dependency compatibility
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install package dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e . pytest
+          python -c "from pathlib import Path; Path('certifi-requirement.txt').write_text(next(line for line in Path('requirements.txt').read_text().splitlines() if line.startswith('certifi==')) + '\n')"
+          python -m pip install -r certifi-requirement.txt
+          python -m pip check
+      - name: Check certifi bundle
+        run: |
+          python -c "import ssl, certifi; context = ssl.create_default_context(cafile=certifi.where()); assert context.get_ca_certs()"
+      - name: Run tests
+        env:
+          MPLBACKEND: Agg
+        run: python -m pytest -q PyCD/tests
