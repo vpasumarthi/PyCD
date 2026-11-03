@@ -9,7 +9,7 @@ from datetime import datetime
 import numpy as np
 import yaml
 
-from PyCT.core import Material
+from PyCD.core import Material
 
 
 def generate_transition_prob_matrix(neighbor_system_element_indices, dst_path,
@@ -21,7 +21,7 @@ def generate_transition_prob_matrix(neighbor_system_element_indices, dst_path,
     sim_param_file_path = dst_path / sim_param_file_name
     with open(sim_param_file_path, 'r') as stream:
         try:
-            sim_params = yaml.load(stream)
+            sim_params = yaml.safe_load(stream)
         except yaml.YAMLError as exc:
             print(exc)
 
@@ -40,7 +40,7 @@ def generate_transition_prob_matrix(neighbor_system_element_indices, dst_path,
     config_file_path = input_directory_path / config_file_name
     with open(config_file_path, 'r') as stream:
         try:
-            params = yaml.load(stream)
+            params = yaml.safe_load(stream)
         except yaml.YAMLError as exc:
             print(exc)
 

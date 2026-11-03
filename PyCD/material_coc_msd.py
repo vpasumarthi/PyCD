@@ -8,7 +8,7 @@ import os
 
 import yaml
 
-from PyCT.core import Material, Analysis
+from PyCD.core import Material, Analysis
 
 
 def materialCOCMSD(systemDirectoryPath, fileFormatIndex, system_size, pbc, n_dim,
@@ -23,7 +23,7 @@ def materialCOCMSD(systemDirectoryPath, fileFormatIndex, system_size, pbc, n_dim
                                   config_file_name)
     with open(config_file_path, 'r') as stream:
         try:
-            params = yaml.load(stream)
+            params = yaml.safe_load(stream)
         except yaml.YAMLError as exc:
             print(exc)
 

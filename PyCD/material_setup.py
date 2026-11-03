@@ -22,7 +22,7 @@ def material_setup(input_directory_path, system_size, pbc,
     config_file_path = input_directory_path.joinpath(config_file_name)
     with open(config_file_path, 'r') as stream:
         try:
-            params = yaml.load(stream)
+            params = yaml.safe_load(stream)
         except yaml.YAMLError as exc:
             print(exc)
 
