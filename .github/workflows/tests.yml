@@ -19,12 +19,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install package and lint dependencies
+      - name: Install development requirements
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e . pytest -r requirements-lint.txt
-          python -c "from pathlib import Path; Path('certifi-requirement.txt').write_text(next(line for line in Path('requirements.txt').read_text().splitlines() if line.startswith('certifi==')) + '\n')"
-          python -m pip install -r certifi-requirement.txt
+          python -m pip install -r requirements.txt
           python -m pip check
       - name: Check certifi bundle and pylint installation
         run: |
