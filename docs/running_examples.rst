@@ -10,12 +10,13 @@ Configuring the environment
 ---------------------------
 
 A simple approach is to create a fresh conda environment and install
-PyCD in editable mode:
+PyCD in editable mode. The development requirements need Python 3.10 or newer;
+CI validates Python 3.10 and 3.11:
 
 .. code-block:: bash
 
    # create a conda environment
-   conda create -n pycd-env python=3.6
+   conda create -n pycd-env python=3.11
 
    # activate the environment
    conda activate pycd-env
@@ -23,8 +24,8 @@ PyCD in editable mode:
    # clone the repository and install dependencies
    git clone https://github.com/vpasumarthi/PyCD.git
    cd PyCD
-   pip install -r requirements.txt
-   pip install -e .
+   python -m pip install -r requirements.txt
+   python -m pip check
 
 Running the examples
 --------------------

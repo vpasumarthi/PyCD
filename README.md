@@ -4,7 +4,7 @@ Python-based Charge Dynamics (PyCD)
 [![Travis Build Status](https://travis-ci.com/vpasumarthi/PyCD.svg?branch=master)](https://travis-ci.com/vpasumarthi/PyCD)
 [![License](https://img.shields.io/badge/License-MPL%202.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
 [![Version](https://img.shields.io/badge/version-v4.0-blue)](https://github.com/vpasumarthi/PyCD/tree/v4.0)
-[![python](https://img.shields.io/badge/python-3.6%20%7C%203.7%20%7C%203.8-blue)](https://github.com/vpasumarthi/PyCD)
+[![python](https://img.shields.io/badge/python-3.7%2B-blue)](https://github.com/vpasumarthi/PyCD)
 [![Documentation Status](https://readthedocs.org/projects/pycd/badge/?version=latest)](https://pycd.readthedocs.io/en/latest/?badge=latest)
 [![DOI](https://zenodo.org/badge/90578885.svg)](https://zenodo.org/badge/latestdoi/90578885)
 
@@ -29,12 +29,14 @@ $ pip install -e .
 
 ### For development:
 
+Use Python 3.10 or newer; CI validates Python 3.10 and 3.11.
+
 ```bash
 # Create a new conda environment
-$ conda create -n pycd-env python=3.6
+$ conda create -n pycd-env python=3.11
 
 # Activate the new conda environment
-$ source activate pycd-env
+$ conda activate pycd-env
 
 # Clone this repository
 $ git clone https://github.com/vpasumarthi/PyCD.git
@@ -42,11 +44,10 @@ $ git clone https://github.com/vpasumarthi/PyCD.git
 # Navigate to root directory
 $ cd PyCD
 
-# Install requirements
-$ pip install -r requirements.txt
-
-# Perform a local installation of package with Pip 
-$ pip install -e .
+# Install PyCD in editable mode, its dependencies, and development tools
+$ python -m pip install -r requirements.txt
+$ python -m pip check
+$ python -m pytest -q PyCD/tests
 ```
 
 ### Copyright
